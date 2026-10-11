@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Glance</string>
+	<key>CFBundleExecutable</key>
+	<string>Glance</string>
+	<key>CFBundleIdentifier</key>
+	<string>dev.vibe.Glance</string>
+	<key>CFBundleName</key>
+	<string>Glance</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Glance changes shuffle, repeat, favorites and volume in Music and Spotify.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Glance measures how loud the playing app is to move the waveform, and turns apps down for the volume slider. Nothing is recorded or leaves your Mac.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/imgaty/Glance/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>c8yiQayQis3C6UlDA7+h3xS0syOm5L4FvoibX2AoE2k=</string>
+</dict>
+</plist>

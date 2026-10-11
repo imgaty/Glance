@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# build.sh output (Glance.app and rebuild.log)
+build/
+
+# release.sh output (Glance.dmg, uploaded to GitHub Releases)
+dist/

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Glance</title>
+    <link>https://github.com/imgaty/Glance/releases</link>
+    <description>New versions of Glance, read by Check for Updates…</description>
+    <language>en</language>
+    <!-- Releases, newest first. release.sh adds each one here, and uploads this file with it. -->
+    <item>
+      <title>Glance 0.1.0</title>
+      <pubDate>Sun, 11 Oct 2026 21:41:54 GMT</pubDate>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<h3>Player</h3><ul><li>Added Now Playing in the notch, with customizable controls.</li><li>Added two layouts, <code>Cover on top</code> and <code>Cover on the side</code>, and four backgrounds behind the player: <code>Replace glass</code>, <code>Fullscreen</code>, <code>Spotlight</code>, and <code>None</code>.</li><li>Added Liquid Glass with adjustable darkness and blur, or the style set in System Settings, tinted by the cover or by the Mac's accent color.</li><li>Added animated album covers from Apple Music, for songs playing in any app.</li></ul><h3>Live Activities</h3><ul><li>Added the cover and a waveform around the closed notch while something plays.</li><li>Added a short announcement when something starts playing.</li></ul><h3>Lyrics</h3><ul><li>Added timed lyrics from LRCLIB beside the player.</li></ul><h3>Opening</h3><ul><li>Added opening by hover, click, or either, each with an optional delay.</li><li>Added two-finger swipes to open and close the notch and to change songs.</li><li>Added an optional haptic tap when the notch opens.</li></ul><h3>Displays</h3><ul><li>Added a notch or a Dynamic Island on displays without one.</li><li>Added settings for where the notch shows, and for hiding it in full screen.</li><li>Made the notch stay over the camera while swiping between desktops and full-screen apps.</li></ul><h3>Additional</h3><ul><li>Added a Settings window.</li><li>Added a welcome tour on first launch.</li><li>Added <code>Check for Updates…</code> and automatic updates from Glance's GitHub releases, through Sparkle.</li></ul>]]></description>
+      <enclosure url="https://github.com/imgaty/Glance/releases/download/v0.1.0/Glance.dmg" sparkle:edSignature="F/YvUY/XMxX7lCzVD3khBg6wttnXjRR4nL8ybIUNZlB6lWgoNw1uHhwJsk/zrzjc0VlY9cZ+nCy+osf8CA49Ag==" length="2077184" type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
