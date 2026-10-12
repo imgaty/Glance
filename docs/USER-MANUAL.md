@@ -70,13 +70,15 @@ notch closes when the pointer leaves it.
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
+| Hold ⌘ and swipe left or right with two fingers | Switches to the tray, and back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
 | Drag something onto the notch | Opens the tray, to drop it there |
 | ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
 | ⇧⌘2, from any app | Opens the notch with the tray; again, closes it |
 
-The notch opens on the page you left it on. To switch between the player and
-the tray, use the two buttons beside the camera, or the other shortcut.
+The notch opens on the player. The tray is to its right: hold ⌘ and swipe left
+with two fingers to go to it, and right to come back. With a mouse, hold ⌘ and
+turn the wheel.
 
 Opened with a shortcut, the notch stays open until you press it again, click
 elsewhere, or move the pointer onto the notch and away. To use other shortcuts,
@@ -131,8 +133,8 @@ record matches the song's title, artist and length.
 ## The tray
 
 The tray keeps the files you drop on the notch and what you copy, newest first.
-Open it with ⇧⌘2, by dragging something onto the notch, or with the tray button
-beside the camera.
+Open it with ⇧⌘2, by dragging something onto the notch, or by holding ⌘ and
+swiping left on the player.
 
 <img src="../assets/screenshots/tray.png"
      width="450"
@@ -245,6 +247,7 @@ Glance's icon in the menu bar opens a menu:
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
 | `Open and close` | Two-finger swipes down and up |
 | `Change songs` | Two-finger swipes left and right |
+| `Switch to the tray` | Two-finger swipes left and right, holding ⌘ |
 | `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 

@@ -43,10 +43,6 @@ enum GlassLook {
     /// A little black even when clear stops the glass lifting dark backgrounds toward white; eased
     /// in, so most of the way is glass and it turns opaque near the end.
     static func black(_ darkness: Double) -> Double { 0.15 + 0.85 * darkness * darkness }
-    /// On the tray, the least the glass blurs and darkens what's behind it, whatever it's set to:
-    /// enough for names over a busy window to read, as a menu's glass is.
-    static let trayBlur = 0.55
-    static let trayDarkness = 0.35
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
@@ -129,6 +125,8 @@ final class NotchModel: ObservableObject {
     @Published var dropping = false
     /// How far the tray's row is scrolled.
     @Published var trayScroll: CGFloat = 0
+    /// How far a swipe to the other page has pushed this one, before it goes.
+    @Published var pageNudge: CGFloat = 0
 
     /// The lyrics show only for a song, on the player; for a video, a podcast or nothing at all
     /// they fold away, and come back with the next song.
@@ -315,8 +313,6 @@ struct NotchView: View {
         // Open on the player, rather than on the tray.
         let playerShown = isOpen && !onTray
         let trayShown = isOpen && onTray
-        let glassBlur = trayShown ? max(blur, GlassLook.trayBlur) : blur
-        let glassDarkness = trayShown ? max(darkness, GlassLook.trayDarkness) : darkness
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed ? 1 : 0
@@ -362,15 +358,19 @@ struct NotchView: View {
                 .mask { awayFromCamera }
                 .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
                 .allowsHitTesting(places == nil)
+            // The player and the tray side by side, as pages are: going to the tray, the player
+            // slides off to the left as the tray comes in from the right, and back.
             NowPlayingView(isVisible: playerShown && !paused, hero: hero)
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
+                .offset(x: (onTray ? -Self.pageShift : 0) + (playerShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: playerShown)) { $0.opacity(playerShown ? 1 : 0).blur(radius: playerShown ? 0 : 4) }
             if trayOn {
                 TrayView(tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll)
                     .frame(width: model.openSize.width, height: model.openSize.height)
                     .environment(\.notchControls, trayShown)
+                    .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
                     .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
                     .allowsHitTesting(places == nil && trayShown)
             }
@@ -394,15 +394,6 @@ struct NotchView: View {
             }
             .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil)
-            // The two pages, beside the camera, while the tray is on.
-            if trayOn {
-                NotchPagePicker(tray: tray, page: model.page, enabled: isOpen && places == nil) { choose($0) }
-                    // Its end lines up with the player's and the tray's.
-                    .padding(.trailing, PlayerLayout.padding)
-                    .frame(width: m.bodyWidth, height: closed.height, alignment: .trailing)
-                    .animation(Self.fade(in: isOpen)) { $0.opacity(isOpen ? 1 : 0) }
-                    .allowsHitTesting(isOpen && places == nil)
-            }
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
@@ -440,11 +431,11 @@ struct NotchView: View {
                     // Clear Liquid Glass under black, as dark as set, blurring what's behind it as much as set.
                     Color.clear
                         .glassEffect(.clear, in: shape)
-                        .background(GlassBlur(radius: GlassLook.blur(glassBlur)))
+                        .background(GlassBlur(radius: GlassLook.blur(blur)))
                         .mask { WithoutFlares(flare: m.flare) }
                         .mask { shape }
                         .opacity(visible)
-                    shape.fill(.black.opacity(GlassLook.black(glassDarkness) * visible))
+                    shape.fill(.black.opacity(GlassLook.black(darkness) * visible))
                 }
             }
         }
@@ -472,12 +463,8 @@ struct NotchView: View {
     static let bodySpace = "notch body"
 
     private var tray: Tray { trayStore ?? .shared }
-
-    /// Another page, from the picker beside the camera; the notch opens on it next time too.
-    private func choose(_ page: NotchPage) {
-        withAnimation(.spring(response: 0.4, dampingFraction: 1)) { model.page = page }
-        if places == nil { UserDefaults.standard.set(page.rawValue, forKey: Preferences.notchPage) }
-    }
+    /// How far a page slides as the other takes its place.
+    private static let pageShift: CGFloat = 28
 
     /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
     private func toggleLyrics() {
@@ -810,39 +797,17 @@ final class GlassBlurView: NSView {
     }
 
     private static let name = "notchBlur"
-    private static let easing: CFTimeInterval = 0.35
-
-    /// A big change, like the tray's blur coming in, eases over; a slider's small steps follow it
-    /// at once.
-    private func ease(_ backdrop: CALayer, from: CGFloat, to: CGFloat) {
-        guard abs(to - from) > 2, window != nil else { return }
-        let animation = CABasicAnimation(keyPath: "filters.\(Self.name).inputRadius")
-        animation.fromValue = from
-        animation.toValue = to
-        animation.duration = Self.easing
-        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        backdrop.add(animation, forKey: Self.name)
-    }
 
     private func set(_ backdrop: CALayer) {
         var filters = backdrop.filters ?? []
         let existing = filters.firstIndex { ($0 as? NSObject)?.value(forKey: "name") as? String == Self.name }
-        let current = existing.flatMap { (filters[$0] as? NSObject)?.value(forKey: "inputRadius") as? CGFloat }
         if radius <= 0.01 {
-            guard let current, current > 0.01 else {
-                // Eased down to nothing: only then does the blur go.
-                if let existing, backdrop.animation(forKey: Self.name) == nil {
-                    filters.remove(at: existing)
-                    backdrop.filters = filters
-                }
-                return
+            if let existing {
+                filters.remove(at: existing)
+                backdrop.filters = filters
             }
-            ease(backdrop, from: current, to: 0)
-            backdrop.setValue(0, forKeyPath: "filters.\(Self.name).inputRadius")
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.easing + 0.05) { [weak self] in self?.apply() }
-        } else if let current {
-            if current != radius {
-                ease(backdrop, from: current, to: radius)
+        } else if let existing {
+            if ((filters[existing] as? NSObject)?.value(forKey: "inputRadius") as? CGFloat) != radius {
                 backdrop.setValue(radius, forKeyPath: "filters.\(Self.name).inputRadius")
             }
         } else if let type = NSClassFromString("CAFilter") as? NSObject.Type,
@@ -853,7 +818,6 @@ final class GlassBlurView: NSView {
             // Blurred right to the glass's edges, with nothing faded in from outside them.
             blur.setValue(true, forKey: "inputNormalizeEdges")
             backdrop.filters = [blur] + filters
-            ease(backdrop, from: 0, to: radius)
         }
         // The glass's own blur, which it uses in a window that doesn't look active: none, so the
         // blur above is all there is either way.

@@ -14,9 +14,12 @@ enum Shelf {
     /// A tile's width, and its picture's side.
     static let tile: CGFloat = 72
     static let picture: CGFloat = 56
-    static let spacing: CGFloat = 4
+    static let spacing: CGFloat = 6
     /// Two lines of names under the pictures.
     static let caption: CGFloat = 27
+    /// Each tile sits on its own frosted glass, rounded concentric with its picture.
+    static let platterRadius: CGFloat = 14
+    static let platterHeight: CGFloat = 8 + picture + 5 + caption + 2
 
     /// The row of tiles, from the first to the last, with the notch's padding at both ends.
     static func width(count: Int) -> CGFloat {
@@ -154,18 +157,14 @@ struct TrayView: View {
 /// The place opened at the front of the row for what's being dragged in.
 private struct DropSlot: View {
     var body: some View {
-        VStack(spacing: 5) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(.white.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                .overlay {
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                .frame(width: Shelf.picture, height: Shelf.picture)
-            Color.clear.frame(height: Shelf.caption)
-        }
-        .frame(width: Shelf.tile)
+        RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous)
+            .strokeBorder(.white.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+            .overlay {
+                Image(systemName: "plus")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .frame(width: Shelf.tile, height: Shelf.platterHeight)
     }
 }
 
@@ -194,19 +193,22 @@ private struct TrayTile: View {
                     }
                 }
             Text(caption)
-                .font(.system(size: 10.5, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .lineLimit(2)
                 .truncationMode(.middle)
                 .multilineTextAlignment(.center)
-                // As Finder's names on the desktop, readable over whatever's behind.
-                .shadow(color: .black.opacity(0.6), radius: 1.5, y: 0.5)
-                .frame(width: Shelf.tile - 4, height: Shelf.caption, alignment: .top)
+                .frame(width: Shelf.tile - 6, height: Shelf.caption, alignment: .top)
         }
-        .padding(.top, 4)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
         .frame(width: Shelf.tile)
+        // Frosted under each tile, as a notification is, so it reads over whatever's behind the
+        // notch; a little brighter under the pointer.
         .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.white.opacity(hovered ? 0.1 : 0))
+            TileFrost()
+                .overlay {
+                    RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous).fill(.white.opacity(hovered ? 0.1 : 0))
+                }
         }
         .overlay {
             TileInteraction(item: item, tray: tray) { hovered = $0 }
@@ -319,56 +321,36 @@ private struct TrayTile: View {
     }
 }
 
-/// The notch's two pages, side by side beside the camera, as Spotlight puts its own beside its
-/// search field: the player and the tray, ⇧⌘1 and ⇧⌘2.
-struct NotchPagePicker: View {
-    @ObservedObject var tray: Tray
-    let page: NotchPage
-    let enabled: Bool
-    let select: (NotchPage) -> Void
-    @Namespace private var selection
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(NotchPage.allCases) { choice in
-                Button {
-                    select(choice)
-                } label: {
-                    Image(systemName: choice == .tray && !tray.items.isEmpty ? "tray.full.fill" : choice.symbol)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(choice == page ? .white : PlayerLayout.secondary)
-                        .frame(width: 28, height: 20)
-                        .background {
-                            if choice == page {
-                                Capsule()
-                                    .fill(.white.opacity(0.2))
-                                    .matchedGeometryEffect(id: "selection", in: selection)
-                            }
-                        }
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(choice.title)
-                .accessibilityAddTraits(choice == page ? .isSelected : [])
-            }
-        }
-        .padding(2)
-        .background(Capsule().fill(.white.opacity(0.08)))
-        .animation(.spring(response: 0.3, dampingFraction: 0.82), value: page)
-        .notchControl(enabled: enabled)
+/// The blur under a tile: macOS's own, dark, as its HUDs have. It blurs what the notch shows behind
+/// it, its glass and all, and looks the same whether or not Glance is the app in front.
+private struct TileFrost: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .hudWindow
+        view.blendingMode = .withinWindow
+        view.state = .active
+        view.appearance = NSAppearance(named: .darkAqua)
+        view.maskImage = Self.mask
+        return view
     }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+
+    /// Rounded as the tile is, at any size.
+    private static let mask: NSImage = {
+        let radius = Shelf.platterRadius
+        let image = NSImage(size: CGSize(width: radius * 2 + 1, height: radius * 2 + 1), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }()
 }
 
-enum NotchPage: String, CaseIterable, Identifiable {
+/// The open notch's two pages: the player, and the tray to its right.
+enum NotchPage {
     case player, tray
-
-    var id: Self { self }
-    var title: String { self == .player ? "Player" : "Tray" }
-    var symbol: String { self == .player ? "music.note" : "tray.fill" }
-
-    /// The page the notch opens on: the one it was left on.
-    static var last: NotchPage {
-        guard Tray.isOn else { return .player }
-        return NotchPage(rawValue: UserDefaults.standard.string(forKey: Preferences.notchPage) ?? "") ?? .player
-    }
 }

@@ -569,8 +569,8 @@ final class NotchController {
         stopPolling()
     }
 
-    /// Opens on the page it was left on, unless told which.
-    private func open(on page: NotchPage? = nil) {
+    /// Opens on the player, unless told otherwise.
+    private func open(on page: NotchPage = .player) {
         guard model.state != .open else { return }
         openTask?.cancel()
         closeTask?.cancel()
@@ -579,7 +579,10 @@ final class NotchController {
         // Closed, nothing of either page shows: the page is simply set.
         var still = Transaction()
         still.disablesAnimations = true
-        withTransaction(still) { model.page = page ?? .last }
+        withTransaction(still) {
+            model.page = page
+            model.pageNudge = 0
+        }
         model.open()
         Opening.tap()
         startPolling()
@@ -589,10 +592,9 @@ final class NotchController {
     /// other, or closes the notch if it's already showing it.
     func toggleFromKeyboard(_ page: NotchPage) {
         guard page == .player || Tray.isOn else { return }
-        UserDefaults.standard.set(page.rawValue, forKey: Preferences.notchPage)
         if model.state == .open {
             guard model.page != page else { return close(holdUntilExit: false) }
-            withAnimation(.spring(response: 0.4, dampingFraction: 1)) { model.page = page }
+            turn(to: page)
             return
         }
         guard !tucked else { return }
@@ -649,7 +651,7 @@ final class NotchController {
         if model.state != .open {
             open(on: .tray)
         } else if model.page != .tray {
-            withAnimation(.spring(response: 0.4, dampingFraction: 1)) { model.page = .tray }
+            turn(to: .tray)
         }
         return .copy
     }
@@ -662,10 +664,7 @@ final class NotchController {
     private func dropped(_ pasteboard: NSPasteboard) -> Bool {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false }
         let taken = Tray.shared.drop(pasteboard)
-        if taken {
-            UserDefaults.standard.set(NotchPage.tray.rawValue, forKey: Preferences.notchPage)
-            Opening.tap()
-        }
+        if taken { Opening.tap() }
         return taken
     }
 
@@ -688,6 +687,15 @@ final class NotchController {
                 trayGliding = false
                 settleTray()
             }
+            return
+        }
+        let switches =
+            model.state == .open && Tray.isOn && event.modifierFlags.contains(.command)
+            && UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch)
+        // A wheel turned with ⌘ held: down or right to the tray, up or left back to the player.
+        if switches, event.phase.isEmpty {
+            let toward = abs(right) > abs(down) ? right : down
+            if toward != 0 { turn(to: toward > 0 ? .tray : .player) }
             return
         }
         // A wheel turned with Shift, sideways, scrolls the tray too.
@@ -719,6 +727,7 @@ final class NotchController {
                 scrollAxis = abs(right) > abs(down) ? .horizontal : .vertical
             }
             if scrollAxis == .horizontal {
+                if switches { return swipedPage(by: right) }
                 if onTray { return scrollTray(by: right) }
                 return skips ? swiped(by: right) : ()
             }
@@ -756,7 +765,36 @@ final class NotchController {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.5)) {
                 model.stretch = 0
                 model.nudge = 0
+                model.pageNudge = 0
             }
+        }
+    }
+
+    // MARK: The player and the tray
+
+    /// ⌘ and two fingers sideways: the pages move as pages do, the tray to the right of the player.
+    /// Swiping left brings the tray in; right, the player. The page leans along, then turns; past
+    /// the last page, it only leans.
+    private func swipedPage(by delta: CGFloat) {
+        guard !pullFired else { return }
+        swipe += delta
+        let target: NotchPage = swipe < 0 ? .tray : .player
+        if abs(swipe) > 56, target != model.page {
+            pullFired = true
+            turn(to: target)
+            Opening.tap()
+            return
+        }
+        let lean = (swipe >= 0 ? 1 : -1) * 14 * (1 - 1 / (abs(swipe) * 0.04 + 1))
+        withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
+    }
+
+    /// To the other page, sliding.
+    private func turn(to page: NotchPage) {
+        guard model.page != page else { return }
+        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+            model.page = page
+            model.pageNudge = 0
         }
     }
 

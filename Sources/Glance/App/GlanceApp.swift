@@ -138,6 +138,7 @@ enum Preferences {
             tray: true,
             trayClipboard: true,
             trayClipboardKeep: ClipboardKeep.eightHours.rawValue,
+            swipeToSwitch: true,
         ])
     }
 
@@ -214,8 +215,8 @@ enum Preferences {
     static let tray = "tray"
     static let trayClipboard = "trayClipboard"
     static let trayClipboardKeep = "trayClipboardKeep"
-    /// The page the notch was last left on (a NotchPage), which it opens on next.
-    static let notchPage = "notchPage"
+    /// Holding ⌘ and swiping sideways with two fingers switches between the player and the tray.
+    static let swipeToSwitch = "swipeToSwitch"
 }
 
 /// The settings that are watched by their keys.

@@ -20,7 +20,7 @@
 - Added ⇧⌘1 to open and close the player from any app, ahead of the app's
   own shortcuts.
 - Added ⇧⌘2 to open and close the tray the same way.
-- Added buttons beside the camera to switch between the player and the tray.
+- Added ⌘ and a two-finger swipe to switch between the player and the tray.
 - Added keyboard shortcut settings in **Settings > Opening** to change them.
 
 <br>

@@ -15,6 +15,7 @@ struct OpeningPage: View {
     @AppStorage(Preferences.haptics) private var haptics = false
     @AppStorage(Preferences.swipeToOpen) private var swipeToOpen = true
     @AppStorage(Preferences.swipeToSkip) private var swipeToSkip = true
+    @AppStorage(Preferences.swipeToSwitch) private var swipeToSwitch = true
     @AppStorage(Preferences.tray) private var trayOn = true
     @ObservedObject private var shortcuts = Shortcuts.shared
 
@@ -41,6 +42,12 @@ struct OpeningPage: View {
                 Toggle(isOn: $swipeToSkip) {
                     Text("Change songs")
                     Text("Swipe left or right with two fingers.")
+                }
+                if trayOn {
+                    Toggle(isOn: $swipeToSwitch) {
+                        Text("Switch to the tray")
+                        Text("Hold Command and swipe left with two fingers, and right to go back.")
+                    }
                 }
             }
             // Works from any app; click it to type another, as in Keyboard Shortcuts settings.
