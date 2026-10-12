@@ -17,7 +17,8 @@ which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 ### Opening the notch
 
 Hover over it, click it, or either, with an optional delay. Swipe down with two
-fingers to open it, up to close it, and sideways to change songs. See the
+fingers to open it, up to close it, and sideways to change songs. From any app,
+⌃⌥⌘1 opens it with the player. See the
 [User Manual](USER-MANUAL.md#opening-and-closing).
 
 ### Layouts and backgrounds

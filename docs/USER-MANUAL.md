@@ -71,6 +71,10 @@ notch closes when the pointer leaves it.
 | Swipe up with two fingers | Closes the notch |
 | Swipe left or right with two fingers | Changes songs |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
+| ⌃⌥⌘1, from any app | Opens the notch with the player; again, closes it |
+
+Opened with ⌃⌥⌘1, the notch stays open until you press it again, click
+elsewhere, or move the pointer onto the notch and away.
 
 <br>
 

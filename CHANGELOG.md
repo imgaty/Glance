@@ -4,6 +4,16 @@
 
 <br>
 
+## Release 0.2.0
+
+`Released: not yet`
+
+### Opening
+
+- Added ⌃⌥⌘1 to open and close the player from any app.
+
+<br>
+
 ## Release 0.1.0
 
 `Released: 11 October 2026`

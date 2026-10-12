@@ -46,6 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.onShowPermissions = { [onboarding] in onboarding.show(startingAt: .permissions) }
         notches.contextMenu = statusBar.menu
         notches.start()
+        Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
+        Shortcuts.shared.register()
         self.statusBar = statusBar
         watchSettings()
         // The welcome tour, on first launch, until its window has been closed once.
@@ -379,6 +381,15 @@ final class NotchManager {
     private func pointerMoved() {
         let location = NSEvent.mouseLocation
         controllers.forEach { $0.pointerMoved(to: location) }
+    }
+
+    /// A shortcut: the notch on the display under the pointer, or the first one.
+    func perform(_ action: Shortcuts.Action) {
+        let location = NSEvent.mouseLocation
+        let controller = controllers.first { $0.screenFrame.contains(location) } ?? controllers.first
+        switch action {
+        case .music: controller?.toggleFromKeyboard()
+        }
     }
 
     private func clickedElsewhere() {

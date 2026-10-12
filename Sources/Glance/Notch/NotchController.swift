@@ -104,6 +104,9 @@ final class NotchController {
     /// A menu opened from inside the open notch, like the sound output's, is up: the pointer is on
     /// the menu, outside the notch, but the notch stays open under it until it's gone.
     private var menuHold = false
+    /// Opened from the keyboard: it stays open with the pointer elsewhere, until the shortcut comes
+    /// again, a click lands outside it, or the pointer visits it and leaves.
+    private var keyboardHold = false
     private var menuWatches: [AnyCancellable] = []
 
     /// A full-screen app covers this display and the user chose to hide the notch then. Like the
@@ -479,7 +482,9 @@ final class NotchController {
                 if model.state == .peek { settle(at: p) } else { model.approach(closeness(to: p)) }
             }
         case .open:
-            if menuHold || openZone.contains(p) {
+            // Once the pointer has been on it, it closes as usual when the pointer leaves.
+            if openZone.contains(p) { keyboardHold = false }
+            if menuHold || keyboardHold || openZone.contains(p) {
                 closeTask?.cancel()
                 closeTask = nil
             } else if closeTask == nil {
@@ -557,7 +562,16 @@ final class NotchController {
         startPolling()
     }
 
+    /// The player's shortcut: opens the notch, or closes it if it's open.
+    func toggleFromKeyboard() {
+        guard model.state != .open else { return close(holdUntilExit: false) }
+        guard !tucked else { return }
+        keyboardHold = true
+        open()
+    }
+
     private func close(holdUntilExit hold: Bool) {
+        keyboardHold = false
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil
