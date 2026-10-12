@@ -959,9 +959,9 @@ final class NotchController {
 
     private var trayReach: CGFloat {
         let tray = Tray.shared
-        let well = TrayView.showsAirDrop(tray: tray, dropping: model.dropping) ? Shelf.wellWidth : 0
+        let airDrop = TrayView.showsAirDropTile(tray) ? Shelf.airDropWidth : 0
         let width = model.expanded ? model.expandedWidth : model.openSize.width
-        return Shelf.reach(count: tray.items.count + (model.dropping ? 1 : 0), in: width - well)
+        return Shelf.reach(count: tray.items.count, in: width - airDrop)
     }
 
     /// Two fingers sideways: left for the next song, right for the previous one, as on a phone's

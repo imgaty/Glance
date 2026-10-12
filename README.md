@@ -85,9 +85,9 @@ screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app to open i
 
 <img src="./assets/screenshots/tray.png"
      width="450"
-     alt="The open notch on the tray: a row of rounded pictures, a photo, a
-     note copied from Notes, a PDF, a link to github.com and a folder, with
-     the photo's name and where it is below them.">
+     alt="The open notch on the tray: a row of tiles, a photo, a note copied
+     from Notes, a PDF and a link to github.com, each with its name under it,
+     and a line below them saying what a click, a drag and a double-click do.">
 <br>
 <sub>Showcase of the tray, with files and copies.</sub>
 

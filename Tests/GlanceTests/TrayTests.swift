@@ -297,7 +297,7 @@ struct TrayTests {
     @Test("The shelf scrolls only as far as its last tile")
     func shelf() {
         #expect(Shelf.width(count: 0) == 0)
-        #expect(Shelf.width(count: 2) == Shelf.tile * 2 + Shelf.spacing + PlayerLayout.padding * 2)
+        #expect(Shelf.width(count: 2) == Shelf.tile.width * 2 + Shelf.spacing + Shelf.inset * 2)
         #expect(Shelf.reach(count: 2, in: 400) == 0)
         #expect(Shelf.reach(count: 10, in: 400) == Shelf.width(count: 10) - 400)
     }

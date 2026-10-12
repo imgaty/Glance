@@ -15,10 +15,9 @@ import SwiftUI
 struct TileInteraction: NSViewRepresentable {
     let item: TrayItem
     let tray: Tray
-    /// Whose chosen items a click with ⌘ or Shift changes, and a drag or the menu acts on: the
-    /// notch's, or the history window's.
+    /// Whose selected items a click changes, and a drag or the menu acts on.
     let selector: TraySelecting
-    /// In the history window, as in Finder, a click chooses an item; in the notch, it copies it.
+    /// A click selects the item, or deselects it, as on a shelf; otherwise it copies it.
     let clickSelects: Bool
     let hover: (Bool) -> Void
 
@@ -83,7 +82,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
         // A chosen item takes every chosen one with it; any other goes alone.
         if !selector.selection.contains(item.id) { selector.deselect() }
         var items: [NSDraggingItem] = []
-        let side = Shelf.tile
+        let side = Shelf.well.height
         for target in selector.targets(of: item) {
             let picture = TrayThumbnails.cached(target) ?? TileDrag.picture(for: target)
             for writer in TileDrag.writers(for: target, in: tray) {
@@ -114,7 +113,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
         } else if event.clickCount >= 2 {
             tray.paste(item)
         } else if event.clickCount == 1, clickSelects {
-            selector.choose(item.id, toggling: false, extending: false)
+            selector.choose(item.id, toggling: true, extending: false)
         } else if event.clickCount == 1 {
             selector.deselect()
             tray.copy(item)
@@ -164,8 +163,8 @@ enum TileDrag {
 
     /// Text and links are dragged as their card: a symbol on a gray tile, the size of the picture.
     static func picture(for item: TrayItem) -> NSImage {
-        let side = Shelf.tile
-        let symbol = NSImage(systemSymbolName: item.kind == .link ? "link" : "text.alignleft", accessibilityDescription: nil)?
+        let side = Shelf.well.height
+        let symbol = NSImage(systemSymbolName: item.kind == .link ? "link" : "doc.plaintext", accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 20, weight: .medium).applying(.init(paletteColors: [.white])))
         return NSImage(size: CGSize(width: side, height: side), flipped: false) { rect in
             NSColor(white: 0.28, alpha: 0.95).setFill()

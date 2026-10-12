@@ -134,37 +134,37 @@ record matches the song's title, artist and length.
 ## The tray
 
 The tray keeps the files you drop on the notch, what you copy, and your
-screenshots, newest first, as a row of pictures the size of the player's cover.
-Under the row, as under the cover, are the name of the item under the pointer,
-or the newest, and where and when it came from. Open it with ⇧⌘2, or switch to
-it from the player. Dragging a file, or anything else the tray takes, into the
+screenshots, newest first, as a row of tiles, each with its name under it. The
+line under the row says where and when the item under the pointer came from, or
+how many are selected. Open it with ⇧⌘2, or switch to it from the player. Dragging a file, or anything else the tray takes, into the
 top half of the screen opens it too, ready for the drop, without reaching the
 top edge.
 
 <img src="../assets/screenshots/tray.png"
      width="450"
-     alt="The open notch on the tray: a row of rounded pictures, a photo, a
-     note copied from Notes, a PDF, a link to github.com and a folder, with
-     the photo's name and where it is below them.">
+     alt="The open notch on the tray: a row of tiles, a photo, a note copied
+     from Notes, a PDF and a link to github.com, each with its name under it,
+     and a line below them saying what a click, a drag and a double-click do.">
 <br>
 <sub>The tray, with files dropped on it and a note and a link copied</sub>
 
 | Action | Operation |
 | --- | --- |
-| Drag files onto the notch | Keeps them in the tray until you remove them |
-| Drag files onto `AirDrop`, at the tray's end | Sends them with AirDrop, without keeping them |
-| Point at an item | Shows its name, and where and when it came from, under the row |
-| Click an item | Copies it |
-| ⌘-click or Shift-click items | Chooses several, to copy, drag, AirDrop or remove together |
+| Drag files onto the notch, onto `Keep in Tray` | Keeps them in the tray until you remove them |
+| Drag files onto the notch, onto `AirDrop` | Sends them with AirDrop, without keeping them |
+| Point at an item | Shows where and when it came from, under the row |
+| Click an item | Selects it, or deselects it, to drag, AirDrop or remove several together |
+| Shift-click an item | Selects everything from the last item selected to it |
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
-| Drag an item out | Puts it there; files move or copy as they do in Finder. Drop it on `AirDrop` to send it |
+| Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder. Drop them on `AirDrop`, at the tray's end, to send them |
 | Swipe left or right with two fingers | Scrolls the tray |
 | Click the handle under the tray, or swipe down with two fingers | Widens the notch to show everything in the tray |
 | Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, AirDrop, Share, and Remove from Tray |
 
-`AirDrop` shows at the tray's end only while something is being dragged, onto
-the notch or out of the tray. A link shows its page's title and its site's icon,
-which Glance fetches from the site, as Messages does.
+Something dragged onto the notch from another app gets two places to go:
+`Keep in Tray` and `AirDrop`. Items dragged out of the tray get `AirDrop` at its
+end. A link shows its site's icon, which Glance fetches from the site, as
+Messages does.
 
 Files stay where they are; the tray only points to them, and follows them if
 they move. If a file is deleted, it leaves the tray too.

@@ -10,137 +10,64 @@ import LinkPresentation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// An item's picture, as the desktop shows a file: a photo or a screenshot whole, with a thin edge;
-/// a document, its first page; a folder, its icon; copied text, as a page with the text on it, as
-/// Finder shows a document's first page; a link, its site's icon on a tile, as Safari shows a
-/// favorite. Each fits the same square, so the row keeps an even rhythm.
+/// What an item shows in its tile's well: a preview of its contents where Quick Look can make one,
+/// filling the well but for a narrow margin; otherwise its icon, smaller, in the middle. Text shows
+/// as a text document's symbol, a link as its site's icon, or a link's symbol until that's fetched.
 struct TrayItemPicture: View {
     let item: TrayItem
     let tray: Tray
-    let side: CGFloat
+    /// The well it fills.
+    let size: CGSize
     @State private var thumbnail: NSImage?
     @State private var link: LinkPreview?
 
-    /// The corners of a tile the size of a thumbnail.
-    static func radius(for side: CGFloat) -> CGFloat { side * 0.2 }
-
     var body: some View {
-        // Every item stands on the same line, at the foot of its square, as icons do in Finder and
-        // the Dock.
-        picture
-            .frame(width: side, height: side, alignment: .bottom)
+        content
+            .frame(width: size.width, height: size.height)
             .task(id: item.id) {
                 if item.kind == .link {
                     link = LinkPreviews.cached(item)
                     if link == nil { link = await LinkPreviews.preview(for: item) }
                     return
                 }
+                guard item.kind != .text else { return }
                 thumbnail = TrayThumbnails.cached(item)
-                if thumbnail == nil { thumbnail = await TrayThumbnails.image(for: item, in: tray, side: side) }
+                if thumbnail == nil { thumbnail = await TrayThumbnails.image(for: item, in: tray, side: 64) }
             }
     }
 
-    @ViewBuilder private var picture: some View {
+    @ViewBuilder private var content: some View {
         switch item.kind {
-        case .image:
-            photo
-        case .files where Self.isPhoto(item):
-            photo.overlay(alignment: .topTrailing) { count }
         case .text:
-            page
-        case .files:
-            // Until Quick Look has made its picture, or if it can't, the icon of its kind of file.
-            Image(nsImage: thumbnail ?? Self.icon(of: item))
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .overlay(alignment: .topTrailing) { count }
+            symbol("doc.plaintext")
         case .link:
-            site
-        }
-    }
-
-    /// Photos and screenshots, whole, their corners a little rounded, with only a hairline to keep a
-    /// dark one from melting into the notch; a video Quick Look can't show yet, its icon, bare.
-    @ViewBuilder private var photo: some View {
-        if let thumbnail, !TrayThumbnails.isIcon(item) {
-            let shape = RoundedRectangle(cornerRadius: side * 0.05, style: .continuous)
-            Image(nsImage: thumbnail)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .clipShape(shape)
-                .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
-        } else {
-            Image(nsImage: thumbnail ?? Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
-        }
-    }
-
-    /// Copied text, as a page with the text on it, as Finder shows a document's first page; drawn
-    /// here, as Quick Look draws a short text as a page too small to read.
-    private var page: some View {
-        let height = side * 0.94, shape = RoundedRectangle(cornerRadius: side * 0.035, style: .continuous)
-        return
-            shape
-            .fill(Color(white: 0.96))
-            .overlay(alignment: .topLeading) {
-                Text(item.text ?? "")
-                    .font(.system(size: side * 0.085))
-                    .foregroundStyle(Color(white: 0.22))
-                    .lineSpacing(-side * 0.01)
-                    .lineLimit(9)
-                    .padding(side * 0.07)
+            if let icon = link?.icon {
+                Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 13)
+            } else {
+                symbol("link")
             }
-            .clipShape(shape)
-            .frame(width: height * 0.77, height: height)
-    }
-
-    /// Several files copied together: how many, as a stack of them is counted.
-    @ViewBuilder private var count: some View {
-        if item.kind == .files, item.names.count > 1 {
-            Text("\(item.names.count)")
-                .font(.system(size: side * 0.16, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white)
-                .padding(.horizontal, side * 0.08)
-                .frame(minWidth: side * 0.3, minHeight: side * 0.3)
-                .background(Capsule().fill(Color(white: 0.3)))
-                .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 0.5))
-                .offset(x: side * 0.06, y: -side * 0.06)
+        case .files, .image:
+            if let thumbnail, !TrayThumbnails.isIcon(item) {
+                // A preview, nearly filling the well.
+                Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                    .padding(4)
+            } else {
+                // An icon, smaller, in the middle.
+                Image(nsImage: thumbnail ?? Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 8)
+            }
         }
     }
 
-    /// A link, as Safari shows a favorite: the site's icon on a tile, or its first letter.
-    private var site: some View {
-        let tile = side * 0.84
-        let shape = RoundedRectangle(cornerRadius: Self.radius(for: tile), style: .continuous)
-        return
-            shape
-            .fill(link?.icon == nil ? Self.color(for: item.title) : Color(white: 0.94))
-            .overlay {
-                if let icon = link?.icon {
-                    Image(nsImage: icon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: tile * 0.56, height: tile * 0.56)
-                        .clipShape(RoundedRectangle(cornerRadius: tile * 0.1, style: .continuous))
-                } else {
-                    Text(item.title.prefix(1).uppercased())
-                        .font(.system(size: tile * 0.48, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: tile, height: tile)
-    }
-
-    /// A color for a site with no icon, the same every time for the same site, as Safari picks one.
-    private static func color(for site: String) -> Color {
-        let colors: [Color] = [.blue, .indigo, .purple, .pink, .orange, .teal, .green, .gray]
-        let index = site.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF } % colors.count
-        return colors[index].mix(with: .black, by: 0.15)
-    }
-
-    /// Photos, screenshots and videos show whole, with an edge; other files show as Finder shows them.
-    private static func isPhoto(_ item: TrayItem) -> Bool {
-        guard let type = UTType(filenameExtension: ((item.names.first ?? "") as NSString).pathExtension) else { return false }
-        return type.conforms(to: .image) || type.conforms(to: .movie)
+    private func symbol(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.system(size: size.height * 0.4, weight: .regular))
+            .foregroundStyle(.white.opacity(0.75))
     }
 
     private static func icon(of item: TrayItem) -> NSImage {
@@ -150,15 +77,15 @@ struct TrayItemPicture: View {
 
     // MARK: Names
 
-    /// What the item is called: a file's name, a link's page title or site, or the start of text.
+    /// What the item is called, under its tile: a file's name, a text's first line, a link's site.
     static func title(of item: TrayItem) -> String {
         switch item.kind {
         case .files: item.title
         case .image: item.origin == .screenshot ? "Screenshot" : "Image"
-        case .link: LinkPreviews.cached(item)?.title ?? item.title
+        case .link: item.title
         case .text:
             (item.text ?? "").split(whereSeparator: \.isNewline).first.map {
-                $0.trimmingCharacters(in: .whitespaces)
+                String($0.trimmingCharacters(in: .whitespaces).prefix(48))
             } ?? "Text"
         }
     }

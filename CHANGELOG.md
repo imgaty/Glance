@@ -14,9 +14,10 @@
 - Added clipboard history, kept for 30 minutes, 8 hours or 7 days, never
   keeping passwords.
 - Added screenshots to the tray, as soon as each is saved.
-- Added AirDrop at the tray's end while something's dragged, to send it.
+- Added AirDrop beside the tray while something's dragged onto the notch, and
+  at its end while items are dragged out of it.
 - Added link previews to the tray, with each page's title and site icon.
-- Added choosing several items with ⌘-click and Shift-click.
+- Added selecting items with a click, and a run of them with Shift-click.
 - Added Quick Look and AirDrop to each item's menu in the tray.
 - Added widening the tray sideways to show everything in it, from its handle or
   a swipe down.
