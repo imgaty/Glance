@@ -52,8 +52,6 @@ struct OpeningPage: View {
                         if shortcuts.taken.contains(action) { Text("Another app is using this shortcut.") }
                     }
                 }
-            } header: {
-                SectionTitle("Keyboard Shortcut")
             }
         }
     }
