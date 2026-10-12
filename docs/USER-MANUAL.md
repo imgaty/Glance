@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 11 October 2026`
+`Created: 11 October 2026` | `Last updated: 12 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -71,10 +71,11 @@ notch closes when the pointer leaves it.
 | Swipe up with two fingers | Closes the notch |
 | Swipe left or right with two fingers | Changes songs |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
-| ⌃⌥⌘1, from any app | Opens the notch with the player; again, closes it |
+| ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
 
-Opened with ⌃⌥⌘1, the notch stays open until you press it again, click
-elsewhere, or move the pointer onto the notch and away.
+Opened with ⇧⌘1, the notch stays open until you press it again, click
+elsewhere, or move the pointer onto the notch and away. To use another shortcut,
+change it in **Settings > Opening**.
 
 <br>
 
@@ -194,6 +195,7 @@ Glance's icon in the menu bar opens a menu:
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
 | `Open and close` | Two-finger swipes down and up |
 | `Change songs` | Two-finger swipes left and right |
+| `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 
 ### Displays
 

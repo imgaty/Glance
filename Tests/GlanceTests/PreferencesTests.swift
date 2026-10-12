@@ -46,6 +46,7 @@ struct PreferencesTests {
             (Preferences.clickDelay, "clickDelay"),
             (Preferences.haptics, "haptics"),
             (Preferences.hideInFullScreen, "hideInFullScreen"),
+            (Preferences.shortcutMusic, "shortcutMusic"),
         ])
     func keys(key: String, stored: String) {
         #expect(key == stored)

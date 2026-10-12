@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 11 October 2026`
+`Created: 11 October 2026` | `Last updated: 12 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -18,7 +18,7 @@ which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 
 Hover over it, click it, or either, with an optional delay. Swipe down with two
 fingers to open it, up to close it, and sideways to change songs. From any app,
-⌃⌥⌘1 opens it with the player. See the
+⇧⌘1 opens it with the player, or a shortcut of your choice. See the
 [User Manual](USER-MANUAL.md#opening-and-closing).
 
 ### Layouts and backgrounds

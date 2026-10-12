@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 11 October 2026`
+`Created: 11 October 2026` | `Last updated: 12 October 2026`
 
 <br>
 
@@ -10,7 +10,9 @@
 
 ### Opening
 
-- Added ⌃⌥⌘1 to open and close the player from any app.
+- Added ⇧⌘1 to open and close the player from any app, ahead of the app's
+  own shortcuts.
+- Added a keyboard shortcut setting in **Settings > Opening** to change it.
 
 <br>
 

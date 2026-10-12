@@ -200,6 +200,8 @@ enum Preferences {
     static let clickDelay = "clickDelay"
     static let haptics = "haptics"
     static let hideInFullScreen = "hideInFullScreen"
+    /// The shortcut that opens the player, when it isn't the one Glance came with: a KeyCombo, as JSON.
+    static let shortcutMusic = "shortcutMusic"
 }
 
 /// The settings that are watched by their keys.

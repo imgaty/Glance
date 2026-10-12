@@ -15,6 +15,7 @@ struct OpeningPage: View {
     @AppStorage(Preferences.haptics) private var haptics = false
     @AppStorage(Preferences.swipeToOpen) private var swipeToOpen = true
     @AppStorage(Preferences.swipeToSkip) private var swipeToSkip = true
+    @ObservedObject private var shortcuts = Shortcuts.shared
 
     var body: some View {
         Form {
@@ -40,6 +41,19 @@ struct OpeningPage: View {
                     Text("Change songs")
                     Text("Swipe left or right with two fingers.")
                 }
+            }
+            // Works from any app; click it to type another, as in Keyboard Shortcuts settings.
+            Section {
+                ForEach(Shortcuts.Action.allCases, id: \.self) { action in
+                    LabeledContent {
+                        ShortcutRecorder(action: action)
+                    } label: {
+                        Text(action.title)
+                        if shortcuts.taken.contains(action) { Text("Another app is using this shortcut.") }
+                    }
+                }
+            } header: {
+                SectionTitle("Keyboard Shortcut")
             }
         }
     }
