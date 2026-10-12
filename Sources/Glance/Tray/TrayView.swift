@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The shelf's measures, shared by what draws it and what scrolls it.
 enum Shelf {
@@ -197,6 +198,8 @@ private struct TrayTile: View {
                 .lineLimit(2)
                 .truncationMode(.middle)
                 .multilineTextAlignment(.center)
+                // As Finder's names on the desktop, readable over whatever's behind.
+                .shadow(color: .black.opacity(0.6), radius: 1.5, y: 0.5)
                 .frame(width: Shelf.tile - 4, height: Shelf.caption, alignment: .top)
         }
         .padding(.top, 4)
@@ -246,6 +249,11 @@ private struct TrayTile: View {
         }
     }
 
+    private static func icon(of item: TrayItem) -> NSImage {
+        let ext = ((item.names.first ?? "") as NSString).pathExtension
+        return NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
+    }
+
     /// Looked up once for each app.
     private static var appNames: [String: String?] = [:]
 
@@ -262,10 +270,9 @@ private struct TrayTile: View {
         switch item.kind {
         case .files:
             ZStack(alignment: .topTrailing) {
-                if let thumbnail {
-                    Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fit)
-                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                }
+                // Until its picture is made, or if it can't be, the icon of its kind of file.
+                Image(nsImage: thumbnail ?? Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                 // As Finder counts files dragged together.
                 if item.names.count > 1 {
                     Text("\(item.names.count)")

@@ -126,7 +126,7 @@ final class Tray: ObservableObject {
     func drop(_ pasteboard: NSPasteboard) -> Bool {
         if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
             // In the order they were dragged, the first at the front.
-            for url in urls.reversed() { addFile(url) }
+            for url in urls.reversed() { keep(url) }
             return true
         }
         if let promises = pasteboard.readObjects(forClasses: [NSFilePromiseReceiver.self]) as? [NSFilePromiseReceiver], !promises.isEmpty {
@@ -153,6 +153,30 @@ final class Tray: ObservableObject {
         let types = Set(pasteboard.types ?? [])
         let wanted: Set<NSPasteboard.PasteboardType> = [.fileURL, .URL, .string, .png, .tiff, .rtf, .html]
         return !types.isDisjoint(with: wanted) || !types.isDisjoint(with: NSFilePromiseReceiver.readableDraggedTypes.map { .init($0) })
+    }
+
+    /// A file kept where it is; one in a temporary folder, like a screenshot dragged from its
+    /// thumbnail, which goes once it's dropped, is copied into a folder of the item's own first.
+    private func keep(_ url: URL) {
+        guard Self.isTemporary(url) else { return addFile(url) }
+        prepareFolder()
+        let id = UUID()
+        let place = folder.appending(path: id.uuidString)
+        let copy = place.appending(path: url.lastPathComponent)
+        do {
+            try FileManager.default.createDirectory(at: place, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: url, to: copy)
+            addFile(copy, id: id)
+        } catch {
+            try? FileManager.default.removeItem(at: place)
+        }
+    }
+
+    static func isTemporary(_ url: URL) -> Bool {
+        let path = url.resolvingSymlinksInPath().path
+        let temporary = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path
+        return path.hasPrefix("/private/var/folders/") || path.hasPrefix("/private/tmp/") || path.contains("/TemporaryItems/")
+            || path.hasPrefix(temporary)
     }
 
     private func addFile(_ url: URL, id: UUID = UUID()) {

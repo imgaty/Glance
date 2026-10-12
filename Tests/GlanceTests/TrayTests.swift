@@ -183,7 +183,7 @@ struct TrayTests {
 
     @Test("Files dropped together are each kept on their own, first at the front, until removed")
     func droppedFiles() throws {
-        let folder = FileManager.default.temporaryDirectory.appending(path: "GlanceTrayDrop-\(UUID().uuidString)")
+        let folder = URL.cachesDirectory.appending(path: "dev.vibe.Glance.tests/GlanceTrayDrop-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let urls = ["A.txt", "B.txt"].map { folder.appending(path: $0) }
@@ -197,7 +197,7 @@ struct TrayTests {
 
     @Test("A file moved after it was kept is followed; one that's deleted goes")
     func movedFiles() throws {
-        let folder = FileManager.default.temporaryDirectory.appending(path: "GlanceTrayMove-\(UUID().uuidString)")
+        let folder = URL.cachesDirectory.appending(path: "dev.vibe.Glance.tests/GlanceTrayMove-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let original = folder.appending(path: "Report.txt")
@@ -210,6 +210,22 @@ struct TrayTests {
         try FileManager.default.removeItem(at: moved)
         tray.purge(checkingFiles: true)
         #expect(tray.items.isEmpty)
+    }
+
+    @Test("A file dropped from a temporary folder, as a screenshot from its thumbnail, is kept as a copy")
+    func temporaryFile() throws {
+        let original = FileManager.default.temporaryDirectory.appending(path: "Screenshot \(UUID().uuidString).png")
+        try Data("png".utf8).write(to: original)
+        let tray = tray()
+        defer { try? FileManager.default.removeItem(at: tray.folder) }
+        #expect(Tray.isTemporary(original))
+        tray.drop(pasteboard { $0.writeObjects([original as NSURL]) })
+        try FileManager.default.removeItem(at: original)
+        let kept = try #require(tray.urls(of: tray.items[0]).first)
+        #expect(kept.resolvingSymlinksInPath().path.hasPrefix(tray.folder.resolvingSymlinksInPath().path))
+        #expect(try Data(contentsOf: kept) == Data("png".utf8))
+        tray.remove(tray.items[0].id)
+        #expect(!FileManager.default.fileExists(atPath: kept.path))
     }
 
     @Test("Dropped text is kept until removed")
