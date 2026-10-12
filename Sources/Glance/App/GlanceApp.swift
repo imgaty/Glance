@@ -215,7 +215,7 @@ enum Preferences {
     static let tray = "tray"
     static let trayClipboard = "trayClipboard"
     static let trayClipboardKeep = "trayClipboardKeep"
-    /// Holding ⌘ and swiping sideways with two fingers switches between the player and the tray.
+    /// Scrolling with Shift held switches between the player and the tray.
     static let swipeToSwitch = "swipeToSwitch"
 }
 
@@ -322,6 +322,13 @@ final class NotchManager {
             NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
                 MainActor.assumeIsolated { self?.clickedElsewhere() }
             },
+            NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+                MainActor.assumeIsolated { self?.pressed(event.type == .leftMouseDown) }
+            },
+            NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+                MainActor.assumeIsolated { self?.pressed(event.type == .leftMouseDown) }
+                return event
+            },
         ].compactMap { $0 }
     }
 
@@ -398,7 +405,36 @@ final class NotchManager {
 
     private func pointerMoved() {
         let location = NSEvent.mouseLocation
-        controllers.forEach { $0.pointerMoved(to: location) }
+        // However the drag ended, it has once the button is up.
+        if dragging, NSEvent.pressedMouseButtons & 1 == 0 { dragging = false }
+        // A drag that's just begun: what it carries is on the drag pasteboard, newly changed.
+        if !dragging, NSEvent.pressedMouseButtons & 1 != 0, Tray.isOn, !TileInteractionView.draggingOut {
+            let board = NSPasteboard(name: .drag)
+            if board.changeCount != dragChange {
+                dragChange = board.changeCount
+                dragging = Tray.accepts(board)
+            }
+        }
+        for controller in controllers {
+            controller.pointerMoved(to: location)
+            controller.dragMoved(to: location, carrying: dragging)
+        }
+    }
+
+    /// A drag from another app carrying something the tray takes, under way.
+    private var dragging = false
+    private var dragChange = NSPasteboard(name: .drag).changeCount
+
+    /// The button down: whatever drag follows is new. Up: it's over.
+    private func pressed(_ down: Bool) {
+        guard down else {
+            guard dragging else { return }
+            dragging = false
+            let location = NSEvent.mouseLocation
+            controllers.forEach { $0.dragMoved(to: location, carrying: false) }
+            return
+        }
+        dragChange = NSPasteboard(name: .drag).changeCount
     }
 
     /// A shortcut: the notch on the display under the pointer, or the first one.

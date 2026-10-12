@@ -46,7 +46,7 @@ struct OpeningPage: View {
                 if trayOn {
                     Toggle(isOn: $swipeToSwitch) {
                         Text("Switch to the tray")
-                        Text("Hold Command and swipe left with two fingers, and right to go back.")
+                        Text("Hold Shift and scroll sideways.")
                     }
                 }
             }

@@ -18,9 +18,9 @@ which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 
 Drag files onto the notch to keep them close, and find what you copied, newest
 first. Click something to copy it again, double-click to paste it, or drag it
-out. Copies stay for 30 minutes, 8 hours or 7 days, and passwords never do.
-⇧⌘2 opens it, or hold ⌘ and swipe left on the player. See the
-[User Manual](USER-MANUAL.md#the-tray).
+out, or send it with AirDrop. Copies stay for 30 minutes, 8 hours or 7 days,
+and passwords never do. ⇧⌘2 opens it, or Shift and a scroll from the player. See
+the [User Manual](USER-MANUAL.md#the-tray).
 
 ### Opening the notch
 

@@ -109,6 +109,9 @@ final class NotchController {
     private var keyboardHold = false
     private var menuWatches: [AnyCancellable] = []
     private var pasteWatch: AnyCancellable?
+    /// Something for the tray is being dragged in the top half of this display: the notch is open on
+    /// the tray to take it, wherever the pointer is.
+    private var dragHold = false
     /// A sideways swipe on the tray was let go and the row glides on.
     private var trayGliding = false
     private var glideCheck: Task<Void, Never>?
@@ -500,7 +503,7 @@ final class NotchController {
         case .open:
             // Once the pointer has been on it, it closes as usual when the pointer leaves.
             if openZone.contains(p) { keyboardHold = false }
-            if menuHold || keyboardHold || openZone.contains(p) {
+            if menuHold || keyboardHold || dragHold || openZone.contains(p) {
                 closeTask?.cancel()
                 closeTask = nil
             } else if closeTask == nil {
@@ -604,6 +607,7 @@ final class NotchController {
 
     private func close(holdUntilExit hold: Bool) {
         keyboardHold = false
+        dragHold = false
         model.dropping = false
         openTask?.cancel()
         closeTask?.cancel()
@@ -640,6 +644,29 @@ final class NotchController {
 
     // MARK: Dropping in the tray
 
+    /// A drag from another app carrying something for the tray: once it's past the middle of the
+    /// display, on its way up, the notch opens on the tray to take it. The pointer needn't reach
+    /// the notch, where the top edge would bring up Mission Control, nor click it. Back down, or let
+    /// go somewhere else, and the notch closes again.
+    func dragMoved(to p: CGPoint, carrying: Bool) {
+        let frame = screen.frame
+        let onDisplay = p.x >= frame.minX && p.x <= frame.maxX && p.y >= frame.minY && p.y <= frame.maxY + 1
+        if carrying, onDisplay, p.y > frame.midY {
+            guard !dragHold, !tucked, Tray.isOn else { return }
+            dragHold = true
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                model.dropping = true
+                model.trayScroll = 0
+            }
+            if model.state != .open { open(on: .tray) } else { turn(to: .tray) }
+        } else if dragHold, !carrying || !onDisplay || p.y < frame.midY - frame.height * 0.05 {
+            dragHold = false
+            if model.dropping { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false } }
+            // Closed now unless the pointer is on it, as over the notch after a drop.
+            pointerMoved(to: p)
+        }
+    }
+
     /// Something the tray takes, dragged over the notch from another app: it opens on the tray,
     /// with a place at the front of the row for it.
     private func dragEntered(_ pasteboard: NSPasteboard) -> NSDragOperation {
@@ -657,7 +684,8 @@ final class NotchController {
     }
 
     private func dragExited() {
-        guard model.dropping else { return }
+        // Still in the top half of the display, it stays ready for the drop.
+        guard model.dropping, !dragHold else { return }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false }
     }
 
@@ -680,7 +708,7 @@ final class NotchController {
         guard event.momentumPhase.isEmpty else {
             guard trayGliding, onTray else { return }
             glideCheck?.cancel()
-            scrollTray(by: right)
+            scrollTray(by: event.scrollingDeltaX)
             // Gliding past an end, it bounces back rather than running on.
             let past = model.trayScroll < -24 || model.trayScroll > trayReach + 24
             if past || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
@@ -689,18 +717,20 @@ final class NotchController {
             }
             return
         }
+        // Scrolling with Shift held goes sideways between the pages, as Shift makes any scroll go
+        // sideways: toward the tray, which is to the right, or back to the player.
         let switches =
-            model.state == .open && Tray.isOn && event.modifierFlags.contains(.command)
+            model.state == .open && Tray.isOn && event.modifierFlags.contains(.shift)
             && UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch)
-        // A wheel turned with ⌘ held: down or right to the tray, up or left back to the player.
+        // A wheel, a notch at a time.
         if switches, event.phase.isEmpty {
-            let toward = abs(right) > abs(down) ? right : down
-            if toward != 0 { turn(to: toward > 0 ? .tray : .player) }
+            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+            if along != 0 { turn(to: along < 0 ? .tray : .player) }
             return
         }
-        // A wheel turned with Shift, sideways, scrolls the tray too.
-        if onTray, event.phase.isEmpty, right != 0 {
-            scrollTray(by: right * (event.hasPreciseScrollingDeltas ? 1 : 8))
+        // A wheel that tilts sideways scrolls the tray.
+        if onTray, event.phase.isEmpty, event.scrollingDeltaX != 0 {
+            scrollTray(by: event.scrollingDeltaX * (event.hasPreciseScrollingDeltas ? 1 : 8))
             return settleTray()
         }
 
@@ -726,9 +756,10 @@ final class NotchController {
                 guard abs(down) + abs(right) > 2 else { return }
                 scrollAxis = abs(right) > abs(down) ? .horizontal : .vertical
             }
+            if switches { return swipedPage(by: scrollAxis == .horizontal ? event.scrollingDeltaX : event.scrollingDeltaY) }
             if scrollAxis == .horizontal {
-                if switches { return swipedPage(by: right) }
-                if onTray { return scrollTray(by: right) }
+                // The row scrolls the way everything else does on this Mac.
+                if onTray { return scrollTray(by: event.scrollingDeltaX) }
                 return skips ? swiped(by: right) : ()
             }
             guard opens else { return }
@@ -747,7 +778,7 @@ final class NotchController {
                 model.stretch = rubberBand(pull)
             }
         default:
-            if onTray, scrollAxis == .horizontal {
+            if onTray, scrollAxis == .horizontal, !switches {
                 // Let go: it glides on if the fingers were still moving; if they'd stopped, it
                 // just settles.
                 trayGliding = true
@@ -772,12 +803,13 @@ final class NotchController {
 
     // MARK: The player and the tray
 
-    /// ⌘ and two fingers sideways: the pages move as pages do, the tray to the right of the player.
-    /// Swiping left brings the tray in; right, the player. The page leans along, then turns; past
-    /// the last page, it only leans.
+    /// Shift and a scroll: the pages move as a page scrolled sideways does, the way this Mac
+    /// scrolls, the tray to the right of the player. The page leans along, then turns; past the
+    /// last page, it only leans.
     private func swipedPage(by delta: CGFloat) {
         guard !pullFired else { return }
         swipe += delta
+        // Scrolled toward the right: the tray.
         let target: NotchPage = swipe < 0 ? .tray : .player
         if abs(swipe) > 56, target != model.page {
             pullFired = true

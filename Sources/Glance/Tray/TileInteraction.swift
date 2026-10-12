@@ -26,6 +26,9 @@ struct TileInteraction: NSViewRepresentable {
 }
 
 final class TileInteractionView: NSView, NSDraggingSource {
+    /// A tile is being dragged out: the drag isn't one coming in for the tray.
+    static var draggingOut = false
+
     var item: TrayItem?
     var tray: Tray?
     var hover: ((Bool) -> Void)?
@@ -67,6 +70,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
             dragging.setDraggingFrame(frame, contents: picture)
             return dragging
         }
+        Self.draggingOut = true
         let session = beginDraggingSession(with: items, event: event, source: self)
         session.animatesToStartingPositionsOnCancelOrFail = true
         session.draggingFormation = .pile
@@ -95,6 +99,10 @@ final class TileInteractionView: NSView, NSDraggingSource {
         case .image: item.files.first.map { [tray.file($0, of: item) as NSURL] } ?? []
         case .link, .text: tray.writers(for: item)
         }
+    }
+
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        Self.draggingOut = false
     }
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
@@ -163,6 +171,12 @@ private final class TileMenu: NSObject {
             case .link: item.text.flatMap(URL.init(string:)).map { [$0] } ?? []
             case .text: [item.text ?? ""]
             }
+        if let airDrop = NSSharingService(named: .sendViaAirDrop), !shared.isEmpty, airDrop.canPerform(withItems: shared) {
+            let item = menu.addItem(withTitle: "AirDrop", action: #selector(sendWithAirDrop), keyEquivalent: "")
+            item.target = self
+            item.image = airDrop.image
+            self.shared = shared
+        }
         if !shared.isEmpty { menu.addItem(NSSharingServicePicker(items: shared).standardShareMenuItem) }
         menu.addItem(.separator())
         add("Remove from Tray", #selector(remove))
@@ -172,6 +186,13 @@ private final class TileMenu: NSObject {
     }
 
     private static var key = 0
+    private var shared: [Any] = []
+
+    /// The AirDrop window, in front, with the item ready to send.
+    @objc private func sendWithAirDrop() {
+        NSApp.activate()
+        NSSharingService(named: .sendViaAirDrop)?.perform(withItems: shared)
+    }
 
     private func add(_ title: String, _ action: Selector) {
         menu.addItem(withTitle: title, action: action, keyEquivalent: "").target = self

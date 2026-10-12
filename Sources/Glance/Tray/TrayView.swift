@@ -17,9 +17,11 @@ enum Shelf {
     static let spacing: CGFloat = 6
     /// Two lines of names under the pictures.
     static let caption: CGFloat = 27
-    /// Each tile sits on its own frosted glass, rounded concentric with its picture.
+    /// A tile's highlight under the pointer, and the band of blur behind them all, around them by
+    /// a margin, rounded concentric with it.
     static let platterRadius: CGFloat = 14
     static let platterHeight: CGFloat = 8 + picture + 5 + caption + 2
+    static let bandMargin: CGFloat = 4
 
     /// The row of tiles, from the first to the last, with the notch's padding at both ends.
     static func width(count: Int) -> CGFloat {
@@ -99,7 +101,29 @@ struct TrayView: View {
         let step = Shelf.tile + Shelf.spacing
         let skipped = max(Int(((scroll - (dropping ? step : 0)) / step).rounded(.down)) - 3, 0)
         let shown = tray.items.dropFirst(skipped).prefix(Int((width / step).rounded(.up)) + 6)
-        return HStack(spacing: Shelf.spacing) {
+        let count = tray.items.count + (dropping ? 1 : 0)
+        return ZStack(alignment: .leading) {
+            // One band of blur behind the whole row, from the first tile to the last, so names
+            // read over whatever's behind the notch.
+            TrayBlur()
+                .frame(width: CGFloat(count) * step - Shelf.spacing + Shelf.bandMargin * 2, height: Shelf.platterHeight)
+                .padding(.leading, PlayerLayout.padding - Shelf.bandMargin)
+            row(shown, skipped: skipped, step: step)
+        }
+        .offset(x: -scroll)
+        .frame(width: width, alignment: .leading)
+        // The row fades out under the notch's sides rather than being cut off by them.
+        .mask {
+            HStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing).frame(width: 14)
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: 14)
+            }
+        }
+    }
+
+    private func row(_ shown: ArraySlice<TrayItem>, skipped: Int, step: CGFloat) -> some View {
+        HStack(spacing: Shelf.spacing) {
             if dropping {
                 DropSlot()
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
@@ -113,16 +137,6 @@ struct TrayView: View {
             }
         }
         .padding(.horizontal, PlayerLayout.padding)
-        .offset(x: -scroll)
-        .frame(width: width, alignment: .leading)
-        // The row fades out under the notch's sides rather than being cut off by them.
-        .mask {
-            HStack(spacing: 0) {
-                LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing).frame(width: 14)
-                Color.black
-                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: 14)
-            }
-        }
     }
 
     /// With nothing in it: what it's for, or, with something dragged over it, where it goes.
@@ -202,13 +216,8 @@ private struct TrayTile: View {
         .padding(.top, 8)
         .padding(.bottom, 2)
         .frame(width: Shelf.tile)
-        // Frosted under each tile, as a notification is, so it reads over whatever's behind the
-        // notch; a little brighter under the pointer.
         .background {
-            TileFrost()
-                .overlay {
-                    RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous).fill(.white.opacity(hovered ? 0.1 : 0))
-                }
+            RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous).fill(.white.opacity(hovered ? 0.1 : 0))
         }
         .overlay {
             TileInteraction(item: item, tray: tray) { hovered = $0 }
@@ -321,30 +330,67 @@ private struct TrayTile: View {
     }
 }
 
-/// The blur under a tile: macOS's own, dark, as its HUDs have. It blurs what the notch shows behind
-/// it, its glass and all, and looks the same whether or not Glance is the app in front.
-private struct TileFrost: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .hudWindow
-        view.blendingMode = .withinWindow
-        view.state = .active
-        view.appearance = NSAppearance(named: .darkAqua)
-        view.maskImage = Self.mask
-        return view
+/// The band of blur behind the tray's row: macOS's own blur, as under its menus, but light, and with
+/// none of its tint, so the row reads over a busy window and the notch keeps its look. It blurs
+/// what the notch shows behind it, its glass and all, whether or not Glance is the app in front.
+private struct TrayBlur: NSViewRepresentable {
+    func makeNSView(context: Context) -> LightBlurView { LightBlurView() }
+    func updateNSView(_ view: LightBlurView, context: Context) {}
+}
+
+final class LightBlurView: NSVisualEffectView {
+    /// Its own blur is 30 points; this is enough to soften text behind it out of the way.
+    private static let radius: CGFloat = 10
+    private static let corner = Shelf.platterRadius + Shelf.bandMargin
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        material = .hudWindow
+        blendingMode = .withinWindow
+        state = .active
+        appearance = NSAppearance(named: .darkAqua)
+        maskImage = Self.mask
     }
 
-    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+    required init?(coder: NSCoder) { fatalError() }
 
-    /// Rounded as the tile is, at any size.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    // AppKit can set its layers up again, as when it's laid out; each time, they're made light.
+    override func layout() {
+        super.layout()
+        lighten()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        lighten()
+        DispatchQueue.main.async { [weak self] in self?.lighten() }
+    }
+
+    private func lighten() {
+        func visit(_ layer: CALayer) {
+            if NSStringFromClass(type(of: layer)) == "CABackdropLayer" {
+                if (layer.value(forKeyPath: "filters.gaussianBlur.inputRadius") as? CGFloat) != Self.radius {
+                    layer.setValue(Self.radius, forKeyPath: "filters.gaussianBlur.inputRadius")
+                }
+            } else if layer !== self.layer, layer.opacity != 0, layer.sublayers?.isEmpty ?? true {
+                // The material's tints.
+                layer.opacity = 0
+            }
+            layer.sublayers?.forEach(visit)
+        }
+        layer.map(visit)
+    }
+
+    /// Rounded as the band is, at any size.
     private static let mask: NSImage = {
-        let radius = Shelf.platterRadius
-        let image = NSImage(size: CGSize(width: radius * 2 + 1, height: radius * 2 + 1), flipped: false) { rect in
+        let image = NSImage(size: CGSize(width: corner * 2 + 1, height: corner * 2 + 1), flipped: false) { rect in
             NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            NSBezierPath(roundedRect: rect, xRadius: corner, yRadius: corner).fill()
             return true
         }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.capInsets = NSEdgeInsets(top: corner, left: corner, bottom: corner, right: corner)
         image.resizingMode = .stretch
         return image
     }()

@@ -70,15 +70,15 @@ notch closes when the pointer leaves it.
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
-| Hold ⌘ and swipe left or right with two fingers | Switches to the tray, and back to the player |
+| Hold Shift and scroll sideways | Switches to the tray, and back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
-| Drag something onto the notch | Opens the tray, to drop it there |
+| Drag something into the top half of the screen | Opens the tray, to drop it there |
 | ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
 | ⇧⌘2, from any app | Opens the notch with the tray; again, closes it |
 
-The notch opens on the player. The tray is to its right: hold ⌘ and swipe left
-with two fingers to go to it, and right to come back. With a mouse, hold ⌘ and
-turn the wheel.
+The notch opens on the player. The tray is to its right: hold Shift and scroll
+toward it, and back to return. It scrolls the way everything else on your Mac
+does.
 
 Opened with a shortcut, the notch stays open until you press it again, click
 elsewhere, or move the pointer onto the notch and away. To use other shortcuts,
@@ -133,8 +133,9 @@ record matches the song's title, artist and length.
 ## The tray
 
 The tray keeps the files you drop on the notch and what you copy, newest first.
-Open it with ⇧⌘2, by dragging something onto the notch, or by holding ⌘ and
-swiping left on the player.
+Open it with ⇧⌘2, or by holding Shift and scrolling sideways on the player.
+Dragging a file, or anything else the tray takes, into the top half of the
+screen opens it too, ready for the drop, without reaching the top edge.
 
 <img src="../assets/screenshots/tray.png"
      width="450"
@@ -151,7 +152,7 @@ swiping left on the player.
 | Drag an item out | Puts it there; files move or copy as they do in Finder |
 | Swipe left or right with two fingers | Scrolls the tray |
 | Hover over an item, then click ✕ | Removes it from the tray |
-| Right-click an item | Open, Show in Finder, Copy, Paste, Share, Remove from Tray, and Clear Tray |
+| Right-click an item | Open, Show in Finder, Copy, Paste, AirDrop, Share, Remove from Tray, and Clear Tray |
 
 Files stay where they are; the tray only points to them, and follows them if
 they move. If a file is deleted, it leaves the tray too.
@@ -247,7 +248,7 @@ Glance's icon in the menu bar opens a menu:
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
 | `Open and close` | Two-finger swipes down and up |
 | `Change songs` | Two-finger swipes left and right |
-| `Switch to the tray` | Two-finger swipes left and right, holding ⌘ |
+| `Switch to the tray` | Scrolling sideways with Shift held |
 | `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 
