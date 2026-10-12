@@ -9,7 +9,8 @@ is playing, in almost any app, and the files and copies you want close at hand,
 right there on the notch. It's built to look and feel like part of macOS.
 
 Glance works mostly offline. Only a few things need the internet: lyrics,
-animated covers, songwriter credits, and a daily check for updates.
+animated covers, songwriter credits, link previews in the tray, and a daily
+check for updates.
 
 <br>
 
@@ -84,8 +85,9 @@ screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app to open i
 
 <img src="./assets/screenshots/tray.png"
      width="450"
-     alt="The open notch on the tray: a photo, a note copied from Notes, a PDF,
-     a link to github.com and a folder, in a row, each with its name below.">
+     alt="The open notch on the tray: a row of rounded pictures, a photo, a
+     note copied from Notes, a PDF, a link to github.com and a folder, with
+     the photo's name and where it is below them.">
 <br>
 <sub>Showcase of the tray, with files and copies.</sub>
 

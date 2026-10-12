@@ -15,7 +15,7 @@ extension Tray {
     /// it never watches the clipboard.
     static let demo: Tray = {
         let folder = URL.cachesDirectory.appending(path: "dev.vibe.Glance/Tour Tray")
-        let files = folder.appending(path: "Files")
+        let files = folder.appending(path: "Downloads")
         try? FileManager.default.removeItem(at: folder)
         try? FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
         let tray = Tray(folder: folder, pasteboard: NSPasteboard(name: .init("dev.vibe.Glance.tour")))

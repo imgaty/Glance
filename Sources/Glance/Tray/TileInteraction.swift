@@ -83,7 +83,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
         // A chosen item takes every chosen one with it; any other goes alone.
         if !selector.selection.contains(item.id) { selector.deselect() }
         var items: [NSDraggingItem] = []
-        let side = Shelf.picture
+        let side = Shelf.tile
         for target in selector.targets(of: item) {
             let picture = TrayThumbnails.cached(target) ?? TileDrag.picture(for: target)
             for writer in TileDrag.writers(for: target, in: tray) {
@@ -91,7 +91,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
                 // Fanned a little, as Finder fans files dragged together.
                 let step = CGFloat(min(items.count, 4)) * 3
                 dragging.setDraggingFrame(
-                    CGRect(x: (bounds.width - side) / 2 + step, y: bounds.height - side - 8 - step, width: side, height: side),
+                    CGRect(x: (bounds.width - side) / 2 + step, y: (bounds.height - side) / 2 - step, width: side, height: side),
                     contents: picture)
                 items.append(dragging)
             }
@@ -164,7 +164,7 @@ enum TileDrag {
 
     /// Text and links are dragged as their card: a symbol on a gray tile, the size of the picture.
     static func picture(for item: TrayItem) -> NSImage {
-        let side = Shelf.picture
+        let side = Shelf.tile
         let symbol = NSImage(systemSymbolName: item.kind == .link ? "link" : "text.alignleft", accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 20, weight: .medium).applying(.init(paletteColors: [.white])))
         return NSImage(size: CGSize(width: side, height: side), flipped: false) { rect in
