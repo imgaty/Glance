@@ -50,8 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Tray.shared.start()
         NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
         NotchSwipes.shared.start()
-        NotificationCenter.default.addObserver(forName: Tray.showHistory, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { TrayHistoryController.shared.show() }
+        NotificationCenter.default.addObserver(forName: Tray.showHistory, object: nil, queue: .main) { [notches] _ in
+            MainActor.assumeIsolated { notches.showHistory() }
         }
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
         Shortcuts.shared.register()
@@ -238,6 +238,8 @@ enum Preferences {
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"
+    /// Swiping and scrolling the other way reaches the tray.
+    static let swipeToSwitchReversed = "swipeToSwitchReversed"
 }
 
 /// The settings that are watched by their keys.
@@ -456,6 +458,12 @@ final class NotchManager {
             return
         }
         dragChange = NSPasteboard(name: .drag).changeCount
+    }
+
+    /// The tray's history, in the notch on the display under the pointer, or the first one.
+    func showHistory() {
+        let location = NSEvent.mouseLocation
+        (controllers.first { $0.screenFrame.contains(location) } ?? controllers.first)?.showHistory()
     }
 
     /// A three-finger swipe on the open notch under the pointer.

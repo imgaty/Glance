@@ -17,7 +17,8 @@
 - Added an AirDrop well at the tray's end, to send what's dropped or chosen.
 - Added choosing several items with ⌘-click and Shift-click.
 - Added Quick Look and AirDrop to each item's menu in the tray.
-- Added a history window of everything the tray kept, to search by day.
+- Added the history: the tray opens out in the notch into everything it kept,
+  by day, from its handle or a swipe down.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening
@@ -26,7 +27,7 @@
   own shortcuts.
 - Added ⇧⌘2 to open and close the tray the same way.
 - Added three fingers on the open notch, or Shift and a scroll, to switch
-  between the player and the tray.
+  between the player and the tray, either way round.
 - Added opening the tray when something is dragged into the top half of the
   screen.
 - Added keyboard shortcut settings in **Settings > Opening** to change them.

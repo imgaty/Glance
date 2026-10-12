@@ -127,6 +127,9 @@ final class NotchModel: ObservableObject {
     @Published var trayScroll: CGFloat = 0
     /// How far a swipe to the other page has pushed this one, before it goes.
     @Published var pageNudge: CGFloat = 0
+    /// The tray opened out into its history, taller and wider.
+    @Published var expanded = false
+    static let historySize = CGSize(width: 600, height: 440)
     /// Where the tray's AirDrop well is, in the notch's points, while it shows; and whether
     /// something dragged is over it.
     var airDropFrame: CGRect?
@@ -196,6 +199,7 @@ final class NotchModel: ObservableObject {
                     closedSize.height + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, closedSize.height + 7 + pull)
+            case .open where expanded && page == .tray: (Self.historySize.width + pull * 0.35, Self.historySize.height + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
@@ -373,9 +377,14 @@ struct NotchView: View {
             if trayOn {
                 TrayView(
                     tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
-                    airDropTargeted: model.airDropTargeted
+                    airDropTargeted: model.airDropTargeted, expanded: model.expanded
+                ) { expanded in
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { model.expanded = expanded }
+                }
+                .frame(
+                    width: model.expanded ? NotchModel.historySize.width : model.openSize.width,
+                    height: model.expanded ? NotchModel.historySize.height : model.openSize.height
                 )
-                .frame(width: model.openSize.width, height: model.openSize.height)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }

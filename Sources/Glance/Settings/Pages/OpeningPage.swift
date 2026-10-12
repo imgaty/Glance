@@ -16,6 +16,7 @@ struct OpeningPage: View {
     @AppStorage(Preferences.swipeToOpen) private var swipeToOpen = true
     @AppStorage(Preferences.swipeToSkip) private var swipeToSkip = true
     @AppStorage(Preferences.swipeToSwitch) private var swipeToSwitch = true
+    @AppStorage(Preferences.swipeToSwitchReversed) private var switchReversed = false
     @AppStorage(Preferences.tray) private var trayOn = true
     @ObservedObject private var shortcuts = Shortcuts.shared
 
@@ -47,6 +48,12 @@ struct OpeningPage: View {
                     Toggle(isOn: $swipeToSwitch) {
                         Text("Switch to the tray")
                         Text("Swipe left or right with three fingers on the open notch, or scroll holding Shift.")
+                    }
+                    if swipeToSwitch {
+                        Toggle(isOn: $switchReversed) {
+                            Text("Reverse direction")
+                            Text("Swipe and scroll the other way to reach the tray.")
+                        }
                     }
                 }
             }

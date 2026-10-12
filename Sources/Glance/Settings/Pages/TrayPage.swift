@@ -54,9 +54,9 @@ struct TrayPage: View {
             Section {
                 CenteredRow {
                     Text("Tray History")
-                    Text("Everything the tray has kept, by day, to search and look through.")
+                    Text("Everything the tray has kept, by day. Click the handle under the tray to see it there.")
                 } trailing: {
-                    Button("Show History") { TrayHistoryController.shared.show() }
+                    Button("Show History") { NotificationCenter.default.post(name: Tray.showHistory, object: nil) }
                         .disabled(!trayOn)
                 }
                 CenteredRow {

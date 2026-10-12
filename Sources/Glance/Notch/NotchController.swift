@@ -178,10 +178,11 @@ final class NotchController {
         model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera, island: resting.island)
 
         // Room for the largest layout with the lyrics open, so switching layouts never resizes it.
+        // Room for the largest layout with the lyrics open, and for the tray's history.
         let largest = PlayerLayout.allCases.map { $0.size(closed: closedSize) }
         let size = CGSize(
-            width: largest.map(\.width).max()! + model.lyricsWidth + Layout.windowPadding.width * 2,
-            height: largest.map(\.height).max()! + Layout.windowPadding.height)
+            width: max(largest.map(\.width).max()! + model.lyricsWidth, NotchModel.historySize.width) + Layout.windowPadding.width * 2,
+            height: max(largest.map(\.height).max()!, NotchModel.historySize.height) + Layout.windowPadding.height)
         panel = NotchPanel(
             frame: CGRect(
                 x: centerX - size.width / 2, y: topY - size.height,
@@ -615,6 +616,8 @@ final class NotchController {
     private func close(holdUntilExit hold: Bool) {
         keyboardHold = false
         dragHold = false
+        // Shrinks with the rest of the notch as it closes.
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) { model.expanded = false }
         model.dropping = false
         model.airDropTargeted = false
         Tray.shared.deselect()
@@ -689,6 +692,8 @@ final class NotchController {
         }
         if own { return onWell ? .copy : [] }
         guard Tray.accepts(pasteboard) else { return [] }
+        // Back to the row, with a place at its front for the drop.
+        if model.expanded, !onWell { expand(false) }
         if !model.dropping {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 model.dropping = true
@@ -751,7 +756,8 @@ final class NotchController {
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
         let right = event.scrollingDeltaX * direction
-        let onTray = model.state == .open && model.page == .tray
+        // The tray's row, not its history, which scrolls on its own.
+        let onTray = model.state == .open && model.page == .tray && !model.expanded
         // A swipe on the tray let go: the row glides on, and settles within its ends.
         guard event.momentumPhase.isEmpty else {
             guard trayGliding, onTray else { return }
@@ -773,7 +779,7 @@ final class NotchController {
         // A wheel, a notch at a time.
         if switches, event.phase.isEmpty {
             let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
-            if along != 0 { turn(to: along < 0 ? .tray : .player) }
+            if along != 0 { turn(to: (along < 0) != switchReversed ? .tray : .player) }
             return
         }
         // A wheel that tilts sideways scrolls the tray.
@@ -816,15 +822,19 @@ final class NotchController {
                 pullFired = true
                 pull = 0
                 open()
+            } else if !pullFired, model.state == .open, model.expanded, pull < -48 {
+                // Pushed up on the history: back to the row.
+                pullFired = true
+                expand(false)
+                return
             } else if !pullFired, model.state == .open, pull < -48 {
                 pullFired = true
                 close(holdUntilExit: true)
                 return
-            } else if !pullFired, model.state == .open, model.page == .tray, pull > 56 {
-                // Pulled further down on the tray: everything it's kept, in the history window.
+            } else if !pullFired, model.state == .open, model.page == .tray, !model.expanded, !Tray.shared.items.isEmpty, pull > 56 {
+                // Pulled further down on the tray: it opens out into the history.
                 pullFired = true
-                close(holdUntilExit: true)
-                NotificationCenter.default.post(name: Tray.showHistory, object: nil)
+                expand(true)
                 return
             }
             guard model.state == .open || pull > 0 else { return }
@@ -857,6 +867,26 @@ final class NotchController {
 
     // MARK: The player and the tray
 
+    /// The tray opened out into its history, or back to its row.
+    private func expand(_ expanded: Bool) {
+        guard model.expanded != expanded else { return }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { model.expanded = expanded }
+        Opening.tap()
+    }
+
+    /// The history, from an item's menu or Settings: the notch opens on the tray, opened out, and
+    /// stays until the pointer has visited it and left, or a click lands elsewhere.
+    func showHistory() {
+        guard Tray.isOn, !tucked else { return }
+        if model.state != .open {
+            keyboardHold = true
+            open(on: .tray)
+        } else {
+            turn(to: .tray)
+        }
+        expand(true)
+    }
+
     /// Whether a three-finger swipe starting here is the notch's: on it, open, with the tray on.
     func takesSwipe(at p: CGPoint) -> Bool {
         swipeZone?.contains(p) ?? false
@@ -870,7 +900,7 @@ final class NotchController {
 
     /// Three fingers on the open notch: toward the page on the right, the tray, or back.
     func swipe(right: Bool) {
-        let page: NotchPage = right ? .tray : .player
+        let page: NotchPage = right != switchReversed ? .tray : .player
         guard page != model.page else { return }
         turn(to: page)
         Opening.tap()
@@ -882,8 +912,8 @@ final class NotchController {
     private func swipedPage(by delta: CGFloat) {
         guard !pullFired else { return }
         swipe += delta
-        // Scrolled toward the right: the tray.
-        let target: NotchPage = swipe < 0 ? .tray : .player
+        // Scrolled toward the right: the tray, unless that's turned around in Settings.
+        let target: NotchPage = (swipe < 0) != switchReversed ? .tray : .player
         if abs(swipe) > 56, target != model.page {
             pullFired = true
             turn(to: target)
@@ -894,14 +924,18 @@ final class NotchController {
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
     }
 
-    /// To the other page, sliding.
+    /// To the other page, sliding; the tray's history closes back to the row as it goes.
     private func turn(to page: NotchPage) {
         guard model.page != page else { return }
         withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
             model.page = page
             model.pageNudge = 0
+            if page == .player { model.expanded = false }
         }
     }
+
+    /// Turned around in Settings: the other way reaches the tray.
+    private var switchReversed: Bool { UserDefaults.standard.bool(forKey: Preferences.swipeToSwitchReversed) }
 
     /// The tray's row follows the fingers, giving way past either end.
     private func scrollTray(by delta: CGFloat) {

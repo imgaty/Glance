@@ -20,7 +20,7 @@ Drag files onto the notch to keep them close, and find what you copied and
 your screenshots, newest first. Click something to copy it again, double-click
 to paste it, drag it out, or drop it on AirDrop. Copies stay for 30 minutes,
 8 hours or 7 days, and passwords never do. ⇧⌘2 opens it, or three fingers on the
-open notch, and its history window shows everything it kept. See the
+open notch, and it opens out into the history of everything it kept. See the
 [User Manual](USER-MANUAL.md#the-tray).
 
 ### Opening the notch

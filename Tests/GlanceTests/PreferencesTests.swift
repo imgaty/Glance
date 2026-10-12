@@ -53,6 +53,7 @@ struct PreferencesTests {
             (Preferences.trayClipboardKeep, "trayClipboardKeep"),
             (Preferences.swipeToSwitch, "swipeToSwitch"),
             (Preferences.trayScreenshots, "trayScreenshots"),
+            (Preferences.swipeToSwitchReversed, "swipeToSwitchReversed"),
         ])
     func keys(key: String, stored: String) {
         #expect(key == stored)

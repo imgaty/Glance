@@ -155,8 +155,8 @@ screen opens it too, ready for the drop, without reaching the top edge.
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
 | Drag an item out | Puts it there; files move or copy as they do in Finder. Drop it on `AirDrop` to send it |
 | Swipe left or right with two fingers | Scrolls the tray |
-| Swipe down with two fingers | Opens the tray's history |
-| Hover over an item, then click ✕ | Removes it from the tray |
+| Click the handle under the tray, or swipe down with two fingers | Opens the tray out into its history |
+| Rest the pointer on an item, then click ✕ | Removes it from the tray |
 | Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, AirDrop, Share, Remove from Tray, and Show Tray History |
 
 Files stay where they are; the tray only points to them, and follows them if
@@ -178,22 +178,13 @@ and stays as long as copies do. Turn this off with
 
 ### History
 
-The history window shows everything the tray has kept, by day: what you copied,
-your screenshots, and what you dropped on the notch. Open it by swiping down
-with two fingers on the tray, from an item's menu, or with
-**Settings > Tray > Show History**. It closes when you click anywhere else.
-
-| Key or action | Operation |
-| --- | --- |
-| Type | Searches the history |
-| `All`, `Copied`, `Screenshots`, `Dropped` | Shows only those |
-| Click, ⌘-click, Shift-click | Chooses items, as in Finder |
-| Space or ⌘Y | Quick Look for the chosen items |
-| Return, or double-click | Pastes the item where you were typing |
-| ⌘C | Copies the chosen items |
-| ⌘A | Chooses everything shown |
-| ⌘⌫ | Removes the chosen items from the tray |
-| Esc | Clears the search, then closes the window |
+The tray opens out, right in the notch, into everything it has kept, by day:
+what you copied, your screenshots, and what you dropped. Click the handle under
+the tray, or swipe down on it with two fingers; or choose
+**Show Tray History** from an item's menu, or
+**Settings > Tray > Show History**. Choose `All`, `Copied`, `Screenshots` or
+`Dropped` along the top, and scroll with two fingers. Items work as they do in
+the row. Click the handle again, or swipe up, to go back to the row.
 
 <br>
 
@@ -267,7 +258,7 @@ Glance's icon in the menu bar opens a menu:
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
-| `Tray History` | Opens the history window |
+| `Tray History` | Opens the tray out into its history |
 | `Clear Tray` | Removes everything in the tray; files stay where they are |
 
 ### Opening
@@ -281,6 +272,7 @@ Glance's icon in the menu bar opens a menu:
 | `Open and close` | Two-finger swipes down and up |
 | `Change songs` | Two-finger swipes left and right |
 | `Switch to the tray` | Three-finger swipes on the open notch, and scrolling sideways with Shift held |
+| `Reverse direction` | Swiping and scrolling the other way to reach the tray |
 | `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 
