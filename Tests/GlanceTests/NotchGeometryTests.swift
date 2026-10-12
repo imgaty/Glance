@@ -299,7 +299,7 @@ struct PlayerOptionsTests {
 struct SettingsPaneTests {
     @Test("The sidebar's pages, in order")
     func order() {
-        #expect(SettingsPane.allCases.map(\.title) == ["General", "Appearance", "Music", "Opening", "Displays"])
+        #expect(SettingsPane.allCases.map(\.title) == ["General", "Appearance", "Music", "Tray", "Opening", "Displays"])
     }
 
     @Test("Each page has its own icon", arguments: SettingsPane.allCases)
@@ -314,7 +314,7 @@ struct SettingsPaneTests {
 
     @Test("The pages about the notch's look and behavior show it at the top")
     func previews() {
-        #expect(SettingsPane.allCases.filter(\.showsPreview) == [.appearance, .music, .opening])
+        #expect(SettingsPane.allCases.filter(\.showsPreview) == [.appearance, .music, .tray, .opening])
     }
 
     @Test("Each page can be found by search", arguments: SettingsPane.allCases)

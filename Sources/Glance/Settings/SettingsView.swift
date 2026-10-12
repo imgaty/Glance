@@ -171,6 +171,7 @@ private struct PageContent: View {
         case .general: GeneralPage()
         case .appearance: AppearancePage()
         case .music: MusicPage()
+        case .tray: TrayPage()
         case .opening: OpeningPage()
         case .displays: DisplaysPage()
         }
@@ -187,7 +188,7 @@ extension EnvironmentValues {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, appearance, music, opening, displays
+    case general, appearance, music, tray, opening, displays
 
     var id: Self { self }
     var title: String {
@@ -195,6 +196,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "General"
         case .appearance: "Appearance"
         case .music: "Music"
+        case .tray: "Tray"
         case .opening: "Opening"
         case .displays: "Displays"
         }
@@ -206,19 +208,21 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "gearshape.fill"
         case .appearance: "circle.lefthalf.filled"
         case .music: "music.note"
+        case .tray: "tray.full.fill"
         case .opening: "cursorarrow.click.2"
         case .displays: "sun.max.fill"
         }
     }
 
     /// The pages about how the notch looks and works show it, live, at the top.
-    var showsPreview: Bool { [.appearance, .music, .opening].contains(self) }
+    var showsPreview: Bool { [.appearance, .music, .tray, .opening].contains(self) }
 
     var color: Color {
         switch self {
         case .general: .gray
         case .appearance: Color(white: 0.15)
         case .music: .pink
+        case .tray: .indigo
         case .opening: .orange
         case .displays: .blue
         }
@@ -231,6 +235,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight fullscreen display preview"
         case .music:
             "player apps sources apple music spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics waveform animated art live activity announce songs closed"
+        case .tray: "shelf files drop drag clipboard copy paste history keep clear airdrop share"
         case .opening: "hover click delay hold haptic feedback gestures swipe trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }
@@ -308,6 +313,7 @@ private enum SystemIcons {
         case .appearance: existing(settings.appending(path: "Appearance.appex"))
         case .displays: existing(settings.appending(path: "DisplaysExt.appex"))
         case .music: described(pane, symbol: "music.note", color: "Red")
+        case .tray: described(pane, symbol: "tray.full.fill", color: "Indigo")
         case .opening: described(pane, symbol: "cursorarrow.click.2", color: "Orange")
         }
     }

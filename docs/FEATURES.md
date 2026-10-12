@@ -14,12 +14,19 @@ Whatever is playing, in almost any app, with its cover, a progress bar to drag
 through the song, and buttons to play, pause and skip. You choose in Settings
 which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 
+### Tray
+
+Drag files onto the notch to keep them close, and find what you copied, newest
+first. Click something to copy it again, double-click to paste it, or drag it
+out. Copies stay for 30 minutes, 8 hours or 7 days, and passwords never do.
+⇧⌘2 opens it. See the [User Manual](USER-MANUAL.md#the-tray).
+
 ### Opening the notch
 
 Hover over it, click it, or either, with an optional delay. Swipe down with two
 fingers to open it, up to close it, and sideways to change songs. From any app,
-⇧⌘1 opens it with the player, or a shortcut of your choice. See the
-[User Manual](USER-MANUAL.md#opening-and-closing).
+⇧⌘1 opens it with the player and ⇧⌘2 with the tray, or shortcuts of your
+choice. See the [User Manual](USER-MANUAL.md#opening-and-closing).
 
 ### Layouts and backgrounds
 
@@ -60,6 +67,9 @@ later.
 **Shuffle, repeat and favorites.** They work in `Music` and `Spotify`
 (favorites in `Music` only); for other apps the buttons show dimmed.
 
+**Copies from other devices.** What you copy on an iPhone or iPad, through
+Universal Clipboard, isn't kept in the tray.
+
 <br>
 
 ## Roadmap
@@ -67,14 +77,14 @@ later.
 - [x] `Animated covers`: Apple Music's animated album covers.
 - [x] `Displays without a notch`: a notch or a Dynamic Island on any display.
 - [x] `Now Playing`: whatever is playing, in any app, with its controls.
+- [x] `Shortcuts`: shortcuts to open the player and the tray.
 - [x] `Timed lyrics`: the words beside the player, line by line.
+- [x] `Tray`: files you drop and what you copy, on the notch.
 - [x] `Updates`: check for updates, and install them automatically.
 - [ ] `AI overview`: AI usage and a chat box on the notch.
 - [ ] `Homebrew`: install with `brew install --cask glance`.
 - [ ] `More Live Activities`: connectivity, battery, calls, timers and more.
 - [ ] `Notarized releases`: open the first time without the extra step.
-- [ ] `Shortcuts`: shortcuts to switch between notch tools.
-- [ ] `Tray`: a clipboard tray on the notch.
 
 <br>
 

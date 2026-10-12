@@ -91,6 +91,7 @@ struct OnboardingView: View {
         }
         .environmentObject(song)
         .environmentObject(preview)
+        .environment(\.tray, .demo)
         .frame(width: Self.size.width, height: Self.size.height)
         // Up under the clear title bar too: the pages leave room for the window buttons.
         .ignoresSafeArea()
@@ -537,10 +538,15 @@ private struct NotchScenePicture: View {
     private func play() async {
         let model = preview.model
         model.songPlaying = true
+        // The tray's step shows the tray; every other, the player.
+        let page: NotchPage = scene == .tray ? .tray : .player
+        if model.page != page {
+            withAnimation(model.state == .open ? .spring(response: 0.4, dampingFraction: 1) : nil) { model.page = page }
+        }
         switch scene {
         case .tryOpening:
             preview.setInteractive(true, animated: true)
-        case .player:
+        case .player, .tray:
             preview.setInteractive(false, animated: true)
             guard model.state != .open else { return }
             try? await Task.sleep(for: .seconds(0.45))

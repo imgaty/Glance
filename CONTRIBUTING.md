@@ -1,6 +1,6 @@
 # Contributing
 
-`Created: 11 October 2026` | `Last updated: 11 October 2026`
+`Created: 11 October 2026` | `Last updated: 12 October 2026`
 
 A guide to contributing to the Glance project.
 
@@ -34,7 +34,8 @@ from macOS.
 │   │   ├── Notch/            # The notch's window and view
 │   │   ├── Onboarding/       # The welcome tour and the permissions
 │   │   ├── Player/           # The player and its controls
-│   │   └── Settings/         # The Settings window and pages
+│   │   ├── Settings/         # The Settings window and pages
+│   │   └── Tray/             # The tray: files dropped and what's copied
 │   └── NowPlayingHelper/     # Reads Now Playing inside perl
 ├── Tests/GlanceTests/        # Unit tests
 ├── updater/appcast.xml       # Every release, for Check for Updates…

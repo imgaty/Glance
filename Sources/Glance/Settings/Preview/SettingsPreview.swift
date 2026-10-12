@@ -325,9 +325,12 @@ struct PreviewHeader: View {
         // A new layout reshapes the open notch in place, as the real one does.
         .onChange(of: layout) { withAnimation(.spring(response: 0.5, dampingFraction: 1)) { preview.model.use(layout) } }
         // From a page that shows the notch, it closes (or opens) before your eyes; from one without
-        // it, it's simply there, as the page wants it.
+        // it, it's simply there, as the page wants it. The Tray page shows it open on the tray.
         .onChange(of: pane, initial: true) { old, new in
-            preview.setInteractive(new == .opening, animated: old != new && old.showsPreview && new.showsPreview)
+            let animated = old != new && old.showsPreview && new.showsPreview
+            preview.setInteractive(new == .opening, animated: animated)
+            let page: NotchPage = new == .tray ? .tray : .player
+            withAnimation(animated ? .spring(response: 0.4, dampingFraction: 1) : nil) { preview.model.page = page }
         }
         // Opened the first time it shows.
         .onChange(of: pane.showsPreview, initial: true) { if pane.showsPreview { preview.reveal() } }

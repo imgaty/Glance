@@ -10,8 +10,9 @@ import Carbon.HIToolbox
 import SwiftUI
 
 /// A shortcut, as System Settings' Keyboard Shortcuts shows one: its keys, and, clicked, ready for
-/// a new one to be typed. Escape leaves it as it was; a shortcut without Command, Option or Control
-/// is refused with the alert sound. Its menu puts back the one Glance came with.
+/// a new one to be typed. Escape leaves it as it was; a shortcut without Command, Option or Control,
+/// or one another of Glance's shortcuts has, is refused with the alert sound. Its menu puts back the
+/// one Glance came with.
 struct ShortcutRecorder: View {
     let action: Shortcuts.Action
     @ObservedObject private var shortcuts = Shortcuts.shared
@@ -44,7 +45,7 @@ struct ShortcutRecorder: View {
                 let combo = KeyCombo(event: event)
                 if Int(event.keyCode) == kVK_Escape, combo.modifiers == 0 {
                     stop()
-                } else if combo.isValid {
+                } else if combo.isValid, !shortcuts.combos.contains(where: { $0.key != action && $0.value == combo }) {
                     shortcuts.set(combo, for: action)
                     stop()
                 } else {

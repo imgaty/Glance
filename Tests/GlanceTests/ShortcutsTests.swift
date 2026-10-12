@@ -12,7 +12,7 @@ import Testing
 
 @testable import Glance
 
-/// The keyboard shortcuts: ⇧⌘1 out of the box, any other a person chooses, kept as they chose it.
+/// The keyboard shortcuts: ⇧⌘1 and ⇧⌘2 out of the box, any other a person chooses, kept as they chose it.
 @MainActor
 @Suite("Keyboard shortcuts")
 struct ShortcutsTests {
@@ -22,6 +22,15 @@ struct ShortcutsTests {
         #expect(combo.keyCode == UInt32(kVK_ANSI_1))
         #expect(combo.modifiers == UInt32(shiftKey | cmdKey))
         #expect(combo.symbols == "⇧⌘1")
+    }
+
+    @Test("The tray opens with ⇧⌘2 out of the box")
+    func trayStandard() {
+        let combo = Shortcuts.Action.tray.standard
+        #expect(combo.keyCode == UInt32(kVK_ANSI_2))
+        #expect(combo.modifiers == UInt32(shiftKey | cmdKey))
+        #expect(combo.symbols == "⇧⌘2")
+        #expect(Shortcuts.Action.tray.defaultsKey == Preferences.shortcutTray)
     }
 
     @Test("Shortcuts are written as Apple writes them: ⌃⌥⇧⌘, then the key")

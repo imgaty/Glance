@@ -69,13 +69,18 @@ notch closes when the pointer leaves it.
 | Click | Opens the notch; click and hold, if a hold time is set |
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch |
-| Swipe left or right with two fingers | Changes songs |
+| Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
+| Drag something onto the notch | Opens the tray, to drop it there |
 | ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
+| ⇧⌘2, from any app | Opens the notch with the tray; again, closes it |
 
-Opened with ⇧⌘1, the notch stays open until you press it again, click
-elsewhere, or move the pointer onto the notch and away. To use another shortcut,
-change it in **Settings > Opening**.
+The notch opens on the page you left it on. To switch between the player and
+the tray, use the two buttons beside the camera, or the other shortcut.
+
+Opened with a shortcut, the notch stays open until you press it again, click
+elsewhere, or move the pointer onto the notch and away. To use other shortcuts,
+change them in **Settings > Opening**.
 
 <br>
 
@@ -120,6 +125,42 @@ Click the waveform to show the song's words beside the player, and click it
 again to hide them. The line being sung is large and bright; the next one fades
 in below it. Lyrics come from [LRCLIB](https://lrclib.net), and show only when a
 record matches the song's title, artist and length.
+
+<br>
+
+## The tray
+
+The tray keeps the files you drop on the notch and what you copy, newest first.
+Open it with ⇧⌘2, by dragging something onto the notch, or with the tray button
+beside the camera.
+
+<img src="../assets/screenshots/tray.png"
+     width="450"
+     alt="The open notch on the tray: a photo, a note copied from Notes, a PDF,
+     a link to github.com and a folder, in a row, each with its name below.">
+<br>
+<sub>The tray, with files dropped on it and a note and a link copied</sub>
+
+| Action | Operation |
+| --- | --- |
+| Drag files onto the notch | Keeps them in the tray until you remove them |
+| Click an item | Copies it |
+| Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
+| Drag an item out | Puts it there; files move or copy as they do in Finder |
+| Swipe left or right with two fingers | Scrolls the tray |
+| Hover over an item, then click ✕ | Removes it from the tray |
+| Right-click an item | Open, Show in Finder, Copy, Paste, Share, Remove from Tray, and Clear Tray |
+
+Files stay where they are; the tray only points to them, and follows them if
+they move. If a file is deleted, it leaves the tray too.
+
+### What you copy
+
+Text, links, pictures and files you copy show up in the tray, and stay for
+30 minutes, 8 hours or 7 days, as set in **Settings > Tray**. Passwords, and
+anything an app marks as private, are never kept, and neither is what you copy
+on another device. Copying something that's already there moves it to the
+front.
 
 <br>
 
@@ -185,6 +226,15 @@ Glance's icon in the menu bar opens a menu:
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
 
+### Tray
+
+| Setting | Operation |
+| --- | --- |
+| `Tray` | Turns the tray on or off, with its shortcut and its button |
+| `Keep what you copy` | Keeps what you copy in the tray |
+| `Keep copies for` | `30 Minutes`, `8 Hours`, or `7 Days` |
+| `Clear Tray` | Removes everything in the tray; files stay where they are |
+
 ### Opening
 
 | Setting | Operation |
@@ -196,6 +246,7 @@ Glance's icon in the menu bar opens a menu:
 | `Open and close` | Two-finger swipes down and up |
 | `Change songs` | Two-finger swipes left and right |
 | `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
+| `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 
 ### Displays
 
@@ -218,7 +269,8 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command, and pasting from the tray |
+| `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>
 
@@ -261,6 +313,14 @@ their signature matches the one built into Glance.
 7. **There's no notch on an external display.** Turn on
    **Settings > Displays > Show on displays without a notch**.
 
+8. **What I copy doesn't show up in the tray.** Turn on
+   **Settings > Tray > Keep what you copy**. If macOS asked about pasting from
+   other apps, allow Glance under
+   **System Settings > Privacy & Security > Paste from Other Apps**.
+
+9. **Double-clicking an item copies it but doesn't paste it.** Turn on Glance
+   under **System Settings > Privacy & Security > Accessibility**.
+
 <br>
 
 ## Uninstalling
@@ -268,11 +328,14 @@ their signature matches the one built into Glance.
 If Glance opens at login, turn that off first in **Settings > General**. Then
 quit Glance from its menu bar menu, and drag it from Applications to the Trash.
 
-Its settings stay behind in case you reinstall it. To remove them, and its
-permissions, run:
+Its settings and the tray stay behind in case you reinstall it. To remove
+them, and its permissions, run:
 
 ```sh
 defaults delete dev.vibe.Glance
+```
+```sh
+rm -rf ~/Library/Application\ Support/dev.vibe.Glance
 ```
 ```sh
 rm -rf ~/Library/Caches/dev.vibe.Glance

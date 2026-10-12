@@ -119,10 +119,16 @@ final class NotchModel: ObservableObject {
     @Published var songPlaying = false
     /// The welcome tour's pointer, showing how, in the notch's own points (see `demoPointer`).
     @Published var demoPointer: CGPoint?
+    /// Which page the open notch shows: the player, or the tray.
+    @Published var page: NotchPage = .player
+    /// Something is being dragged over the notch, to be dropped in the tray.
+    @Published var dropping = false
+    /// How far the tray's row is scrolled.
+    @Published var trayScroll: CGFloat = 0
 
-    /// The lyrics show only for a song; for a video, a podcast or nothing at all they fold away,
-    /// and come back with the next song.
-    var showsLyrics: Bool { lyrics && songPlaying }
+    /// The lyrics show only for a song, on the player; for a video, a podcast or nothing at all
+    /// they fold away, and come back with the next song.
+    var showsLyrics: Bool { lyrics && songPlaying && page == .player }
     /// How far a sideways swipe has pushed the artwork, before it skips.
     @Published var nudge: CGFloat = 0
     /// Where the player's buttons sit, so the window can hand clicks there to them.
@@ -274,6 +280,9 @@ struct NotchView: View {
     /// Whether there are lyrics at all.
     @AppStorage(Preferences.lyrics) private var lyricsOn = true
     @Environment(\.notchThumbnail) private var thumbnail
+    @AppStorage(Preferences.tray) private var trayOn = true
+    /// The tray shown: Glance's own, or the welcome tour's made-up one.
+    @Environment(\.tray) private var trayStore
     @Namespace private var hero
 
     init(model: NotchModel, display: String, background: MusicBackground? = nil) {
@@ -298,10 +307,14 @@ struct NotchView: View {
         let m = model.metrics
         let shape = NotchShape(corners: model.corners)
         let isOpen = model.state == .open
+        let onTray = trayOn && model.page == .tray
+        // Open on the player, rather than on the tray.
+        let playerShown = isOpen && !onTray
+        let trayShown = isOpen && onTray
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed ? 1 : 0
-        let lit = isOpen && nowPlaying.artwork != nil && background != .none
+        let lit = playerShown && nowPlaying.artwork != nil && background != .none
         let lyricsShown = isOpen && model.showsLyrics
         // The closed notch swells under the pointer, and the artwork and waveform with it.
         let swell = isOpen ? 1 : m.height / closed.height
@@ -343,15 +356,25 @@ struct NotchView: View {
                 .mask { awayFromCamera }
                 .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
                 .allowsHitTesting(places == nil)
-            NowPlayingView(isVisible: isOpen && !paused, hero: hero)
+            NowPlayingView(isVisible: playerShown && !paused, hero: hero)
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
-                .animation(Self.fade(in: isOpen)) { $0.opacity(isOpen ? 1 : 0).blur(radius: isOpen ? 0 : 4) }
+                .environment(\.notchControls, playerShown)
+                .animation(Self.fade(in: playerShown)) { $0.opacity(playerShown ? 1 : 0).blur(radius: playerShown ? 0 : 4) }
+            if trayOn {
+                TrayView(tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll)
+                    .frame(width: model.openSize.width, height: model.openSize.height)
+                    .environment(\.notchControls, trayShown)
+                    .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
+                    .allowsHitTesting(places == nil && trayShown)
+            }
             HeroArtwork(isOpen: isOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
                 .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
                 .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
                 .offset(x: model.nudge)
-                .opacity(isOpen || model.activity ? 1 : 0)
+                // On the tray, it steps aside with the rest of the player.
+                .opacity((isOpen ? !onTray : model.activity) ? 1 : 0)
+                .environment(\.notchControls, !trayShown)
                 .allowsHitTesting(places == nil)
             HeroWaveform(
                 isOpen: isOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
@@ -361,9 +384,19 @@ struct NotchView: View {
             .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
             // Out of the way quickly when a new song's artist takes its place.
             .animation(model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)) {
-                $0.opacity(isOpen || (model.activity && !model.pop) ? 1 : 0)
+                $0.opacity((isOpen ? !onTray : model.activity && !model.pop) ? 1 : 0)
             }
+            .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil)
+            // The two pages, beside the camera, while the tray is on.
+            if trayOn {
+                NotchPagePicker(tray: tray, page: model.page, enabled: isOpen && places == nil) { choose($0) }
+                    // Its end lines up with the player's and the tray's.
+                    .padding(.trailing, PlayerLayout.padding)
+                    .frame(width: m.bodyWidth, height: closed.height, alignment: .trailing)
+                    .animation(Self.fade(in: isOpen)) { $0.opacity(isOpen ? 1 : 0) }
+                    .allowsHitTesting(isOpen && places == nil)
+            }
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
@@ -431,6 +464,14 @@ struct NotchView: View {
 
     /// The notch's own points, from the top left of its whole shape, flares and all.
     static let bodySpace = "notch body"
+
+    private var tray: Tray { trayStore ?? .shared }
+
+    /// Another page, from the picker beside the camera; the notch opens on it next time too.
+    private func choose(_ page: NotchPage) {
+        withAnimation(.spring(response: 0.4, dampingFraction: 1)) { model.page = page }
+        if places == nil { UserDefaults.standard.set(page.rawValue, forKey: Preferences.notchPage) }
+    }
 
     /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
     private func toggleLyrics() {
@@ -572,11 +613,27 @@ extension View {
     /// Lets clicks inside this view reach it instead of the notch's own press-and-close handling.
     /// Off while the view is hidden, so clicks there aren't taken from what's showing.
     func notchControl(enabled: Bool = true) -> some View {
-        background(
+        modifier(NotchControl(enabled: enabled))
+    }
+}
+
+private struct NotchControl: ViewModifier {
+    let enabled: Bool
+    /// Off for the whole page that isn't showing: the player under the tray, or the tray under it.
+    @Environment(\.notchControls) private var pageShown
+
+    func body(content: Content) -> some View {
+        content.background(
             GeometryReader { proxy in
-                Color.clear.preference(key: ControlFrames.self, value: enabled ? [proxy.frame(in: .named(ControlFrames.space))] : [])
+                Color.clear.preference(
+                    key: ControlFrames.self, value: enabled && pageShown ? [proxy.frame(in: .named(ControlFrames.space))] : [])
             })
     }
+}
+
+extension EnvironmentValues {
+    @Entry var notchControls = true
+    @Entry var tray: Tray? = nil
 }
 
 /// The notch silhouette: a rectangle whose top corners flare out into the screen's edge and whose

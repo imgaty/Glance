@@ -47,6 +47,11 @@ struct PreferencesTests {
             (Preferences.haptics, "haptics"),
             (Preferences.hideInFullScreen, "hideInFullScreen"),
             (Preferences.shortcutMusic, "shortcutMusic"),
+            (Preferences.shortcutTray, "shortcutTray"),
+            (Preferences.tray, "tray"),
+            (Preferences.trayClipboard, "trayClipboard"),
+            (Preferences.trayClipboardKeep, "trayClipboardKeep"),
+            (Preferences.notchPage, "notchPage"),
         ])
     func keys(key: String, stored: String) {
         #expect(key == stored)
@@ -184,6 +189,9 @@ struct PreferencesTests {
         #expect(registered[Preferences.clickDelay] as? Double == 0.0)
         #expect(registered[Preferences.haptics] as? Bool == false)
         #expect(registered[Preferences.hideInFullScreen] as? Bool == true)
+        #expect(registered[Preferences.tray] as? Bool == true)
+        #expect(registered[Preferences.trayClipboard] as? Bool == true)
+        #expect(registered[Preferences.trayClipboardKeep] as? String == ClipboardKeep.eightHours.rawValue)
     }
 
     @Test("The layout falls back to the cover on top")

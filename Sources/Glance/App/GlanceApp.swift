@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.onShowPermissions = { [onboarding] in onboarding.show(startingAt: .permissions) }
         notches.contextMenu = statusBar.menu
         notches.start()
+        Tray.shared.start()
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
         Shortcuts.shared.register()
         self.statusBar = statusBar
@@ -70,6 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Turned off and on from the menu bar: the notches close away and come back.
             watch(\.notchEnabled) { notches.reload(switching: true) },
             watch(\.musicLayout) { notches.relayout() },
+            // Its shortcut comes and goes with the tray.
+            watch(\.tray) { Shortcuts.shared.register() },
         ]
     }
 
@@ -132,6 +135,9 @@ enum Preferences {
             clickDelay: 0.0,
             haptics: false,
             hideInFullScreen: true,
+            tray: true,
+            trayClipboard: true,
+            trayClipboardKeep: ClipboardKeep.eightHours.rawValue,
         ])
     }
 
@@ -200,8 +206,16 @@ enum Preferences {
     static let clickDelay = "clickDelay"
     static let haptics = "haptics"
     static let hideInFullScreen = "hideInFullScreen"
-    /// The shortcut that opens the player, when it isn't the one Glance came with: a KeyCombo, as JSON.
+    /// The shortcuts that open the player and the tray, when they aren't the ones Glance came with:
+    /// a KeyCombo, as JSON.
     static let shortcutMusic = "shortcutMusic"
+    static let shortcutTray = "shortcutTray"
+    /// The tray: on, keeping what's copied, and for how long (a ClipboardKeep).
+    static let tray = "tray"
+    static let trayClipboard = "trayClipboard"
+    static let trayClipboardKeep = "trayClipboardKeep"
+    /// The page the notch was last left on (a NotchPage), which it opens on next.
+    static let notchPage = "notchPage"
 }
 
 /// The settings that are watched by their keys.
@@ -211,6 +225,7 @@ extension UserDefaults {
     @objc dynamic var sameLookEverywhere: Bool { bool(forKey: Preferences.sameLook) }
     @objc dynamic var musicLayout: String? { string(forKey: Preferences.musicLayout) }
     @objc dynamic var notchEnabled: Bool { bool(forKey: Preferences.notchEnabled) }
+    @objc dynamic var tray: Bool { bool(forKey: Preferences.tray) }
 }
 
 enum OpenTrigger: String, CaseIterable, Identifiable {
@@ -390,7 +405,8 @@ final class NotchManager {
         let location = NSEvent.mouseLocation
         let controller = controllers.first { $0.screenFrame.contains(location) } ?? controllers.first
         switch action {
-        case .music: controller?.toggleFromKeyboard()
+        case .music: controller?.toggleFromKeyboard(.player)
+        case .tray: controller?.toggleFromKeyboard(.tray)
         }
     }
 

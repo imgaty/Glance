@@ -20,7 +20,7 @@ struct OnboardingFeature: Identifiable {
     let steps: [OnboardingStep]
 
     /// Every feature, in the order the tour shows them.
-    static var all: [OnboardingFeature] { [music] }
+    static var all: [OnboardingFeature] { [music, tray] }
 }
 
 /// A tile on the welcome page, as Apple lists what's new in an app: a symbol, a headline, and a
@@ -55,6 +55,8 @@ enum NotchScene {
     case player
     /// Closed, with the cover and the waveform beside the camera, announcing the song now and then.
     case liveActivity
+    /// Open on the tray.
+    case tray
 }
 
 /// What a step lets the user choose.
@@ -104,6 +106,29 @@ extension OnboardingFeature {
                             OnboardingSwitch(key: Preferences.musicTrackPop, title: "Announce new audio"),
                         ])
                     ]),
+            ])
+    }
+}
+
+// MARK: - Tray
+
+extension OnboardingFeature {
+    static var tray: OnboardingFeature {
+        OnboardingFeature(
+            id: "tray", title: "Tray", symbol: "tray.full.fill", color: .indigo,
+            highlights: [
+                OnboardingHighlight(
+                    symbol: "tray.and.arrow.down", title: "Tray", text: "Files you drop and what you copy, close at hand.")
+            ],
+            steps: [
+                OnboardingStep(
+                    id: "tray", title: "Keep Files and Copies in the Tray", scene: .tray,
+                    settings: [
+                        .switches([
+                            OnboardingSwitch(key: Preferences.tray, title: "Tray"),
+                            OnboardingSwitch(key: Preferences.trayClipboard, title: "Keep what you copy"),
+                        ])
+                    ])
             ])
     }
 }

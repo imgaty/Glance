@@ -15,6 +15,7 @@ struct OpeningPage: View {
     @AppStorage(Preferences.haptics) private var haptics = false
     @AppStorage(Preferences.swipeToOpen) private var swipeToOpen = true
     @AppStorage(Preferences.swipeToSkip) private var swipeToSkip = true
+    @AppStorage(Preferences.tray) private var trayOn = true
     @ObservedObject private var shortcuts = Shortcuts.shared
 
     var body: some View {
@@ -44,7 +45,7 @@ struct OpeningPage: View {
             }
             // Works from any app; click it to type another, as in Keyboard Shortcuts settings.
             Section {
-                ForEach(Shortcuts.Action.allCases, id: \.self) { action in
+                ForEach(Shortcuts.Action.allCases.filter { $0 != .tray || trayOn }, id: \.self) { action in
                     LabeledContent {
                         ShortcutRecorder(action: action)
                     } label: {

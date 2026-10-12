@@ -18,10 +18,13 @@ final class Shortcuts: ObservableObject {
     enum Action: UInt32, CaseIterable {
         /// Opens the notch with the player.
         case music = 1
+        /// Opens the notch with the tray.
+        case tray = 2
 
         var title: String {
             switch self {
             case .music: "Open the player"
+            case .tray: "Open the tray"
             }
         }
 
@@ -29,14 +32,19 @@ final class Shortcuts: ObservableObject {
         var standard: KeyCombo {
             switch self {
             case .music: KeyCombo(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(shiftKey | cmdKey), key: "1")
+            case .tray: KeyCombo(keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(shiftKey | cmdKey), key: "2")
             }
         }
 
         var defaultsKey: String {
             switch self {
             case .music: Preferences.shortcutMusic
+            case .tray: Preferences.shortcutTray
             }
         }
+
+        /// The tray's shortcut is only there while the tray is.
+        var isAvailable: Bool { self != .tray || Tray.isOn }
     }
 
     /// Glance's mark on its hotkeys, so the ones it gets back are known as its own: "GLNC".
@@ -102,7 +110,10 @@ final class Shortcuts: ObservableObject {
 
     private func take(_ action: Action) {
         if let held = hotKeys.removeValue(forKey: action) { UnregisterEventHotKey(held) }
-        guard let combo = combos[action] else { return }
+        guard action.isAvailable, let combo = combos[action] else {
+            taken.remove(action)
+            return
+        }
         var hotKey: EventHotKeyRef?
         let id = EventHotKeyID(signature: Self.signature, id: action.rawValue)
         if RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), 0, &hotKey) == noErr, let hotKey {

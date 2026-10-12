@@ -4,9 +4,9 @@
 
 <br>
 
-Glance turns your Mac's notch into a Now Playing display: whatever is playing,
-in almost any app, right there on the notch. It's built to look and feel like
-part of macOS.
+Glance turns your Mac's notch into a Now Playing display and a tray: whatever
+is playing, in almost any app, and the files and copies you want close at hand,
+right there on the notch. It's built to look and feel like part of macOS.
 
 Glance works mostly offline. Only a few things need the internet: lyrics,
 animated covers, songwriter credits, and a daily check for updates.
@@ -74,6 +74,20 @@ whenever LRCLIB has timed lyrics for it.
      large and bright, moves up as the next one takes its place.">
 <br>
 <sub>Showcase of the lyrics in the open notch.</sub>
+
+<br>
+
+### Tray
+
+Drag files onto the notch to keep them close, and find what you copied, ready to
+paste again. Press ⇧⌘2 in any app to open it.
+
+<img src="./assets/screenshots/tray.png"
+     width="450"
+     alt="The open notch on the tray: a photo, a note copied from Notes, a PDF,
+     a link to github.com and a folder, in a row, each with its name below.">
+<br>
+<sub>Showcase of the tray, with files and copies.</sub>
 
 <br>
 
