@@ -62,10 +62,11 @@ struct TrayView: View {
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
-        .animation(.spring(response: 0.4, dampingFraction: 0.86), value: tray.items.map(\.id))
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: dropping)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: Self.showsAirDrop(tray: tray, dropping: dropping))
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: airDropTargeted)
+        // Smooth, settling without overshoot, as the system's own motion does.
+        .animation(.smooth(duration: 0.35), value: tray.items.map(\.id))
+        .animation(.smooth(duration: 0.3), value: dropping)
+        .animation(.smooth(duration: 0.3), value: Self.showsAirDrop(tray: tray, dropping: dropping))
+        .animation(.smooth(duration: 0.25), value: airDropTargeted)
         .onChange(of: isVisible, initial: true) {
             guard isVisible else { return }
             built = true
@@ -85,9 +86,10 @@ struct TrayView: View {
         dropping || tray.draggingOut
     }
 
-    /// Where the row sits: just below the camera, its thumbnails' tops lined up with the player's
-    /// cover's.
-    private var rowTop: CGFloat { closedNotch.height + PlayerLayout.cameraGap + 2 }
+    /// Where the room for the row starts: just below the camera.
+    private var rowTop: CGFloat { closedNotch.height + PlayerLayout.cameraGap }
+    /// Kept clear at the bottom for the handle.
+    private static let handleRoom: CGFloat = 14
 
     @ViewBuilder private func content(_ proxy: GeometryProxy) -> some View {
         let well = Self.showsAirDrop(tray: tray, dropping: dropping)
@@ -96,6 +98,8 @@ struct TrayView: View {
             if tray.items.isEmpty {
                 empty(proxy, well: well)
             } else {
+                // The row and its name, in the middle of the room below the camera, with as much
+                // space under them as above.
                 VStack(alignment: .leading, spacing: 0) {
                     ZStack(alignment: .trailing) {
                         row(width: proxy.size.width - (well ? Shelf.wellWidth : 0))
@@ -104,14 +108,16 @@ struct TrayView: View {
                             AirDropTarget(targeted: airDropTargeted)
                                 .reportsAirDropFrame()
                                 .padding(.trailing, PlayerLayout.padding)
-                                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                                .transition(.scale(scale: 0.8).combined(with: .opacity))
                         }
                     }
                     label
                         .padding(.horizontal, PlayerLayout.padding)
-                        .padding(.top, -Shelf.lift + 6)
+                        .padding(.top, -Shelf.lift + 8)
                 }
+                .frame(maxHeight: .infinity)
                 .padding(.top, rowTop - Shelf.lift)
+                .padding(.bottom, Self.handleRoom - Shelf.lift)
             }
         }
         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
@@ -133,14 +139,14 @@ struct TrayView: View {
         return HStack(spacing: Shelf.spacing) {
             if dropping {
                 DropSlot()
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
             }
             if skipped > 0 {
                 Color.clear.frame(width: CGFloat(skipped) * step - Shelf.spacing, height: 1)
             }
             ForEach(shown) { item in
                 thumb(item)
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    .transition(.scale(scale: 0.8, anchor: .bottom).combined(with: .opacity))
             }
         }
         .padding(.horizontal, PlayerLayout.padding)
@@ -268,15 +274,15 @@ private struct TrayThumb: View {
                         .transition(.opacity)
                 }
             }
-            .scaleEffect(copied ? 0.94 : hovered ? 1.07 : 1)
+            .scaleEffect(copied ? 0.95 : hovered ? 1.05 : 1, anchor: .bottom)
             .overlay {
                 TileInteraction(item: item, tray: tray, selector: tray, clickSelects: false) { over in
                     hovered = over
                     pointing(over)
                 }
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hovered)
-            .animation(.spring(response: 0.25, dampingFraction: 0.55), value: copied)
+            .animation(.smooth(duration: 0.2), value: hovered)
+            .animation(.smooth(duration: 0.2), value: copied)
             .animation(.easeOut(duration: 0.15), value: chosen)
             .notchControl(enabled: isVisible)
             .accessibilityElement(children: .ignore)

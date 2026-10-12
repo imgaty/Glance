@@ -25,8 +25,10 @@ struct TrayItemPicture: View {
     static func radius(for side: CGFloat) -> CGFloat { side * 0.2 }
 
     var body: some View {
+        // Every item stands on the same line, at the foot of its square, as icons do in Finder and
+        // the Dock.
         picture
-            .frame(width: side, height: side)
+            .frame(width: side, height: side, alignment: .bottom)
             .task(id: item.id) {
                 if item.kind == .link {
                     link = LinkPreviews.cached(item)
@@ -57,18 +59,18 @@ struct TrayItemPicture: View {
         }
     }
 
-    /// Photos and screenshots, whole, their corners a little rounded and a thin edge around them,
-    /// as the desktop shows them.
+    /// Photos and screenshots, whole, their corners a little rounded, with only a hairline to keep a
+    /// dark one from melting into the notch; a video Quick Look can't show yet, its icon, bare.
     @ViewBuilder private var photo: some View {
-        if let thumbnail {
+        if let thumbnail, !TrayThumbnails.isIcon(item) {
+            let shape = RoundedRectangle(cornerRadius: side * 0.05, style: .continuous)
             Image(nsImage: thumbnail)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: side * 0.05, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: side * 0.05, style: .continuous).strokeBorder(.white.opacity(0.35), lineWidth: 1))
-                .frame(width: side, height: side)
+                .clipShape(shape)
+                .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
         } else {
-            Image(nsImage: Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
+            Image(nsImage: thumbnail ?? Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
         }
     }
 
@@ -78,7 +80,7 @@ struct TrayItemPicture: View {
         let height = side * 0.94, shape = RoundedRectangle(cornerRadius: side * 0.035, style: .continuous)
         return
             shape
-            .fill(.white)
+            .fill(Color(white: 0.96))
             .overlay(alignment: .topLeading) {
                 Text(item.text ?? "")
                     .font(.system(size: side * 0.085))

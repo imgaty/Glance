@@ -13,6 +13,11 @@ import QuickLookThumbnailing
 @MainActor
 enum TrayThumbnails {
     private static let cache = NSCache<NSString, NSImage>()
+    /// Items Quick Look could only give an icon for, not their contents: they're shown bare, without
+    /// the edge a photo has.
+    private static var iconsOnly: Set<UUID> = []
+
+    static func isIcon(_ item: TrayItem) -> Bool { iconsOnly.contains(item.id) }
 
     /// Already made, for drawing at once and for dragging.
     static func cached(_ item: TrayItem) -> NSImage? {
@@ -26,10 +31,16 @@ enum TrayThumbnails {
         switch item.kind {
         case .files:
             guard let url = tray.urls(of: item).first else { return nil }
-            image = await thumbnail(of: url, side: side, scale: scale) ?? NSWorkspace.shared.icon(forFile: url.path)
+            if let (picture, contents) = await thumbnail(of: url, side: side, scale: scale) {
+                image = picture
+                if !contents { iconsOnly.insert(item.id) }
+            } else {
+                image = NSWorkspace.shared.icon(forFile: url.path)
+                iconsOnly.insert(item.id)
+            }
         case .image:
             guard let name = item.files.first else { return nil }
-            image = await thumbnail(of: tray.file(name, of: item), side: side, scale: scale)
+            image = await thumbnail(of: tray.file(name, of: item), side: side, scale: scale)?.0
         case .link, .text:
             return nil
         }
@@ -37,10 +48,11 @@ enum TrayThumbnails {
         return image
     }
 
-    private static func thumbnail(of url: URL, side: CGFloat, scale: CGFloat) async -> NSImage? {
+    /// The picture, and whether it shows the file's contents rather than its icon.
+    private static func thumbnail(of url: URL, side: CGFloat, scale: CGFloat) async -> (NSImage, Bool)? {
         let request = QLThumbnailGenerator.Request(
             fileAt: url, size: CGSize(width: side, height: side), scale: scale, representationTypes: .all)
         guard let representation = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) else { return nil }
-        return representation.nsImage
+        return (representation.nsImage, representation.type == .thumbnail)
     }
 }

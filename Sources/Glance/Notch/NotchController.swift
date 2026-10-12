@@ -667,14 +667,14 @@ final class NotchController {
         if carrying, onDisplay, p.y > frame.midY {
             guard !dragHold, !tucked, Tray.isOn else { return }
             dragHold = true
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAnimation(.smooth(duration: 0.3)) {
                 model.dropping = true
                 model.trayScroll = 0
             }
             if model.state != .open { open(on: .tray) } else { turn(to: .tray) }
         } else if dragHold, !carrying || !onDisplay || p.y < frame.midY - frame.height * 0.05 {
             dragHold = false
-            if model.dropping { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false } }
+            if model.dropping { withAnimation(.smooth(duration: 0.3)) { model.dropping = false } }
             // Closed now unless the pointer is on it, as over the notch after a drop.
             pointerMoved(to: p)
         }
@@ -687,7 +687,7 @@ final class NotchController {
         guard Tray.isOn, !tucked else { return [] }
         let onWell = isOnAirDrop(point)
         if model.airDropTargeted != onWell {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { model.airDropTargeted = onWell }
+            withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = onWell }
             if onWell { Opening.tap() }
         }
         if own { return onWell ? .copy : [] }
@@ -695,7 +695,7 @@ final class NotchController {
         // Back to the row, with a place at its front for the drop.
         if model.expanded, !onWell { expand(false) }
         if !model.dropping {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAnimation(.smooth(duration: 0.3)) {
                 model.dropping = true
                 model.trayScroll = 0
             }
@@ -714,17 +714,17 @@ final class NotchController {
     }
 
     private func dragExited() {
-        if model.airDropTargeted { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { model.airDropTargeted = false } }
+        if model.airDropTargeted { withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = false } }
         // Still in the top half of the display, it stays ready for the drop.
         guard model.dropping, !dragHold else { return }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false }
+        withAnimation(.smooth(duration: 0.3)) { model.dropping = false }
     }
 
     /// Onto the AirDrop well: sent, as soon as a device is picked. Anywhere else on the notch, from
     /// another app: kept in the tray.
     private func dropped(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> Bool {
         let onWell = isOnAirDrop(point)
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAnimation(.smooth(duration: 0.3)) {
             model.dropping = false
             model.airDropTargeted = false
         }
@@ -757,7 +757,8 @@ final class NotchController {
         let down = event.scrollingDeltaY * direction
         let right = event.scrollingDeltaX * direction
         // The tray's row, not its history, which scrolls on its own.
-        let onTray = model.state == .open && model.page == .tray && !model.expanded
+        // The tray's row, widened or not.
+        let onTray = model.state == .open && model.page == .tray
         // A swipe on the tray let go: the row glides on, and settles within its ends.
         guard event.momentumPhase.isEmpty else {
             guard trayGliding, onTray else { return }
@@ -814,7 +815,8 @@ final class NotchController {
             if scrollAxis == .horizontal {
                 // The row scrolls the way everything else does on this Mac.
                 if onTray { return scrollTray(by: event.scrollingDeltaX) }
-                return skips ? swiped(by: right) : ()
+                // Songs change from the player, or the closed notch; never from the tray.
+                return skips && (model.state != .open || model.page == .player) ? swiped(by: right) : ()
             }
             guard opens else { return }
             pull += down
@@ -873,7 +875,7 @@ final class NotchController {
     /// or back to its width.
     private func expand(_ expanded: Bool) {
         guard model.expanded != expanded else { return }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+        withAnimation(.smooth(duration: 0.4)) {
             if expanded {
                 model.expandedWidth = min(max(Shelf.width(count: Tray.shared.items.count), model.openSize.width), Self.widestTray(on: screen))
             }
@@ -952,7 +954,7 @@ final class NotchController {
     private func settleTray() {
         let target = min(max(model.trayScroll, 0), trayReach)
         guard target != model.trayScroll else { return }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { model.trayScroll = target }
+        withAnimation(.smooth(duration: 0.35)) { model.trayScroll = target }
     }
 
     private var trayReach: CGFloat {

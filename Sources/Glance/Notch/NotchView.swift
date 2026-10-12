@@ -383,7 +383,7 @@ struct NotchView: View {
                     tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
                     airDropTargeted: model.airDropTargeted, expanded: model.expanded
                 ) { expanded in
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { model.expanded = expanded }
+                    withAnimation(.smooth(duration: 0.4)) { model.expanded = expanded }
                 }
                 .frame(width: model.expanded ? model.expandedWidth : model.openSize.width, height: model.openSize.height)
                 .environment(\.notchControls, trayShown)
