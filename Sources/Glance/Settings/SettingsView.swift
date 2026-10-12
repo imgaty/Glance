@@ -235,7 +235,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight fullscreen display preview"
         case .music:
             "player apps sources apple music spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics waveform animated art live activity announce songs closed"
-        case .tray: "shelf files drop drag clipboard copy paste history keep clear airdrop share"
+        case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look"
         case .opening: "hover click delay hold haptic feedback gestures swipe trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }

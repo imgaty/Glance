@@ -52,6 +52,7 @@ struct PreferencesTests {
             (Preferences.trayClipboard, "trayClipboard"),
             (Preferences.trayClipboardKeep, "trayClipboardKeep"),
             (Preferences.swipeToSwitch, "swipeToSwitch"),
+            (Preferences.trayScreenshots, "trayScreenshots"),
         ])
     func keys(key: String, stored: String) {
         #expect(key == stored)
@@ -193,6 +194,7 @@ struct PreferencesTests {
         #expect(registered[Preferences.trayClipboard] as? Bool == true)
         #expect(registered[Preferences.trayClipboardKeep] as? String == ClipboardKeep.eightHours.rawValue)
         #expect(registered[Preferences.swipeToSwitch] as? Bool == true)
+        #expect(registered[Preferences.trayScreenshots] as? Bool == true)
     }
 
     @Test("The layout falls back to the cover on top")

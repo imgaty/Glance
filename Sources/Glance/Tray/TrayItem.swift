@@ -17,6 +17,11 @@ struct TrayItem: Codable, Identifiable, Equatable {
         case files, image, link, text
     }
 
+    /// How it came to be in the tray.
+    enum Source: String, Codable, CaseIterable {
+        case copied, dropped, screenshot
+    }
+
     let id: UUID
     var added: Date
     let kind: Kind
@@ -36,8 +41,14 @@ struct TrayItem: Codable, Identifiable, Equatable {
     /// Two items with the same fingerprint hold the same thing: copying it again brings the one
     /// already there to the front rather than adding it twice.
     var fingerprint: String
+    /// How it came to be in the tray; items kept before this was recorded say only whether they
+    /// were kept.
+    var source: Source? = nil
 
-    /// Copies, as copies go, are kept for 30 minutes, 8 hours or 7 days, as Spotlight's are.
+    var origin: Source { source ?? (kept ? .dropped : .copied) }
+
+    /// Copies and screenshots are kept for 30 minutes, 8 hours or 7 days, as Spotlight keeps its
+    /// clipboard history.
     func expired(at date: Date, keep: ClipboardKeep) -> Bool {
         !kept && date.timeIntervalSince(added) > keep.seconds
     }
@@ -121,7 +132,7 @@ struct TrayCapture {
             return TrayCapture(
                 item: TrayItem(
                     id: id, added: now, kind: .files, kept: kept, bookmarks: bookmarks, names: urls.map(\.lastPathComponent), app: app,
-                    fingerprint: "files:" + urls.map(\.path).joined(separator: "\n")),
+                    fingerprint: "files:" + urls.map(\.path).joined(separator: "\n"), source: kept ? .dropped : .copied),
                 data: [])
         }
 
@@ -135,7 +146,7 @@ struct TrayCapture {
             return TrayCapture(
                 item: TrayItem(
                     id: id, added: now, kind: .image, kept: kept, app: app, types: [type.rawValue],
-                    files: ["\(imageName(at: now)).\(ext)"], fingerprint: "image:" + digest(data)),
+                    files: ["\(imageName(at: now)).\(ext)"], fingerprint: "image:" + digest(data), source: kept ? .dropped : .copied),
                 data: [data])
         }
 
@@ -157,7 +168,8 @@ struct TrayCapture {
         return TrayCapture(
             item: TrayItem(
                 id: id, added: now, kind: link ? .link : .text, kept: kept, text: String(string.prefix(shownText)), app: app,
-                types: kinds, files: files, fingerprint: (link ? "link:" : "text:") + digest(Data(string.utf8))),
+                types: kinds, files: files, fingerprint: (link ? "link:" : "text:") + digest(Data(string.utf8)),
+                source: kept ? .dropped : .copied),
             data: data)
     }
 

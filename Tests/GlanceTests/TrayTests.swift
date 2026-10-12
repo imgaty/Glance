@@ -167,7 +167,7 @@ struct TrayTests {
         tray.copy(tray.items[0])
         #expect(target.string(forType: .string) == "Hello")
         #expect(target.data(forType: .rtf) == rtf)
-        #expect(tray.justCopied == capture.item.id)
+        #expect(tray.justCopied == [capture.item.id])
         #expect(tray.items.count == 1)
     }
 
@@ -234,6 +234,58 @@ struct TrayTests {
         #expect(tray.drop(pasteboard { $0.setString("A note", forType: .string) }))
         #expect(tray.items.first?.kind == .text)
         #expect(tray.items.first?.kept == true)
+    }
+
+    @Test("Each item says how it came in: copied, dropped, or a screenshot")
+    func sources() throws {
+        let copied = try #require(TrayCapture.make(from: pasteboard { $0.setString("a", forType: .string) }, kept: false))
+        let dropped = try #require(TrayCapture.make(from: pasteboard { $0.setString("b", forType: .string) }, kept: true))
+        #expect(copied.item.origin == .copied)
+        #expect(dropped.item.origin == .dropped)
+        // Kept before sources were recorded: told apart by whether they were kept.
+        var old = copied.item
+        old.source = nil
+        #expect(old.origin == .copied)
+        old.kept = true
+        #expect(old.origin == .dropped)
+    }
+
+    @Test("⌘ adds an item to the chosen ones or takes it out; Shift chooses a run; a plain click, one")
+    func choosing() throws {
+        let tray = tray()
+        for text in ["d", "c", "b", "a"] {
+            tray.add(try #require(TrayCapture.make(from: pasteboard { $0.setString(text, forType: .string) }, kept: false)))
+        }
+        let ids = tray.items.map(\.id)
+        tray.choose(ids[0], toggling: false, extending: false)
+        tray.choose(ids[2], toggling: true, extending: false)
+        #expect(tray.selection == [ids[0], ids[2]])
+        tray.choose(ids[2], toggling: true, extending: false)
+        #expect(tray.selection == [ids[0]])
+        // Shift runs from the item last clicked, as in Finder.
+        tray.choose(ids[0], toggling: false, extending: false)
+        tray.choose(ids[3], toggling: false, extending: true)
+        #expect(tray.selection == Set(ids))
+        #expect(tray.targets(of: tray.items[1]).map(\.text) == ["a", "b", "c", "d"])
+        tray.choose(ids[1], toggling: false, extending: false)
+        #expect(tray.targets(of: tray.items[3]).map(\.text) == ["d"])
+        tray.remove(Set([ids[1]]))
+        #expect(tray.selection.isEmpty)
+    }
+
+    @Test("Several items copy together, and share as files, links and text")
+    func several() throws {
+        let target = pasteboard { _ in }
+        let tray = Tray(folder: FileManager.default.temporaryDirectory.appending(path: "GlanceTray-\(UUID().uuidString)"), pasteboard: target)
+        for text in ["https://apple.com", "Hello"] {
+            tray.add(try #require(TrayCapture.make(from: pasteboard { $0.setString(text, forType: .string) }, kept: false)))
+        }
+        tray.copy(tray.items)
+        #expect(target.pasteboardItems?.count == 2)
+        #expect(tray.justCopied == Set(tray.items.map(\.id)))
+        let shared = tray.shareable(tray.items)
+        #expect(shared.first as? String == "Hello")
+        #expect((shared.last as? URL)?.host() == "apple.com")
     }
 
     @Test("Drags it can take: files, pictures, links and text")

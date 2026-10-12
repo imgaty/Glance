@@ -386,6 +386,12 @@ private struct PermissionsPage: View {
                 detail: "For the shuffle, repeat and volume controls. Repeating one song also takes Accessibility.",
                 state: permissions.spotify, allow: permissions.requestSpotify,
                 openSettings: { permissions.openSettings(for: permissions.spotifyControl == .denied ? \.spotifyControl : \.accessibility) })
+            Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
+            PermissionRow(
+                symbol: "accessibility", title: "Accessibility",
+                detail: "To paste from the tray with a double-click, and to switch to it with three fingers on the notch.",
+                state: permissions.accessibility, allow: permissions.requestAccessibility,
+                openSettings: { permissions.openSettings(for: \.accessibility) })
         }
         .background(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous).fill(.quinary))
     }

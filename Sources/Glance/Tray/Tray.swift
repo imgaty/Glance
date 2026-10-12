@@ -9,9 +9,9 @@ import AppKit
 import Carbon.HIToolbox
 import Combine
 
-/// The tray: files dropped on the notch, kept until they're removed, and what's been copied, kept
-/// as long as chosen, newest first. It keeps its list, and what it holds that isn't a file, in its
-/// own folder, readable only by its owner.
+/// The tray: files dropped on the notch, kept until they're removed, and what's been copied and
+/// screenshots taken, kept as long as chosen, newest first. It keeps its list, and what it holds
+/// that isn't a file, in its own folder, readable only by its owner.
 @MainActor
 final class Tray: ObservableObject {
     static let shared = Tray(folder: URL.applicationSupportDirectory.appending(path: "dev.vibe.Glance/Tray"))
@@ -20,10 +20,17 @@ final class Tray: ObservableObject {
     /// macOS asks before Glance reads what's copied, or was told not to let it: copies aren't kept
     /// until it's allowed under Paste from Other Apps.
     @Published private(set) var pasteBlocked = false
-    /// The item just copied back, for a moment, to show it was.
-    @Published private(set) var justCopied: UUID?
+    /// The items just copied back, for a moment, to show they were.
+    @Published private(set) var justCopied: Set<UUID> = []
+    /// Items chosen together, with ⌘ or Shift, to copy, drag, share or remove at once.
+    @Published private(set) var selection: Set<UUID> = []
+    private var anchor: UUID?
+    /// Items are being dragged out of the tray: the AirDrop well shows, to drop them on.
+    @Published var draggingOut = false
 
     static let didPaste = Notification.Name("TrayDidPaste")
+    /// Asked for the history window, from an item's menu or a pull down on the tray.
+    static let showHistory = Notification.Name("TrayShowHistory")
     /// The most of either kind kept: the oldest goes first.
     static let limit = 200
 
@@ -45,6 +52,7 @@ final class Tray: ObservableObject {
 
     nonisolated static var isOn: Bool { UserDefaults.standard.bool(forKey: Preferences.tray) }
     nonisolated static var keepsCopies: Bool { isOn && UserDefaults.standard.bool(forKey: Preferences.trayClipboard) }
+    nonisolated static var keepsScreenshots: Bool { isOn && UserDefaults.standard.bool(forKey: Preferences.trayScreenshots) }
 
     // MARK: Watching what's copied
 
@@ -67,6 +75,7 @@ final class Tray: ObservableObject {
 
     /// Starts or stops watching as the settings say.
     private func follow() {
+        followScreenshots()
         guard Self.keepsCopies != (watchTimer != nil) else { return }
         if Self.keepsCopies {
             changeCount = pasteboard.changeCount
@@ -98,6 +107,42 @@ final class Tray: ObservableObject {
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         guard app != Bundle.main.bundleIdentifier, let capture = TrayCapture.make(from: pasteboard, kept: false, app: app) else { return }
         add(capture)
+    }
+
+    // MARK: Watching for screenshots
+
+    private var screenshots: NSMetadataQuery?
+
+    /// Screenshots, wherever they're saved, as Spotlight finds them: each new one joins the tray as
+    /// it's saved. Those taken before aren't added.
+    private func followScreenshots() {
+        guard Self.keepsScreenshots != (screenshots != nil) else { return }
+        guard Self.keepsScreenshots else {
+            screenshots?.stop()
+            screenshots = nil
+            return
+        }
+        let query = NSMetadataQuery()
+        query.predicate = NSPredicate(format: "kMDItemIsScreenCapture == 1")
+        query.searchScopes = [NSMetadataQueryUserHomeScope]
+        NotificationCenter.default.addObserver(forName: .NSMetadataQueryDidUpdate, object: query, queue: .main) { [weak self] note in
+            let added = note.userInfo?[NSMetadataQueryUpdateAddedItemsKey] as? [NSMetadataItem] ?? []
+            let paths = added.compactMap { $0.value(forAttribute: NSMetadataItemPathKey) as? String }
+            MainActor.assumeIsolated { paths.forEach { self?.addScreenshot(at: $0) } }
+        }
+        query.start()
+        screenshots = query
+    }
+
+    private func addScreenshot(at path: String) {
+        let url = URL(fileURLWithPath: path)
+        guard let bookmark = try? url.bookmarkData() else { return }
+        add(
+            TrayCapture(
+                item: TrayItem(
+                    id: UUID(), added: .now, kind: .files, kept: false, bookmarks: [bookmark], names: [url.lastPathComponent],
+                    fingerprint: "files:" + path, source: .screenshot),
+                data: []))
     }
 
     // MARK: Adding and removing
@@ -185,13 +230,20 @@ final class Tray: ObservableObject {
             TrayCapture(
                 item: TrayItem(
                     id: id, added: .now, kind: .files, kept: true, bookmarks: [bookmark], names: [url.lastPathComponent],
-                    fingerprint: "files:" + url.path),
+                    fingerprint: "files:" + url.path, source: .dropped),
                 data: []))
     }
 
     func remove(_ id: UUID) {
-        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
-        discard(items.remove(at: index))
+        remove([id])
+    }
+
+    func remove(_ ids: Set<UUID>) {
+        let gone = items.filter { ids.contains($0.id) }
+        guard !gone.isEmpty else { return }
+        gone.forEach(discard)
+        items.removeAll { ids.contains($0.id) }
+        selection.subtract(ids)
         store()
     }
 
@@ -199,8 +251,47 @@ final class Tray: ObservableObject {
     func clear() {
         items.forEach(discard)
         items = []
+        selection = []
         store()
     }
+
+    // MARK: Choosing several
+
+    /// A click on an item with ⌘ adds it to the chosen ones or takes it out; with Shift, chooses
+    /// every item from the last one chosen to it, as Finder does; with neither, chooses it alone.
+    func choose(_ id: UUID, toggling: Bool = false, extending: Bool = false, in order: [TrayItem]? = nil) {
+        let order = order ?? items
+        if extending, let anchor, let from = order.firstIndex(where: { $0.id == anchor }),
+            let to = order.firstIndex(where: { $0.id == id })
+        {
+            selection = Set(order[min(from, to)...max(from, to)].map(\.id))
+            return
+        }
+        if toggling {
+            if selection.remove(id) == nil { selection.insert(id) }
+        } else {
+            selection = [id]
+        }
+        anchor = id
+    }
+
+    func choose(all order: [TrayItem]) {
+        selection = Set(order.map(\.id))
+    }
+
+    func deselect() {
+        guard !selection.isEmpty else { return }
+        selection = []
+        anchor = nil
+    }
+
+    /// What an action on an item covers: every chosen item, when it's one of them; otherwise it
+    /// alone. In the tray's order.
+    func targets(of item: TrayItem) -> [TrayItem] {
+        selection.contains(item.id) ? items.filter { selection.contains($0.id) } : [item]
+    }
+
+    var chosen: [TrayItem] { items.filter { selection.contains($0.id) } }
 
     /// Copies older than chosen go, and, when asked, files that are gone, which takes looking for
     /// each one.
@@ -253,17 +344,45 @@ final class Tray: ObservableObject {
 
     /// Back on the clipboard, as it was copied. It's not added again.
     func copy(_ item: TrayItem) {
+        copy([item])
+    }
+
+    /// Several at once, as Finder copies several files.
+    func copy(_ items: [TrayItem]) {
+        guard !items.isEmpty else { return }
         pasteboard.clearContents()
-        pasteboard.writeObjects(writers(for: item))
+        pasteboard.writeObjects(items.flatMap(writers))
         ownChange = pasteboard.changeCount
         changeCount = pasteboard.changeCount
         copiedTask?.cancel()
-        justCopied = item.id
+        justCopied = Set(items.map(\.id))
         copiedTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1.2))
             guard !Task.isCancelled else { return }
-            self?.justCopied = nil
+            self?.justCopied = []
         }
+    }
+
+    /// What the share menu and AirDrop are given for items: files as themselves, a picture as the
+    /// file it's kept in, a link as its address, text as itself.
+    func shareable(_ items: [TrayItem]) -> [Any] {
+        items.flatMap { item -> [Any] in
+            switch item.kind {
+            case .files: urls(of: item)
+            case .image: item.files.first.map { [file($0, of: item)] } ?? []
+            case .link: item.text.flatMap(URL.init(string:)).map { [$0] } ?? []
+            case .text: item.text.map { [$0] } ?? []
+            }
+        }
+    }
+
+    /// The AirDrop window, in front, with the items ready to send.
+    func airDrop(_ items: [Any]) {
+        guard let service = NSSharingService(named: .sendViaAirDrop), !items.isEmpty, service.canPerform(withItems: items) else {
+            return NSSound.beep()
+        }
+        NSApp.activate()
+        service.perform(withItems: items)
     }
 
     /// Copied, and pasted where the cursor is, as Spotlight's clipboard history pastes on a double

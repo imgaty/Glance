@@ -213,9 +213,9 @@ final class NotchController {
         }
         eventView.registerForDraggedTypes(
             [.fileURL, .URL, .string, .png, .tiff, .rtf, .html] + NSFilePromiseReceiver.readableDraggedTypes.map { .init($0) })
-        eventView.onDragEntered = { [weak self] pasteboard in self?.dragEntered(pasteboard) ?? [] }
+        eventView.onDragMoved = { [weak self] pasteboard, point, own in self?.dragMoved(pasteboard, at: point, own: own) ?? [] }
         eventView.onDragExited = { [weak self] in self?.dragExited() }
-        eventView.onDrop = { [weak self] pasteboard in self?.dropped(pasteboard) ?? false }
+        eventView.onDrop = { [weak self] pasteboard, point, own in self?.dropped(pasteboard, at: point, own: own) ?? false }
         // Pasted from the tray: its work is done, so it closes, as Spotlight does.
         pasteWatch = NotificationCenter.default.publisher(for: Tray.didPaste).sink { [weak self] _ in
             MainActor.assumeIsolated {
@@ -266,6 +266,7 @@ final class NotchController {
     /// that has one, up into the top edge on one that doesn't, or, an island, into a dot that shrinks
     /// away.
     func tearDown(collapsing: Bool = false) {
+        NotchSwipes.shared.set(nil, for: self)
         activityTask?.cancel()
         popTask?.cancel()
         openTask?.cancel()
@@ -491,6 +492,8 @@ final class NotchController {
     // MARK: Pointer
 
     func pointerMoved(to p: CGPoint) {
+        // Where three fingers turn the page: the open notch, kept up to date as it opens and closes.
+        NotchSwipes.shared.set(swipeZone, for: self)
         if fullScreen, followMenuBar(p) { return }
         switch model.state {
         case .closed, .peek:
@@ -525,6 +528,8 @@ final class NotchController {
     /// clicks outside its controls: it closes when the pointer leaves or with a swipe up.
     private func press() {
         pressBeganClosed = model.state != .open
+        // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
+        if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
         guard pressBeganClosed else { return }
         model.press(true)
         let opening = Opening.current
@@ -589,6 +594,8 @@ final class NotchController {
         model.open()
         Opening.tap()
         startPolling()
+        // Accessibility may have been allowed since: three fingers can turn the page now.
+        NotchSwipes.shared.start()
     }
 
     /// A page's shortcut: opens the notch on that page, switches to it if the notch is open on the
@@ -609,6 +616,9 @@ final class NotchController {
         keyboardHold = false
         dragHold = false
         model.dropping = false
+        model.airDropTargeted = false
+        Tray.shared.deselect()
+        NotchSwipes.shared.set(nil, for: self)
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil
@@ -667,13 +677,23 @@ final class NotchController {
         }
     }
 
-    /// Something the tray takes, dragged over the notch from another app: it opens on the tray,
-    /// with a place at the front of the row for it.
-    private func dragEntered(_ pasteboard: NSPasteboard) -> NSDragOperation {
-        guard Tray.isOn, !tucked, Tray.accepts(pasteboard) else { return [] }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            model.dropping = true
-            model.trayScroll = 0
+    /// Something dragged over the notch, at a point in the window's own (flipped) points. From
+    /// another app, the notch opens on the tray with a place at the front of the row for it, and the
+    /// AirDrop well at its end; dragged out of the tray, only the well takes it.
+    private func dragMoved(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> NSDragOperation {
+        guard Tray.isOn, !tucked else { return [] }
+        let onWell = isOnAirDrop(point)
+        if model.airDropTargeted != onWell {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { model.airDropTargeted = onWell }
+            if onWell { Opening.tap() }
+        }
+        if own { return onWell ? .copy : [] }
+        guard Tray.accepts(pasteboard) else { return [] }
+        if !model.dropping {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                model.dropping = true
+                model.trayScroll = 0
+            }
         }
         if model.state != .open {
             open(on: .tray)
@@ -683,17 +703,45 @@ final class NotchController {
         return .copy
     }
 
+    private func isOnAirDrop(_ point: CGPoint) -> Bool {
+        guard model.state == .open, model.page == .tray, let well = model.airDropFrame else { return false }
+        return well.insetBy(dx: -6, dy: -6).contains(CGPoint(x: point.x, y: point.y - Layout.pastTop))
+    }
+
     private func dragExited() {
+        if model.airDropTargeted { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { model.airDropTargeted = false } }
         // Still in the top half of the display, it stays ready for the drop.
         guard model.dropping, !dragHold else { return }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false }
     }
 
-    private func dropped(_ pasteboard: NSPasteboard) -> Bool {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.dropping = false }
+    /// Onto the AirDrop well: sent, as soon as a device is picked. Anywhere else on the notch, from
+    /// another app: kept in the tray.
+    private func dropped(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> Bool {
+        let onWell = isOnAirDrop(point)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            model.dropping = false
+            model.airDropTargeted = false
+        }
+        if onWell {
+            let items = Self.shareable(from: pasteboard)
+            guard !items.isEmpty else { return false }
+            Tray.shared.airDrop(items)
+            return true
+        }
+        guard !own else { return false }
         let taken = Tray.shared.drop(pasteboard)
         if taken { Opening.tap() }
         return taken
+    }
+
+    /// What a drag carries, as AirDrop takes it: files, or else links, or else text.
+    private static func shareable(from pasteboard: NSPasteboard) -> [Any] {
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
+            return urls
+        }
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL], !urls.isEmpty { return urls }
+        return (pasteboard.readObjects(forClasses: [NSString.self]) as? [String]) ?? []
     }
 
     // MARK: Scroll: pull down to open, push up to dismiss, swipe sideways to skip
@@ -772,6 +820,12 @@ final class NotchController {
                 pullFired = true
                 close(holdUntilExit: true)
                 return
+            } else if !pullFired, model.state == .open, model.page == .tray, pull > 56 {
+                // Pulled further down on the tray: everything it's kept, in the history window.
+                pullFired = true
+                close(holdUntilExit: true)
+                NotificationCenter.default.post(name: Tray.showHistory, object: nil)
+                return
             }
             guard model.state == .open || pull > 0 else { return }
             withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) {
@@ -802,6 +856,25 @@ final class NotchController {
     }
 
     // MARK: The player and the tray
+
+    /// Whether a three-finger swipe starting here is the notch's: on it, open, with the tray on.
+    func takesSwipe(at p: CGPoint) -> Bool {
+        swipeZone?.contains(p) ?? false
+    }
+
+    /// Where three-finger swipes are the notch's: all of it, while it's open with the tray on.
+    private var swipeZone: CGRect? {
+        guard model.state == .open, Tray.isOn, UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch) else { return nil }
+        return openZone
+    }
+
+    /// Three fingers on the open notch: toward the page on the right, the tray, or back.
+    func swipe(right: Bool) {
+        let page: NotchPage = right ? .tray : .player
+        guard page != model.page else { return }
+        turn(to: page)
+        Opening.tap()
+    }
 
     /// Shift and a scroll: the pages move as a page scrolled sideways does, the way this Mac
     /// scrolls, the tray to the right of the player. The page leans along, then turns; past the
@@ -848,7 +921,9 @@ final class NotchController {
     }
 
     private var trayReach: CGFloat {
-        Shelf.reach(count: Tray.shared.items.count + (model.dropping ? 1 : 0), in: model.openSize.width)
+        let tray = Tray.shared
+        let well = TrayView.showsAirDrop(tray: tray, dropping: model.dropping) ? Shelf.wellWidth : 0
+        return Shelf.reach(count: tray.items.count + (model.dropping ? 1 : 0), in: model.openSize.width - well)
     }
 
     /// Two fingers sideways: left for the next song, right for the previous one, as on a phone's
@@ -974,9 +1049,10 @@ final class NotchEventView: NSView {
     var onScroll: (@MainActor (NSEvent) -> Void)?
     var onMouseMoved: (@MainActor () -> Void)?
     /// Something dragged over the notch, and dropped on it.
-    var onDragEntered: (@MainActor (NSPasteboard) -> NSDragOperation)?
+    /// With where it is, in this view's points, and whether it came from the tray itself.
+    var onDragMoved: (@MainActor (NSPasteboard, CGPoint, Bool) -> NSDragOperation)?
     var onDragExited: (@MainActor () -> Void)?
-    var onDrop: (@MainActor (NSPasteboard) -> Bool)?
+    var onDrop: (@MainActor (NSPasteboard, CGPoint, Bool) -> Bool)?
     private var dragOperation: NSDragOperation = []
 
     override var isFlipped: Bool { true }
@@ -1006,13 +1082,16 @@ final class NotchEventView: NSView {
     override func mouseMoved(with event: NSEvent) { onMouseMoved?() }
     override func mouseExited(with event: NSEvent) { onMouseMoved?() }
 
-    // Drags from the tray itself have a source here; they're on their way out, not in.
-    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        dragOperation = sender.draggingSource == nil ? onDragEntered?(sender.draggingPasteboard) ?? [] : []
+    // Drags from the tray itself have a source here; they're on their way out, and only the AirDrop
+    // well takes them.
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { moved(sender) }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { moved(sender) }
+
+    private func moved(_ sender: NSDraggingInfo) -> NSDragOperation {
+        dragOperation =
+            onDragMoved?(sender.draggingPasteboard, convert(sender.draggingLocation, from: nil), sender.draggingSource != nil) ?? []
         return dragOperation
     }
-
-    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { dragOperation }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
         dragOperation = []
@@ -1022,7 +1101,7 @@ final class NotchEventView: NSView {
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         guard !dragOperation.isEmpty else { return false }
         dragOperation = []
-        return onDrop?(sender.draggingPasteboard) ?? false
+        return onDrop?(sender.draggingPasteboard, convert(sender.draggingLocation, from: nil), sender.draggingSource != nil) ?? false
     }
 
     override func draggingEnded(_ sender: NSDraggingInfo) {

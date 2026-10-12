@@ -8,12 +8,13 @@
 import AppKit
 import SwiftUI
 
-/// The tray's settings, as Spotlight's for its clipboard history: whether copies are kept, for how
-/// long, and a way to clear it all.
+/// The tray's settings, as Spotlight's for its clipboard history: whether copies and screenshots are
+/// kept, for how long, the history of it all, and a way to clear it.
 struct TrayPage: View {
     @AppStorage(Preferences.tray) private var trayOn = true
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
     @AppStorage(Preferences.trayClipboardKeep) private var keep = ClipboardKeep.eightHours
+    @AppStorage(Preferences.trayScreenshots) private var keepsScreenshots = true
     @ObservedObject private var tray = Tray.shared
     @State private var confirmingClear = false
 
@@ -22,7 +23,7 @@ struct TrayPage: View {
             Section {
                 Toggle(isOn: $trayOn) {
                     Text("Tray")
-                    Text("Keeps files you drop on the notch, and what you copy.")
+                    Text("Keeps files you drop on the notch, what you copy, and your screenshots.")
                 }
             }
             Section {
@@ -30,10 +31,14 @@ struct TrayPage: View {
                     Text("Keep what you copy")
                     Text("Passwords and other private items are never kept.")
                 }
-                Picker("Keep copies for", selection: $keep) {
+                Toggle(isOn: $keepsScreenshots) {
+                    Text("Keep screenshots")
+                    Text("Each screenshot joins the tray as soon as it's saved.")
+                }
+                Picker("Keep copies and screenshots for", selection: $keep) {
                     ForEach(ClipboardKeep.allCases) { Text($0.title).tag($0) }
                 }
-                .disabled(!keepsCopies)
+                .disabled(!keepsCopies && !keepsScreenshots)
                 if keepsCopies, tray.pasteBlocked {
                     CenteredRow {
                         Text("Glance can't see what you copy")
@@ -47,6 +52,13 @@ struct TrayPage: View {
             }
             .disabled(!trayOn)
             Section {
+                CenteredRow {
+                    Text("Tray History")
+                    Text("Everything the tray has kept, by day, to search and look through.")
+                } trailing: {
+                    Button("Show History") { TrayHistoryController.shared.show() }
+                        .disabled(!trayOn)
+                }
                 CenteredRow {
                     Text("Clear Tray")
                     Text("Removes everything in it. Files stay where they are.")

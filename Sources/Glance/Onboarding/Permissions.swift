@@ -85,6 +85,12 @@ final class Permissions: ObservableObject {
         }
     }
 
+    /// Accessibility on its own, for the tray: pasting with a double-click, and three fingers on the
+    /// notch.
+    func requestAccessibility() {
+        askForAccessibility()
+    }
+
     /// macOS shows its prompt only once; after that, Settings is the way.
     private func askForAccessibility() {
         guard accessibility == .notDetermined else { return }

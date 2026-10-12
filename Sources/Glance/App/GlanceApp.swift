@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Quartz
 
 @main
 enum GlanceApp {
@@ -47,6 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notches.contextMenu = statusBar.menu
         notches.start()
         Tray.shared.start()
+        NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
+        NotchSwipes.shared.start()
+        NotificationCenter.default.addObserver(forName: Tray.showHistory, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { TrayHistoryController.shared.show() }
+        }
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
         Shortcuts.shared.register()
         self.statusBar = statusBar
@@ -78,6 +84,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         settings.show()
+    }
+
+    // Quick Look, for the tray's items: Glance takes charge of the panel, and the tray gives it what
+    // to show.
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = TrayQuickLook.shared
+    }
+
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = nil
     }
 
     private func makeMainMenu() -> NSMenu {
@@ -138,6 +156,7 @@ enum Preferences {
             tray: true,
             trayClipboard: true,
             trayClipboardKeep: ClipboardKeep.eightHours.rawValue,
+            trayScreenshots: true,
             swipeToSwitch: true,
         ])
     }
@@ -211,11 +230,13 @@ enum Preferences {
     /// a KeyCombo, as JSON.
     static let shortcutMusic = "shortcutMusic"
     static let shortcutTray = "shortcutTray"
-    /// The tray: on, keeping what's copied, and for how long (a ClipboardKeep).
+    /// The tray: on, keeping what's copied and screenshots, and for how long (a ClipboardKeep).
     static let tray = "tray"
     static let trayClipboard = "trayClipboard"
     static let trayClipboardKeep = "trayClipboardKeep"
-    /// Scrolling with Shift held switches between the player and the tray.
+    static let trayScreenshots = "trayScreenshots"
+    /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
+    /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"
 }
 
@@ -408,7 +429,7 @@ final class NotchManager {
         // However the drag ended, it has once the button is up.
         if dragging, NSEvent.pressedMouseButtons & 1 == 0 { dragging = false }
         // A drag that's just begun: what it carries is on the drag pasteboard, newly changed.
-        if !dragging, NSEvent.pressedMouseButtons & 1 != 0, Tray.isOn, !TileInteractionView.draggingOut {
+        if !dragging, NSEvent.pressedMouseButtons & 1 != 0, Tray.isOn, !Tray.shared.draggingOut {
             let board = NSPasteboard(name: .drag)
             if board.changeCount != dragChange {
                 dragChange = board.changeCount
@@ -435,6 +456,12 @@ final class NotchManager {
             return
         }
         dragChange = NSPasteboard(name: .drag).changeCount
+    }
+
+    /// A three-finger swipe on the open notch under the pointer.
+    func swipe(right: Bool) {
+        let location = NSEvent.mouseLocation
+        controllers.first { $0.takesSwipe(at: location) }?.swipe(right: right)
     }
 
     /// A shortcut: the notch on the display under the pointer, or the first one.

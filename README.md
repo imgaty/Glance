@@ -79,8 +79,8 @@ whenever LRCLIB has timed lyrics for it.
 
 ### Tray
 
-Drag files onto the notch to keep them close, and find what you copied, ready to
-paste again. Press ⇧⌘2 in any app to open it.
+Drag files onto the notch to keep them close, and find what you copied and your
+screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app to open it.
 
 <img src="./assets/screenshots/tray.png"
      width="450"

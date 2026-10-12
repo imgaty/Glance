@@ -21,12 +21,16 @@ enum Shelf {
     /// a margin, rounded concentric with it.
     static let platterRadius: CGFloat = 14
     static let platterHeight: CGFloat = 8 + picture + 5 + caption + 2
-    static let bandMargin: CGFloat = 4
+    /// Wide enough that the band's soft edge fades out beyond the tiles, not over them.
+    static let bandMargin: CGFloat = 12
 
     /// The row of tiles, from the first to the last, with the notch's padding at both ends.
     static func width(count: Int) -> CGFloat {
         count == 0 ? 0 : CGFloat(count) * tile + CGFloat(count - 1) * spacing + PlayerLayout.padding * 2
     }
+
+    /// The room the AirDrop well takes at the row's end, its gap before it included.
+    static let wellWidth: CGFloat = tile + PlayerLayout.padding
 
     /// How far the row scrolls in a notch this wide.
     static func reach(count: Int, in width: CGFloat) -> CGFloat {
@@ -44,6 +48,8 @@ struct TrayView: View {
     let dropping: Bool
     /// How far the row is scrolled.
     let scroll: CGFloat
+    /// Something dragged is over the AirDrop well.
+    var airDropTargeted = false
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
     /// Built only while it shows, and a moment after, to fade out: closed, or on the player, the
@@ -55,8 +61,11 @@ struct TrayView: View {
             if built || dropping { content(proxy) }
         }
         .foregroundStyle(.white)
+        .environment(\.colorScheme, .dark)
         .animation(.spring(response: 0.4, dampingFraction: 0.86), value: tray.items.map(\.id))
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: dropping)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: Self.showsAirDrop(tray: tray, dropping: dropping))
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: airDropTargeted)
         .onChange(of: isVisible, initial: true) {
             guard isVisible else { return }
             built = true
@@ -70,12 +79,40 @@ struct TrayView: View {
         }
     }
 
+    /// The AirDrop well shows while something's dragged over the notch or out of the tray, and
+    /// while items are chosen, to send them.
+    static func showsAirDrop(tray: Tray, dropping: Bool) -> Bool {
+        dropping || tray.draggingOut || !tray.selection.isEmpty
+    }
+
     @ViewBuilder private func content(_ proxy: GeometryProxy) -> some View {
         let top = closedNotch.height + PlayerLayout.cameraGap + 4
         let room = proxy.size.height - top - PlayerLayout.padding + 4
+        let well = Self.showsAirDrop(tray: tray, dropping: dropping)
+        ZStack(alignment: .topTrailing) {
+            shelf(width: proxy.size.width - (well ? Shelf.wellWidth : 0), height: proxy.size.height, top: top, room: room)
+                .frame(width: proxy.size.width, alignment: .leading)
+            if well {
+                AirDropWell(targeted: airDropTargeted, chosen: tray.selection.count) {
+                    tray.airDrop(tray.shareable(tray.chosen))
+                }
+                .notchControl(enabled: isVisible && !tray.selection.isEmpty)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: AirDropFrame.self, value: proxy.frame(in: .named(ControlFrames.space)))
+                    }
+                }
+                .padding(.trailing, PlayerLayout.padding)
+                .padding(.top, top + (room - Shelf.platterHeight) / 2)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+    }
+
+    @ViewBuilder private func shelf(width: CGFloat, height: CGFloat, top: CGFloat, room: CGFloat) -> some View {
         if tray.items.isEmpty {
             empty
-                .frame(width: proxy.size.width, height: room)
+                .frame(width: width, height: room)
                 .padding(.top, top)
                 .background(alignment: .top) {
                     // The whole notch takes the drop: a ring just inside its edges, below the
@@ -84,13 +121,13 @@ struct TrayView: View {
                         let inset: CGFloat = 10
                         RoundedRectangle(cornerRadius: PlayerLayout.cornerRadius - inset, style: .continuous)
                             .strokeBorder(.white.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                            .frame(width: proxy.size.width - inset * 2, height: proxy.size.height - closedNotch.height - 6 - inset)
+                            .frame(width: width - inset * 2, height: height - closedNotch.height - 6 - inset)
                             .padding(.top, closedNotch.height + 6)
                             .transition(.opacity)
                     }
                 }
         } else {
-            row(width: proxy.size.width)
+            row(width: width)
                 .frame(height: room)
                 .padding(.top, top)
         }
@@ -106,7 +143,7 @@ struct TrayView: View {
             // One band of blur behind the whole row, from the first tile to the last, so names
             // read over whatever's behind the notch.
             TrayBlur()
-                .frame(width: CGFloat(count) * step - Shelf.spacing + Shelf.bandMargin * 2, height: Shelf.platterHeight)
+                .frame(width: CGFloat(count) * step - Shelf.spacing + Shelf.bandMargin * 2, height: Shelf.platterHeight + 12)
                 .padding(.leading, PlayerLayout.padding - Shelf.bandMargin)
             row(shown, skipped: skipped, step: step)
         }
@@ -189,14 +226,14 @@ private struct TrayTile: View {
     let item: TrayItem
     @ObservedObject var tray: Tray
     let isVisible: Bool
-    @State private var thumbnail: NSImage?
     @State private var hovered = false
 
     var body: some View {
-        let copied = tray.justCopied == item.id
+        let copied = tray.justCopied.contains(item.id)
+        let chosen = tray.selection.contains(item.id)
+        let caption = TrayItemPicture.caption(for: item)
         VStack(spacing: 5) {
-            picture
-                .frame(width: Shelf.picture, height: Shelf.picture)
+            TrayItemPicture(item: item, tray: tray, side: Shelf.picture)
                 .overlay {
                     if copied {
                         Image(systemName: "checkmark.circle.fill")
@@ -216,11 +253,14 @@ private struct TrayTile: View {
         .padding(.top, 8)
         .padding(.bottom, 2)
         .frame(width: Shelf.tile)
+        // Chosen, as Finder shows chosen files: in the accent color; under the pointer, a little
+        // brighter.
         .background {
-            RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous).fill(.white.opacity(hovered ? 0.1 : 0))
+            RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous)
+                .fill(chosen ? Color.accentColor.opacity(0.5) : .white.opacity(hovered ? 0.1 : 0))
         }
         .overlay {
-            TileInteraction(item: item, tray: tray) { hovered = $0 }
+            TileInteraction(item: item, tray: tray, selector: tray, clickSelects: false) { hovered = $0 }
         }
         .overlay(alignment: .topLeading) {
             if hovered {
@@ -246,88 +286,55 @@ private struct TrayTile: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(caption)
         .accessibilityAddTraits(.isButton)
-        .task(id: item.id) {
-            thumbnail = TrayThumbnails.cached(item)
-            if thumbnail == nil { thumbnail = await TrayThumbnails.image(for: item, in: tray, side: Shelf.picture) }
-        }
     }
+}
 
-    /// A file's name; a link's site; text or a picture, by the app it came from.
-    private var caption: String {
-        switch item.kind {
-        case .files, .link: item.title
-        case .image, .text: item.app.flatMap(Self.appName) ?? item.title
-        }
-    }
+/// AirDrop, at the end of the row: drop something on it, or click it with items chosen, and the
+/// AirDrop window opens with them, ready to send.
+private struct AirDropWell: View {
+    let targeted: Bool
+    let chosen: Int
+    let send: () -> Void
 
-    private static func icon(of item: TrayItem) -> NSImage {
-        let ext = ((item.names.first ?? "") as NSString).pathExtension
-        return NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
-    }
+    /// The AirDrop icon Finder shows in its sidebar.
+    private static let icon = NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app")
 
-    /// Looked up once for each app.
-    private static var appNames: [String: String?] = [:]
-
-    private static func appName(_ bundle: String) -> String? {
-        if let name = appNames[bundle] { return name }
-        let name = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
-            .map { FileManager.default.displayName(atPath: $0.path) }
-            .map { $0.hasSuffix(".app") ? String($0.dropLast(4)) : $0 }
-        appNames[bundle] = name
-        return name
-    }
-
-    @ViewBuilder private var picture: some View {
-        switch item.kind {
-        case .files:
-            ZStack(alignment: .topTrailing) {
-                // Until its picture is made, or if it can't be, the icon of its kind of file.
-                Image(nsImage: thumbnail ?? Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
-                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                // As Finder counts files dragged together.
-                if item.names.count > 1 {
-                    Text("\(item.names.count)")
-                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
-                        .padding(.horizontal, 5)
-                        .frame(minWidth: 18, minHeight: 18)
-                        .background(Capsule().fill(.red))
-                        .offset(x: 4, y: -4)
-                }
-            }
-        case .image:
-            if let thumbnail {
-                Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fill)
+    var body: some View {
+        Button(action: send) {
+            VStack(spacing: 5) {
+                Image(nsImage: Self.icon)
+                    .resizable()
                     .frame(width: Shelf.picture, height: Shelf.picture)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(.white.opacity(0.15), lineWidth: 0.5))
+                Text(chosen > 0 ? "AirDrop \(chosen)" : "AirDrop")
+                    .font(.system(size: 10, weight: .medium))
+                    .frame(height: Shelf.caption, alignment: .top)
             }
-        case .link:
-            card {
-                Image(systemName: "link")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.75))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+            .frame(width: Shelf.tile, height: Shelf.platterHeight)
+            .background {
+                RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous)
+                    .fill(.white.opacity(targeted ? 0.22 : 0.08))
+                RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(targeted ? 0.5 : 0.18), lineWidth: 1)
             }
-        case .text:
-            card {
-                Text(item.text ?? "")
-                    .font(.system(size: 7.5))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .lineLimit(6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(6)
-            }
+            .scaleEffect(targeted ? 1.06 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: Shelf.platterRadius, style: .continuous))
         }
+        .buttonStyle(.plain)
+        // The same soft blur as under the row.
+        .background {
+            TrayBlur()
+                .frame(width: Shelf.tile + Shelf.bandMargin * 2, height: Shelf.platterHeight + 12)
+        }
+        .accessibilityLabel(chosen > 0 ? "AirDrop \(chosen) Items" : "AirDrop")
     }
+}
 
-    /// Text and links, on a card like a note's.
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(.white.opacity(0.12))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.1), lineWidth: 0.5))
-            .overlay { content() }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
+/// Where the AirDrop well is in the notch, for dropping on it.
+struct AirDropFrame: PreferenceKey {
+    static let defaultValue: CGRect? = nil
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) { value = nextValue() ?? value }
 }
 
 /// The band of blur behind the tray's row: macOS's own blur, as under its menus, but light, and with
@@ -341,7 +348,7 @@ private struct TrayBlur: NSViewRepresentable {
 final class LightBlurView: NSVisualEffectView {
     /// Its own blur is 30 points; this is enough to soften text behind it out of the way.
     private static let radius: CGFloat = 10
-    private static let corner = Shelf.platterRadius + Shelf.bandMargin
+    private static let corner = Shelf.platterRadius + 4
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -383,14 +390,34 @@ final class LightBlurView: NSVisualEffectView {
         layer.map(visit)
     }
 
-    /// Rounded as the band is, at any size.
+    /// Rounded as the band is, at any size, its edges fading out over a few points rather than
+    /// ending in a line, so the blur melts into the glass around it.
     private static let mask: NSImage = {
-        let image = NSImage(size: CGSize(width: corner * 2 + 1, height: corner * 2 + 1), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: corner, yRadius: corner).fill()
-            return true
+        let feather: CGFloat = 10, side = Int((corner + feather) * 2 + 1)
+        let scale = 2
+        let pixels = side * scale
+        guard
+            let context = CGContext(
+                data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: pixels,
+                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue),
+            let data = context.data?.assumingMemoryBound(to: UInt8.self)
+        else { return NSImage() }
+        // How far each point is outside the rounded rectangle (negative inside), eased across the
+        // feather.
+        let half = CGFloat(side) / 2, inner = half - feather
+        for y in 0..<pixels {
+            for x in 0..<pixels {
+                let px = abs((CGFloat(x) + 0.5) / CGFloat(scale) - half) - (inner - corner)
+                let py = abs((CGFloat(y) + 0.5) / CGFloat(scale) - half) - (inner - corner)
+                let distance = hypot(max(px, 0), max(py, 0)) + min(max(px, py), 0) - corner
+                let t = min(max(0.5 - distance / feather, 0), 1)
+                data[y * pixels + x] = UInt8((t * t * (3 - 2 * t) * 255).rounded())
+            }
         }
-        image.capInsets = NSEdgeInsets(top: corner, left: corner, bottom: corner, right: corner)
+        guard let cgImage = context.makeImage() else { return NSImage() }
+        let image = NSImage(cgImage: cgImage, size: CGSize(width: side, height: side))
+        let inset = corner + feather
+        image.capInsets = NSEdgeInsets(top: inset, left: inset, bottom: inset, right: inset)
         image.resizingMode = .stretch
         return image
     }()

@@ -13,7 +13,11 @@
 - Added the tray: files dropped on the notch, and what you copy, newest first.
 - Added clipboard history, kept for 30 minutes, 8 hours or 7 days, never
   keeping passwords.
-- Added AirDrop to each item's menu in the tray.
+- Added screenshots to the tray, as soon as each is saved.
+- Added an AirDrop well at the tray's end, to send what's dropped or chosen.
+- Added choosing several items with ⌘-click and Shift-click.
+- Added Quick Look and AirDrop to each item's menu in the tray.
+- Added a history window of everything the tray kept, to search by day.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening
@@ -21,7 +25,8 @@
 - Added ⇧⌘1 to open and close the player from any app, ahead of the app's
   own shortcuts.
 - Added ⇧⌘2 to open and close the tray the same way.
-- Added Shift and a scroll to switch between the player and the tray.
+- Added three fingers on the open notch, or Shift and a scroll, to switch
+  between the player and the tray.
 - Added opening the tray when something is dragged into the top half of the
   screen.
 - Added keyboard shortcut settings in **Settings > Opening** to change them.

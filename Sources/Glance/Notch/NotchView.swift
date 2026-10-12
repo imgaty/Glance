@@ -127,6 +127,10 @@ final class NotchModel: ObservableObject {
     @Published var trayScroll: CGFloat = 0
     /// How far a swipe to the other page has pushed this one, before it goes.
     @Published var pageNudge: CGFloat = 0
+    /// Where the tray's AirDrop well is, in the notch's points, while it shows; and whether
+    /// something dragged is over it.
+    var airDropFrame: CGRect?
+    @Published var airDropTargeted = false
 
     /// The lyrics show only for a song, on the player; for a video, a podcast or nothing at all
     /// they fold away, and come back with the next song.
@@ -367,12 +371,15 @@ struct NotchView: View {
                 .offset(x: (onTray ? -Self.pageShift : 0) + (playerShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: playerShown)) { $0.opacity(playerShown ? 1 : 0).blur(radius: playerShown ? 0 : 4) }
             if trayOn {
-                TrayView(tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll)
-                    .frame(width: model.openSize.width, height: model.openSize.height)
-                    .environment(\.notchControls, trayShown)
-                    .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
-                    .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
-                    .allowsHitTesting(places == nil && trayShown)
+                TrayView(
+                    tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
+                    airDropTargeted: model.airDropTargeted
+                )
+                .frame(width: model.openSize.width, height: model.openSize.height)
+                .environment(\.notchControls, trayShown)
+                .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
+                .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
+                .allowsHitTesting(places == nil && trayShown)
             }
             HeroArtwork(isOpen: isOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
                 .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
@@ -452,6 +459,7 @@ struct NotchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .coordinateSpace(.named(ControlFrames.space))
         .onPreferenceChange(ControlFrames.self) { model.controlFrames = $0 }
+        .onPreferenceChange(AirDropFrame.self) { model.airDropFrame = $0 }
         // A change in Settings eases in rather than snapping.
         .animation(.easeInOut(duration: 0.6), value: background)
         .animation(.easeInOut(duration: 0.45), value: darkness)
