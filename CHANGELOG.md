@@ -18,8 +18,8 @@
 - Added link previews to the tray, with each page's title and site icon.
 - Added choosing several items with ⌘-click and Shift-click.
 - Added Quick Look and AirDrop to each item's menu in the tray.
-- Added the history: the tray opens out in the notch into everything it kept,
-  by day, from its handle or a swipe down.
+- Added widening the tray sideways to show everything in it, from its handle or
+  a swipe down.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening

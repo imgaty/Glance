@@ -10,10 +10,10 @@ import LinkPresentation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// An item's picture, a rounded square as the player's cover is, so the tray reads as one row of
-/// things: a photo or a screenshot fills it, as artwork does; a document shows its first page and a
-/// folder its icon, as Finder shows them; text is a note, its first line bold, as Notes shows one;
-/// a link is the page's own preview, its site's icon and title, as Messages shows it.
+/// An item's picture, as the desktop shows a file: a photo or a screenshot whole, with a thin edge;
+/// a document, its first page; a folder, its icon; copied text, as a page with the text on it, as
+/// Finder shows a document's first page; a link, its site's icon on a tile, as Safari shows a
+/// favorite. Each fits the same square, so the row keeps an even rhythm.
 struct TrayItemPicture: View {
     let item: TrayItem
     let tray: Tray
@@ -21,16 +21,16 @@ struct TrayItemPicture: View {
     @State private var thumbnail: NSImage?
     @State private var link: LinkPreview?
 
-    /// Concentric with the player's cover at the same size.
+    /// The corners of a tile the size of a thumbnail.
     static func radius(for side: CGFloat) -> CGFloat { side * 0.2 }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Self.radius(for: side), style: .continuous)
-        picture(shape)
+        picture
             .frame(width: side, height: side)
             .task(id: item.id) {
                 if item.kind == .link {
-                    link = await LinkPreviews.preview(for: item)
+                    link = LinkPreviews.cached(item)
+                    if link == nil { link = await LinkPreviews.preview(for: item) }
                     return
                 }
                 thumbnail = TrayThumbnails.cached(item)
@@ -38,129 +38,105 @@ struct TrayItemPicture: View {
             }
     }
 
-    @ViewBuilder private func picture(_ shape: RoundedRectangle) -> some View {
+    @ViewBuilder private var picture: some View {
         switch item.kind {
         case .image:
-            filled(shape)
-        case .files where item.names.count > 1:
-            stack(shape)
-        case .files where Self.fills(item):
-            filled(shape)
+            photo
+        case .files where Self.isPhoto(item):
+            photo.overlay(alignment: .topTrailing) { count }
+        case .text:
+            page
         case .files:
-            // Until its picture is made, or if it can't be, the icon of its kind of file.
+            // Until Quick Look has made its picture, or if it can't, the icon of its kind of file.
             Image(nsImage: thumbnail ?? Self.icon(of: item))
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
-                .padding(side * 0.04)
-        case .text:
-            note(shape)
+                .overlay(alignment: .topTrailing) { count }
         case .link:
-            linkCard(shape)
+            site
         }
     }
 
-    /// A picture, filling the square as a cover does.
-    private func filled(_ shape: RoundedRectangle) -> some View {
-        Color(white: 0.16)
-            .overlay {
-                if let thumbnail {
-                    Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fill)
-                }
+    /// Photos and screenshots, whole, their corners a little rounded and a thin edge around them,
+    /// as the desktop shows them.
+    @ViewBuilder private var photo: some View {
+        if let thumbnail {
+            Image(nsImage: thumbnail)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: side * 0.05, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: side * 0.05, style: .continuous).strokeBorder(.white.opacity(0.35), lineWidth: 1))
+                .frame(width: side, height: side)
+        } else {
+            Image(nsImage: Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
+        }
+    }
+
+    /// Copied text, as a page with the text on it, as Finder shows a document's first page; drawn
+    /// here, as Quick Look draws a short text as a page too small to read.
+    private var page: some View {
+        let height = side * 0.94, shape = RoundedRectangle(cornerRadius: side * 0.035, style: .continuous)
+        return
+            shape
+            .fill(.white)
+            .overlay(alignment: .topLeading) {
+                Text(item.text ?? "")
+                    .font(.system(size: side * 0.085))
+                    .foregroundStyle(Color(white: 0.22))
+                    .lineSpacing(-side * 0.01)
+                    .lineLimit(9)
+                    .padding(side * 0.07)
             }
             .clipShape(shape)
-            .overlay(shape.strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+            .frame(width: height * 0.77, height: height)
     }
 
-    /// Several files copied together: the first, with the edges of the others behind it, as a
-    /// stack of photos is shown.
-    private func stack(_ shape: RoundedRectangle) -> some View {
-        ZStack {
-            ForEach([2, 1], id: \.self) { depth in
-                shape
-                    .fill(Color(white: 0.22 + 0.06 * Double(2 - depth)))
-                    .overlay(shape.strokeBorder(.white.opacity(0.1), lineWidth: 0.5))
-                    .scaleEffect(1 - 0.06 * CGFloat(depth))
-                    .offset(y: -side * 0.05 * CGFloat(depth))
-            }
-            Group {
-                if Self.fills(item) {
-                    filled(shape)
-                } else {
-                    Color(white: 0.16)
-                        .overlay {
-                            Image(nsImage: thumbnail ?? Self.icon(of: item))
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .padding(side * 0.14)
-                        }
-                        .clipShape(shape)
-                }
-            }
-            .scaleEffect(0.92, anchor: .bottom)
+    /// Several files copied together: how many, as a stack of them is counted.
+    @ViewBuilder private var count: some View {
+        if item.kind == .files, item.names.count > 1 {
+            Text("\(item.names.count)")
+                .font(.system(size: side * 0.16, weight: .semibold).monospacedDigit())
+                .foregroundStyle(.white)
+                .padding(.horizontal, side * 0.08)
+                .frame(minWidth: side * 0.3, minHeight: side * 0.3)
+                .background(Capsule().fill(Color(white: 0.3)))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 0.5))
+                .offset(x: side * 0.06, y: -side * 0.06)
         }
     }
 
-    /// Text, as a note: its first line bold, then the rest.
-    private func note(_ shape: RoundedRectangle) -> some View {
-        let lines = (item.text ?? "").split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true)
-        let first = lines.first.map(String.init) ?? ""
-        let rest = lines.count > 1 ? String(lines[1]) : ""
-        return VStack(alignment: .leading, spacing: 1) {
-            Text(first)
-                .font(.system(size: side * 0.13, weight: .semibold))
-                .lineLimit(rest.isEmpty ? 5 : 2)
-            if !rest.isEmpty {
-                Text(rest)
-                    .font(.system(size: side * 0.12))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(3)
-            }
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(side * 0.12)
-        .background(Color(white: 0.17))
-        .clipShape(shape)
-        .overlay(shape.strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
-    }
-
-    /// A link, as the page shows itself: its site's icon and its title, the site under them.
-    private func linkCard(_ shape: RoundedRectangle) -> some View {
-        VStack(alignment: .leading, spacing: side * 0.05) {
-            Group {
+    /// A link, as Safari shows a favorite: the site's icon on a tile, or its first letter.
+    private var site: some View {
+        let tile = side * 0.84
+        let shape = RoundedRectangle(cornerRadius: Self.radius(for: tile), style: .continuous)
+        return
+            shape
+            .fill(link?.icon == nil ? Self.color(for: item.title) : Color(white: 0.94))
+            .overlay {
                 if let icon = link?.icon {
-                    Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: side * 0.06, style: .continuous))
-                } else {
-                    Image(systemName: "safari")
+                    Image(nsImage: icon)
                         .resizable()
-                        .foregroundStyle(.white.opacity(0.75))
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: tile * 0.56, height: tile * 0.56)
+                        .clipShape(RoundedRectangle(cornerRadius: tile * 0.1, style: .continuous))
+                } else {
+                    Text(item.title.prefix(1).uppercased())
+                        .font(.system(size: tile * 0.48, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
                 }
             }
-            .frame(width: side * 0.26, height: side * 0.26)
-            Spacer(minLength: 0)
-            // The page's title once it's known, over its site; until then, the site alone.
-            if let title = link?.title {
-                Text(title)
-                    .font(.system(size: side * 0.13, weight: .semibold))
-                    .lineLimit(2)
-            }
-            Text(item.title)
-                .font(.system(size: side * (link?.title == nil ? 0.13 : 0.11), weight: link?.title == nil ? .semibold : .regular))
-                .foregroundStyle(.white.opacity(link?.title == nil ? 1 : 0.6))
-                .lineLimit(1)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(side * 0.12)
-        .background(Color(white: 0.17))
-        .clipShape(shape)
-        .overlay(shape.strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+            .frame(width: tile, height: tile)
     }
 
-    /// Photos, screenshots and videos fill their square; other files show as Finder shows them.
-    private static func fills(_ item: TrayItem) -> Bool {
+    /// A color for a site with no icon, the same every time for the same site, as Safari picks one.
+    private static func color(for site: String) -> Color {
+        let colors: [Color] = [.blue, .indigo, .purple, .pink, .orange, .teal, .green, .gray]
+        let index = site.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF } % colors.count
+        return colors[index].mix(with: .black, by: 0.15)
+    }
+
+    /// Photos, screenshots and videos show whole, with an edge; other files show as Finder shows them.
+    private static func isPhoto(_ item: TrayItem) -> Bool {
         guard let type = UTType(filenameExtension: ((item.names.first ?? "") as NSString).pathExtension) else { return false }
         return type.conforms(to: .image) || type.conforms(to: .movie)
     }

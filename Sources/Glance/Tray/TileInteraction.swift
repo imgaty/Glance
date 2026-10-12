@@ -222,8 +222,6 @@ final class TrayMenu: NSObject {
         }
         separate()
         add(count > 1 ? "Remove\(many) from Tray" : "Remove from Tray", "minus.circle", #selector(remove))
-        separate()
-        add("Show Tray History", "clock.arrow.circlepath", #selector(showHistory))
         // The menu holds its items' target weakly; it keeps this alive while it's up.
         objc_setAssociatedObject(menu, &Self.key, self, .OBJC_ASSOCIATION_RETAIN)
     }
@@ -261,7 +259,6 @@ final class TrayMenu: NSObject {
     @objc private func pasteItem() { items.first.map(tray.paste) }
     @objc private func sendWithAirDrop() { tray.airDrop(tray.shareable(items)) }
     @objc private func remove() { tray.remove(Set(items.map(\.id))) }
-    @objc private func showHistory() { NotificationCenter.default.post(name: Tray.showHistory, object: nil) }
 }
 
 /// Quick Look, as Finder shows it, for what's in the tray: files and pictures. Glance takes charge of

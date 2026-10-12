@@ -9,7 +9,7 @@ import AppKit
 import SwiftUI
 
 /// The tray's settings, as Spotlight's for its clipboard history: whether copies and screenshots are
-/// kept, for how long, the history of it all, and a way to clear it.
+/// kept, for how long, and a way to clear it all.
 struct TrayPage: View {
     @AppStorage(Preferences.tray) private var trayOn = true
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
@@ -52,13 +52,6 @@ struct TrayPage: View {
             }
             .disabled(!trayOn)
             Section {
-                CenteredRow {
-                    Text("Tray History")
-                    Text("Everything the tray has kept, by day. Click the handle under the tray to see it there.")
-                } trailing: {
-                    Button("Show History") { NotificationCenter.default.post(name: Tray.showHistory, object: nil) }
-                        .disabled(!trayOn)
-                }
                 CenteredRow {
                     Text("Clear Tray")
                     Text("Removes everything in it. Files stay where they are.")

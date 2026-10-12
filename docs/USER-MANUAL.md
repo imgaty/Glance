@@ -159,8 +159,8 @@ top edge.
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
 | Drag an item out | Puts it there; files move or copy as they do in Finder. Drop it on `AirDrop` to send it |
 | Swipe left or right with two fingers | Scrolls the tray |
-| Click the handle under the tray, or swipe down with two fingers | Opens the tray out into its history |
-| Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, AirDrop, Share, Remove from Tray, and Show Tray History |
+| Click the handle under the tray, or swipe down with two fingers | Widens the notch to show everything in the tray |
+| Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, AirDrop, Share, and Remove from Tray |
 
 `AirDrop` shows at the tray's end only while something is being dragged, onto
 the notch or out of the tray. A link shows its page's title and its site's icon,
@@ -183,15 +183,12 @@ Each screenshot joins the tray as soon as it's saved, wherever you save them,
 and stays as long as copies do. Turn this off with
 **Settings > Tray > Keep screenshots**.
 
-### History
+### Seeing everything
 
-The tray opens out, right in the notch, into everything it has kept, by day:
-what you copied, your screenshots, and what you dropped. Click the handle under
-the tray, or swipe down on it with two fingers; or choose
-**Show Tray History** from an item's menu, or
-**Settings > Tray > Show History**. Scroll with two fingers; the name of the
-item under the pointer shows at the top. Items work as they do in the row.
-Click the handle again, or swipe up, to go back to the row.
+With more in the tray than fits, a handle shows under it. Click it, or swipe
+down with two fingers, and the notch widens sideways to show everything, up to
+most of the screen's width. Click the handle again, or swipe up, to bring it
+back.
 
 <br>
 
@@ -265,7 +262,6 @@ Glance's icon in the menu bar opens a menu:
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
-| `Tray History` | Opens the tray out into its history |
 | `Clear Tray` | Removes everything in the tray; files stay where they are |
 
 ### Opening

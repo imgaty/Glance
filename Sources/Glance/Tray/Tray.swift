@@ -29,8 +29,6 @@ final class Tray: ObservableObject {
     @Published var draggingOut = false
 
     static let didPaste = Notification.Name("TrayDidPaste")
-    /// Asked for the history window, from an item's menu or a pull down on the tray.
-    static let showHistory = Notification.Name("TrayShowHistory")
     /// The most of either kind kept: the oldest goes first.
     static let limit = 200
 

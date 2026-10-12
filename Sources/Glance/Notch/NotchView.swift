@@ -43,6 +43,9 @@ enum GlassLook {
     /// A little black even when clear stops the glass lifting dark backgrounds toward white; eased
     /// in, so most of the way is glass and it turns opaque near the end.
     static func black(_ darkness: Double) -> Double { 0.15 + 0.85 * darkness * darkness }
+    /// On the tray, the least the glass blurs what's behind it, whatever it's set to: enough for
+    /// the row and its name to read over a busy window, as a menu's glass does.
+    static let trayBlur = 0.55
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
@@ -127,9 +130,9 @@ final class NotchModel: ObservableObject {
     @Published var trayScroll: CGFloat = 0
     /// How far a swipe to the other page has pushed this one, before it goes.
     @Published var pageNudge: CGFloat = 0
-    /// The tray opened out into its history, taller and wider.
+    /// The tray widened to show everything in it, and how wide.
     @Published var expanded = false
-    static let historySize = CGSize(width: 600, height: 440)
+    @Published var expandedWidth: CGFloat = 0
     /// Where the tray's AirDrop well is, in the notch's points, while it shows; and whether
     /// something dragged is over it.
     var airDropFrame: CGRect?
@@ -199,7 +202,7 @@ final class NotchModel: ObservableObject {
                     closedSize.height + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, closedSize.height + 7 + pull)
-            case .open where expanded && page == .tray: (Self.historySize.width + pull * 0.35, Self.historySize.height + pull)
+            case .open where expanded && page == .tray: (expandedWidth + pull * 0.35, openSize.height + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
@@ -321,6 +324,7 @@ struct NotchView: View {
         // Open on the player, rather than on the tray.
         let playerShown = isOpen && !onTray
         let trayShown = isOpen && onTray
+        let glassBlur = trayShown ? max(blur, GlassLook.trayBlur) : blur
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed ? 1 : 0
@@ -381,10 +385,7 @@ struct NotchView: View {
                 ) { expanded in
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { model.expanded = expanded }
                 }
-                .frame(
-                    width: model.expanded ? NotchModel.historySize.width : model.openSize.width,
-                    height: model.expanded ? NotchModel.historySize.height : model.openSize.height
-                )
+                .frame(width: model.expanded ? model.expandedWidth : model.openSize.width, height: model.openSize.height)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
@@ -447,7 +448,7 @@ struct NotchView: View {
                     // Clear Liquid Glass under black, as dark as set, blurring what's behind it as much as set.
                     Color.clear
                         .glassEffect(.clear, in: shape)
-                        .background(GlassBlur(radius: GlassLook.blur(blur)))
+                        .background(GlassBlur(radius: GlassLook.blur(glassBlur)))
                         .mask { WithoutFlares(flare: m.flare) }
                         .mask { shape }
                         .opacity(visible)
@@ -814,17 +815,39 @@ final class GlassBlurView: NSView {
     }
 
     private static let name = "notchBlur"
+    private static let easing: CFTimeInterval = 0.35
+
+    /// A big change, as going to the tray and back, eases over; a slider's small steps follow it at
+    /// once.
+    private func ease(_ backdrop: CALayer, from: CGFloat, to: CGFloat) {
+        guard abs(to - from) > 2, window != nil else { return }
+        let animation = CABasicAnimation(keyPath: "filters.\(Self.name).inputRadius")
+        animation.fromValue = from
+        animation.toValue = to
+        animation.duration = Self.easing
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        backdrop.add(animation, forKey: Self.name)
+    }
 
     private func set(_ backdrop: CALayer) {
         var filters = backdrop.filters ?? []
         let existing = filters.firstIndex { ($0 as? NSObject)?.value(forKey: "name") as? String == Self.name }
+        let current = existing.flatMap { (filters[$0] as? NSObject)?.value(forKey: "inputRadius") as? CGFloat }
         if radius <= 0.01 {
-            if let existing {
-                filters.remove(at: existing)
-                backdrop.filters = filters
+            guard let current, current > 0.01 else {
+                // Eased down to nothing: only then does the blur go.
+                if let existing, backdrop.animation(forKey: Self.name) == nil {
+                    filters.remove(at: existing)
+                    backdrop.filters = filters
+                }
+                return
             }
-        } else if let existing {
-            if ((filters[existing] as? NSObject)?.value(forKey: "inputRadius") as? CGFloat) != radius {
+            ease(backdrop, from: current, to: 0)
+            backdrop.setValue(0, forKeyPath: "filters.\(Self.name).inputRadius")
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.easing + 0.05) { [weak self] in self?.apply() }
+        } else if let current {
+            if current != radius {
+                ease(backdrop, from: current, to: radius)
                 backdrop.setValue(radius, forKeyPath: "filters.\(Self.name).inputRadius")
             }
         } else if let type = NSClassFromString("CAFilter") as? NSObject.Type,
@@ -835,6 +858,7 @@ final class GlassBlurView: NSView {
             // Blurred right to the glass's edges, with nothing faded in from outside them.
             blur.setValue(true, forKey: "inputNormalizeEdges")
             backdrop.filters = [blur] + filters
+            ease(backdrop, from: 0, to: radius)
         }
         // The glass's own blur, which it uses in a window that doesn't look active: none, so the
         // blur above is all there is either way.

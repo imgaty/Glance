@@ -15,9 +15,6 @@ enum Shelf {
     static let spacing: CGFloat = 10
     /// Room around each thumbnail for it to lift, and for the ring around a chosen one.
     static let lift: CGFloat = 10
-    /// The band of blur reaches past the thumbnails by this much, so its soft edge fades out
-    /// beyond them, not over them.
-    static let bandMargin: CGFloat = 16
 
     /// The row of thumbnails, from the first to the last, with the notch's padding at both ends.
     static func width(count: Int) -> CGFloat {
@@ -37,8 +34,8 @@ enum Shelf {
 /// and under them, as its title and artist, the name of the one under the pointer, or the newest,
 /// and where and when it came from. Nothing on it is a button: an item is clicked to copy it,
 /// dragged to put it somewhere, right-clicked for everything else. Something dragged over the notch
-/// parts the row for it, as the Dock does, with AirDrop at its end. Its handle, or a pull down,
-/// opens it out into everything it's kept, by day.
+/// parts the row for it, as the Dock does, with AirDrop at its end. With more in it than fits, its
+/// handle, or a pull down, widens the notch to show them all.
 struct TrayView: View {
     @ObservedObject var tray: Tray
     let isVisible: Bool
@@ -48,7 +45,7 @@ struct TrayView: View {
     let scroll: CGFloat
     /// Something dragged is over AirDrop.
     var airDropTargeted = false
-    /// Opened out into the history, and how to open it out or back.
+    /// Widened to show everything, and how to widen it or bring it back.
     var expanded = false
     var expand: (Bool) -> Void = { _ in }
     @Environment(\.closedNotch) private var closedNotch
@@ -61,12 +58,7 @@ struct TrayView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            if built || dropping {
-                Group {
-                    if expanded { history(proxy) } else { content(proxy) }
-                }
-                .transition(.opacity.animation(.easeOut(duration: 0.2)))
-            }
+            if built || dropping { content(proxy) }
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
@@ -120,21 +112,15 @@ struct TrayView: View {
                         .padding(.top, -Shelf.lift + 6)
                 }
                 .padding(.top, rowTop - Shelf.lift)
-                .background(alignment: .top) {
-                    // One soft band of blur behind the row and its name, so they read over a busy
-                    // window.
-                    TrayBlur()
-                        .frame(height: rowHeight + 34 + Shelf.bandMargin)
-                        .padding(.horizontal, PlayerLayout.padding - Shelf.bandMargin)
-                        .padding(.top, rowTop - Shelf.bandMargin)
-                }
             }
         }
         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         .overlay(alignment: .bottom) {
-            if !tray.items.isEmpty, !dropping {
-                Grabber(label: "Show History") { expand(true) }
+            // Only when there's more than fits, or it's widened to show it all.
+            if !dropping, expanded || Shelf.width(count: tray.items.count) > proxy.size.width {
+                Grabber(label: expanded ? "Show Less" : "Show All") { expand(!expanded) }
                     .notchControl(enabled: isVisible)
+                    .transition(.opacity)
             }
         }
     }
@@ -198,8 +184,6 @@ struct TrayView: View {
                 .foregroundStyle(PlayerLayout.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // As names on the desktop are, readable over a bright window or wallpaper behind.
-            .shadow(color: .black.opacity(0.45), radius: 2, y: 0.5)
             .id(title + detail)
             .transition(.opacity)
         }
@@ -259,83 +243,6 @@ struct TrayView: View {
             ? "To keep what you copy, allow Glance in Privacy & Security, under Paste from Other Apps."
             : "Drop files on the notch. What you copy and your screenshots show up here too."
     }
-
-    // MARK: The history
-
-    /// Everything the tray has kept, in the notch opened out: what was copied, screenshots, and what
-    /// was dropped, by day, newest first, in a grid that scrolls; the name of the one under the
-    /// pointer above it, where the notch is darkest; and the handle to close it back to the row.
-    private func history(_ proxy: GeometryProxy) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            label
-                .padding(.horizontal, PlayerLayout.padding)
-                .padding(.bottom, 2)
-            ScrollView(.vertical) {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: Shelf.tile, maximum: Shelf.tile), spacing: Shelf.spacing)],
-                    alignment: .leading, spacing: Shelf.spacing
-                ) {
-                    ForEach(Self.days(of: tray.items), id: \.day) { group in
-                        Section {
-                            ForEach(group.items) { thumb($0) }
-                        } header: {
-                            Text(Self.title(of: group.day))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(PlayerLayout.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.top, 6)
-                        }
-                    }
-                }
-                .padding(.horizontal, PlayerLayout.padding)
-                .padding(.vertical, Shelf.lift)
-            }
-            .scrollIndicators(.never)
-            // The grid softens away at its edges, as content scrolling under a toolbar does.
-            .mask {
-                VStack(spacing: 0) {
-                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 10)
-                    Color.black
-                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 14)
-                }
-            }
-            .notchControl(enabled: isVisible)
-            Grabber(label: "Show Less") { expand(false) }
-                .notchControl(enabled: isVisible)
-                .frame(maxWidth: .infinity)
-        }
-        .padding(.top, closedNotch.height + PlayerLayout.cameraGap + 2)
-        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-        // The soft blur behind all of it, below the camera, so it reads over a busy window.
-        .background {
-            TrayBlur()
-                .padding(.horizontal, PlayerLayout.padding - Shelf.bandMargin)
-                .padding(.top, closedNotch.height)
-                .padding(.bottom, 2)
-        }
-    }
-
-    /// Items by the day they came in.
-    private static func days(of items: [TrayItem]) -> [(day: Date, items: [TrayItem])] {
-        let calendar = Calendar.current
-        var groups: [(day: Date, items: [TrayItem])] = []
-        for item in items {
-            let day = calendar.startOfDay(for: item.added)
-            if groups.last?.day == day { groups[groups.count - 1].items.append(item) } else { groups.append((day, [item])) }
-        }
-        return groups
-    }
-
-    /// Today, Yesterday, then the weekday for this week, then the date, as Photos heads its days.
-    private static func title(of day: Date) -> String {
-        let calendar = Calendar.current
-        if calendar.isDateInToday(day) { return "Today" }
-        if calendar.isDateInYesterday(day) { return "Yesterday" }
-        if let week = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: .now)), day >= week {
-            return day.formatted(.dateTime.weekday(.wide))
-        }
-        return day.formatted(.dateTime.weekday(.wide).day().month(.wide))
-    }
 }
 
 /// One thing in the tray: its picture, nothing more; its name shows under the row. Under the
@@ -362,7 +269,6 @@ private struct TrayThumb: View {
                 }
             }
             .scaleEffect(copied ? 0.94 : hovered ? 1.07 : 1)
-            .shadow(color: .black.opacity(hovered ? 0.45 : 0), radius: hovered ? 8 : 0, y: hovered ? 4 : 0)
             .overlay {
                 TileInteraction(item: item, tray: tray, selector: tray, clickSelects: false) { over in
                     hovered = over
@@ -424,8 +330,8 @@ extension View {
     }
 }
 
-/// The handle at the bottom of the tray, as a sheet's: pull down, or click it, to open the history;
-/// in the history, to close it back.
+/// The handle at the bottom of the tray, as a sheet's: pull down, or click it, to widen the notch
+/// to show everything; again, to bring it back.
 private struct Grabber: View {
     let label: String
     let action: () -> Void
@@ -442,84 +348,6 @@ private struct Grabber: View {
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { action() }
     }
-}
-
-/// The band of blur behind the tray's row: a plain blur of what the notch shows behind it, its glass
-/// and all, with no tint and no added color, so the notch keeps its look and only busy windows behind
-/// it soften. Its edges fade out over many points, so there's no edge to see.
-struct TrayBlur: NSViewRepresentable {
-    func makeNSView(context: Context) -> SoftBlurView { SoftBlurView() }
-    func updateNSView(_ view: SoftBlurView, context: Context) {}
-}
-
-/// A backdrop layer, the kind macOS's blurs are made of, with only a blur on it: macOS's own blur
-/// views add a tint and more saturated color, which made the band a darker rectangle.
-final class SoftBlurView: NSView {
-    static let radius: CGFloat = 7
-    static let feather: CGFloat = 18
-    private static let corner = TrayItemPicture.radius(for: Shelf.tile) + 6
-
-    private let backdrop: CALayer = (NSClassFromString("CABackdropLayer") as? CALayer.Type)?.init() ?? CALayer()
-    private let fade = CALayer()
-
-    override init(frame: NSRect) {
-        super.init(frame: frame)
-        layer = CALayer()
-        wantsLayer = true
-        backdrop.setValue(0.5, forKey: "scale")
-        if let type = NSClassFromString("CAFilter") as? NSObject.Type,
-            let blur = type.perform(NSSelectorFromString("filterWithType:"), with: "gaussianBlur")?.takeUnretainedValue() as? NSObject
-        {
-            blur.setValue(Self.radius, forKey: "inputRadius")
-            blur.setValue(true, forKey: "inputNormalizeEdges")
-            backdrop.filters = [blur]
-        }
-        if let mask = Self.mask {
-            let side = CGFloat(mask.width) / 2, inset = Self.corner + Self.feather
-            fade.contents = mask
-            fade.contentsScale = 2
-            fade.contentsCenter = CGRect(x: inset / side, y: inset / side, width: 1 / side, height: 1 / side)
-        }
-        backdrop.mask = fade
-        layer?.addSublayer(backdrop)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
-
-    override func layout() {
-        super.layout()
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        backdrop.frame = bounds
-        fade.frame = bounds
-        CATransaction.commit()
-    }
-
-    /// Rounded as the band is, its edges fading out over the feather, eased so the fade has no line
-    /// where it starts or ends. Drawn at twice the size, and stretched in the middle.
-    private static let mask: CGImage? = {
-        let side = Int((corner + feather) * 2 + 1), scale = 2, pixels = side * scale
-        guard
-            let context = CGContext(
-                data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: pixels,
-                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue),
-            let data = context.data?.assumingMemoryBound(to: UInt8.self)
-        else { return nil }
-        // How far each point is inside the rounded rectangle at the feather's inner edge.
-        let half = CGFloat(side) / 2, inner = half - feather
-        for y in 0..<pixels {
-            for x in 0..<pixels {
-                let px = abs((CGFloat(x) + 0.5) / CGFloat(scale) - half) - (inner - corner)
-                let py = abs((CGFloat(y) + 0.5) / CGFloat(scale) - half) - (inner - corner)
-                let outside = hypot(max(px, 0), max(py, 0)) + min(max(px, py), 0) - corner
-                let t = min(max(-outside / feather + 1, 0), 1)
-                data[y * pixels + x] = UInt8((t * t * (3 - 2 * t) * 255).rounded())
-            }
-        }
-        return context.makeImage()
-    }()
 }
 
 /// The open notch's two pages: the player, and the tray to its right.

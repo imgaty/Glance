@@ -178,11 +178,11 @@ final class NotchController {
         model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera, island: resting.island)
 
         // Room for the largest layout with the lyrics open, so switching layouts never resizes it.
-        // Room for the largest layout with the lyrics open, and for the tray's history.
+        // Room for the largest layout with the lyrics open, and for the tray at its widest.
         let largest = PlayerLayout.allCases.map { $0.size(closed: closedSize) }
         let size = CGSize(
-            width: max(largest.map(\.width).max()! + model.lyricsWidth, NotchModel.historySize.width) + Layout.windowPadding.width * 2,
-            height: max(largest.map(\.height).max()!, NotchModel.historySize.height) + Layout.windowPadding.height)
+            width: max(largest.map(\.width).max()! + model.lyricsWidth, Self.widestTray(on: screen)) + Layout.windowPadding.width * 2,
+            height: largest.map(\.height).max()! + Layout.windowPadding.height)
         panel = NotchPanel(
             frame: CGRect(
                 x: centerX - size.width / 2, y: topY - size.height,
@@ -823,7 +823,7 @@ final class NotchController {
                 pull = 0
                 open()
             } else if !pullFired, model.state == .open, model.expanded, pull < -48 {
-                // Pushed up on the history: back to the row.
+                // Pushed up on the widened tray: back to its width.
                 pullFired = true
                 expand(false)
                 return
@@ -831,8 +831,10 @@ final class NotchController {
                 pullFired = true
                 close(holdUntilExit: true)
                 return
-            } else if !pullFired, model.state == .open, model.page == .tray, !model.expanded, !Tray.shared.items.isEmpty, pull > 56 {
-                // Pulled further down on the tray: it opens out into the history.
+            } else if !pullFired, model.state == .open, model.page == .tray, !model.expanded,
+                Shelf.width(count: Tray.shared.items.count) > model.openSize.width, pull > 56
+            {
+                // Pulled further down on a tray with more than fits: it widens to show them all.
                 pullFired = true
                 expand(true)
                 return
@@ -867,24 +869,23 @@ final class NotchController {
 
     // MARK: The player and the tray
 
-    /// The tray opened out into its history, or back to its row.
+    /// The tray widened, sideways, just enough to show everything in it, up to most of the screen;
+    /// or back to its width.
     private func expand(_ expanded: Bool) {
         guard model.expanded != expanded else { return }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { model.expanded = expanded }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+            if expanded {
+                model.expandedWidth = min(max(Shelf.width(count: Tray.shared.items.count), model.openSize.width), Self.widestTray(on: screen))
+            }
+            model.expanded = expanded
+            model.trayScroll = 0
+        }
         Opening.tap()
     }
 
-    /// The history, from an item's menu or Settings: the notch opens on the tray, opened out, and
-    /// stays until the pointer has visited it and left, or a click lands elsewhere.
-    func showHistory() {
-        guard Tray.isOn, !tucked else { return }
-        if model.state != .open {
-            keyboardHold = true
-            open(on: .tray)
-        } else {
-            turn(to: .tray)
-        }
-        expand(true)
+    /// The widest the tray gets: most of the display, clear of its corners.
+    static func widestTray(on screen: NSScreen) -> CGFloat {
+        min(screen.frame.width - 200, 1200)
     }
 
     /// Whether a three-finger swipe starting here is the notch's: on it, open, with the tray on.
@@ -957,7 +958,8 @@ final class NotchController {
     private var trayReach: CGFloat {
         let tray = Tray.shared
         let well = TrayView.showsAirDrop(tray: tray, dropping: model.dropping) ? Shelf.wellWidth : 0
-        return Shelf.reach(count: tray.items.count + (model.dropping ? 1 : 0), in: model.openSize.width - well)
+        let width = model.expanded ? model.expandedWidth : model.openSize.width
+        return Shelf.reach(count: tray.items.count + (model.dropping ? 1 : 0), in: width - well)
     }
 
     /// Two fingers sideways: left for the next song, right for the previous one, as on a phone's

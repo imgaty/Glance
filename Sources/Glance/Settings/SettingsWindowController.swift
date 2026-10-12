@@ -140,10 +140,16 @@ private enum FixedSidebar {
         if let table = sidebarTable(of: controller) { emphasize(table) }
     }
 
+    /// The window takes the keys, and Glance is the app in use: an app in the background keeps its
+    /// key window, but draws it, window buttons and sidebar selection, gray, as System Settings does.
+    private static func inFront(_ window: NSWindow?) -> Bool {
+        (window?.isKeyWindow ?? false) && NSApp.isActive
+    }
+
     static func refreshEmphasis(in window: NSWindow) {
         guard let controller = splitController(in: window), let table = sidebarTable(of: controller) else { return }
         table.enumerateAvailableRowViews { row, _ in
-            row.isEmphasized = window.isKeyWindow
+            row.isEmphasized = inFront(window)
             row.needsDisplay = true
         }
     }
@@ -200,13 +206,13 @@ private enum FixedSidebar {
             let getter = #selector(getter: NSTableRowView.isEmphasized)
             let setter = #selector(setter: NSTableRowView.isEmphasized)
             guard let get = class_getInstanceMethod(base, getter), let set = class_getInstanceMethod(base, setter) else { return }
-            let isKey: @convention(block) (NSView) -> Bool = { row in row.window?.isKeyWindow ?? false }
+            let isKey: @convention(block) (NSView) -> Bool = { row in MainActor.assumeIsolated { inFront(row.window) } }
             class_addMethod(made, getter, imp_implementationWithBlock(isKey), method_getTypeEncoding(get))
             typealias SetEmphasized = @convention(c) (AnyObject, Selector, Bool) -> Void
             let original = unsafeBitCast(method_getImplementation(set), to: SetEmphasized.self)
-            // Whatever the table says, emphasized while the window is key.
+            // Whatever the table says, emphasized while the window is in front.
             let follow: @convention(block) (NSView, Bool) -> Void = { row, _ in
-                original(row, setter, row.window?.isKeyWindow ?? false)
+                original(row, setter, MainActor.assumeIsolated { inFront(row.window) })
             }
             class_addMethod(made, setter, imp_implementationWithBlock(follow), method_getTypeEncoding(set))
         }
