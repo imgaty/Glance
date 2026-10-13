@@ -6,7 +6,9 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import Combine
+import Quartz
 import SwiftUI
 
 private enum Layout {
@@ -107,6 +109,14 @@ final class NotchController {
     /// Opened from the keyboard: it stays open with the pointer elsewhere, until the shortcut comes
     /// again, a click lands outside it, or the pointer visits it and leaves.
     private var keyboardHold = false
+    /// Opened from the keyboard, it takes the keyboard too, as Spotlight's window does, until it
+    /// closes or the keyboard goes elsewhere: Escape, the arrows, Space, Return and a few ⌘ keys
+    /// work it (see `typed`). Keys come through a watch on Glance's own, ahead of its menus.
+    private var hasKeys = false
+    private var keyWatch: Any?
+    private var keyLoss: AnyCancellable?
+    /// Something dragged for the tray has come near the notch: a moment's wait, then it opens.
+    private var dropDwell: Task<Void, Never>?
     private var menuWatches: [AnyCancellable] = []
     private var pasteWatch: AnyCancellable?
     /// Something for the tray is being dragged in the top half of this display: the notch is open on
@@ -224,6 +234,9 @@ final class NotchController {
                 self.close(holdUntilExit: true)
             }
         }
+        keyLoss = NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification, object: panel).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.lostKeys() }
+        }
 
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in
@@ -267,6 +280,8 @@ final class NotchController {
     /// that has one, up into the top edge on one that doesn't, or, an island, into a dot that shrinks
     /// away.
     func tearDown(collapsing: Bool = false) {
+        giveBackKeys()
+        dropDwell?.cancel()
         NotchSwipes.shared.set(nil, for: self)
         activityTask?.cancel()
         popTask?.cancel()
@@ -606,14 +621,157 @@ final class NotchController {
         if model.state == .open {
             guard model.page != page else { return close(holdUntilExit: false) }
             turn(to: page)
+            takeKeys()
             return
         }
         guard !tucked else { return }
         keyboardHold = true
         open(on: page)
+        takeKeys()
+    }
+
+    // MARK: The keyboard
+
+    private var lookWatch: AnyCancellable?
+
+    /// The notch takes the keyboard, and every key typed comes to it, ahead of Glance's menus, so
+    /// ⌘Q or ⌘H can't quit or hide it from there.
+    private func takeKeys() {
+        guard !hasKeys else { return }
+        hasKeys = true
+        panel.takesKeys = true
+        panel.makeKey()
+        keyWatch = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let used = MainActor.assumeIsolated { () -> Bool in
+                guard let self, self.hasKeys, event.window === self.panel else { return false }
+                if !self.typed(event) { NSSound.beep() }
+                return true
+            }
+            return used ? nil : event
+        }
+    }
+
+    /// Back to the window that had the keyboard before the notch took it.
+    private func giveBackKeys() {
+        guard hasKeys else { return }
+        hasKeys = false
+        if let keyWatch { NSEvent.removeMonitor(keyWatch) }
+        keyWatch = nil
+        lookWatch = nil
+        let wasKey = panel.isKeyWindow
+        panel.takesKeys = false
+        if wasKey, panel.isVisible {
+            // A window can't hand the keyboard to another app's. Out of sight for an instant and
+            // back, the notch lets it go back to where it was.
+            panel.orderOut(nil)
+            panel.orderFrontRegardless()
+        }
+        // Quick Look brought Glance to the front; with no window of its own up, the app that was in
+        // front before comes back.
+        if NSApp.isActive, !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) }) { NSApp.deactivate() }
+    }
+
+    /// The keyboard went elsewhere, as to a window clicked or an app switched to: the notch's turn
+    /// is over. Quick Look, showing the tray's items, only borrows it, and gives it back as it goes.
+    private func lostKeys() {
+        guard hasKeys else { return }
+        // Asked a moment later, once the keyboard has landed.
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.hasKeys, !self.panel.isKeyWindow else { return }
+                if QLPreviewPanel.sharedPreviewPanelExists(), let look = QLPreviewPanel.shared(), look.isVisible {
+                    self.lookWatch = NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification, object: look)
+                        .sink { [weak self] _ in
+                            DispatchQueue.main.async { MainActor.assumeIsolated { self?.quickLookDone() } }
+                        }
+                    return
+                }
+                self.giveBackKeys()
+                if self.model.state == .open { self.close(holdUntilExit: false) }
+            }
+        }
+    }
+
+    private func quickLookDone() {
+        guard hasKeys else { return }
+        lookWatch = nil
+        let look = QLPreviewPanel.sharedPreviewPanelExists() ? QLPreviewPanel.shared() : nil
+        if look?.isVisible != true, NSApp.isActive, model.state == .open {
+            panel.makeKey()
+        } else {
+            giveBackKeys()
+        }
+    }
+
+    /// A key typed while the notch has the keyboard, as Finder and Music take them: Escape closes
+    /// it. On the player, Space plays or pauses, and the arrows go to the song before or after. On
+    /// the tray, the arrows choose an item (with Shift, a run of them), Space shows the chosen ones
+    /// in Quick Look, Return pastes them, ⌘C copies them, ⌘A chooses everything, and ⌘Delete
+    /// removes them. Returns whether the notch had a use for the key.
+    private func typed(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let command = flags.contains(.command), shift = flags.contains(.shift)
+        let key = Int(event.keyCode)
+        // ⌘ and a letter, wherever the letter is on this keyboard.
+        let letter = command ? event.charactersIgnoringModifiers?.lowercased() : nil
+        if (key == kVK_Escape && !command) || letter == "w" {
+            close(holdUntilExit: false)
+            return true
+        }
+        guard model.page == .tray else {
+            guard !command, nowPlaying.hasMedia else { return false }
+            switch key {
+            case kVK_Space: nowPlaying.togglePlayPause()
+            case kVK_LeftArrow: nowPlaying.previous()
+            case kVK_RightArrow: nowPlaying.next()
+            default: return false
+            }
+            return true
+        }
+        let tray = Tray.shared
+        switch (key, letter) {
+        case (kVK_LeftArrow, nil), (kVK_RightArrow, nil):
+            guard let id = tray.move(by: key == kVK_LeftArrow ? -1 : 1, extending: shift) else { return false }
+            reveal(id)
+        case (kVK_Space, nil):
+            let urls = TrayQuickLook.urls(for: tray.chosen, in: tray)
+            guard !urls.isEmpty else { return false }
+            TrayQuickLook.shared.show(urls)
+        case (kVK_Return, nil), (kVK_ANSI_KeypadEnter, nil):
+            guard !tray.chosen.isEmpty else { return false }
+            tray.paste(tray.chosen)
+        case (_, "c"):
+            guard !tray.chosen.isEmpty else { return false }
+            tray.copy(tray.chosen)
+        case (_, "a"):
+            tray.choose(all: tray.items)
+        case (kVK_Delete, _) where command, (kVK_ForwardDelete, _) where command:
+            guard !tray.chosen.isEmpty else { return false }
+            tray.remove(Set(tray.chosen.map(\.id)))
+        default:
+            return false
+        }
+        return true
+    }
+
+    /// The tray's row scrolled, if it must be, so the item the keyboard is on shows whole.
+    private func reveal(_ id: UUID) {
+        let tray = Tray.shared
+        guard let index = tray.items.firstIndex(where: { $0.id == id }) else { return }
+        let width =
+            (model.expanded ? model.expandedWidth : model.openSize.width) - (TrayView.showsAirDropTile(tray) ? Shelf.airDropWidth : 0)
+        let start = CGFloat(index) * (Shelf.tile.width + Shelf.spacing)
+        let end = start + Shelf.tile.width + Shelf.inset * 2
+        var scroll = model.trayScroll
+        if start < scroll { scroll = start }
+        if end > scroll + width { scroll = end - width }
+        scroll = min(max(scroll, 0), trayReach)
+        guard scroll != model.trayScroll else { return }
+        withAnimation(.smooth(duration: 0.3)) { model.trayScroll = scroll }
     }
 
     private func close(holdUntilExit hold: Bool) {
+        giveBackKeys()
         keyboardHold = false
         dragHold = false
         // Shrinks with the rest of the notch as it closes.
@@ -657,27 +815,44 @@ final class NotchController {
 
     // MARK: Dropping in the tray
 
-    /// A drag from another app carrying something for the tray: once it's past the middle of the
-    /// display, on its way up, the notch opens on the tray to take it. The pointer needn't reach
-    /// the notch, where the top edge would bring up Mission Control, nor click it. Back down, or let
-    /// go somewhere else, and the notch closes again.
+    /// A drag from another app carrying something for the tray: once it comes near the notch and
+    /// rests there a moment, as a folder springs open under a dragged file, the notch opens on the
+    /// tray to take it. The pointer needn't reach the notch, where the top edge would bring up
+    /// Mission Control, nor click it; a drag passing by, or anywhere else on the screen, leaves it
+    /// be. Taken away, or let go somewhere else, and the notch closes again.
     func dragMoved(to p: CGPoint, carrying: Bool) {
-        let frame = screen.frame
-        let onDisplay = p.x >= frame.minX && p.x <= frame.maxX && p.y >= frame.minY && p.y <= frame.maxY + 1
-        if carrying, onDisplay, p.y > frame.midY {
-            guard !dragHold, !tucked, Tray.isOn else { return }
-            dragHold = true
-            withAnimation(.smooth(duration: 0.3)) {
-                model.dropping = true
-                model.trayScroll = 0
+        let near = rect(for: .open).insetBy(dx: -Self.dropReach, dy: -Self.dropReach)
+        if carrying, near.contains(p) {
+            guard !dragHold, dropDwell == nil, !tucked, Tray.isOn else { return }
+            dropDwell = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(0.25))
+                guard let self, !Task.isCancelled else { return }
+                self.dropDwell = nil
+                self.openForDrop()
             }
-            if model.state != .open { open(on: .tray) } else { turn(to: .tray) }
-        } else if dragHold, !carrying || !onDisplay || p.y < frame.midY - frame.height * 0.05 {
+            return
+        }
+        dropDwell?.cancel()
+        dropDwell = nil
+        // A little further out before it closes again, so its edge doesn't flicker.
+        if dragHold, !carrying || !near.insetBy(dx: -40, dy: -40).contains(p) {
             dragHold = false
             if model.dropping { withAnimation(.smooth(duration: 0.3)) { model.dropping = false } }
             // Closed now unless the pointer is on it, as over the notch after a drop.
             pointerMoved(to: p)
         }
+    }
+
+    /// How far around the open notch a drag for the tray opens it.
+    private static let dropReach: CGFloat = 80
+
+    private func openForDrop() {
+        dragHold = true
+        withAnimation(.smooth(duration: 0.3)) {
+            model.dropping = true
+            model.trayScroll = 0
+        }
+        if model.state != .open { open(on: .tray) } else { turn(to: .tray) }
     }
 
     /// Something dragged over the notch, at a point in the window's own (flipped) points. From
@@ -1039,9 +1214,14 @@ final class NotchController {
     }
 }
 
-/// A clear, borderless panel that floats above the menu bar. Being borderless, it never takes
-/// keyboard focus and can't be dragged.
+/// A clear, borderless panel that floats above the menu bar. It can't be dragged, and it takes the
+/// keyboard only while the notch is opened from it, as Spotlight's window does, without making
+/// Glance the app in front.
 final class NotchPanel: NSPanel {
+    /// Opened with a shortcut: the notch has the keyboard until it closes.
+    var takesKeys = false
+    override var canBecomeKey: Bool { takesKeys }
+
     init(frame: CGRect) {
         super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isOpaque = false

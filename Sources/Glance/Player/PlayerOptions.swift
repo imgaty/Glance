@@ -294,3 +294,36 @@ extension NowPlaying {
         source.color ?? accent
     }
 }
+
+extension Color {
+    /// The color as words in it read on black, at `opacity`: as it is, if that's already as clear
+    /// as text needs (4.5 to 1); otherwise lifted toward white just until it is. A deep blue cover's
+    /// color, the darkest, gets the most.
+    func readableOnBlack(opacity: Double = 1, contrast: Double = 4.5) -> Color {
+        let color = NSColor(self).usingColorSpace(.sRGB) ?? .white
+        // Seen at an opacity over black, it's simply darker.
+        let seen = [color.redComponent, color.greenComponent, color.blueComponent].map { $0 * opacity * color.alphaComponent }
+        let lifted = { (t: CGFloat) in seen.map { $0 + (1 - $0) * t } }
+        var low: CGFloat = 0, high: CGFloat = 1
+        if Self.contrastOnBlack(lifted(0)) < contrast {
+            for _ in 0..<16 {
+                let middle = (low + high) / 2
+                if Self.contrastOnBlack(lifted(middle)) < contrast { low = middle } else { high = middle }
+            }
+        } else {
+            high = 0
+        }
+        let rgb = lifted(high)
+        return Color(.sRGB, red: rgb[0], green: rgb[1], blue: rgb[2])
+    }
+
+    /// How a color stands out on black, as WCAG measures it: 1 to 21.
+    static func contrastOnBlack(_ rgb: [CGFloat]) -> Double {
+        func linear(_ c: CGFloat) -> Double {
+            let c = Double(c)
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * linear(rgb[0]) + 0.7152 * linear(rgb[1]) + 0.0722 * linear(rgb[2])
+        return (luminance + 0.05) / 0.05
+    }
+}

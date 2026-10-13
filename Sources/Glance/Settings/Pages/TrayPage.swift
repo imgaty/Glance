@@ -53,7 +53,7 @@ struct TrayPage: View {
             .disabled(!trayOn)
             Section {
                 CenteredRow {
-                    Text("Clear Tray")
+                    Text("Clear tray")
                     Text("Removes everything in it. Files stay where they are.")
                 } trailing: {
                     Button("Clear…") { confirmingClear = true }

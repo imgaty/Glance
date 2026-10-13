@@ -46,9 +46,11 @@ enum GlassLook {
     /// smear at 24 points (Liquid Glass's own is 10). Eased in, so the slider's first half covers
     /// the subtle blurs.
     static func blur(_ amount: Double) -> CGFloat { 24 * pow(min(max(amount, 0), 1), 1.5) }
-    /// A little black even when clear stops the glass lifting dark backgrounds toward white; eased
-    /// in, so most of the way is glass and it turns opaque near the end.
-    static func black(_ darkness: Double) -> Double { 0.15 + 0.85 * darkness * darkness }
+    /// Even clear, the glass is dimmed by a third, as Apple dims clear glass over bright content, so
+    /// the player's times and buttons read over a light window; eased in, so most of the way is
+    /// glass and it turns opaque near the end. The top is black whatever this is.
+    static let floor = 0.35
+    static func black(_ darkness: Double) -> Double { floor + (1 - floor) * darkness * darkness }
     /// On the tray, the least the glass blurs what's behind it, whatever it's set to: enough for
     /// the row and its name to read over a busy window, as a menu's glass does.
     static let trayBlur = 0.55

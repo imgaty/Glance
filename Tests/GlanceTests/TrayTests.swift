@@ -207,7 +207,7 @@ struct TrayTests {
     }
 
     @Test("A file moved after it was kept is followed; one that's deleted goes")
-    func movedFiles() throws {
+    func movedFiles() async throws {
         let folder = URL.cachesDirectory.appending(path: "dev.vibe.Glance.tests/GlanceTrayMove-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -218,9 +218,36 @@ struct TrayTests {
         let moved = folder.appending(path: "Moved.txt")
         try FileManager.default.moveItem(at: original, to: moved)
         #expect(tray.urls(of: tray.items[0]).map(\.lastPathComponent) == ["Moved.txt"])
+        // Looked for away from the main thread, which notes the folder it's in on the way.
+        await tray.checkFiles()
+        #expect(tray.folders[tray.items[0].id] == folder.lastPathComponent)
         try FileManager.default.removeItem(at: moved)
-        tray.purge(checkingFiles: true)
+        await tray.checkFiles()
         #expect(tray.items.isEmpty)
+    }
+
+    @Test("The arrow keys choose the next item or the one before, and Shift a run, as in Finder")
+    func arrowKeys() throws {
+        let tray = tray()
+        for text in ["d", "c", "b", "a"] {
+            tray.add(try #require(TrayCapture.make(from: pasteboard { $0.setString(text, forType: .string) }, kept: false)))
+        }
+        let ids = tray.items.map(\.id)
+        // With nothing chosen, → starts at the first and ← at the last.
+        #expect(tray.move(by: 1) == ids[0])
+        #expect(tray.selection == [ids[0]])
+        tray.move(by: 1)
+        #expect(tray.selection == [ids[1]])
+        tray.move(by: 1, extending: true)
+        tray.move(by: 1, extending: true)
+        #expect(tray.selection == [ids[1], ids[2], ids[3]])
+        // Past the last, it stays there.
+        #expect(tray.move(by: 1) == ids[3])
+        tray.deselect()
+        #expect(tray.move(by: -1) == ids[3])
+        // A click moves the keyboard there too.
+        tray.choose(ids[1])
+        #expect(tray.move(by: -1) == ids[0])
     }
 
     @Test("A file dropped from a temporary folder, as a screenshot from its thumbnail, is kept as a copy")

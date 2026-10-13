@@ -10,14 +10,14 @@ import Quartz
 import SwiftUI
 
 /// What a tray tile does under the pointer, done by AppKit, which the notch's window, never the key
-/// one, still gives every event to: the pointer coming and going, a click to copy, ⌘ or Shift to
+/// one, still gives every event to: the pointer coming and going, a click to select, ⌘ or Shift to
 /// choose several, a double-click to paste, a drag out with every chosen item in it, and the menu.
 struct TileInteraction: NSViewRepresentable {
     let item: TrayItem
     let tray: Tray
     /// Whose selected items a click changes, and a drag or the menu acts on.
     let selector: TraySelecting
-    /// A click selects the item, or deselects it, as on a shelf; otherwise it copies it.
+    /// A click selects the item alone, as in Finder; otherwise it copies it.
     let clickSelects: Bool
     let hover: (Bool) -> Void
 
@@ -113,7 +113,8 @@ final class TileInteractionView: NSView, NSDraggingSource {
         } else if event.clickCount >= 2 {
             tray.paste(item)
         } else if event.clickCount == 1, clickSelects {
-            selector.choose(item.id, toggling: true, extending: false)
+            // As in Finder: this one alone. ⌘ above adds it to the others or takes it out.
+            selector.choose(item.id, toggling: false, extending: false)
         } else if event.clickCount == 1 {
             selector.deselect()
             tray.copy(item)
@@ -180,9 +181,9 @@ enum TileDrag {
     }
 }
 
-/// The menu for items in the tray, laid out as Finder's is for files: opening and looking first,
-/// then copying, then sending, then removing; each with its symbol, and named for how many items it
-/// acts on.
+/// The menu for items in the tray, laid out as Finder's is for files, in three groups: opening and
+/// looking first, then copying and sharing (AirDrop is in Share), then removing; each with its
+/// symbol, and named for how many items it acts on.
 @MainActor
 final class TrayMenu: NSObject {
     let items: [TrayItem]
@@ -206,15 +207,9 @@ final class TrayMenu: NSObject {
         if !TrayQuickLook.urls(for: items, in: tray).isEmpty { add("Quick Look" + many, "eye", #selector(quickLook)) }
         separate()
         add("Copy" + many, "doc.on.doc", #selector(copyItems))
-        if single != nil, CGPreflightPostEventAccess() { add("Paste", "doc.on.clipboard", #selector(pasteItem)) }
-        separate()
+        if CGPreflightPostEventAccess() { add("Paste" + many, "doc.on.clipboard", #selector(pasteItems)) }
         let shared = tray.shareable(items)
         if !shared.isEmpty {
-            if let airDrop = NSSharingService(named: .sendViaAirDrop), airDrop.canPerform(withItems: shared) {
-                let item = menu.addItem(withTitle: "AirDrop", action: #selector(sendWithAirDrop), keyEquivalent: "")
-                item.target = self
-                item.image = airDrop.image
-            }
             let share = NSSharingServicePicker(items: shared).standardShareMenuItem
             share.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
             menu.addItem(share)
@@ -243,8 +238,8 @@ final class TrayMenu: NSObject {
         guard let item = items.first else { return }
         switch item.kind {
         case .files: tray.urls(of: item).forEach { NSWorkspace.shared.open($0) }
-        case .image: item.files.first.map { NSWorkspace.shared.open(tray.file($0, of: item)) }
-        case .link: item.text.flatMap(URL.init(string:)).map { NSWorkspace.shared.open($0) }
+        case .image: _ = item.files.first.map { NSWorkspace.shared.open(tray.file($0, of: item)) }
+        case .link: _ = item.text.flatMap(URL.init(string:)).map { NSWorkspace.shared.open($0) }
         case .text: break
         }
     }
@@ -255,8 +250,7 @@ final class TrayMenu: NSObject {
 
     @objc private func quickLook() { TrayQuickLook.shared.show(TrayQuickLook.urls(for: items, in: tray)) }
     @objc private func copyItems() { tray.copy(items) }
-    @objc private func pasteItem() { items.first.map(tray.paste) }
-    @objc private func sendWithAirDrop() { tray.airDrop(tray.shareable(items)) }
+    @objc private func pasteItems() { tray.paste(items) }
     @objc private func remove() { tray.remove(Set(items.map(\.id))) }
 }
 

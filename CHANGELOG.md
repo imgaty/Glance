@@ -18,8 +18,10 @@
   at its end while items are dragged out of it.
 - Added link previews to the tray, with each site's icon, fetched from the
   site's home page rather than the link itself.
-- Added selecting items with a click, and a run of them with Shift-click.
-- Added Quick Look and AirDrop to each item's menu in the tray.
+- Added selecting items as Finder does: a click, ⌘-click for more, and
+  Shift-click for a run.
+- Added Quick Look and Share, with AirDrop in it, to each item's menu in the
+  tray.
 - Added widening the tray sideways to show everything in it, from its handle or
   a swipe down.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
@@ -31,9 +33,11 @@
 - Added ⇧⌘2 to open and close the tray the same way.
 - Added three fingers on the open notch, or Shift and a scroll, to switch
   between the player and the tray, either way round.
-- Added opening the tray when something is dragged into the top half of the
-  screen.
+- Added opening the tray when something is dragged near the notch and held
+  there a moment.
 - Added keyboard shortcut settings in **Settings > Opening** to change them.
+- Added the keyboard to the notch opened with a shortcut: Escape, the arrows,
+  Space and Return, and ⌘C, ⌘A and ⌘Delete on the tray.
 
 ### Accessibility
 
@@ -43,6 +47,16 @@
   while Reduce Motion is on.
 - Added names for VoiceOver and Voice Control to the player's buttons and
   progress bar, and actions to the tray's items.
+- Dimmed clear glass by a third, so the player's times and buttons read over
+  light windows.
+- Made a new song's name, in the cover's color, light enough to read on the
+  black notch.
+- Made the handle under the tray easier to see and to click.
+
+### Additional
+
+- Added Undo, Redo, Delete, Zoom, Bring All to Front and Services to the menu
+  bar, and moved Close to a File menu.
 
 <br>
 

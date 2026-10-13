@@ -71,8 +71,9 @@ struct LiveActivityView: View {
                     .frame(width: side, height: side)
                     .matchedGeometryEffect(id: Hero.liveArtwork, in: hero)
                 if pop {
+                    // In the cover's color, made light enough to read on the black notch.
                     MarqueeText(text: nowPlaying.title, font: .system(size: size, weight: .semibold), active: true)
-                        .foregroundStyle(accent)
+                        .foregroundStyle(accent.readableOnBlack())
                         .transition(Self.announce)
                 }
             }
@@ -84,7 +85,7 @@ struct LiveActivityView: View {
                     .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
                 if pop {
                     MarqueeText(text: nowPlaying.artist, font: .system(size: size), active: true, alignment: .trailing)
-                        .foregroundStyle(accent.opacity(0.7))
+                        .foregroundStyle(accent.readableOnBlack(opacity: 0.7))
                         .transition(Self.announce)
                 }
             }

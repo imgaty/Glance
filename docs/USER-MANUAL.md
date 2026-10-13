@@ -73,7 +73,7 @@ notch closes when the pointer leaves it.
 | Swipe left or right with three fingers, on the open notch | Switches to the tray, and back to the player (with `Accessibility` allowed) |
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
-| Drag something into the top half of the screen | Opens the tray, to drop it there |
+| Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |
 | ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
 | ⇧⌘2, from any app | Opens the notch with the tray; again, closes it |
 
@@ -82,8 +82,22 @@ three fingers on the open notch, or hold Shift and scroll, and back to return.
 Three fingers anywhere else still move between desktops.
 
 Opened with a shortcut, the notch stays open until you press it again, click
-elsewhere, or move the pointer onto the notch and away. To use other shortcuts,
-change them in **Settings > Opening**.
+elsewhere, or move the pointer onto the notch and away. It takes the keyboard
+too, as Spotlight does, until it closes:
+
+| Key | Operation |
+| --- | --- |
+| Escape or ⌘W | Closes the notch |
+| Space | Plays or pauses; on the tray, shows the selected items in Quick Look |
+| Left or right arrow | Goes to the song before or after; on the tray, selects the item before or after it, or with Shift, a run of them |
+| Return | On the tray, pastes the selected items where you were typing (with `Accessibility` allowed) |
+| ⌘C | On the tray, copies the selected items |
+| ⌘A | On the tray, selects everything |
+| ⌘Delete | On the tray, removes the selected items |
+
+⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
+replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
+shortcuts, change them in **Settings > Opening**.
 
 <br>
 
@@ -136,9 +150,9 @@ record matches the song's title, artist and length.
 The tray keeps the files you drop on the notch, what you copy, and your
 screenshots, newest first, as Finder shows files: each item's icon, with its
 name under it. Copied text shows as a text clipping, and a link as its site's
-icon. Open it with ⇧⌘2, or switch to it from the player. Dragging a file, or anything else the tray takes, into the
-top half of the screen opens it too, ready for the drop, without reaching the
-top edge.
+icon. Open it with ⇧⌘2, or switch to it from the player. Dragging a file, or
+anything else the tray takes, near the notch and holding it there a moment
+opens it too, ready for the drop, without reaching the top edge.
 
 <img src="../assets/screenshots/tray.png"
      width="450"
@@ -152,13 +166,14 @@ top edge.
 | --- | --- |
 | Drag files onto the notch, onto `Keep in Tray` | Keeps them in the tray until you remove them |
 | Drag files onto the notch, onto `AirDrop` | Sends them with AirDrop, without keeping them |
-| Click an item | Selects it, or deselects it, to drag, AirDrop or remove several together |
+| Click an item | Selects it, as in Finder |
+| Command-click an item | Adds it to the selection, or takes it out, to drag, AirDrop or remove several together |
 | Shift-click an item | Selects everything from the last item selected to it |
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
 | Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder. Drop them on `AirDrop`, at the tray's end, to send them |
 | Swipe left or right with two fingers | Scrolls the tray |
 | Click the handle under the tray, or swipe down with two fingers | Widens the notch to show everything in the tray |
-| Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, AirDrop, Share, and Remove from Tray |
+| Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), and Remove from Tray |
 
 Something dragged onto the notch from another app gets two places to go:
 `Keep in Tray` and `AirDrop`. Items dragged out of the tray get `AirDrop` at its
@@ -266,7 +281,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
-| `Clear Tray` | Removes everything in the tray; files stay where they are |
+| `Clear tray` | Removes everything in the tray; files stay where they are |
 
 ### Opening
 

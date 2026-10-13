@@ -125,8 +125,9 @@ struct TrayItemPicture: View {
         case .screenshot:
             return "Screenshot"
         case .dropped:
-            guard item.kind == .files, item.names.count == 1, let url = tray.urls(of: item).first else { return "Dropped" }
-            return "In " + FileManager.default.displayName(atPath: url.deletingLastPathComponent().path)
+            // As last looked, away from the notch (see Tray.checkFiles): never looked for here, as
+            // the tray is drawn.
+            return tray.folders[item.id].map { "In " + $0 } ?? "Dropped"
         }
     }
 

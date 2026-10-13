@@ -68,7 +68,8 @@ final class Tray: ObservableObject {
         timer.tolerance = 10
         RunLoop.main.add(timer, forMode: .common)
         purgeTimer = timer
-        purge(checkingFiles: true)
+        purge()
+        Task { await checkFiles() }
     }
 
     /// Starts or stops watching as the settings say.
@@ -241,12 +242,7 @@ final class Tray: ObservableObject {
     }
 
     func remove(_ ids: Set<UUID>) {
-        let gone = items.filter { ids.contains($0.id) }
-        guard !gone.isEmpty else { return }
-        gone.forEach(discard)
-        items.removeAll { ids.contains($0.id) }
-        selection.subtract(ids)
-        store()
+        discard(ids: ids)
     }
 
     /// Everything, kept or copied. Files stay where they are.
@@ -263,6 +259,7 @@ final class Tray: ObservableObject {
     /// every item from the last one chosen to it, as Finder does; with neither, chooses it alone.
     func choose(_ id: UUID, toggling: Bool = false, extending: Bool = false, in order: [TrayItem]? = nil) {
         let order = order ?? items
+        lead = id
         if extending, let anchor, let from = order.firstIndex(where: { $0.id == anchor }),
             let to = order.firstIndex(where: { $0.id == id })
         {
@@ -282,9 +279,26 @@ final class Tray: ObservableObject {
     }
 
     func deselect() {
+        lead = nil
         guard !selection.isEmpty else { return }
         selection = []
         anchor = nil
+    }
+
+    /// The item the keyboard is on: the last one clicked, or moved to with an arrow key.
+    private var lead: UUID?
+
+    /// An arrow key, as in Finder's row of icons: the item after the one the keyboard is on, or
+    /// before it, chosen alone; with Shift, every item from the first one chosen to it. With none
+    /// chosen yet, the first item, or the last. Returns the item moved to.
+    @discardableResult
+    func move(by step: Int, extending: Bool = false) -> UUID? {
+        guard !items.isEmpty else { return nil }
+        let current = lead.flatMap { id in items.firstIndex { $0.id == id } }
+        let index = current.map { min(max($0 + step, 0), items.count - 1) } ?? (step > 0 ? 0 : items.count - 1)
+        let id = items[index].id
+        choose(id, extending: extending && anchor != nil)
+        return id
     }
 
     /// What an action on an item covers: every chosen item, when it's one of them; otherwise it
@@ -295,15 +309,42 @@ final class Tray: ObservableObject {
 
     var chosen: [TrayItem] { items.filter { selection.contains($0.id) } }
 
-    /// Copies older than chosen go, and, when asked, files that are gone, which takes looking for
-    /// each one.
-    func purge(now: Date = .now, checkingFiles: Bool = false) {
+    /// Copies older than chosen go.
+    func purge(now: Date = .now) {
         let keep = ClipboardKeep.current
-        let gone = items.filter { $0.expired(at: now, keep: keep) || (checkingFiles && $0.kind == .files && urls(of: $0).isEmpty) }
+        discard(ids: Set(items.filter { $0.expired(at: now, keep: keep) }.map(\.id)))
+    }
+
+    /// The folder each file kept on its own is in, by name, as last looked: for what VoiceOver says
+    /// of it.
+    @Published private(set) var folders: [UUID: String] = [:]
+
+    /// Files that are gone, as to the Trash, go too. Looking for each file can take a while, on a
+    /// slow or sleeping disk, so it's done away from the notch, which never waits for it; the
+    /// folder each one is in is noted on the way.
+    func checkFiles() async {
+        let files = items.filter { $0.kind == .files }.map { (id: $0.id, bookmarks: $0.bookmarks) }
+        guard !files.isEmpty else { return }
+        let found = await Task.detached(priority: .utility) {
+            files.map { file -> (id: UUID, exists: Bool, folder: String?) in
+                let urls = Tray.resolve(file.bookmarks)
+                let folder = urls.count == 1 ? FileManager.default.displayName(atPath: urls[0].deletingLastPathComponent().path) : nil
+                return (file.id, !urls.isEmpty, folder)
+            }
+        }.value
+        var folders = self.folders
+        for file in found { folders[file.id] = file.folder }
+        if folders != self.folders { self.folders = folders }
+        discard(ids: Set(found.filter { !$0.exists }.map(\.id)))
+    }
+
+    /// These items go, with what they kept, if they're still here.
+    private func discard(ids: Set<UUID>) {
+        let gone = items.filter { ids.contains($0.id) }
         guard !gone.isEmpty else { return }
-        let ids = Set(gone.map(\.id))
         gone.forEach(discard)
         items.removeAll { ids.contains($0.id) }
+        selection.subtract(ids)
         store()
     }
 
@@ -322,7 +363,11 @@ final class Tray: ObservableObject {
 
     /// The item's files, wherever they are now; any that are gone are left out.
     func urls(of item: TrayItem) -> [URL] {
-        item.bookmarks.compactMap { bookmark in
+        Self.resolve(item.bookmarks)
+    }
+
+    nonisolated static func resolve(_ bookmarks: [Data]) -> [URL] {
+        bookmarks.compactMap { bookmark in
             var stale = false
             return try? URL(resolvingBookmarkData: bookmark, options: [.withoutUI, .withoutMounting], bookmarkDataIsStale: &stale)
         }
@@ -390,7 +435,13 @@ final class Tray: ObservableObject {
     /// Copied, and pasted where the cursor is, as Spotlight's clipboard history pastes on a double
     /// click; without Accessibility, only copied.
     func paste(_ item: TrayItem) {
-        copy(item)
+        paste([item])
+    }
+
+    /// Several at once, as several files copied in Finder paste together.
+    func paste(_ items: [TrayItem]) {
+        guard !items.isEmpty else { return }
+        copy(items)
         guard CGPreflightPostEventAccess() else { return }
         NotificationCenter.default.post(name: Self.didPaste, object: nil)
         // The app the notch floats over still has the keyboard; ⌘V, once the copy has landed.

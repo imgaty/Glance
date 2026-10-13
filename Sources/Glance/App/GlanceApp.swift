@@ -95,11 +95,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.dataSource = nil
     }
 
+    /// The menu bar while Settings or the welcome tour is open: Apple's standard menus, in their
+    /// order, with what those windows can use of them.
     private func makeMainMenu() -> NSMenu {
         let app = NSMenu()
         app.addItem(withTitle: "About Glance", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
         app.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        app.addItem(.separator())
+        let services = NSMenu(title: "Services")
+        app.addItem(withTitle: "Services", action: nil, keyEquivalent: "").submenu = services
+        NSApp.servicesMenu = services
         app.addItem(.separator())
         app.addItem(withTitle: "Hide Glance", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
@@ -108,19 +114,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         app.addItem(.separator())
         app.addItem(withTitle: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
+        // Closing a window is the File menu's, not the Window menu's.
+        let file = NSMenu(title: "File")
+        file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+
         let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
         edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Delete", action: #selector(NSText.delete(_:)), keyEquivalent: "")
         edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
 
+        // Minimize and Zoom even for one window, so the keyboard reaches them with Full Keyboard
+        // Access; macOS adds its own tiling items and the windows' names below.
         let window = NSMenu(title: "Window")
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        window.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        window.addItem(.separator())
+        window.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
         NSApp.windowsMenu = window
 
         let main = NSMenu()
-        for menu in [app, edit, window] {
+        for menu in [app, file, edit, window] {
             let item = NSMenuItem()
             item.submenu = menu
             main.addItem(item)

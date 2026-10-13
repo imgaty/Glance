@@ -68,8 +68,9 @@ struct TrayView: View {
         .onChange(of: isVisible, initial: true) {
             guard isVisible else { return }
             built = true
-            // Files moved to the Trash since it last showed go.
-            tray.purge(checkingFiles: true)
+            // Files moved to the Trash since it last showed go, once they've been looked for.
+            tray.purge()
+            Task { await tray.checkFiles() }
         }
         .task(id: isVisible) {
             guard !isVisible else { return }
@@ -230,9 +231,9 @@ private struct ItemTile: View {
         .accessibilityValue(TrayItemPicture.detail(of: item, in: tray))
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         // What a click and the item's menu do, for VoiceOver and Voice Control.
-        .accessibilityAction { tray.choose(item.id, toggling: true) }
+        .accessibilityAction { tray.choose(item.id) }
         .accessibilityAction(named: "Copy") { tray.copy(tray.targets(of: item)) }
-        .accessibilityAction(named: "Paste") { tray.paste(item) }
+        .accessibilityAction(named: "Paste") { tray.paste(tray.targets(of: item)) }
         .accessibilityAction(named: "Quick Look") {
             TrayQuickLook.shared.show(TrayQuickLook.urls(for: tray.targets(of: item), in: tray))
         }
@@ -360,16 +361,19 @@ extension View {
 }
 
 /// The handle at the bottom of the tray, as a sheet's: pull down, or click it, to widen the notch
-/// to show everything; again, to bring it back.
+/// to show everything; again, to bring it back. A soft dark edge keeps it in sight over a light
+/// window, and it can be clicked anywhere in a strip as tall as the smallest control.
 private struct Grabber: View {
     let label: String
     let action: () -> Void
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         Capsule()
-            .fill(.white.opacity(0.3))
+            .fill(.white.opacity(contrast == .increased ? 0.8 : 0.55))
+            .shadow(color: .black.opacity(0.4), radius: 1, y: 0.5)
             .frame(width: 36, height: 5)
-            .frame(width: 96, height: 16)
+            .frame(width: 96, height: 20)
             .contentShape(Rectangle())
             .onTapGesture(perform: action)
             .accessibilityElement()

@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 12 October 2026`
+`Created: 11 October 2026` | `Last updated: 13 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -17,8 +17,8 @@ which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 ### Tray
 
 Drag files onto the notch to keep them close, and find what you copied and
-your screenshots, newest first. Click something to copy it again, double-click
-to paste it, drag it out, or drop it on AirDrop. Copies stay for 30 minutes,
+your screenshots, newest first. Click something to select it, double-click to
+paste it, drag it out, or drop it on AirDrop. Copies stay for 30 minutes,
 8 hours or 7 days, and passwords never do. ⇧⌘2 opens it, or three fingers on the
 open notch, and it widens to show everything it kept. See the
 [User Manual](USER-MANUAL.md#the-tray).
@@ -28,7 +28,8 @@ open notch, and it widens to show everything it kept. See the
 Hover over it, click it, or either, with an optional delay. Swipe down with two
 fingers to open it, up to close it, and sideways to change songs. From any app,
 ⇧⌘1 opens it with the player and ⇧⌘2 with the tray, or shortcuts of your
-choice. See the [User Manual](USER-MANUAL.md#opening-and-closing).
+choice, and the keyboard works it until it closes. See the
+[User Manual](USER-MANUAL.md#opening-and-closing).
 
 ### Layouts and backgrounds
 

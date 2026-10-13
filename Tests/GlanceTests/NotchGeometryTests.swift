@@ -38,15 +38,15 @@ struct GlassLookTests {
         #expect(zip(steps, steps.dropFirst()).allSatisfy { $0 < $1 })
     }
 
-    @Test("Clear glass keeps a little black; full darkness is solid")
+    @Test("Clear glass is dimmed by a third, as Apple dims clear glass over bright content; full darkness is solid")
     func blackEnds() {
-        #expect(isClose(GlassLook.black(0), 0.15))
+        #expect(isClose(GlassLook.black(0), 0.35))
         #expect(isClose(GlassLook.black(1), 1))
     }
 
     @Test("Darkness eases in, so most of the way is glass")
     func blackEasesIn() {
-        #expect(isClose(GlassLook.black(0.5), 0.3625))
+        #expect(isClose(GlassLook.black(0.5), 0.5125))
         let steps = stride(from: 0.0, through: 1, by: 0.05).map(GlassLook.black)
         #expect(zip(steps, steps.dropFirst()).allSatisfy { $0 < $1 })
     }
