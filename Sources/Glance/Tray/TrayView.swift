@@ -10,20 +10,20 @@ import SwiftUI
 
 /// The tray's measures, shared by what draws it and what scrolls it.
 enum Shelf {
-    /// A tile: its picture's well, and its name under it.
-    static let tile = CGSize(width: 78, height: 88)
-    /// The lit well a picture sits in, at the top of its tile.
-    static let well = CGSize(width: 64, height: 50)
+    /// An item: its icon, and its name under it, as Finder's icon view shows a file.
+    static let tile = CGSize(width: 78, height: 98)
+    /// The icon's square.
+    static let icon: CGFloat = 56
     static let spacing: CGFloat = 10
-    /// At the row's ends: the first well lines up with the player's artwork.
-    static let inset: CGFloat = PlayerLayout.padding - (tile.width - well.width) / 2
+    /// At the row's ends: the first icon lines up with the player's artwork.
+    static let inset: CGFloat = PlayerLayout.padding - (tile.width - icon) / 2
 
-    /// The row of tiles, from the first to the last, with its insets at both ends.
+    /// The row of items, from the first to the last, with its insets at both ends.
     static func width(count: Int) -> CGFloat {
         count == 0 ? 0 : CGFloat(count) * tile.width + CGFloat(count - 1) * spacing + inset * 2
     }
 
-    /// The room AirDrop's tile takes at the row's end while items are dragged out.
+    /// The room AirDrop takes at the row's end while items are dragged out.
     static let airDropWidth: CGFloat = tile.width + inset
 
     /// How far the row scrolls in a notch this wide.
@@ -32,11 +32,10 @@ enum Shelf {
     }
 }
 
-/// The tray in the open notch: a row of tiles, each a lit well with the item's picture and its name
-/// under it, and a line under the row saying what the one under the pointer is, how many are
-/// selected, or what can be done. A click selects, as in Finder; a drag takes the item, or every
-/// selected one, anywhere, AirDrop included; a double-click pastes it; a right-click shows the rest.
-/// Something dragged in from another app gets two places to go: the tray, and AirDrop.
+/// The tray in the open notch, as Finder's icon view: each item's icon with its name under it. A
+/// click selects, as in Finder; a drag takes the item, or every selected one, anywhere, AirDrop
+/// included; a double-click pastes it; a right-click shows the rest. Something dragged in from
+/// another app gets two places to go: the tray, and AirDrop.
 struct TrayView: View {
     @ObservedObject var tray: Tray
     let isVisible: Bool
@@ -51,8 +50,6 @@ struct TrayView: View {
     var expand: (Bool) -> Void = { _ in }
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
-    /// The item under the pointer, whose detail shows under the row.
-    @State private var pointed: UUID?
     /// Built only while it shows, and a moment after, to fade out: closed, or on the player, the
     /// tray costs nothing.
     @State private var built = false
@@ -66,7 +63,7 @@ struct TrayView: View {
         .animation(.smooth(duration: 0.24), value: tray.items.map(\.id))
         .animation(.smooth(duration: 0.24), value: dropping)
         .animation(.smooth(duration: 0.24), value: tray.draggingOut)
-        .animation(.easeOut(duration: 0.15), value: airDropTargeted)
+        .animation(.smooth(duration: 0.2), value: airDropTargeted)
         .onChange(of: isVisible, initial: true) {
             guard isVisible else { return }
             built = true
@@ -80,25 +77,26 @@ struct TrayView: View {
         }
     }
 
-    /// AirDrop's tile is at the row's end only while items are dragged out of it.
+    /// AirDrop is at the row's end only while items are dragged out of it.
     static func showsAirDropTile(_ tray: Tray) -> Bool { tray.draggingOut }
 
     /// Where the room below the camera starts.
     private var top: CGFloat { closedNotch.height + PlayerLayout.cameraGap }
     /// Kept clear at the bottom for the handle.
     private static let handleRoom: CGFloat = 14
+    /// Around the places to drop: their corners are then concentric with the notch's.
+    private static let zoneInset: CGFloat = 12
 
     @ViewBuilder private func content(_ proxy: GeometryProxy) -> some View {
         Group {
             if dropping {
                 dropZones
-                    .padding(.horizontal, PlayerLayout.padding)
+                    .padding(.horizontal, Self.zoneInset)
                     .padding(.top, top)
-                    .padding(.bottom, Self.handleRoom)
+                    .padding(.bottom, Self.zoneInset)
                     .transition(.opacity)
             } else if tray.items.isEmpty {
                 empty
-                    .padding(.horizontal, PlayerLayout.padding)
                     .padding(.top, top)
                     .padding(.bottom, Self.handleRoom)
                     .transition(.opacity)
@@ -121,27 +119,23 @@ struct TrayView: View {
         }
     }
 
-    // MARK: The shelf
+    // MARK: The row
 
     private func shelf(width: CGFloat) -> some View {
         let airDrop = Self.showsAirDropTile(tray)
-        return VStack(alignment: .leading, spacing: 4) {
-            ZStack(alignment: .trailing) {
-                row(width: width - (airDrop ? Shelf.airDropWidth : 0))
-                    .frame(width: width, alignment: .leading)
-                if airDrop {
-                    AirDropTile(targeted: airDropTargeted)
-                        .reportsAirDropFrame()
-                        .padding(.trailing, Shelf.inset)
-                        .transition(.opacity)
-                }
+        return ZStack(alignment: .trailing) {
+            row(width: width - (airDrop ? Shelf.airDropWidth : 0))
+                .frame(width: width, alignment: .leading)
+            if airDrop {
+                AirDropTile(targeted: airDropTargeted)
+                    .reportsAirDropFrame()
+                    .padding(.trailing, Shelf.inset)
+                    .transition(.opacity)
             }
-            footer
-                .padding(.horizontal, PlayerLayout.padding)
         }
     }
 
-    /// Only the tiles in sight, and a few either side, are made; the rest of the row is space. It
+    /// Only the items in sight, and a few either side, are made; the rest of the row is space. It
     /// fades at an edge only where there's more past it.
     private func row(width: CGFloat) -> some View {
         let step = Shelf.tile.width + Shelf.spacing
@@ -153,10 +147,8 @@ struct TrayView: View {
                 Color.clear.frame(width: CGFloat(skipped) * step - Shelf.spacing, height: 1)
             }
             ForEach(shown) { item in
-                ShelfTile(item: item, tray: tray, isVisible: isVisible) { over in
-                    if over { pointed = item.id } else if pointed == item.id { pointed = nil }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                ItemTile(item: item, tray: tray, isVisible: isVisible)
+                    .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .bottom)))
             }
         }
         .padding(.horizontal, Shelf.inset)
@@ -165,63 +157,24 @@ struct TrayView: View {
         .mask { EdgeFade(start: scroll > 1, end: scroll < reach - 1) }
     }
 
-    // MARK: The line under the row
-
-    /// What the item under the pointer is and where it came from; or how many are selected; or,
-    /// with neither, what can be done.
-    private var footer: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { _ in
-            let (text, symbol) = footerText
-            HStack(spacing: 4) {
-                if let symbol { Image(systemName: symbol).font(.system(size: 9, weight: .semibold)) }
-                Text(text).lineLimit(1).truncationMode(.middle)
-            }
-            .font(.system(size: 10))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .id(text)
-            .transition(.opacity)
-        }
-        .animation(.easeOut(duration: 0.15), value: pointed)
-        .animation(.easeOut(duration: 0.15), value: tray.selection)
-        .animation(.easeOut(duration: 0.15), value: tray.justCopied)
-    }
-
-    private var footerText: (String, String?) {
-        if let item = tray.items.first(where: { $0.id == pointed }) {
-            if tray.justCopied.contains(item.id) { return ("Copied", "checkmark") }
-            return (TrayItemPicture.detail(of: item, in: tray), nil)
-        }
-        if let item = tray.items.first(where: { tray.justCopied.contains($0.id) }) {
-            return ("Copied \(TrayItemPicture.title(of: item))", "checkmark")
-        }
-        if !tray.selection.isEmpty { return ("\(tray.selection.count) of \(tray.items.count) selected", nil) }
-        return ("Click to select, drag anywhere, double-click to paste", nil)
-    }
-
     // MARK: Empty
 
-    /// With nothing in it: what it's for, in a dashed outline of where things will go.
+    /// With nothing in it: what it's for, as an app says it has nothing to show.
     private var empty: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "tray.and.arrow.down")
-                .font(.system(size: 26, weight: .light))
-                .foregroundStyle(.white.opacity(0.65))
-                .frame(width: 56, height: 56)
-                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .accessibilityHidden(true)
+        VStack(spacing: 3) {
+            Image(systemName: "tray")
+                .font(.system(size: 26))
+                .foregroundStyle(PlayerLayout.secondary)
+                .padding(.bottom, 6)
+            Text("Tray Is Empty")
+                .font(.system(size: 13, weight: .semibold))
             Text(emptyLine)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 260, alignment: .leading)
+                .font(.system(size: 11))
+                .foregroundStyle(PlayerLayout.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 260)
         }
-        .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(.white.opacity(0.18), style: StrokeStyle(lineWidth: 0.75, dash: [4, 5]))
-        }
     }
 
     private var emptyLine: String {
@@ -236,67 +189,34 @@ struct TrayView: View {
     /// Something dragged in from another app: kept in the tray, or sent with AirDrop, whichever it's
     /// let go over.
     private var dropZones: some View {
-        HStack(spacing: 10) {
-            DropZone(title: "Keep in Tray", lit: !airDropTargeted) {
-                Image(systemName: "tray.and.arrow.down").font(.system(size: 28, weight: .light))
+        HStack(spacing: 8) {
+            DropZone(title: "Keep in Tray", lit: !airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
+                Image(systemName: "tray.and.arrow.down.fill").font(.system(size: 26))
             }
             // AirDrop has no symbol of its own: its icon, as the Share menu shows it.
-            DropZone(title: "AirDrop", lit: airDropTargeted) {
-                Image(nsImage: AirDropTile.icon).resizable().frame(width: 36, height: 36)
+            DropZone(title: "AirDrop", lit: airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
+                Image(nsImage: AirDropTile.icon).resizable().frame(width: 40, height: 40)
             }
             .reportsAirDropFrame()
         }
     }
 }
 
-/// One thing in the tray: its picture in a lit well, and its name under it. Selected, the tile
-/// takes the accent color, edged with it, with a checkmark in its corner. Several files kept
-/// together show as a stack, with how many on it.
-private struct ShelfTile: View {
+/// One thing in the tray, with its name under it.
+private struct ItemTile: View {
     let item: TrayItem
     @ObservedObject var tray: Tray
     let isVisible: Bool
-    let pointing: (Bool) -> Void
 
     var body: some View {
         let chosen = tray.selection.contains(item.id)
-        let count = item.kind == .files ? item.names.count : 1
-        VStack(spacing: 3) {
-            ZStack(alignment: .topLeading) {
-                if count > 1 { Backplates() }
-                Well { TrayItemPicture(item: item, tray: tray, size: Shelf.well) }
-            }
-            .frame(width: Shelf.well.width, height: Shelf.well.height, alignment: .topLeading)
-            TileName(TrayItemPicture.title(of: item), middle: item.kind == .files || item.kind == .image)
-        }
-        .padding(.top, 6)
-        .frame(width: Shelf.tile.width, height: Shelf.tile.height, alignment: .top)
-        .overlay(alignment: .topLeading) {
-            if count > 1 {
-                Text("\(count)")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 22, height: 15)
-                    .background(Color.accentColor, in: Capsule())
-                    .offset(x: 50, y: 39)
-            }
-        }
-        .tileChrome(lit: chosen)
-        .overlay(alignment: .topLeading) {
-            if chosen {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 14))
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, Color.accentColor)
-                    .frame(width: 16, height: 16)
-                    .offset(x: 4, y: count > 1 ? 22 : 4)
-                    .transition(.opacity)
-            }
+        TileLayout(name: TrayItemPicture.title(of: item), keepsEnd: item.kind == .files || item.kind == .image, lit: chosen) {
+            TrayItemPicture(item: item, tray: tray, side: Shelf.icon)
         }
         .overlay {
-            TileInteraction(item: item, tray: tray, selector: tray, clickSelects: true, hover: pointing)
+            TileInteraction(item: item, tray: tray, selector: tray, clickSelects: true) { _ in }
         }
-        .animation(.easeOut(duration: 0.15), value: chosen)
+        .animation(.easeOut(duration: 0.12), value: chosen)
         .notchControl(enabled: isVisible)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(TrayItemPicture.title(of: item))
@@ -305,87 +225,56 @@ private struct ShelfTile: View {
     }
 }
 
-/// The faintly lit well at the top of a tile that its picture sits in.
-private struct Well<Content: View>: View {
-    @ViewBuilder let content: Content
+/// An icon over its name, as Finder lays them out. Lit, as Finder shows a selected file: a gray
+/// square behind the icon, and the name on the accent color.
+private struct TileLayout<Icon: View>: View {
+    let name: String
+    /// A file's name is shortened in the middle, to keep its extension; a text's at its end.
+    let keepsEnd: Bool
+    let lit: Bool
+    @ViewBuilder let icon: Icon
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(.white.opacity(0.06))
-            .frame(width: Shelf.well.width, height: Shelf.well.height)
-            .overlay { content }
-    }
-}
-
-/// Two wells behind a tile's own, a little down and to the right of it, for a stack.
-private struct Backplates: View {
-    var body: some View {
-        ForEach([6, 3], id: \.self) { (step: CGFloat) in
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.white.opacity(step == 6 ? 0.035 : 0.055))
-                .strokeBorder(.white.opacity(0.05), lineWidth: 1)
-                .frame(width: Shelf.well.width, height: Shelf.well.height)
-                .offset(x: step, y: step)
+        VStack(spacing: 4) {
+            icon
+                .frame(width: Shelf.icon, height: Shelf.icon)
+                .padding(4)
+                .background {
+                    if lit {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous).fill(.white.opacity(0.2))
+                    }
+                }
+            Text(name)
+                .font(.system(size: 11))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .truncationMode(keepsEnd ? .middle : .tail)
+                // Legible on the glass, as names are on the desktop.
+                .shadow(color: .black.opacity(lit ? 0 : 0.45), radius: 1, y: 0.5)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background {
+                    if lit {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.accentColor)
+                    }
+                }
+                .frame(width: Shelf.tile.width, height: 30, alignment: .top)
         }
+        .frame(width: Shelf.tile.width, height: Shelf.tile.height, alignment: .top)
     }
 }
 
-/// A tile's name: small, gray, centered. A file's is shortened in the middle, to keep its
-/// extension; a text's or a link's runs on to a second line.
-private struct TileName: View {
-    let text: String
-    var middle = true
-    init(_ text: String, middle: Bool = true) {
-        self.text = text
-        self.middle = middle
-    }
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 10))
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-            .lineLimit(middle ? 1 : 2)
-            .truncationMode(middle ? .middle : .tail)
-            .frame(width: Shelf.tile.width - 6, height: 26, alignment: .top)
-    }
-}
-
-extension View {
-    /// A selected tile, or one something's dragged over: tinted with the accent color, and edged
-    /// with it.
-    fileprivate func tileChrome(lit: Bool) -> some View {
-        background {
-            if lit {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.16))
-                    .strokeBorder(Color.accentColor, lineWidth: 2)
-                    .transition(.opacity)
-            }
-        }
-    }
-}
-
-/// AirDrop, as a tile at the row's end while items are dragged out: let go on it to send them.
+/// AirDrop, at the row's end while items are dragged out: let go on it to send them.
 private struct AirDropTile: View {
     let targeted: Bool
 
     static let icon = NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app")
 
     var body: some View {
-        VStack(spacing: 3) {
-            Well {
-                Image(nsImage: Self.icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 8)
-            }
-            TileName("AirDrop")
+        TileLayout(name: "AirDrop", keepsEnd: false, lit: targeted) {
+            Image(nsImage: Self.icon).resizable().aspectRatio(contentMode: .fit)
         }
-        .padding(.top, 6)
-        .frame(width: Shelf.tile.width, height: Shelf.tile.height, alignment: .top)
-        .tileChrome(lit: targeted)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("AirDrop")
     }
@@ -395,20 +284,20 @@ private struct AirDropTile: View {
 private struct DropZone<Glyph: View>: View {
     let title: String
     let lit: Bool
+    let radius: CGFloat
     @ViewBuilder let glyph: Glyph
 
     var body: some View {
-        VStack(spacing: 12) {
-            glyph.frame(height: 36)
-            Text(title).font(.callout.weight(.medium)).multilineTextAlignment(.center)
+        VStack(spacing: 8) {
+            glyph
+                .frame(height: 40)
+                .scaleEffect(lit ? 1.08 : 1)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(lit ? 1 : 0.7))
         }
-        .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.white.opacity(lit ? 0.14 : 0.04), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(.white.opacity(lit ? 0.7 : 0.2), lineWidth: lit ? 1.5 : 0.75)
-        }
+        .background(.white.opacity(lit ? 0.16 : 0.06), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(lit ? .isSelected : [])
     }

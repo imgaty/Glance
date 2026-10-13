@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 12 October 2026`
+`Created: 11 October 2026` | `Last updated: 13 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -134,17 +134,17 @@ record matches the song's title, artist and length.
 ## The tray
 
 The tray keeps the files you drop on the notch, what you copy, and your
-screenshots, newest first, as a row of tiles, each with its name under it. The
-line under the row says where and when the item under the pointer came from, or
-how many are selected. Open it with ⇧⌘2, or switch to it from the player. Dragging a file, or anything else the tray takes, into the
+screenshots, newest first, as Finder shows files: each item's icon, with its
+name under it. Copied text shows as a text clipping, and a link as its site's
+icon. Open it with ⇧⌘2, or switch to it from the player. Dragging a file, or anything else the tray takes, into the
 top half of the screen opens it too, ready for the drop, without reaching the
 top edge.
 
 <img src="../assets/screenshots/tray.png"
      width="450"
-     alt="The open notch on the tray: a row of tiles, a photo, a note copied
-     from Notes, a PDF and a link to github.com, each with its name under it,
-     and a line below them saying what a click, a drag and a double-click do.">
+     alt="The open notch on the tray, showing its items as Finder does: a
+     photo, a text clipping copied from Notes, a PDF and a link to github.com
+     with the site's icon, each with its name under it.">
 <br>
 <sub>The tray, with files dropped on it and a note and a link copied</sub>
 
@@ -152,7 +152,6 @@ top edge.
 | --- | --- |
 | Drag files onto the notch, onto `Keep in Tray` | Keeps them in the tray until you remove them |
 | Drag files onto the notch, onto `AirDrop` | Sends them with AirDrop, without keeping them |
-| Point at an item | Shows where and when it came from, under the row |
 | Click an item | Selects it, or deselects it, to drag, AirDrop or remove several together |
 | Shift-click an item | Selects everything from the last item selected to it |
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |

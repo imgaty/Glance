@@ -82,7 +82,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
         // A chosen item takes every chosen one with it; any other goes alone.
         if !selector.selection.contains(item.id) { selector.deselect() }
         var items: [NSDraggingItem] = []
-        let side = Shelf.well.height
+        let side = Shelf.icon
         for target in selector.targets(of: item) {
             let picture = TrayThumbnails.cached(target) ?? TileDrag.picture(for: target)
             for writer in TileDrag.writers(for: target, in: tray) {
@@ -163,7 +163,7 @@ enum TileDrag {
 
     /// Text and links are dragged as their card: a symbol on a gray tile, the size of the picture.
     static func picture(for item: TrayItem) -> NSImage {
-        let side = Shelf.well.height
+        let side = Shelf.icon
         let symbol = NSImage(systemSymbolName: item.kind == .link ? "link" : "doc.plaintext", accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 20, weight: .medium).applying(.init(paletteColors: [.white])))
         return NSImage(size: CGSize(width: side, height: side), flipped: false) { rect in

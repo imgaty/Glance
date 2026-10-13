@@ -10,20 +10,20 @@ import LinkPresentation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// What an item shows in its tile's well: a preview of its contents where Quick Look can make one,
-/// filling the well but for a narrow margin; otherwise its icon, smaller, in the middle. Text shows
-/// as a text document's symbol, a link as its site's icon, or a link's symbol until that's fetched.
+/// An item's icon, as Finder shows it. A picture or a document is a preview of what's in it, edged
+/// and lifted a little; anything else, its icon. Copied text is a text clipping and a link a web
+/// location, as each is once dragged to the desktop, or a link is its site's icon where the site has
+/// a sharp one. Several files kept together are a pile. Each sits on the bottom of its square.
 struct TrayItemPicture: View {
     let item: TrayItem
     let tray: Tray
-    /// The well it fills.
-    let size: CGSize
+    let side: CGFloat
     @State private var thumbnail: NSImage?
     @State private var link: LinkPreview?
 
     var body: some View {
-        content
-            .frame(width: size.width, height: size.height)
+        picture
+            .frame(width: side, height: side, alignment: .bottom)
             .task(id: item.id) {
                 if item.kind == .link {
                     link = LinkPreviews.cached(item)
@@ -36,43 +36,62 @@ struct TrayItemPicture: View {
             }
     }
 
-    @ViewBuilder private var content: some View {
+    @ViewBuilder private var picture: some View {
         switch item.kind {
         case .text:
-            symbol("doc.plaintext")
+            icon(Self.clipping)
         case .link:
-            if let icon = link?.icon {
-                Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 13)
+            if let site = link?.icon, Self.isSharp(site) {
+                let shape = RoundedRectangle(cornerRadius: side * 0.18, style: .continuous)
+                Image(nsImage: site).resizable().interpolation(.high).aspectRatio(contentMode: .fit)
+                    .frame(width: side * 0.8, height: side * 0.8)
+                    .clipShape(shape)
+                    .overlay { shape.strokeBorder(.white.opacity(0.15), lineWidth: 0.5) }
+                    .padding(.bottom, side * 0.06)
             } else {
-                symbol("link")
+                icon(Self.location)
+            }
+        case .files where item.names.count > 1:
+            // The next two behind the first, askew, as files pile on the desktop.
+            ZStack(alignment: .bottom) {
+                ForEach(Array(item.names.dropFirst().prefix(2).enumerated().reversed()), id: \.offset) { index, name in
+                    icon(Self.icon(for: name))
+                        .scaleEffect(0.86, anchor: .bottom)
+                        .rotationEffect(.degrees(index == 0 ? -9 : 8), anchor: .bottom)
+                }
+                single
             }
         case .files, .image:
-            if let thumbnail, !TrayThumbnails.isIcon(item) {
-                // A preview, nearly filling the well.
-                Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-                    .padding(4)
-            } else {
-                // An icon, smaller, in the middle.
-                Image(nsImage: thumbnail ?? Self.icon(of: item)).resizable().aspectRatio(contentMode: .fit)
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 8)
-            }
+            single
         }
     }
 
-    private func symbol(_ name: String) -> some View {
-        Image(systemName: name)
-            .font(.system(size: size.height * 0.4, weight: .regular))
-            .foregroundStyle(.white.opacity(0.75))
+    @ViewBuilder private var single: some View {
+        if let thumbnail, !TrayThumbnails.isIcon(item) {
+            Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fit)
+                .overlay { Rectangle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5) }
+                .shadow(color: .black.opacity(0.35), radius: 1.5, y: 1)
+                .padding(side * 0.06)
+        } else {
+            icon(thumbnail ?? Self.icon(for: item.names.first))
+        }
     }
 
-    private static func icon(of item: TrayItem) -> NSImage {
-        let ext = ((item.names.first ?? "") as NSString).pathExtension
+    private func icon(_ image: NSImage) -> some View {
+        Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+    }
+
+    private static let clipping = NSWorkspace.shared.icon(for: UTType("com.apple.finder.textclipping") ?? .plainText)
+    private static let location = NSWorkspace.shared.icon(for: UTType("com.apple.web-internet-location") ?? .url)
+
+    private static func icon(for name: String?) -> NSImage {
+        let ext = ((name ?? "") as NSString).pathExtension
         return NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
+    }
+
+    /// Big enough to show at an icon's size without blurring.
+    private static func isSharp(_ image: NSImage) -> Bool {
+        (image.representations.map(\.pixelsWide).max() ?? 0) >= 64
     }
 
     // MARK: Names
