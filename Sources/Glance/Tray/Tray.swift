@@ -27,6 +27,8 @@ final class Tray: ObservableObject {
     private var anchor: UUID?
     /// Items are being dragged out of the tray: the AirDrop well shows, to drop them on.
     @Published var draggingOut = false
+    /// Share's picker is up over the notch, which stays open until it's done.
+    var sharing = false
 
     static let didPaste = Notification.Name("TrayDidPaste")
     /// The most of either kind kept: the oldest goes first.

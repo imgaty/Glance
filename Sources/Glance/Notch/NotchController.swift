@@ -533,7 +533,8 @@ final class NotchController {
         case .open:
             // Once the pointer has been on it, it closes as usual when the pointer leaves.
             if openZone.contains(p) { keyboardHold = false }
-            if menuHold || keyboardHold || dragHold || openZone.contains(p) {
+            // Share's picker over it holds it open too, as a menu from it does.
+            if menuHold || keyboardHold || dragHold || Tray.shared.sharing || openZone.contains(p) {
                 closeTask?.cancel()
                 closeTask = nil
             } else if closeTask == nil {
@@ -684,7 +685,10 @@ final class NotchController {
         }
         // Quick Look brought Glance to the front; with no window of its own up, the app that was in
         // front before comes back.
-        if NSApp.isActive, !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) }) { NSApp.deactivate() }
+        // Not while Share's picker, which needs Glance in front, is up.
+        if NSApp.isActive, !Tray.shared.sharing, !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) }) {
+            NSApp.deactivate()
+        }
     }
 
     /// The keyboard went elsewhere, as to a window clicked or an app switched to: the notch's turn
@@ -703,7 +707,8 @@ final class NotchController {
                     return
                 }
                 self.giveBackKeys()
-                if self.model.state == .open { self.close(holdUntilExit: false) }
+                // Share's picker took it: the notch stays under it.
+                if self.model.state == .open, !Tray.shared.sharing { self.close(holdUntilExit: false) }
             }
         }
     }

@@ -149,7 +149,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
         if !selector.selection.contains(item.id) {
             clickSelects ? selector.choose(item.id, toggling: false, extending: false) : selector.deselect()
         }
-        NSMenu.popUpContextMenu(TrayMenu(items: selector.targets(of: item), tray: tray).menu, with: event, for: self)
+        NSMenu.popUpContextMenu(TrayMenu(items: selector.targets(of: item), tray: tray, anchor: self).menu, with: event, for: self)
     }
 }
 
@@ -193,15 +193,17 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
     let items: [TrayItem]
     let tray: Tray
     private(set) var menu = NSMenu()
-    /// Share's own picker. The services in its submenu act through it, so it's kept as long as one
-    /// can be chosen; let go, choosing one did nothing.
+    /// The item the menu is for, where Share's picker shows.
+    private weak var anchor: NSView?
+    /// Share's picker, kept while it's up: it tells this when it's done.
     private var picker: NSSharingServicePicker?
-    /// The menu last shown, kept until the next one: a service chosen in Share acts as its menu goes.
+    /// The menu last shown, kept until the next one, so its picker can finish after the menu's gone.
     private static var shown: TrayMenu?
 
-    init(items: [TrayItem], tray: Tray) {
+    init(items: [TrayItem], tray: Tray, anchor: NSView?) {
         self.items = items
         self.tray = tray
+        self.anchor = anchor
         super.init()
         let count = items.count
         let many = count > 1 ? " \(count) Items" : ""
@@ -217,15 +219,10 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         separate()
         add("Copy" + many, "doc.on.doc", #selector(copyItems))
         if CGPreflightPostEventAccess() { add("Paste" + many, "doc.on.clipboard", #selector(pasteItems)) }
-        let shared = tray.shareable(items)
-        if !shared.isEmpty {
-            let picker = NSSharingServicePicker(items: shared)
-            picker.delegate = self
-            self.picker = picker
-            let share = picker.standardShareMenuItem
-            share.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
-            menu.addItem(share)
-        }
+        // As Finder's Share…: the share picker, with AirDrop, Messages, Mail and the rest. macOS's
+        // own menu item for it shows the picker beside nothing in particular, which from the notch
+        // was nowhere at all; this one shows it on the item.
+        if !tray.shareable(items).isEmpty, anchor != nil { add("Share…", "square.and.arrow.up", #selector(share)) }
         separate()
         add(count > 1 ? "Remove\(many) from Tray" : "Remove from Tray", "minus.circle", #selector(remove))
         // The menu holds its items' target weakly; it keeps this alive while it's up.
@@ -233,10 +230,33 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         Self.shown = self
     }
 
-    /// A service shows its own window, as AirDrop does, which needs Glance in front.
+    /// The picker, under the item, once the menu has gone, with Glance in front so it can be used.
+    /// The notch stays open under it until a service is chosen, or it's dismissed.
+    @objc private func share() {
+        let shared = tray.shareable(items)
+        guard !shared.isEmpty else { return }
+        let picker = NSSharingServicePicker(items: shared)
+        picker.delegate = self
+        self.picker = picker
+        tray.sharing = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard let self, let anchor = self.anchor, anchor.window != nil else {
+                self?.tray.sharing = false
+                return
+            }
+            NSApp.activate()
+            picker.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
+        }
+    }
+
+    /// A service chosen, which shows its own window, or the picker dismissed: either way, the notch
+    /// is free to close.
     nonisolated func sharingServicePicker(_ picker: NSSharingServicePicker, didChoose service: NSSharingService?) {
-        guard service != nil else { return }
-        MainActor.assumeIsolated { NSApp.activate() }
+        MainActor.assumeIsolated {
+            tray.sharing = false
+            self.picker = nil
+        }
     }
 
     private static var key = 0
