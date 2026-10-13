@@ -88,6 +88,8 @@ struct TrayView: View {
     private static let handleRoom: CGFloat = 14
     /// Around the places to drop: their corners are then concentric with the notch's.
     private static let zoneInset: CGFloat = 12
+    /// Each place's symbol, as a font's size.
+    private static let zoneGlyph: CGFloat = 26
 
     @ViewBuilder private func content(_ proxy: GeometryProxy) -> some View {
         Group {
@@ -199,11 +201,11 @@ struct TrayView: View {
     private var dropZones: some View {
         HStack(spacing: 8) {
             DropZone(title: "Keep in Tray", lit: !airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
-                Image(systemName: "tray.and.arrow.down.fill").font(.system(size: 26))
+                Image(systemName: "tray.and.arrow.down.fill").font(.system(size: Self.zoneGlyph))
             }
-            // AirDrop has no symbol of its own: its icon, as the Share menu shows it.
+            // Both places in one style: a white symbol each, the same size.
             DropZone(title: "AirDrop", lit: airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
-                Image(nsImage: AirDropTile.icon).resizable().frame(width: 40, height: 40)
+                AirDropTile.glyph(size: Self.zoneGlyph)
             }
             .reportsAirDropFrame()
         }
@@ -281,19 +283,39 @@ private struct TileLayout<Icon: View>: View {
     }
 }
 
-/// AirDrop, at the row's end while items are dragged out: let go on it to send them.
+/// AirDrop, at the row's end while items are dragged out: let go on it to send them. It's AirDrop's
+/// own symbol, as Finder's sidebar shows it, in the white the notch's symbols are, rather than its
+/// app icon, which macOS draws in the icon style chosen in Appearance settings (a gray glass tile
+/// with Clear) and which sat apart from everything around it.
 private struct AirDropTile: View {
     let targeted: Bool
 
-    static let icon = NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app")
-
     var body: some View {
         TileLayout(name: "AirDrop", keepsEnd: false, lit: targeted) {
-            Image(nsImage: Self.icon).resizable().aspectRatio(contentMode: .fit)
+            Self.glyph(size: 30)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("AirDrop")
     }
+
+    /// The symbol, at a size as a font's. Apple keeps it among its own symbols, out of the public
+    /// list, so it's asked for by its private name; failing that, the app icon stands in.
+    @ViewBuilder static func glyph(size: CGFloat) -> some View {
+        if let symbol = symbol?.withSymbolConfiguration(.init(pointSize: size, weight: .regular)) {
+            Image(nsImage: symbol).renderingMode(.template)
+        } else {
+            Image(nsImage: icon).resizable().frame(width: size * 1.5, height: size * 1.5)
+        }
+    }
+
+    private static let symbol: NSImage? = {
+        let selector = NSSelectorFromString("imageWithPrivateSystemSymbolName:accessibilityDescription:")
+        let images = NSImage.self as AnyObject
+        guard images.responds(to: selector) else { return nil }
+        return images.perform(selector, with: "airdrop", with: "AirDrop")?.takeUnretainedValue() as? NSImage
+    }()
+
+    private static let icon = NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app")
 }
 
 /// One of the two places something dragged in from another app can go, lit while it's over it.

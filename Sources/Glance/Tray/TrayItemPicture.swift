@@ -13,7 +13,9 @@ import UniformTypeIdentifiers
 /// An item's icon, as Finder shows it. A picture or a document is a preview of what's in it, edged
 /// and lifted a little; anything else, its icon. Copied text is a text clipping and a link a web
 /// location, as each is once dragged to the desktop, or a link is its site's icon where the site has
-/// a sharp one. Several files kept together are a pile. Each sits on the bottom of its square.
+/// a sharp one. Several files kept together are a pile. A preview sits on the bottom of its square,
+/// just over its name, as Finder sets a wide photo; an icon fills its square, and a site's icon,
+/// shaped like an app's, sits in the middle of it, as an app icon sits on Apple's icon grid.
 struct TrayItemPicture: View {
     let item: TrayItem
     let tray: Tray
@@ -47,7 +49,9 @@ struct TrayItemPicture: View {
                     .frame(width: side * 0.8, height: side * 0.8)
                     .clipShape(shape)
                     .overlay { shape.strokeBorder(.white.opacity(0.15), lineWidth: 0.5) }
-                    .padding(.bottom, side * 0.06)
+                    // Centered, with as much room above as below, so a selection's square sits
+                    // evenly around it.
+                    .frame(width: side, height: side)
             } else {
                 icon(Self.location)
             }
