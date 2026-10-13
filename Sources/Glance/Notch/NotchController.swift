@@ -119,6 +119,7 @@ final class NotchController {
     private var dropDwell: Task<Void, Never>?
     private var menuWatches: [AnyCancellable] = []
     private var pasteWatch: AnyCancellable?
+    private var trayWatch: AnyCancellable?
     /// Something for the tray is being dragged in the top half of this display: the notch is open on
     /// the tray to take it, wherever the pointer is.
     private var dragHold = false
@@ -188,7 +189,8 @@ final class NotchController {
         model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera, island: resting.island)
 
         // Room for the largest layout with the lyrics open, and for the tray at its widest, so
-        // switching layouts or widening the tray never resizes it.
+        // switching layouts or the tray growing never resizes it.
+        model.trayMaxWidth = Self.widestTray(on: screen)
         let largest = PlayerLayout.allCases.map { $0.size(closed: closedSize) }
         let size = CGSize(
             width: max(largest.map(\.width).max()! + model.lyricsWidth, Self.widestTray(on: screen)) + Layout.windowPadding.width * 2,
@@ -232,6 +234,15 @@ final class NotchController {
             MainActor.assumeIsolated {
                 guard let self, self.model.state == .open else { return }
                 self.close(holdUntilExit: true)
+            }
+        }
+        // The tray grows with what's in it, up to its widest, then scrolls.
+        trayWatch = Tray.shared.$items.map(\.count).removeDuplicates().sink { [weak self] count in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                withAnimation(.smooth(duration: 0.3)) { self.model.trayItems = count }
+                // Once the tray has its new items: within its row's new ends.
+                Task { @MainActor in self.settleTray() }
             }
         }
         keyLoss = NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification, object: panel).sink { [weak self] _ in
@@ -593,8 +604,9 @@ final class NotchController {
         stopPolling()
     }
 
-    /// Opens on the player, unless told otherwise.
-    private func open(on page: NotchPage = .player) {
+    /// Opens on the player, unless told otherwise; for something dragged to it, with its places to
+    /// drop.
+    private func open(on page: NotchPage = .player, forDrop: Bool = false) {
         guard model.state != .open else { return }
         openTask?.cancel()
         closeTask?.cancel()
@@ -606,6 +618,10 @@ final class NotchController {
         withTransaction(still) {
             model.page = page
             model.pageNudge = 0
+            if !forDrop {
+                model.dropping = false
+                model.airDropTargeted = false
+            }
         }
         model.open()
         Opening.tap()
@@ -758,8 +774,7 @@ final class NotchController {
     private func reveal(_ id: UUID) {
         let tray = Tray.shared
         guard let index = tray.items.firstIndex(where: { $0.id == id }) else { return }
-        let width =
-            (model.expanded ? model.expandedWidth : model.openSize.width) - (TrayView.showsAirDropTile(tray) ? Shelf.airDropWidth : 0)
+        let width = model.trayWidth
         let start = CGFloat(index) * (Shelf.tile.width + Shelf.spacing)
         let end = start + Shelf.tile.width + Shelf.inset * 2
         var scroll = model.trayScroll
@@ -774,9 +789,9 @@ final class NotchController {
         giveBackKeys()
         keyboardHold = false
         dragHold = false
-        // Shrinks with the rest of the notch as it closes.
-        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) { model.expanded = false }
-        model.dropping = false
+        // The places to drop stay as the notch closes, rather than the tray showing on its way
+        // out; once it's shut, they go.
+        if model.dropping { clearDropOnceClosed() }
         model.airDropTargeted = false
         Tray.shared.deselect()
         NotchSwipes.shared.set(nil, for: self)
@@ -837,9 +852,27 @@ final class NotchController {
         // A little further out before it closes again, so its edge doesn't flicker.
         if dragHold, !carrying || !near.insetBy(dx: -40, dy: -40).contains(p) {
             dragHold = false
-            if model.dropping { withAnimation(.smooth(duration: 0.3)) { model.dropping = false } }
-            // Closed now unless the pointer is on it, as over the notch after a drop.
+            // Let go on the notch itself, with nothing dropped: it stays, and shows the tray.
+            if !carrying, model.dropping, model.state == .open, openZone.contains(p) {
+                withAnimation(.smooth(duration: 0.3)) { model.dropping = false }
+            }
+            // Closed now unless the pointer is on it, its places to drop still in it as it goes.
             pointerMoved(to: p)
+        }
+    }
+
+    /// The places to drop go once the notch has shut, without a fade: closing, it never shows the
+    /// tray behind them on its way out.
+    private func clearDropOnceClosed() {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(0.45))
+            guard let self, self.model.state == .closed, !self.dragHold else { return }
+            var still = Transaction()
+            still.disablesAnimations = true
+            withTransaction(still) {
+                self.model.dropping = false
+                self.model.airDropTargeted = false
+            }
         }
     }
 
@@ -852,23 +885,21 @@ final class NotchController {
             model.dropping = true
             model.trayScroll = 0
         }
-        if model.state != .open { open(on: .tray) } else { turn(to: .tray) }
+        if model.state != .open { open(on: .tray, forDrop: true) } else { turn(to: .tray) }
     }
 
     /// Something dragged over the notch, at a point in the window's own (flipped) points. From
-    /// another app, the notch opens on the tray with a place at the front of the row for it, and the
-    /// AirDrop well at its end; dragged out of the tray, only the well takes it.
+    /// another app, the notch opens on the tray with its two places to drop: the tray, and
+    /// AirDrop. Dragged out of the tray, it's on its way elsewhere: the notch takes nothing back.
     private func dragMoved(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> NSDragOperation {
-        guard Tray.isOn, !tucked else { return [] }
+        guard Tray.isOn, !tucked, !own else { return [] }
         let onWell = isOnAirDrop(point)
         if model.airDropTargeted != onWell {
             withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = onWell }
             if onWell { Opening.tap() }
         }
-        if own { return onWell ? .copy : [] }
         guard Tray.accepts(pasteboard) else { return [] }
         // Back to the row, with a place at its front for the drop.
-        if model.expanded, !onWell { expand(false) }
         if !model.dropping {
             withAnimation(.smooth(duration: 0.3)) {
                 model.dropping = true
@@ -876,7 +907,7 @@ final class NotchController {
             }
         }
         if model.state != .open {
-            open(on: .tray)
+            open(on: .tray, forDrop: true)
         } else if model.page != .tray {
             turn(to: .tray)
         }
@@ -888,16 +919,16 @@ final class NotchController {
         return well.insetBy(dx: -6, dy: -6).contains(CGPoint(x: point.x, y: point.y - Layout.pastTop))
     }
 
+    /// The drag left the notch's window. Its places to drop stay: near the notch, for the drop; going
+    /// away, they close with the notch (see `close`).
     private func dragExited() {
         if model.airDropTargeted { withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = false } }
-        // Still in the top half of the display, it stays ready for the drop.
-        guard model.dropping, !dragHold else { return }
-        withAnimation(.smooth(duration: 0.3)) { model.dropping = false }
     }
 
     /// Onto the AirDrop well: sent, as soon as a device is picked. Anywhere else on the notch, from
     /// another app: kept in the tray.
     private func dropped(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> Bool {
+        guard !own else { return false }
         let onWell = isOnAirDrop(point)
         withAnimation(.smooth(duration: 0.3)) {
             model.dropping = false
@@ -909,7 +940,6 @@ final class NotchController {
             Tray.shared.airDrop(items)
             return true
         }
-        guard !own else { return false }
         let taken = Tray.shared.drop(pasteboard)
         if taken { Opening.tap() }
         return taken
@@ -998,21 +1028,9 @@ final class NotchController {
                 pullFired = true
                 pull = 0
                 open()
-            } else if !pullFired, model.state == .open, model.expanded, pull < -48 {
-                // Pushed up on the widened tray: back to its width.
-                pullFired = true
-                expand(false)
-                return
             } else if !pullFired, model.state == .open, pull < -48 {
                 pullFired = true
                 close(holdUntilExit: true)
-                return
-            } else if !pullFired, model.state == .open, model.page == .tray, !model.expanded,
-                Shelf.width(count: Tray.shared.items.count) > model.openSize.width, pull > 56
-            {
-                // Pulled further down on a tray with more than fits: it widens to show them all.
-                pullFired = true
-                expand(true)
                 return
             }
             guard model.state == .open || pull > 0 else { return }
@@ -1045,23 +1063,10 @@ final class NotchController {
 
     // MARK: The player and the tray
 
-    /// The tray widened, sideways, just enough to show everything in it, up to most of the screen;
-    /// or back to its width.
-    private func expand(_ expanded: Bool) {
-        guard model.expanded != expanded else { return }
-        withAnimation(.smooth(duration: 0.4)) {
-            if expanded {
-                model.expandedWidth = min(max(Shelf.width(count: Tray.shared.items.count), model.openSize.width), Self.widestTray(on: screen))
-            }
-            model.expanded = expanded
-            model.trayScroll = 0
-        }
-        Opening.tap()
-    }
-
-    /// The widest the tray gets: most of the display, clear of its corners.
+    /// The widest the tray grows: room for seven items, and never closer than 100 points to either
+    /// side of the display.
     static func widestTray(on screen: NSScreen) -> CGFloat {
-        min(screen.frame.width - 200, 1200)
+        min(Shelf.width(count: 7), screen.frame.width - 200)
     }
 
     /// Whether a three-finger swipe starting here is the notch's: on it, open, with the tray on.
@@ -1101,13 +1106,12 @@ final class NotchController {
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
     }
 
-    /// To the other page, sliding; a widened tray goes back to its width as it goes.
+    /// To the other page, sliding, the notch taking the new page's width.
     private func turn(to page: NotchPage) {
         guard model.page != page else { return }
         withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
             model.page = page
             model.pageNudge = 0
-            if page == .player { model.expanded = false }
         }
     }
 
@@ -1132,10 +1136,7 @@ final class NotchController {
     }
 
     private var trayReach: CGFloat {
-        let tray = Tray.shared
-        let airDrop = TrayView.showsAirDropTile(tray) ? Shelf.airDropWidth : 0
-        let width = model.expanded ? model.expandedWidth : model.openSize.width
-        return Shelf.reach(count: tray.items.count, in: width - airDrop)
+        Shelf.reach(count: Tray.shared.items.count, in: model.trayWidth)
     }
 
     /// Two fingers sideways: left for the next song, right for the previous one, as on a phone's
@@ -1276,7 +1277,27 @@ final class NotchEventView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard frame.contains(point) else { return nil }
-        return passesThrough?(convert(point, from: superview)) == true ? super.hitTest(point) : self
+        let local = convert(point, from: superview)
+        guard passesThrough?(local) == true else { return self }
+        // A tray item gets its own clicks, found by where it is. Asked, SwiftUI could answer with
+        // a layer over it that isn't even showing, and the click went nowhere, or a right-click to
+        // the notch's own menu.
+        return tile(at: local) ?? super.hitTest(point)
+    }
+
+    /// The tray item, on the page showing, at a point in this view's own points.
+    private func tile(at point: CGPoint) -> TileInteractionView? {
+        func search(_ view: NSView) -> TileInteractionView? {
+            for child in view.subviews.reversed() {
+                if let tile = child as? TileInteractionView {
+                    if tile.live, tile.convert(tile.bounds, to: self).contains(point) { return tile }
+                } else if let found = search(child) {
+                    return found
+                }
+            }
+            return nil
+        }
+        return search(self)
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }

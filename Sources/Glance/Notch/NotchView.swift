@@ -138,9 +138,13 @@ final class NotchModel: ObservableObject {
     @Published var trayScroll: CGFloat = 0
     /// How far a swipe to the other page has pushed this one, before it goes.
     @Published var pageNudge: CGFloat = 0
-    /// The tray widened to show everything in it, and how wide.
-    @Published var expanded = false
-    @Published var expandedWidth: CGFloat = 0
+    /// How many items the tray holds, which its width follows.
+    @Published var trayItems = 0
+    /// The widest the tray grows: room for seven items, or less on a narrow display.
+    var trayMaxWidth = Shelf.width(count: 7)
+    /// The tray as wide as its items, from the player's width up to `trayMaxWidth`, past which its
+    /// row scrolls.
+    var trayWidth: CGFloat { min(max(Shelf.width(count: trayItems), openSize.width), max(trayMaxWidth, openSize.width)) }
     /// Where the tray's AirDrop well is, in the notch's points, while it shows; and whether
     /// something dragged is over it.
     var airDropFrame: CGRect?
@@ -210,7 +214,7 @@ final class NotchModel: ObservableObject {
                     closedSize.height + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, closedSize.height + 7 + pull)
-            case .open where expanded && page == .tray: (expandedWidth + pull * 0.35, openSize.height + pull)
+            case .open where page == .tray: (trayWidth + pull * 0.35, openSize.height + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
@@ -390,11 +394,9 @@ struct NotchView: View {
             if trayOn {
                 TrayView(
                     tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
-                    airDropTargeted: model.airDropTargeted, expanded: model.expanded
-                ) { expanded in
-                    withAnimation(.smooth(duration: 0.4)) { model.expanded = expanded }
-                }
-                .frame(width: model.expanded ? model.expandedWidth : model.openSize.width, height: model.openSize.height)
+                    airDropTargeted: model.airDropTargeted
+                )
+                .frame(width: model.trayWidth, height: model.openSize.height)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
@@ -407,7 +409,8 @@ struct NotchView: View {
                 // On the tray, it steps aside with the rest of the player.
                 .opacity((isOpen ? !onTray : model.activity) ? 1 : 0)
                 .environment(\.notchControls, !trayShown)
-                .allowsHitTesting(places == nil)
+                // Over the tray, though unseen there: clicks go through it to the tray's items.
+                .allowsHitTesting(places == nil && !trayShown)
             HeroWaveform(
                 isOpen: isOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
                 toggleLyrics: toggleLyrics
@@ -419,7 +422,7 @@ struct NotchView: View {
                 $0.opacity((isOpen ? !onTray : model.activity && !model.pop) ? 1 : 0)
             }
             .environment(\.notchControls, !trayShown)
-            .allowsHitTesting(places == nil)
+            .allowsHitTesting(places == nil && !trayShown)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)

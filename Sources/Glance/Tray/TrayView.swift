@@ -23,19 +23,17 @@ enum Shelf {
         count == 0 ? 0 : CGFloat(count) * tile.width + CGFloat(count - 1) * spacing + inset * 2
     }
 
-    /// The room AirDrop takes at the row's end while items are dragged out.
-    static let airDropWidth: CGFloat = tile.width + inset
-
     /// How far the row scrolls in a notch this wide.
     static func reach(count: Int, in width: CGFloat) -> CGFloat {
         max(self.width(count: count) - width, 0)
     }
 }
 
-/// The tray in the open notch, as Finder's icon view: each item's icon with its name under it. A
-/// click selects, as in Finder; a drag takes the item, or every selected one, anywhere, AirDrop
-/// included; a double-click pastes it; a right-click shows the rest. Something dragged in from
-/// another app gets two places to go: the tray, and AirDrop.
+/// The tray in the open notch, as Finder's icon view: each item's icon with its name under it. It's
+/// as wide as its items, up to a point (see `NotchModel.trayWidth`), and past that its row scrolls.
+/// A click selects, as in Finder; a drag takes the item, or every selected one, anywhere; a
+/// double-click pastes it; a right-click shows the rest. Something dragged in from another app gets
+/// two places to go: the tray, and AirDrop.
 struct TrayView: View {
     @ObservedObject var tray: Tray
     let isVisible: Bool
@@ -45,9 +43,6 @@ struct TrayView: View {
     let scroll: CGFloat
     /// Something dragged is over AirDrop.
     var airDropTargeted = false
-    /// Widened to show everything, and how to widen it or bring it back.
-    var expanded = false
-    var expand: (Bool) -> Void = { _ in }
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
     @AppStorage(Preferences.trayScreenshots) private var keepsScreenshots = true
@@ -63,7 +58,6 @@ struct TrayView: View {
         .environment(\.colorScheme, .dark)
         .animation(.smooth(duration: 0.24), value: tray.items.map(\.id))
         .animation(.smooth(duration: 0.24), value: dropping)
-        .animation(.smooth(duration: 0.24), value: tray.draggingOut)
         .animation(.smooth(duration: 0.2), value: airDropTargeted)
         .onChange(of: isVisible, initial: true) {
             guard isVisible else { return }
@@ -79,13 +73,10 @@ struct TrayView: View {
         }
     }
 
-    /// AirDrop is at the row's end only while items are dragged out of it.
-    static func showsAirDropTile(_ tray: Tray) -> Bool { tray.draggingOut }
-
     /// Where the room below the camera starts.
     private var top: CGFloat { closedNotch.height + PlayerLayout.cameraGap }
-    /// Kept clear at the bottom for the handle.
-    private static let handleRoom: CGFloat = 14
+    /// Kept clear at the bottom, as the player keeps its controls off the edge.
+    private static let bottomRoom: CGFloat = 14
     /// Around the places to drop: their corners are then concentric with the notch's.
     private static let zoneInset: CGFloat = 12
     /// Each place's symbol, as a font's size.
@@ -102,42 +93,20 @@ struct TrayView: View {
             } else if tray.items.isEmpty {
                 empty
                     .padding(.top, top)
-                    .padding(.bottom, Self.handleRoom)
+                    .padding(.bottom, Self.bottomRoom)
                     .transition(.opacity)
             } else {
-                shelf(width: proxy.size.width)
+                row(width: proxy.size.width)
                     .frame(maxHeight: .infinity)
                     .padding(.top, top)
-                    .padding(.bottom, Self.handleRoom)
+                    .padding(.bottom, Self.bottomRoom)
                     .transition(.opacity)
             }
         }
         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-        .overlay(alignment: .bottom) {
-            // Only when there's more than fits, or it's widened to show it all.
-            if !dropping, expanded || Shelf.width(count: tray.items.count) > proxy.size.width {
-                Grabber(label: expanded ? "Show Less" : "Show All") { expand(!expanded) }
-                    .notchControl(enabled: isVisible)
-                    .transition(.opacity)
-            }
-        }
     }
 
     // MARK: The row
-
-    private func shelf(width: CGFloat) -> some View {
-        let airDrop = Self.showsAirDropTile(tray)
-        return ZStack(alignment: .trailing) {
-            row(width: width - (airDrop ? Shelf.airDropWidth : 0))
-                .frame(width: width, alignment: .leading)
-            if airDrop {
-                AirDropTile(targeted: airDropTargeted)
-                    .reportsAirDropFrame()
-                    .padding(.trailing, Shelf.inset)
-                    .transition(.opacity)
-            }
-        }
-    }
 
     /// Only the items in sight, and a few either side, are made; the rest of the row is space. It
     /// fades at an edge only where there's more past it.
@@ -205,7 +174,7 @@ struct TrayView: View {
             }
             // Both places in one style: a white symbol each, the same size.
             DropZone(title: "AirDrop", lit: airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
-                AirDropTile.glyph(size: Self.zoneGlyph)
+                AirDropSymbol.glyph(size: Self.zoneGlyph)
             }
             .reportsAirDropFrame()
         }
@@ -224,7 +193,7 @@ private struct ItemTile: View {
             TrayItemPicture(item: item, tray: tray, side: Shelf.icon)
         }
         .overlay {
-            TileInteraction(item: item, tray: tray, selector: tray, clickSelects: true) { _ in }
+            TileInteraction(item: item, tray: tray, selector: tray, clickSelects: true, live: isVisible) { _ in }
         }
         .animation(.easeOut(duration: 0.12), value: chosen)
         .notchControl(enabled: isVisible)
@@ -283,21 +252,10 @@ private struct TileLayout<Icon: View>: View {
     }
 }
 
-/// AirDrop, at the row's end while items are dragged out: let go on it to send them. It's AirDrop's
-/// own symbol, as Finder's sidebar shows it, in the white the notch's symbols are, rather than its
-/// app icon, which macOS draws in the icon style chosen in Appearance settings (a gray glass tile
-/// with Clear) and which sat apart from everything around it.
-private struct AirDropTile: View {
-    let targeted: Bool
-
-    var body: some View {
-        TileLayout(name: "AirDrop", keepsEnd: false, lit: targeted) {
-            Self.glyph(size: 30)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("AirDrop")
-    }
-
+/// AirDrop's own symbol, as Finder's sidebar shows it, in the white the notch's symbols are, for
+/// the place to drop things to send them. Its app icon, which macOS draws in the icon style chosen
+/// in Appearance settings (a gray glass tile with Clear), sat apart from everything around it.
+private enum AirDropSymbol {
     /// The symbol, at a size as a font's. Apple keeps it among its own symbols, out of the public
     /// list, so it's asked for by its private name; failing that, the app icon stands in.
     @ViewBuilder static func glyph(size: CGFloat) -> some View {
@@ -379,29 +337,6 @@ extension View {
                 Color.clear.preference(key: AirDropFrame.self, value: proxy.frame(in: .named(ControlFrames.space)))
             }
         }
-    }
-}
-
-/// The handle at the bottom of the tray, as a sheet's: pull down, or click it, to widen the notch
-/// to show everything; again, to bring it back. A soft dark edge keeps it in sight over a light
-/// window, and it can be clicked anywhere in a strip as tall as the smallest control.
-private struct Grabber: View {
-    let label: String
-    let action: () -> Void
-    @Environment(\.colorSchemeContrast) private var contrast
-
-    var body: some View {
-        Capsule()
-            .fill(.white.opacity(contrast == .increased ? 0.8 : 0.55))
-            .shadow(color: .black.opacity(0.4), radius: 1, y: 0.5)
-            .frame(width: 36, height: 5)
-            .frame(width: 96, height: 20)
-            .contentShape(Rectangle())
-            .onTapGesture(perform: action)
-            .accessibilityElement()
-            .accessibilityLabel(label)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action() }
     }
 }
 

@@ -14,16 +14,15 @@
 - Added clipboard history, kept for 30 minutes, 8 hours or 7 days, never
   keeping passwords.
 - Added screenshots to the tray, as soon as each is saved.
-- Added AirDrop beside the tray while something's dragged onto the notch, and
-  at its end while items are dragged out of it.
+- Added AirDrop beside the tray while something's dragged onto the notch.
 - Added link previews to the tray, with each site's icon, fetched from the
   site's home page rather than the link itself.
 - Added selecting items as Finder does: a click, ⌘-click for more, and
   Shift-click for a run.
 - Added Quick Look and Share, with AirDrop in it, to each item's menu in the
   tray.
-- Added widening the tray sideways to show everything in it, from its handle or
-  a swipe down.
+- Added the tray growing wider with what's in it, up to seven items, then
+  scrolling.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening
@@ -51,7 +50,6 @@
   light windows.
 - Made a new song's name, in the cover's color, light enough to read on the
   black notch.
-- Made the handle under the tray easier to see and to click.
 
 ### Additional
 

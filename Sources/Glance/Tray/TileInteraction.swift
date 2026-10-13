@@ -19,6 +19,8 @@ struct TileInteraction: NSViewRepresentable {
     let selector: TraySelecting
     /// A click selects the item alone, as in Finder; otherwise it copies it.
     let clickSelects: Bool
+    /// Its page is showing, so the notch hands it the clicks on it (see `NotchEventView`).
+    var live = true
     let hover: (Bool) -> Void
 
     func makeNSView(context: Context) -> TileInteractionView { TileInteractionView() }
@@ -28,6 +30,7 @@ struct TileInteraction: NSViewRepresentable {
         view.tray = tray
         view.selector = selector
         view.clickSelects = clickSelects
+        view.live = live
         view.hover = hover
     }
 }
@@ -53,6 +56,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
     var tray: Tray?
     weak var selector: TraySelecting?
     var clickSelects = false
+    var live = false
     var hover: ((Bool) -> Void)?
     private var downAt: NSPoint?
     private var dragged = false
@@ -126,9 +130,9 @@ final class TileInteractionView: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         guard let item else { return [] }
-        // Onto the notch's AirDrop well, a copy; out to other apps, files go as Finder takes them,
-        // and the tray's own copies are only ever copied out.
-        if context == .withinApplication { return .copy }
+        // Not back onto the notch, where it came from; out to other apps, files go as Finder takes
+        // them, and the tray's own copies are only ever copied out.
+        if context == .withinApplication { return [] }
         return item.kind == .files ? [.copy, .move, .link, .generic] : [.copy, .generic]
     }
 
@@ -185,10 +189,15 @@ enum TileDrag {
 /// looking first, then copying and sharing (AirDrop is in Share), then removing; each with its
 /// symbol, and named for how many items it acts on.
 @MainActor
-final class TrayMenu: NSObject {
+final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
     let items: [TrayItem]
     let tray: Tray
     private(set) var menu = NSMenu()
+    /// Share's own picker. The services in its submenu act through it, so it's kept as long as one
+    /// can be chosen; let go, choosing one did nothing.
+    private var picker: NSSharingServicePicker?
+    /// The menu last shown, kept until the next one: a service chosen in Share acts as its menu goes.
+    private static var shown: TrayMenu?
 
     init(items: [TrayItem], tray: Tray) {
         self.items = items
@@ -210,7 +219,10 @@ final class TrayMenu: NSObject {
         if CGPreflightPostEventAccess() { add("Paste" + many, "doc.on.clipboard", #selector(pasteItems)) }
         let shared = tray.shareable(items)
         if !shared.isEmpty {
-            let share = NSSharingServicePicker(items: shared).standardShareMenuItem
+            let picker = NSSharingServicePicker(items: shared)
+            picker.delegate = self
+            self.picker = picker
+            let share = picker.standardShareMenuItem
             share.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
             menu.addItem(share)
         }
@@ -218,6 +230,13 @@ final class TrayMenu: NSObject {
         add(count > 1 ? "Remove\(many) from Tray" : "Remove from Tray", "minus.circle", #selector(remove))
         // The menu holds its items' target weakly; it keeps this alive while it's up.
         objc_setAssociatedObject(menu, &Self.key, self, .OBJC_ASSOCIATION_RETAIN)
+        Self.shown = self
+    }
+
+    /// A service shows its own window, as AirDrop does, which needs Glance in front.
+    nonisolated func sharingServicePicker(_ picker: NSSharingServicePicker, didChoose service: NSSharingService?) {
+        guard service != nil else { return }
+        MainActor.assumeIsolated { NSApp.activate() }
     }
 
     private static var key = 0

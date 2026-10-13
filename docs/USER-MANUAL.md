@@ -170,15 +170,14 @@ opens it too, ready for the drop, without reaching the top edge.
 | Command-click an item | Adds it to the selection, or takes it out, to drag, AirDrop or remove several together |
 | Shift-click an item | Selects everything from the last item selected to it |
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
-| Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder. Drop them on `AirDrop`, at the tray's end, to send them |
+| Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder |
 | Swipe left or right with two fingers | Scrolls the tray |
-| Click the handle under the tray, or swipe down with two fingers | Widens the notch to show everything in the tray |
 | Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), and Remove from Tray |
 
 Something dragged onto the notch from another app gets two places to go:
-`Keep in Tray` and `AirDrop`. Items dragged out of the tray get `AirDrop` at its
-end. A link shows its site's icon, which Glance fetches from the site, as
-Messages does.
+`Keep in Tray` and `AirDrop`. To send items already in the tray, right-click
+them and choose Share, which has AirDrop. A link shows its site's icon, which
+Glance fetches from the site, as Messages does.
 
 Files stay where they are; the tray only points to them, and follows them if
 they move. If a file is deleted, it leaves the tray too.
@@ -199,10 +198,8 @@ and stays as long as copies do. Turn this off with
 
 ### Seeing everything
 
-With more in the tray than fits, a handle shows under it. Click it, or swipe
-down with two fingers, and the notch widens sideways to show everything, up to
-most of the screen's width. Click the handle again, or swipe up, to bring it
-back.
+The tray grows wider with what's in it, up to room for seven items. Past that,
+swipe left or right with two fingers to scroll through the rest.
 
 <br>
 
