@@ -152,39 +152,52 @@ struct TrayItemPicture: View {
     }
 }
 
-/// A page's title and its site's icon, as macOS's link previews show them.
+/// A link's site's icon, as macOS's link previews show it.
 struct LinkPreview {
-    var title: String?
     var icon: NSImage?
 }
 
-/// Link previews, fetched from the page once each, as Messages fetches a link's, and kept while
-/// Glance runs.
+/// Link previews, fetched once for each site, as Messages fetches a link's, and kept while Glance
+/// runs. Only the site's home page is asked, never the address copied: a link can do something
+/// just by being opened, like a sign-in or unsubscribe link, which works only once.
 @MainActor
 enum LinkPreviews {
-    private static var previews: [UUID: LinkPreview] = [:]
-    private static var fetching: [UUID: Task<LinkPreview, Never>] = [:]
+    private static var previews: [URL: LinkPreview] = [:]
+    private static var fetching: [URL: Task<LinkPreview, Never>] = [:]
 
-    static func cached(_ item: TrayItem) -> LinkPreview? { previews[item.id] }
+    static func cached(_ item: TrayItem) -> LinkPreview? { site(of: item).flatMap { previews[$0] } }
 
     static func preview(for item: TrayItem) async -> LinkPreview? {
-        if let preview = previews[item.id] { return preview }
-        guard let address = item.text, let url = URL(string: address) else { return nil }
+        guard let site = site(of: item) else { return nil }
+        if let preview = previews[site] { return preview }
         let task =
-            fetching[item.id]
+            fetching[site]
             ?? Task {
                 let provider = LPMetadataProvider()
                 provider.timeout = 6
-                guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return LinkPreview() }
-                var preview = LinkPreview(title: metadata.title)
+                guard let metadata = try? await provider.startFetchingMetadata(for: site) else { return LinkPreview() }
+                var preview = LinkPreview()
                 if let icon = metadata.iconProvider { preview.icon = await load(icon) }
                 return preview
             }
-        fetching[item.id] = task
+        fetching[site] = task
         let preview = await task.value
-        fetching[item.id] = nil
-        previews[item.id] = preview
+        fetching[site] = nil
+        previews[site] = preview
         return preview
+    }
+
+    /// The home page of the link's site: its scheme, host and port, and nothing of the rest.
+    static func site(of item: TrayItem) -> URL? {
+        guard let address = item.text, let link = URLComponents(string: address), let host = link.encodedHost, !host.isEmpty else {
+            return nil
+        }
+        var site = URLComponents()
+        site.scheme = link.scheme
+        site.encodedHost = host
+        site.port = link.port
+        site.path = "/"
+        return site.url
     }
 
     private static func load(_ provider: NSItemProvider) async -> NSImage? {

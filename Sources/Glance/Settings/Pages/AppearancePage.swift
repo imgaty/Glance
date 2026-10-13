@@ -93,9 +93,11 @@ private struct LookEditor: View {
         } footer: {
             if accessibility.reducesTransparency {
                 Text("The notch is opaque while Reduce transparency is on in Accessibility settings.")
+            } else if accessibility.increasesContrast {
+                Text("The notch is opaque while Increase contrast is on in Accessibility settings.")
             }
         }
-        .disabled(accessibility.reducesTransparency)
+        .disabled(accessibility.opaque)
         Section {
             // One choice, as Apple would make it: the cover's colors, or the Mac's own accent.
             Toggle(isOn: Binding(get: { accentSource == .artwork }, set: { accentSource = $0 ? .artwork : .system })) {

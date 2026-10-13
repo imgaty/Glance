@@ -317,6 +317,8 @@ final class NowPlaying: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 MainActor.assumeIsolated {
                     self?.helper = nil
+                    // Whatever half a line the old one left would spoil the new one's first.
+                    self?.buffer.removeAll()
                     self?.start()
                 }
             }

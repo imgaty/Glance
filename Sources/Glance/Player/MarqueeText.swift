@@ -22,6 +22,8 @@ struct MarqueeText: View {
     @State private var textWidth: CGFloat = 0
     @State private var boxWidth: CGFloat = 0
     @State private var start = Date()
+    /// With Reduce Motion on, a line too long ends in an ellipsis instead of scrolling.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let gap: CGFloat = 36
     private static let speed: CGFloat = 32  // points a second
     private static let rest: Double = 2.5
@@ -38,18 +40,11 @@ struct MarqueeText: View {
                 boxWidth = $0
             }
             .overlay(alignment: .leading) {
-                TimelineView(.animation(paused: !(active && overflows))) { context in
-                    let offset = overflows ? self.offset(at: context.date) : 0
-                    // The left fade comes in as the text sets off, and is gone by the time the next
-                    // copy reaches its resting place, so it never fades the start of the text.
-                    let lead = overflows ? max(min(Self.fade, offset, textWidth + Self.gap - offset), 0) : 0
-                    HStack(spacing: Self.gap) {
-                        label
-                        if overflows { label }
-                    }
-                    .offset(x: -offset)
-                    .frame(width: boxWidth, alignment: overflows ? .leading : alignment)
-                    .mask(edges(leading: lead, trailing: overflows))
+                if overflows && reduceMotion {
+                    Text(text).font(font).lineLimit(1).truncationMode(.tail)
+                        .frame(width: boxWidth, alignment: .leading)
+                } else {
+                    scrolling(overflows: overflows)
                 }
             }
             .clipped()
@@ -61,6 +56,22 @@ struct MarqueeText: View {
                 }
             )
             .onChange(of: text) { start = .now }
+    }
+
+    private func scrolling(overflows: Bool) -> some View {
+        TimelineView(.animation(paused: !(active && overflows))) { context in
+            let offset = overflows ? self.offset(at: context.date) : 0
+            // The left fade comes in as the text sets off, and is gone by the time the next
+            // copy reaches its resting place, so it never fades the start of the text.
+            let lead = overflows ? max(min(Self.fade, offset, textWidth + Self.gap - offset), 0) : 0
+            HStack(spacing: Self.gap) {
+                label
+                if overflows { label }
+            }
+            .offset(x: -offset)
+            .frame(width: boxWidth, alignment: overflows ? .leading : alignment)
+            .mask(edges(leading: lead, trailing: overflows))
+        }
     }
 
     private var label: some View {

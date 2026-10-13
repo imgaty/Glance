@@ -22,6 +22,8 @@ struct HeroArtwork: View {
     let restingSide: CGFloat
     @State private var motionReady = false
     @Environment(\.notchThumbnail) private var thumbnail
+    /// With Reduce Motion on, the cover is its picture, never the moving one.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The app icon's tile on the cover, one size in every layout, and how far past the cover's
     /// corner its corner is.
@@ -30,7 +32,8 @@ struct HeroArtwork: View {
 
     var body: some View {
         let size = layout.artwork
-        let video = animated && !nowPlaying.isDemo ? motion.video(artist: nowPlaying.artist, album: nowPlaying.album) : nil
+        let video =
+            animated && !nowPlaying.isDemo && !reduceMotion ? motion.video(artist: nowPlaying.artist, album: nowPlaying.album) : nil
         // Exactly the square it's given: artwork that isn't square, like a video's thumbnail, is
         // cropped to fill it.
         Color.clear
@@ -70,7 +73,7 @@ struct HeroArtwork: View {
                 of: isOpen && animated ? [nowPlaying.artist, nowPlaying.album, nowPlaying.artwork == nil ? "" : "cover"] : [],
                 initial: true
             ) {
-                if isOpen, animated, !nowPlaying.isDemo {
+                if isOpen, animated, !nowPlaying.isDemo, !reduceMotion {
                     motion.load(
                         title: nowPlaying.title, artist: nowPlaying.artist, album: nowPlaying.album,
                         albumID: nowPlaying.albumID, artwork: nowPlaying.artwork)
@@ -94,6 +97,10 @@ struct HeroArtwork: View {
                         }
                         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
                         .notchControl(enabled: showsBadge && isOpen)
+                        .accessibilityLabel(
+                            nowPlaying.appBundleID.flatMap(TrayItemPicture.appName).map { "Open \($0)" } ?? "Open App"
+                        )
+                        .accessibilityHidden(!(showsBadge && isOpen))
                         .position(x: proxy.size.width + past - tile / 2, y: proxy.size.height + past - tile / 2)
                     }
                     // Only its fading has timing of its own; where it is and how large come with the
@@ -165,11 +172,13 @@ struct ArtworkLight: View {
 struct ArtworkSwirl: View {
     let image: NSImage
     let active: Bool
+    /// With Reduce Motion on, the colors stay where they are.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
             let side = max(proxy.size.width, proxy.size.height)
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 ZStack {
                     layer(side * 1.5, turn: t / 24, drift: .zero, soft: false)

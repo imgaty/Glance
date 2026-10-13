@@ -177,8 +177,8 @@ final class NotchController {
         // Open, the player fills the notch; its artwork sits up beside the camera.
         model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera, island: resting.island)
 
-        // Room for the largest layout with the lyrics open, so switching layouts never resizes it.
-        // Room for the largest layout with the lyrics open, and for the tray at its widest.
+        // Room for the largest layout with the lyrics open, and for the tray at its widest, so
+        // switching layouts or widening the tray never resizes it.
         let largest = PlayerLayout.allCases.map { $0.size(closed: closedSize) }
         let size = CGSize(
             width: max(largest.map(\.width).max()! + model.lyricsWidth, Self.widestTray(on: screen)) + Layout.windowPadding.width * 2,
@@ -756,7 +756,6 @@ final class NotchController {
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
         let right = event.scrollingDeltaX * direction
-        // The tray's row, not its history, which scrolls on its own.
         // The tray's row, widened or not.
         let onTray = model.state == .open && model.page == .tray
         // A swipe on the tray let go: the row glides on, and settles within its ends.
@@ -927,7 +926,7 @@ final class NotchController {
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
     }
 
-    /// To the other page, sliding; the tray's history closes back to the row as it goes.
+    /// To the other page, sliding; a widened tray goes back to its width as it goes.
     private func turn(to page: NotchPage) {
         guard model.page != page else { return }
         withAnimation(.spring(response: 0.42, dampingFraction: 1)) {

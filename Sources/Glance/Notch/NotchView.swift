@@ -14,11 +14,16 @@ enum NotchState {
     case open  // fully expanded
 }
 
-/// macOS's Reduce Transparency setting, watched so the notch follows it as it changes.
+/// macOS's Reduce Transparency and Increase Contrast settings, watched so the notch follows them as
+/// they change.
 @MainActor
 final class SystemAccessibility: ObservableObject {
     static let shared = SystemAccessibility()
     @Published private(set) var reducesTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+    @Published private(set) var increasesContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+
+    /// Either one makes the notch opaque, as macOS makes its own glass then.
+    var opaque: Bool { reducesTransparency || increasesContrast }
 
     private init() {
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -27,6 +32,7 @@ final class SystemAccessibility: ObservableObject {
             MainActor.assumeIsolated {
                 withAnimation(.easeInOut(duration: 0.4)) {
                     self?.reducesTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+                    self?.increasesContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
                 }
             }
         }
@@ -310,10 +316,10 @@ struct NotchView: View {
 
     private var background: MusicBackground { backgroundShown ?? chosenBackground }
 
-    /// With Reduce Transparency on, the notch is opaque whatever its setting. With the system's Liquid
-    /// Glass, the glass itself is as dark as macOS makes it.
+    /// With Reduce Transparency or Increase Contrast on, the notch is opaque whatever its setting.
+    /// With the system's Liquid Glass, the glass itself is as dark as macOS makes it.
     private var darkness: Double {
-        accessibility.reducesTransparency ? 1 : followsSystem ? 0 : min(max(chosenDarkness, 0), 1)
+        accessibility.opaque ? 1 : followsSystem ? 0 : min(max(chosenDarkness, 0), 1)
     }
 
     var body: some View {
@@ -328,7 +334,8 @@ struct NotchView: View {
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed ? 1 : 0
-        let lit = playerShown && nowPlaying.artwork != nil && background != .none
+        // With Increase Contrast on, the player's words and buttons sit on plain black.
+        let lit = playerShown && nowPlaying.artwork != nil && background != .none && !accessibility.increasesContrast
         let lyricsShown = isOpen && model.showsLyrics
         // The closed notch swells under the pointer, and the artwork and waveform with it.
         let swell = isOpen ? 1 : m.height / closed.height
@@ -432,12 +439,12 @@ struct NotchView: View {
                 if thumbnail {
                     // Liquid Glass can't be drawn this small: its rim and refraction stay their full
                     // size and smear. So it's drawn as it looks from afar, a veil with a bright rim.
-                    let system = followsSystem && !accessibility.reducesTransparency
+                    let system = followsSystem && !accessibility.opaque
                     shape.fill(.white.opacity((system ? 0.14 : 0.06) * (1 - GlassLook.black(darkness)) * visible))
                     shape.fill(.black.opacity((system ? 0.2 : GlassLook.black(darkness)) * visible))
                     shape.stroke(.white.opacity(0.3 * (1 - GlassLook.black(darkness)) * visible), lineWidth: 3)
                         .mask { WithoutFlares(flare: m.flare) }
-                } else if followsSystem && !accessibility.reducesTransparency {
+                } else if followsSystem && !accessibility.opaque {
                     // Liquid Glass as macOS draws it everywhere, as set in Appearance settings.
                     Color.clear
                         .glassEffect(.regular, in: shape)

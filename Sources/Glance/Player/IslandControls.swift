@@ -18,6 +18,10 @@ struct IslandButton: View {
     /// Counts saves: each new value plays the save effect once.
     var burst = 0
     var burstColor: Color = .white
+    /// What VoiceOver and Voice Control call it, and its state, when the symbol's own name isn't
+    /// what it does.
+    var label: String? = nil
+    var value: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -56,6 +60,21 @@ struct IslandButton: View {
         }
         .buttonStyle(IslandPress())
         .notchControl()
+        .modifier(SpokenAs(label: label, value: value))
+    }
+}
+
+/// A control's name, and its state, for VoiceOver and Voice Control, where it has one of its own.
+struct SpokenAs: ViewModifier {
+    let label: String?
+    var value: String? = nil
+
+    func body(content: Content) -> some View {
+        if let label {
+            content.accessibilityLabel(label).accessibilityValue(value ?? "")
+        } else {
+            content
+        }
     }
 }
 
@@ -135,6 +154,9 @@ struct IslandPress: ButtonStyle {
 struct Scrubber: View {
     let fraction: Double
     let color: Color
+    /// Where the song is, in words, and how far one step of VoiceOver's adjusting moves it.
+    var spoken = ""
+    var step = 0.05
     let onScrub: (Double) -> Void
     let onCommit: (Double) -> Void
     @State private var hovering = false
@@ -163,5 +185,13 @@ struct Scrubber: View {
         .animation(.easeOut(duration: 0.18), value: hovering)
         .onHover { hovering = $0 }
         .notchControl()
+        // To VoiceOver, a slider: where the song is, and a step back or ahead.
+        .accessibilityElement()
+        .accessibilityLabel("Track Position")
+        .accessibilityValue(spoken)
+        .accessibilityAdjustableAction { direction in
+            let moved = direction == .increment ? fraction + step : fraction - step
+            onCommit(min(max(moved, 0), 1))
+        }
     }
 }

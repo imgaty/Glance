@@ -238,6 +238,11 @@ Glance's icon in the menu bar opens a menu:
 | `Use artwork colors` | Tints the notch with the cover's colors; off, with your Mac's accent color |
 | `Background` | `Replace glass`, `Fullscreen`, `Spotlight`, or `None` behind the player |
 
+With **Reduce transparency** or **Increase contrast** on in **System Settings >
+Accessibility > Display**, the notch is opaque, and with **Increase contrast**
+the player sits on plain black. With **Reduce motion** on, covers and their
+colors hold still, and long titles end in an ellipsis instead of scrolling.
+
 ### Music
 
 | Setting | Operation |
@@ -257,7 +262,7 @@ Glance's icon in the menu bar opens a menu:
 
 | Setting | Operation |
 | --- | --- |
-| `Tray` | Turns the tray on or off, with its shortcut and its button |
+| `Tray` | Turns the tray on or off, with its shortcut and its gestures |
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |

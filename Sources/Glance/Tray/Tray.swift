@@ -180,7 +180,11 @@ final class Tray: ObservableObject {
                 let place = folder.appending(path: id.uuidString)
                 try? FileManager.default.createDirectory(at: place, withIntermediateDirectories: true)
                 promise.receivePromisedFiles(atDestination: place, options: [:], operationQueue: .main) { [weak self] url, error in
-                    guard error == nil else { return }
+                    // Never written: its folder goes, rather than staying behind, empty, for good.
+                    guard error == nil else {
+                        try? FileManager.default.removeItem(at: place)
+                        return
+                    }
                     MainActor.assumeIsolated { self?.addFile(url, id: id) }
                 }
             }

@@ -171,7 +171,10 @@ struct NowPlayingView: View {
                     .frame(minWidth: 26, alignment: .leading)
                 Scrubber(
                     fraction: duration > 0 ? position / duration : 0,
-                    color: accentTimeline ? accent : .white.opacity(0.7)
+                    color: accentTimeline ? accent : .white.opacity(0.7),
+                    spoken: playing ? Self.time(position) + " of " + Self.time(duration) : "",
+                    // Ten seconds at a time.
+                    step: duration > 0 ? min(10 / duration, 1) : 0
                 ) {
                     scrub = $0
                 } onCommit: { fraction in
@@ -199,16 +202,19 @@ struct NowPlayingView: View {
                 slot(leftSlot)
             }
             Group {
-                GlyphButton {
+                GlyphButton(label: "Previous") {
                     skipsBack += 1
                     nowPlaying.previous()
                 } glyph: {
                     SkipSymbol(forward: false, skips: skipsBack)
                 }
-                IslandButton(symbol: nowPlaying.isPlaying ? "pause.fill" : "play.fill", size: PlayerLayout.playGlyph) {
+                IslandButton(
+                    symbol: nowPlaying.isPlaying ? "pause.fill" : "play.fill", size: PlayerLayout.playGlyph,
+                    label: nowPlaying.isPlaying ? "Pause" : "Play"
+                ) {
                     nowPlaying.togglePlayPause()
                 }
-                GlyphButton {
+                GlyphButton(label: "Next") {
                     skipsForward += 1
                     nowPlaying.next()
                 } glyph: {
@@ -256,7 +262,8 @@ struct NowPlayingView: View {
         case .favorite:
             IslandButton(
                 symbol: symbol(for: .favorite), size: size,
-                color: optionColor(options.favorite), burst: favoriteBursts, burstColor: burstColor
+                color: optionColor(options.favorite), burst: favoriteBursts, burstColor: burstColor,
+                label: slot.title, value: Self.spoken(options.favorite)
             ) {
                 if options.favorite == false { favoriteBursts += 1 }
                 nowPlaying.toggleFavorite()
@@ -264,24 +271,28 @@ struct NowPlayingView: View {
             .disabled(options.favorite == nil)
         case .shuffle:
             // Off, struck through rather than dimmed.
-            IslandButton(symbol: "shuffle", size: size, color: switchColor(options.shuffle), slashed: options.shuffle != true) {
+            IslandButton(
+                symbol: "shuffle", size: size, color: switchColor(options.shuffle), slashed: options.shuffle != true,
+                label: slot.title, value: Self.spoken(options.shuffle)
+            ) {
                 nowPlaying.toggleShuffle()
             }
             .disabled(options.shuffle == nil)
         case .repeatMode:
             IslandButton(
                 symbol: symbol(for: .repeatMode), size: size, color: switchColor(options.repeatMode.map { $0 != .off }),
-                slashed: repeatSlashed
+                slashed: repeatSlashed, label: slot.title, value: options.repeatMode?.rawValue.capitalized
             ) {
                 nowPlaying.cycleRepeat()
             }
             .disabled(options.repeatMode == nil)
         case .output:
-            IslandButton(symbol: output.symbol, size: size, color: buttonGray) { output.showMenu() }
+            IslandButton(symbol: output.symbol, size: size, color: buttonGray, label: slot.title) { output.showMenu() }
         case .lyrics:
             IslandButton(
                 symbol: symbol(for: .lyrics), size: size,
-                color: optionColor(lyricsControl.available ? lyricsControl.shown : nil)
+                color: optionColor(lyricsControl.available ? lyricsControl.shown : nil),
+                label: slot.title, value: Self.spoken(lyricsControl.available ? lyricsControl.shown : nil)
             ) {
                 lyricsControl.toggle()
             }
@@ -290,6 +301,11 @@ struct NowPlayingView: View {
             // Nothing, but the space stays, so the transport controls stay where they are.
             Color.clear.frame(width: Self.hitbox, height: Self.hitbox)
         }
+    }
+
+    /// An option's state as VoiceOver says a switch's.
+    private static func spoken(_ on: Bool?) -> String? {
+        on.map { $0 ? "On" : "Off" }
     }
 
     /// Shuffle and repeat: the artist's gray, on or off (off, they're struck through); faint when the
@@ -459,6 +475,8 @@ private struct SkipArrows: View, Animatable {
 
 /// A button around a drawn glyph, with the same contact area and press as every other.
 private struct GlyphButton<Glyph: View>: View {
+    /// A drawn glyph has no name of its own: what VoiceOver and Voice Control call it.
+    let label: String
     let action: () -> Void
     @ViewBuilder let glyph: Glyph
 
@@ -466,6 +484,7 @@ private struct GlyphButton<Glyph: View>: View {
         Button(action: action) { glyph }
             .buttonStyle(IslandPress())
             .notchControl()
+            .accessibilityLabel(label)
     }
 }
 

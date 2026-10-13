@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 12 October 2026`
+`Created: 11 October 2026` | `Last updated: 13 October 2026`
 
 <br>
 
@@ -16,7 +16,8 @@
 - Added screenshots to the tray, as soon as each is saved.
 - Added AirDrop beside the tray while something's dragged onto the notch, and
   at its end while items are dragged out of it.
-- Added link previews to the tray, with each page's title and site icon.
+- Added link previews to the tray, with each site's icon, fetched from the
+  site's home page rather than the link itself.
 - Added selecting items with a click, and a run of them with Shift-click.
 - Added Quick Look and AirDrop to each item's menu in the tray.
 - Added widening the tray sideways to show everything in it, from its handle or
@@ -33,6 +34,15 @@
 - Added opening the tray when something is dragged into the top half of the
   screen.
 - Added keyboard shortcut settings in **Settings > Opening** to change them.
+
+### Accessibility
+
+- Made the notch opaque while Increase Contrast is on, with the player on
+  plain black.
+- Made covers and their colors hold still, and long titles stop scrolling,
+  while Reduce Motion is on.
+- Added names for VoiceOver and Voice Control to the player's buttons and
+  progress bar, and actions to the tray's items.
 
 <br>
 

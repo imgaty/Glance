@@ -50,6 +50,7 @@ struct TrayView: View {
     var expand: (Bool) -> Void = { _ in }
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
+    @AppStorage(Preferences.trayScreenshots) private var keepsScreenshots = true
     /// Built only while it shows, and a moment after, to fade out: closed, or on the player, the
     /// tray costs nothing.
     @State private var built = false
@@ -177,11 +178,17 @@ struct TrayView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// What shows up here besides what's dropped, as set in Settings.
     private var emptyLine: String {
-        guard keepsCopies else { return "Drop files here to keep them close." }
-        return tray.pasteBlocked
-            ? "To keep what you copy, allow Glance in Privacy & Security, under Paste from Other Apps."
-            : "Drop files here. What you copy and your screenshots show up here too."
+        if keepsCopies, tray.pasteBlocked {
+            return "To keep what you copy, allow Glance in Privacy & Security, under Paste from Other Apps."
+        }
+        return switch (keepsCopies, keepsScreenshots) {
+        case (true, true): "Drop files here. What you copy and your screenshots show up here too."
+        case (true, false): "Drop files here. What you copy shows up here too."
+        case (false, true): "Drop files here. Your screenshots show up here too."
+        case (false, false): "Drop files here to keep them close."
+        }
     }
 
     // MARK: Dropping
@@ -222,6 +229,14 @@ private struct ItemTile: View {
         .accessibilityLabel(TrayItemPicture.title(of: item))
         .accessibilityValue(TrayItemPicture.detail(of: item, in: tray))
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
+        // What a click and the item's menu do, for VoiceOver and Voice Control.
+        .accessibilityAction { tray.choose(item.id, toggling: true) }
+        .accessibilityAction(named: "Copy") { tray.copy(tray.targets(of: item)) }
+        .accessibilityAction(named: "Paste") { tray.paste(item) }
+        .accessibilityAction(named: "Quick Look") {
+            TrayQuickLook.shared.show(TrayQuickLook.urls(for: tray.targets(of: item), in: tray))
+        }
+        .accessibilityAction(named: "Remove from Tray") { tray.remove(Set(tray.targets(of: item).map(\.id))) }
     }
 }
 

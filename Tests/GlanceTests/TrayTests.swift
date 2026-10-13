@@ -53,6 +53,17 @@ struct TrayTests {
         #expect(!TrayCapture.isLink("apple"))
     }
 
+    @Test("A link's preview asks only its site's home page, never the address copied")
+    func linkPreviewSite() throws {
+        let magic = try #require(
+            TrayCapture.make(
+                from: pasteboard { $0.setString("https://user:secret@accounts.example.com:8443/login/confirm?token=abc#now", forType: .string) },
+                kept: false))
+        #expect(LinkPreviews.site(of: magic.item)?.absoluteString == "https://accounts.example.com:8443/")
+        let plain = try #require(TrayCapture.make(from: pasteboard { $0.setString("https://www.apple.com/macos/", forType: .string) }, kept: false))
+        #expect(LinkPreviews.site(of: plain.item)?.absoluteString == "https://www.apple.com/")
+    }
+
     @Test("Passwords and other private copies are never kept", arguments: Array(TrayCapture.privateTypes))
     func privateCopies(type: String) {
         let board = pasteboard {
