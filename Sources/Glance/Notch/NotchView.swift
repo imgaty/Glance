@@ -495,6 +495,9 @@ struct NotchView: View {
                         .mask { shape }
                         .opacity(visible)
                     shape.fill(.black.opacity((trayShown ? max(GlassLook.black(darkness), GlassLook.trayBlack) : GlassLook.black(darkness)) * visible))
+                        // The tray's darker glass is there as the tray arrives, as its blur is,
+                        // rather than following the page's slower slide.
+                        .animation(.easeOut(duration: 0.15), value: trayShown)
                 }
             }
         }
@@ -868,17 +871,17 @@ final class GlassBlurView: NSView {
     }
 
     private static let name = "notchBlur"
-    private static let easing: CFTimeInterval = 0.35
+    private static let easing: CFTimeInterval = 0.15
 
-    /// A big change, as going to the tray and back, eases over; a slider's small steps follow it at
-    /// once.
+    /// A big change, as going to the tray and back, eases over quickly, most of it at the start, so
+    /// the blur is there as the page arrives; a slider's small steps follow it at once.
     private func ease(_ backdrop: CALayer, from: CGFloat, to: CGFloat) {
         guard abs(to - from) > 2, window != nil else { return }
         let animation = CABasicAnimation(keyPath: "filters.\(Self.name).inputRadius")
         animation.fromValue = from
         animation.toValue = to
         animation.duration = Self.easing
-        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
         backdrop.add(animation, forKey: Self.name)
     }
 
