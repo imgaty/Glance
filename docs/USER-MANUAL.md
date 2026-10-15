@@ -96,6 +96,7 @@ keyboard the same way:
 | ⌘A | On the tray, selects everything |
 | ⌘Delete | On the tray, removes the selected items |
 | ⌘Z | On the tray, brings back what you last removed, for a minute |
+| Type a name | On the tray, selects the first item whose name starts with it |
 
 ⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
 replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
@@ -175,7 +176,9 @@ for the drop, without reaching the top edge.
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
 | Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder |
 | Swipe left or right with two fingers, or scroll a mouse's wheel | Scrolls the tray |
-| Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), and Remove from Tray |
+| Right-click an item | Open, Open With, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), Keep, and Remove from Tray |
+| Hold Option in an item's menu | Turns Paste into Paste and Match Style, for text without its style |
+| Choose **Services > Add to Glance Tray** in Finder or any app | Keeps what's selected there in the tray, as a drop does |
 
 Something dragged onto the notch from another app gets two places to go:
 `Keep in Tray` and `AirDrop`. To send items already in the tray, right-click
@@ -194,11 +197,16 @@ on another device. Copying something that's already there moves it to the
 front. What you copy while the pointer is on the tray waits until it leaves, so
 nothing moves under the pointer.
 
+To keep a copy until you remove it, right-click it and choose Keep; a pin shows
+before its name. Choose Don't Keep to let it go again, after the usual time from
+then. To never keep what you copy in an app, add the app under
+**Settings > Tray > Never keep copies from**.
+
 ### Screenshots
 
 Each screenshot joins the tray as soon as it's saved, wherever you save them,
-and stays as long as copies do. Turn this off with
-**Settings > Tray > Keep screenshots**.
+and stays as long as copies do, or until you remove it if you choose Keep. Turn
+this off with **Settings > Tray > Keep screenshots**.
 
 ### Seeing everything
 
@@ -283,6 +291,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
+| `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
 
 ### Opening
@@ -372,6 +381,9 @@ their signature matches the one built into Glance.
 
 9. **Double-clicking an item copies it but doesn't paste it.** Turn on Glance
    under **System Settings > Privacy & Security > Accessibility**.
+
+10. **Add to Glance Tray isn't in the Services menu.** Turn it on under
+    **System Settings > Keyboard > Keyboard Shortcuts > Services**.
 
 <br>
 

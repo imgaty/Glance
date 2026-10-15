@@ -29,6 +29,14 @@
 - Added ⌘Z to bring back what was removed from the tray, for a minute.
 - Added holding what's copied while the pointer is on the tray, so the row never
   moves under it.
+- Added Keep to an item's menu, so a copy or screenshot stays until removed,
+  marked with a pin.
+- Added Open With to an item's menu, listing the apps that open it.
+- Added Paste and Match Style to an item's menu, with Option held, to paste
+  text without its style.
+- Added typing an item's name to select it, as in Finder.
+- Added a list in Settings of apps whose copies the tray never keeps.
+- Added Add to Glance Tray to the Services menu, in Finder and every other app.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening

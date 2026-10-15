@@ -25,7 +25,8 @@ struct TrayItem: Codable, Identifiable, Equatable {
     let id: UUID
     var added: Date
     let kind: Kind
-    /// Dropped on the notch: kept until it's removed. Copied: kept as long as chosen in Settings.
+    /// Dropped on the notch, or a copy chosen to be kept: kept until it's removed. Copied: kept as
+    /// long as chosen in Settings.
     var kept: Bool
     /// Files: where each one is.
     var bookmarks: [Data] = []
@@ -45,12 +46,18 @@ struct TrayItem: Codable, Identifiable, Equatable {
     /// were kept.
     var source: Source? = nil
 
+    /// A copy or screenshot no longer kept, when: it's kept as long as copies are from then on.
+    var released: Date? = nil
+
     var origin: Source { source ?? (kept ? .dropped : .copied) }
+
+    /// A copy or screenshot kept until it's removed, as what's dropped on the notch is.
+    var keptCopy: Bool { kept && origin != .dropped }
 
     /// Copies and screenshots are kept for 30 minutes, 8 hours or 7 days, as Spotlight keeps its
     /// clipboard history.
     func expired(at date: Date, keep: ClipboardKeep) -> Bool {
-        !kept && date.timeIntervalSince(added) > keep.seconds
+        !kept && date.timeIntervalSince(max(added, released ?? added)) > keep.seconds
     }
 
     /// The name under the item: a file's, or what kind of thing it is.

@@ -48,6 +48,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notches.contextMenu = statusBar.menu
         notches.start()
         Tray.shared.start()
+        NSApp.servicesProvider = TrayService()
+        NSUpdateDynamicServices()
         NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
         NotchSwipes.shared.start()
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
@@ -250,6 +252,8 @@ enum Preferences {
     static let trayClipboard = "trayClipboard"
     static let trayClipboardKeep = "trayClipboardKeep"
     static let trayScreenshots = "trayScreenshots"
+    /// Apps whose copies are never kept, comma separated (see TrayApps).
+    static let trayIgnoredApps = "trayIgnoredApps"
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"

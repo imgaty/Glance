@@ -19,9 +19,10 @@ which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 Drag files onto the notch to keep them close, and find what you copied and
 your screenshots, newest first. Click something to select it, double-click to
 paste it, drag it out, or send it with AirDrop. Copies stay for 30 minutes,
-8 hours or 7 days, and passwords never do. ⇧⌘2 opens it, or three fingers on the
-open notch, and it grows wider with what it keeps. See the
-[User Manual](USER-MANUAL.md#the-tray).
+8 hours or 7 days, unless you keep them, and passwords never do. Open items
+with any app, add things from any app's Services menu, and choose apps whose
+copies stay out. ⇧⌘2 opens it, or three fingers on the open notch, and it grows
+wider with what it keeps. See the [User Manual](USER-MANUAL.md#the-tray).
 
 ### Opening the notch
 

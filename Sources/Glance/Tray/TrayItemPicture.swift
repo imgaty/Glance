@@ -139,7 +139,7 @@ struct TrayItemPicture: View {
         // As Notification Center says it: "now", "2m ago".
         let when = item.added.formatted(.relative(presentation: .named, unitsStyle: .narrow))
         let count = item.kind == .files && item.names.count > 1 ? "\(item.names.count) Items · " : ""
-        return count + source(of: item, in: tray) + " · " + when
+        return (item.keptCopy ? "Kept · " : "") + count + source(of: item, in: tray) + " · " + when
     }
 
     private static func source(of item: TrayItem, in tray: Tray) -> String {

@@ -106,7 +106,7 @@ final class Tray: ObservableObject {
         // Copied on another device: reading it waits for it to arrive, which would hold up the notch.
         guard !(pasteboard.types ?? []).contains(.init("com.apple.is-remote-clipboard")) else { return }
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        guard app != Bundle.main.bundleIdentifier, let capture = TrayCapture.make(from: pasteboard, kept: false, app: app) else { return }
+        guard app != Bundle.main.bundleIdentifier, !TrayApps.ignores(app), let capture = TrayCapture.make(from: pasteboard, kept: false, app: app) else { return }
         add(capture)
     }
 
@@ -315,6 +315,22 @@ final class Tray: ObservableObject {
         return ids
     }
 
+    /// Copies and screenshots kept until they're removed, as what's dropped on the notch is; or, no
+    /// longer, kept as long as copies are from now on. What's dropped is always kept.
+    func keep(_ ids: Set<UUID>, _ keeping: Bool = true) {
+        var changed = false
+        for index in items.indices where ids.contains(items[index].id) && items[index].origin != .dropped {
+            guard items[index].kept != keeping else { continue }
+            // How it came is noted first: an item from before that was recorded is told apart by
+            // whether it's kept.
+            items[index].source = items[index].origin
+            items[index].kept = keeping
+            items[index].released = keeping ? nil : .now
+            changed = true
+        }
+        if changed { store() }
+    }
+
     /// Everything, kept or copied, after asking. Files stay where they are.
     func clear() {
         items.forEach(discard)
@@ -390,6 +406,13 @@ final class Tray: ObservableObject {
 
     var chosen: [TrayItem] { items.filter { selection.contains($0.id) } }
 
+    /// The first item whose name, as the tray shows it, starts with what's typed, as Finder finds a
+    /// file by its name typed in a window: whatever the case or accents.
+    func first(named typed: String) -> UUID? {
+        let options: String.CompareOptions = [.anchored, .caseInsensitive, .diacriticInsensitive]
+        return items.first { TrayItemPicture.title(of: $0).range(of: typed, options: options) != nil }?.id
+    }
+
     /// Copies older than chosen go.
     func purge(now: Date = .now) {
         let keep = ClipboardKeep.current
@@ -460,11 +483,12 @@ final class Tray: ObservableObject {
         folder.appending(path: item.id.uuidString).appending(path: name)
     }
 
-    /// What goes on a pasteboard for the item: its files, or each version the app gave of it.
-    func writers(for item: TrayItem) -> [NSPasteboardWriting] {
+    /// What goes on a pasteboard for the item: its files, or each version the app gave of it; plain,
+    /// only its words, without the style they were copied with.
+    func writers(for item: TrayItem, plain: Bool = false) -> [NSPasteboardWriting] {
         if item.kind == .files { return urls(of: item).map { $0 as NSURL } }
         let entry = NSPasteboardItem()
-        for (type, name) in zip(item.types, item.files) {
+        for (type, name) in zip(item.types, item.files) where !plain || type == NSPasteboard.PasteboardType.string.rawValue {
             if let data = try? Data(contentsOf: file(name, of: item)) { entry.setData(data, forType: .init(type)) }
         }
         return [entry]
@@ -476,10 +500,10 @@ final class Tray: ObservableObject {
     }
 
     /// Several at once, as Finder copies several files.
-    func copy(_ items: [TrayItem]) {
+    func copy(_ items: [TrayItem], plain: Bool = false) {
         guard !items.isEmpty else { return }
         pasteboard.clearContents()
-        pasteboard.writeObjects(items.flatMap(writers))
+        pasteboard.writeObjects(items.flatMap { writers(for: $0, plain: plain) })
         ownChange = pasteboard.changeCount
         changeCount = pasteboard.changeCount
     }
@@ -512,10 +536,11 @@ final class Tray: ObservableObject {
         paste([item])
     }
 
-    /// Several at once, as several files copied in Finder paste together.
-    func paste(_ items: [TrayItem]) {
+    /// Several at once, as several files copied in Finder paste together. Plain, as Paste and Match
+    /// Style pastes: text takes on the style of where it lands.
+    func paste(_ items: [TrayItem], plain: Bool = false) {
         guard !items.isEmpty else { return }
-        copy(items)
+        copy(items, plain: plain)
         guard CGPreflightPostEventAccess() else { return }
         NotificationCenter.default.post(name: Self.didPaste, object: nil)
         // The app the notch floats over still has the keyboard; ⌘V, once the copy has landed.
@@ -567,5 +592,28 @@ final class Tray: ObservableObject {
     private func prepareFolder() {
         guard !FileManager.default.fileExists(atPath: folder.path) else { return }
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+    }
+}
+
+/// Apps whose copies are never kept, as chosen in Settings: by bundle identifier, comma separated.
+enum TrayApps {
+    static var ignored: [String] {
+        (UserDefaults.standard.string(forKey: Preferences.trayIgnoredApps) ?? "").split(separator: ",").map(String.init)
+    }
+
+    static func ignores(_ app: String?) -> Bool {
+        app.map(ignored.contains) ?? false
+    }
+
+    static func add(_ app: String) {
+        set(ignored.filter { $0 != app } + [app])
+    }
+
+    static func remove(_ app: String) {
+        set(ignored.filter { $0 != app })
+    }
+
+    private static func set(_ apps: [String]) {
+        UserDefaults.standard.set(apps.joined(separator: ","), forKey: Preferences.trayIgnoredApps)
     }
 }

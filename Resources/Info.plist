@@ -26,6 +26,36 @@
 	<string>Glance measures how loud the playing app is to move the waveform, and turns apps down for the volume slider. Nothing is recorded or leaves your Mac.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>Add to Glance Tray</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>addToTray</string>
+			<key>NSPortName</key>
+			<string>Glance</string>
+			<key>NSRequiredContext</key>
+			<dict/>
+			<key>NSSendFileTypes</key>
+			<array>
+				<string>public.item</string>
+			</array>
+			<key>NSSendTypes</key>
+			<array>
+				<string>public.file-url</string>
+				<string>public.url</string>
+				<string>public.utf8-plain-text</string>
+				<string>public.rtf</string>
+				<string>public.html</string>
+				<string>public.png</string>
+				<string>public.tiff</string>
+			</array>
+		</dict>
+	</array>
 	<key>SUAutomaticallyUpdate</key>
 	<true/>
 	<key>SUEnableAutomaticChecks</key>

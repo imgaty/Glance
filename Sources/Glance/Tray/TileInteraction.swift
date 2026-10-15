@@ -138,8 +138,8 @@ enum TileDrag {
 }
 
 /// The menu for items in the tray, laid out as Finder's is for files, in three groups: opening and
-/// looking first, then copying and sharing (AirDrop is in Share), then removing; each with its
-/// symbol, and named for how many items it acts on.
+/// looking first, then copying and sharing (AirDrop is in Share), then keeping and removing; each
+/// with its symbol, and named for how many items it acts on.
 @MainActor
 final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
     let items: [TrayItem]
@@ -163,6 +163,9 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
 
         if let single, single.kind != .text {
             add(single.kind == .link ? "Open Link" : "Open", "arrow.up.forward.app", #selector(open))
+            if let apps = openWith() {
+                add("Open With", "arrow.up.forward.square", nil).submenu = apps
+            }
         }
         if items.contains(where: { $0.kind == .files }) {
             add("Show in Finder", "folder", #selector(reveal))
@@ -170,12 +173,28 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         if !TrayQuickLook.urls(for: items, in: tray).isEmpty { add("Quick Look" + many, "eye", #selector(quickLook)) }
         separate()
         add("Copy" + many, "doc.on.doc", #selector(copyItems))
-        if CGPreflightPostEventAccess() { add("Paste" + many, "doc.on.clipboard", #selector(pasteItems)) }
+        if CGPreflightPostEventAccess() {
+            let paste = add("Paste" + many, "doc.on.clipboard", #selector(pasteItems))
+            // With Option held, as in the Edit menu: only the words, in the style of where they land.
+            if items.allSatisfy({ $0.kind == .text || $0.kind == .link }) {
+                paste.keyEquivalentModifierMask = []
+                let plain = add("Paste and Match Style", "doc.on.clipboard", #selector(pastePlain))
+                plain.keyEquivalentModifierMask = .option
+                plain.isAlternate = true
+            }
+        }
         // As Finder's Share…: the share picker, with AirDrop, Messages, Mail and the rest. macOS's
         // own menu item for it shows the picker beside nothing in particular, which from the notch
         // was nowhere at all; this one shows it on the item.
         if !tray.shareable(items).isEmpty, anchor != nil { add("Share…", "square.and.arrow.up", #selector(share)) }
         separate()
+        // Copies and screenshots, kept until they're removed rather than for as long as copies are.
+        let copies = items.filter { $0.origin != .dropped }
+        if !copies.isEmpty {
+            let kept = copies.allSatisfy(\.kept)
+            let some = copies.count > 1 ? " \(copies.count) Items" : ""
+            add(kept ? "Don't Keep" + some : "Keep" + some, kept ? "pin.slash" : "pin", kept ? #selector(letGo) : #selector(keepItems))
+        }
         add(count > 1 ? "Remove\(many) from Tray" : "Remove from Tray", "minus.circle", #selector(remove))
         // The menu holds its items' target weakly; it keeps this alive while it's up.
         objc_setAssociatedObject(menu, &Self.key, self, .OBJC_ASSOCIATION_RETAIN)
@@ -213,10 +232,12 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
 
     private static var key = 0
 
-    private func add(_ title: String, _ symbol: String, _ action: Selector) {
+    @discardableResult
+    private func add(_ title: String, _ symbol: String, _ action: Selector?) -> NSMenuItem {
         let item = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
         item.target = self
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        return item
     }
 
     /// A line between groups, never two together or one at either end.
@@ -225,13 +246,76 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         menu.addItem(.separator())
     }
 
+    /// What Open opens: the item's files, the file a picture is kept in, or a link's address.
+    private var openable: [URL] {
+        guard let item = items.first, items.count == 1 else { return [] }
+        return switch item.kind {
+        case .files: tray.urls(of: item)
+        case .image: item.files.first.map { [tray.file($0, of: item)] } ?? []
+        case .link: item.text.flatMap(URL.init(string:)).map { [$0] } ?? []
+        case .text: []
+        }
+    }
+
     @objc private func open() {
-        guard let item = items.first else { return }
-        switch item.kind {
-        case .files: tray.urls(of: item).forEach { NSWorkspace.shared.open($0) }
-        case .image: _ = item.files.first.map { NSWorkspace.shared.open(tray.file($0, of: item)) }
-        case .link: _ = item.text.flatMap(URL.init(string:)).map { NSWorkspace.shared.open($0) }
-        case .text: break
+        openable.forEach { NSWorkspace.shared.open($0) }
+    }
+
+    /// Finder's Open With: the app they open in, then every other app that opens them all, by name,
+    /// then any app at all, chosen. A link lists the browsers.
+    private func openWith() -> NSMenu? {
+        let urls = openable
+        guard let first = urls.first else { return nil }
+        let workspace = NSWorkspace.shared
+        let standard = workspace.urlForApplication(toOpen: first)
+        // One of each app, the copy macOS prefers first, never Glance itself.
+        var seen: Set<String> = [Bundle.main.bundleIdentifier ?? ""]
+        let apps = workspace.urlsForApplications(toOpen: first).filter { app in
+            let id = Bundle(url: app)?.bundleIdentifier ?? app.path
+            return seen.insert(id).inserted && urls.dropFirst().allSatisfy { workspace.urlsForApplications(toOpen: $0).contains(app) }
+        }
+        let others = apps.filter { $0 != standard }.sorted { Self.name(of: $0).localizedStandardCompare(Self.name(of: $1)) == .orderedAscending }
+        guard standard != nil || !others.isEmpty else { return nil }
+        let menu = NSMenu()
+        func app(_ url: URL, _ title: String) {
+            let item = menu.addItem(withTitle: title, action: #selector(openIn), keyEquivalent: "")
+            item.target = self
+            item.representedObject = url
+            item.image = workspace.icon(forFile: url.path)
+            item.image?.size = CGSize(width: 16, height: 16)
+        }
+        if let standard { app(standard, Self.name(of: standard) + " (default)") }
+        if standard != nil, !others.isEmpty { menu.addItem(.separator()) }
+        others.forEach { app($0, Self.name(of: $0)) }
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Other…", action: #selector(openInOther), keyEquivalent: "").target = self
+        return menu
+    }
+
+    private static func name(of app: URL) -> String {
+        let name = FileManager.default.displayName(atPath: app.path)
+        return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
+    }
+
+    @objc private func openIn(_ sender: NSMenuItem) {
+        guard let app = sender.representedObject as? URL else { return }
+        NSWorkspace.shared.open(openable, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    /// Any app, chosen from the Applications folder, as Finder's Open With › Other… does.
+    @objc private func openInOther() {
+        let urls = openable
+        let panel = NSOpenPanel()
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        panel.canChooseDirectories = false
+        panel.treatsFilePackagesAsDirectories = false
+        panel.prompt = "Open"
+        panel.message = "Choose an app to open \(items.first.map(TrayItemPicture.title) ?? "the item") with."
+        NSApp.activate()
+        panel.begin { response in
+            guard response == .OK, let app = panel.url else { return }
+            NSWorkspace.shared.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
         }
     }
 
@@ -242,6 +326,9 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
     @objc private func quickLook() { TrayQuickLook.shared.show(TrayQuickLook.urls(for: items, in: tray)) }
     @objc private func copyItems() { tray.copy(items) }
     @objc private func pasteItems() { tray.paste(items) }
+    @objc private func pastePlain() { tray.paste(items, plain: true) }
+    @objc private func keepItems() { tray.keep(Set(items.map(\.id))) }
+    @objc private func letGo() { tray.keep(Set(items.map(\.id)), false) }
     @objc private func remove() { tray.remove(Set(items.map(\.id))) }
 }
 

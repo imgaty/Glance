@@ -110,11 +110,15 @@ final class NotchController {
     /// again, a click lands outside it, or the pointer visits it and leaves.
     private var keyboardHold = false
     /// Opened from the keyboard, it takes the keyboard too, as Spotlight's window does, until it
-    /// closes or the keyboard goes elsewhere: Escape, the arrows, Space, Return and a few ⌘ keys
-    /// work it (see `typed`). Keys come through a watch on Glance's own, ahead of its menus.
+    /// closes or the keyboard goes elsewhere: Escape, the arrows, Space, Return, a few ⌘ keys and
+    /// typing a name work it (see `typed`). Keys come through a watch on Glance's own, ahead of its
+    /// menus.
     private var hasKeys = false
     private var keyWatch: Any?
     private var keyLoss: AnyCancellable?
+    /// What's been typed of a name in the tray, and when last (see `choose(typing:)`).
+    private var typedName = ""
+    private var typedAt = Date.distantPast
     /// Something dragged for the tray has come near the notch: a moment's wait, then it opens.
     private var dropDwell: Task<Void, Never>?
     private var menuWatches: [AnyCancellable] = []
@@ -789,10 +793,30 @@ final class NotchController {
             guard !tray.chosen.isEmpty else { return false }
             tray.remove(Set(tray.chosen.map(\.id)))
         default:
-            return false
+            return choose(typing: event)
         }
         return true
     }
+
+    /// A name typed in the tray, as in a Finder window: each letter typed soon after the last adds
+    /// to it, and the first item whose name starts with it is chosen, in sight.
+    private func choose(typing event: NSEvent) -> Bool {
+        // Not ⌘ or Control keys, nor the arrows, function keys, Tab, Return or Delete.
+        guard event.modifierFlags.isDisjoint(with: [.command, .control, .function]), let characters = event.characters,
+            !characters.isEmpty, characters.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) })
+        else { return false }
+        let now = Date.now
+        typedName = now.timeIntervalSince(typedAt) < Self.typingPause ? typedName + characters : characters
+        typedAt = now
+        if let id = Tray.shared.first(named: typedName) {
+            Tray.shared.choose(id)
+            reveal(id)
+        }
+        return true
+    }
+
+    /// Longer than this between letters, and a new name is being typed.
+    static let typingPause: TimeInterval = 1
 
     /// The tray's row scrolled, if it must be, so the item the keyboard is on shows whole.
     private func reveal(_ id: UUID) {

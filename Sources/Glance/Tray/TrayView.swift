@@ -201,7 +201,9 @@ private struct ItemTile: View {
 
     var body: some View {
         let chosen = tray.selection.contains(item.id)
-        TileLayout(name: TrayItemPicture.title(of: item), keepsEnd: item.kind == .files || item.kind == .image, lit: chosen) {
+        TileLayout(
+            name: TrayItemPicture.title(of: item), keepsEnd: item.kind == .files || item.kind == .image, pinned: item.keptCopy, lit: chosen
+        ) {
             TrayItemPicture(item: item, tray: tray, side: Shelf.icon)
         }
         .overlay {
@@ -220,6 +222,12 @@ private struct ItemTile: View {
         .accessibilityAction(named: "Quick Look") {
             TrayQuickLook.shared.show(TrayQuickLook.urls(for: tray.targets(of: item), in: tray))
         }
+        .accessibilityActions {
+            // What's dropped is always kept.
+            if item.origin != .dropped {
+                Button(item.keptCopy ? "Don't Keep" : "Keep") { tray.keep(Set(tray.targets(of: item).map(\.id)), !item.keptCopy) }
+            }
+        }
         .accessibilityAction(named: "Remove from Tray") { tray.remove(Set(tray.targets(of: item).map(\.id))) }
     }
 }
@@ -230,6 +238,9 @@ private struct TileLayout<Icon: View>: View {
     let name: String
     /// A file's name is shortened in the middle, to keep its extension; a text's at its end.
     let keepsEnd: Bool
+    /// A copy kept until it's removed: a pin before its name, as Finder sets a file's status by its
+    /// name.
+    var pinned = false
     let lit: Bool
     @ViewBuilder let icon: Icon
 
@@ -243,7 +254,7 @@ private struct TileLayout<Icon: View>: View {
                         RoundedRectangle(cornerRadius: 6, style: .continuous).fill(.white.opacity(0.2))
                     }
                 }
-            Text(name)
+            Text(pinned ? "\(Image(systemName: "pin.fill")) \(name)" : "\(name)")
                 .font(.system(size: 11))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
