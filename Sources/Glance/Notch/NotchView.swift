@@ -145,9 +145,22 @@ final class NotchModel: ObservableObject {
     @Published var trayItems = 0
     /// The widest the tray grows: room for seven items, or less on a narrow display.
     var trayMaxWidth = Shelf.peekWidth
-    /// The tray as wide as its items, from the player's width up to `trayMaxWidth`, past which its
-    /// row scrolls.
-    var trayWidth: CGFloat { min(max(Shelf.width(count: trayItems), openSize.width), max(trayMaxWidth, openSize.width)) }
+    /// The tray on the player's grid: the padding either side of its first and last icons, as of the
+    /// cover and the buttons, and under its row. As wide as its items, up to `trayMaxWidth`, past
+    /// which its row scrolls, and never narrower than the camera with the padding either side, its
+    /// row in the middle then. Empty, or with something dragged in, as wide as the player, for its
+    /// words and its two places to drop.
+    var trayWidth: CGFloat {
+        let least = trayItems == 0 || dropping ? openSize.width : closedSize.width + PlayerLayout.padding * 2
+        return min(max(Shelf.width(count: trayItems), least), max(trayMaxWidth, least))
+    }
+
+    /// Its row just below the camera, as the player's column below it starts, and the padding under it.
+    var trayHeight: CGFloat { Self.trayHeight(closed: closedSize) }
+
+    static func trayHeight(closed: CGSize) -> CGFloat {
+        closed.height + PlayerLayout.cameraGap + Shelf.tile.height + PlayerLayout.padding
+    }
     /// Where the tray's AirDrop well is, in the notch's points, while it shows; and whether
     /// something dragged is over it.
     var airDropFrame: CGRect?
@@ -182,8 +195,9 @@ final class NotchModel: ObservableObject {
         self.island = island
         let openSize = layout.size(closed: closedSize)
         self.openSize = openSize
+        // Fully round by the shorter of the two pages, so both have the same corners.
         corners = NotchCorners(
-            restingHeight: closedSize.height, openHeight: openSize.height,
+            restingHeight: closedSize.height, openHeight: min(openSize.height, Self.trayHeight(closed: closedSize)),
             openRadius: PlayerLayout.cornerRadius, island: island)
     }
 
@@ -191,7 +205,7 @@ final class NotchModel: ObservableObject {
     func use(_ layout: PlayerLayout) {
         self.layout = layout
         openSize = layout.size(closed: closedSize)
-        corners.openHeight = openSize.height
+        corners.openHeight = min(openSize.height, trayHeight)
     }
 
     /// Each side of the camera while music plays: as wide as the notch is tall, so the artwork and
@@ -217,7 +231,7 @@ final class NotchModel: ObservableObject {
                     closedSize.height + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, closedSize.height + 7 + pull)
-            case .open where page == .tray: (trayWidth + pull * 0.35, openSize.height + pull)
+            case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
@@ -401,7 +415,7 @@ struct NotchView: View {
                     tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
                     airDropTargeted: model.airDropTargeted
                 )
-                .frame(width: model.trayWidth, height: model.openSize.height)
+                .frame(width: model.trayWidth, height: model.trayHeight)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }

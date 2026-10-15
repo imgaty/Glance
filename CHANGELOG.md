@@ -21,8 +21,9 @@
   Shift-click for a run.
 - Added Quick Look and Share, with AirDrop in it, to each item's menu in the
   tray.
-- Added the tray growing wider with what's in it, up to seven items with the
-  next one peeking in, then scrolling, with two fingers or a mouse's wheel.
+- Added the tray fitting its items on the player's padding, growing wider with
+  what's in it up to seven items with the next one peeking in, then scrolling,
+  with two fingers or a mouse's wheel.
 - Added a page of its first words for copied text, and where a link goes under
   its site's name, so no two items look alike.
 - Added ⌘Z to bring back what was removed from the tray, for a minute.

@@ -81,8 +81,8 @@ struct TrayView: View {
 
     /// Where the room below the camera starts.
     private var top: CGFloat { closedNotch.height + PlayerLayout.cameraGap }
-    /// Kept clear at the bottom, as the player keeps its controls off the edge.
-    private static let bottomRoom: CGFloat = 14
+    /// Under the row, the player's padding, as under its buttons.
+    private static let bottomRoom = PlayerLayout.padding
     /// Around the places to drop: their corners are then concentric with the notch's.
     private static let zoneInset: CGFloat = 12
     /// Each place's symbol, as a font's size.
@@ -132,7 +132,9 @@ struct TrayView: View {
         }
         .padding(.horizontal, Shelf.inset)
         .offset(x: -scroll)
-        .frame(width: width, height: Shelf.tile.height, alignment: .leading)
+        // A row that fits sits in the middle, the same room either side; one that doesn't starts at
+        // the left and scrolls.
+        .frame(width: width, height: Shelf.tile.height, alignment: reach > 0 ? .leading : .center)
         .mask { EdgeFade(start: scroll > 1, end: scroll < reach - 1) }
     }
 
