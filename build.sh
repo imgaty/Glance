@@ -19,8 +19,9 @@ swift build -c release
 APP=build/Glance.app
 PLIST="$APP/Contents/Info.plist"
 FRAMEWORKS="$APP/Contents/Frameworks"
+SHARE="$APP/Contents/PlugIns/GlanceShare.appex"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$FRAMEWORKS"
+mkdir -p "$APP/Contents/MacOS" "$FRAMEWORKS" "$SHARE/Contents/MacOS"
 cp .build/release/Glance "$APP/Contents/MacOS/Glance"
 # The Now Playing helper, which the app loads into /usr/bin/perl.
 cp .build/release/libGlanceNowPlaying.dylib "$FRAMEWORKS/"
@@ -29,6 +30,12 @@ ditto .build/release/Sparkle.framework "$FRAMEWORKS/Sparkle.framework"
 rm -rf "$FRAMEWORKS/Sparkle.framework/Versions/B/XPCServices" "$FRAMEWORKS/Sparkle.framework/XPCServices"
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Glance"
 cp Resources/Info.plist "$PLIST"
+# Add to Glance Tray in the Share menu, an app extension, at the app's own version.
+cp .build/release/GlanceShare "$SHARE/Contents/MacOS/GlanceShare"
+cp Resources/GlanceShare-Info.plist "$SHARE/Contents/Info.plist"
+for key in CFBundleShortVersionString CFBundleVersion; do
+    /usr/libexec/PlistBuddy -c "Set :$key $(/usr/libexec/PlistBuddy -c "Print :$key" "$PLIST")" "$SHARE/Contents/Info.plist"
+done
 if ! $RELEASE; then
     # Lets the running app find its way back here for the Rebuild menu item.
     /usr/libexec/PlistBuddy -c "Add :GlanceSourceDirectory string $PWD" "$PLIST"
@@ -37,7 +44,8 @@ fi
 
 # Sign with the Apple Development identity when there is one: unlike an ad-hoc signature it
 # stays the same across builds, so macOS remembers permissions such as controlling Spotify.
-# Inside out: Sparkle's helpers, Sparkle, the Now Playing helper, then the app around them.
+# Inside out: Sparkle's helpers, Sparkle, the Now Playing helper, the Share extension in its
+# sandbox, then the app around them.
 IDENTITY=$(security find-identity -v -p codesigning | grep -m1 -o '"Apple Development[^"]*"' | tr -d '"' || true)
 sign() { codesign --force --sign "${IDENTITY:--}" "$@" >/dev/null 2>&1; }
 SPARKLE="$FRAMEWORKS/Sparkle.framework/Versions/B"
@@ -45,6 +53,7 @@ sign "$SPARKLE/Autoupdate"
 sign "$SPARKLE/Updater.app"
 sign "$FRAMEWORKS/Sparkle.framework"
 sign "$FRAMEWORKS/libGlanceNowPlaying.dylib"
+sign --entitlements Resources/GlanceShare.entitlements "$SHARE"
 sign "$APP"
 echo "Built $APP"
 

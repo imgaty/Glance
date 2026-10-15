@@ -1,6 +1,6 @@
 # Contributing
 
-`Created: 11 October 2026` | `Last updated: 12 October 2026`
+`Created: 11 October 2026` | `Last updated: 15 October 2026`
 
 A guide to contributing to the Glance project.
 
@@ -26,7 +26,9 @@ from macOS.
 ```text
 ├── assets/screenshots/       # Documentation screenshots
 ├── docs/                     # Features and user manual
-├── Resources/Info.plist      # Info.plist, with the update feed and key
+├── Resources/
+│   ├── Info.plist            # Info.plist, with the update feed and key
+│   └── GlanceShare-*         # The Share extension's Info.plist and sandbox
 ├── Sources/
 │   ├── Glance/
 │   │   ├── App/              # Entry point, settings, menu bar, updates
@@ -36,6 +38,7 @@ from macOS.
 │   │   ├── Player/           # The player and its controls
 │   │   ├── Settings/         # The Settings window and pages
 │   │   └── Tray/             # The tray: files dropped and what's copied
+│   ├── GlanceShare/          # Add to Glance Tray, in the Share menu
 │   └── NowPlayingHelper/     # Reads Now Playing inside perl
 ├── Tests/GlanceTests/        # Unit tests
 ├── updater/appcast.xml       # Every release, for Check for Updates…
@@ -55,6 +58,13 @@ later. This builds `build/Glance.app` and opens it with the welcome tour:
 ```
 
 `Package.swift` also opens in Xcode.
+
+### Why the Share extension hands over on a pasteboard
+
+Every app extension runs in a sandbox, so `GlanceShare` can't reach the tray
+itself. It leaves what's shared on a pasteboard of Glance's own, tells Glance
+with a distributed notification, and waits for Glance's answer before it
+finishes, so a file the sharing app made only for the moment is kept first.
 
 ### Why NowPlayingHelper runs inside perl
 

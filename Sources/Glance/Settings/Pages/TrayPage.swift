@@ -18,6 +18,8 @@ struct TrayPage: View {
     @AppStorage(Preferences.trayIgnoredApps) private var ignoredApps = ""
     @ObservedObject private var tray = Tray.shared
     @State private var confirmingClear = false
+    /// Add to Glance Tray is on in the Share menu, as last looked.
+    @State private var shareOn = true
 
     var body: some View {
         Form {
@@ -76,6 +78,17 @@ struct TrayPage: View {
                 SectionTitle("Apps")
             }
             .disabled(!trayOn || !keepsCopies)
+            if !shareOn {
+                Section {
+                    CenteredRow {
+                        Text("Add from the Share menu")
+                        Text("Turn on Add to Glance Tray, under Extensions in Sharing, to share pictures, links and files to the tray.")
+                    } trailing: {
+                        Button("Open Login Items & Extensions") { NSWorkspace.shared.open(TrayService.extensionsSettings) }
+                    }
+                }
+                .disabled(!trayOn)
+            }
             Section {
                 CenteredRow {
                     Text("Clear tray")
@@ -85,6 +98,11 @@ struct TrayPage: View {
                         .disabled(tray.items.isEmpty)
                 }
             }
+        }
+        // Looked at again on coming back from System Settings.
+        .task { shareOn = await TrayService.shareIsOn() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { shareOn = await TrayService.shareIsOn() }
         }
         .confirmationDialog("Clear the tray?", isPresented: $confirmingClear) {
             Button("Clear Tray", role: .destructive) { tray.clear() }

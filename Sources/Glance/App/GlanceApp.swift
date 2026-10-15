@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboarding = OnboardingWindowController()
     private var statusBar: StatusBarController?
     private var settingsWatch: [NSKeyValueObservation] = []
+    private let trayService = TrayService()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
@@ -48,8 +49,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notches.contextMenu = statusBar.menu
         notches.start()
         Tray.shared.start()
-        NSApp.servicesProvider = TrayService()
+        NSApp.servicesProvider = trayService
         NSUpdateDynamicServices()
+        trayService.start()
         NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
         NotchSwipes.shared.start()
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }

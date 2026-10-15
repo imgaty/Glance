@@ -13,7 +13,7 @@ import Testing
 
 /// What can be done with what's in the tray: keeping a copy, pasting only its words, choosing an
 /// item by typing its name, opening it with another app, apps whose copies are never kept, and the
-/// Services menu's way in.
+/// Services and Share menus' ways in.
 @MainActor
 @Suite("Tray actions", .serialized)
 struct TrayActionsTests {
@@ -185,6 +185,62 @@ struct TrayActionsTests {
             #expect(tray.items.first?.text == "Chosen words")
             #expect(tray.items.first?.origin == .dropped)
         }
+    }
+
+    @Test("What's shared from the Share menu joins the tray, each thing on its own, the first at the front")
+    func shared() throws {
+        let place = folder()
+        try FileManager.default.createDirectory(at: place, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: place) }
+        let file = place.appending(path: "Shared.txt")
+        try Data("Hello".utf8).write(to: file)
+        preservingDefaults([Preferences.tray]) {
+            UserDefaults.standard.set(true, forKey: Preferences.tray)
+            let sharing = pasteboard()
+            let tray = Tray(folder: folder(), pasteboard: pasteboard())
+            let service = TrayService(tray: tray, sharing: sharing)
+            let words = NSPasteboardItem(), link = NSPasteboardItem(), files = NSPasteboardItem()
+            words.setString("Shared words", forType: .string)
+            link.setString("https://www.apple.com/", forType: .URL)
+            link.setString("https://www.apple.com/", forType: .string)
+            files.setString(file.absoluteString, forType: .fileURL)
+            sharing.writeObjects([words, link, files])
+            service.takeShared()
+            #expect(tray.items.map(\.kind) == [.text, .link, .files])
+            #expect(tray.items.allSatisfy { $0.origin == .dropped })
+            #expect(sharing.pasteboardItems?.isEmpty ?? true)
+            // Taken once: told again, there's nothing more.
+            service.takeShared()
+            #expect(tray.items.count == 3)
+        }
+    }
+
+    @Test("With the tray off, what's shared isn't kept, and doesn't wait for it")
+    func sharedOff() {
+        preservingDefaults([Preferences.tray]) {
+            UserDefaults.standard.set(false, forKey: Preferences.tray)
+            let sharing = pasteboard { $0.setString("Not kept", forType: .string) }
+            let tray = Tray(folder: folder(), pasteboard: pasteboard())
+            TrayService(tray: tray, sharing: sharing).takeShared()
+            #expect(tray.items.isEmpty)
+            #expect(sharing.pasteboardItems?.isEmpty ?? true)
+        }
+    }
+
+    @Test("The Share extension and Glance agree on where what's shared is left, and the extension's class")
+    func shareExtension() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let source = try String(contentsOf: root.appending(path: "Sources/GlanceShare/ShareViewController.swift"), encoding: .utf8)
+        for name in [TrayService.sharePasteboard.rawValue, TrayService.shared.rawValue, TrayService.taken.rawValue] {
+            #expect(source.contains("\"\(name)\""))
+        }
+        #expect(source.contains("final class ShareViewController: NSViewController"))
+        let plist = try #require(NSDictionary(contentsOf: root.appending(path: "Resources/GlanceShare-Info.plist")))
+        let point = try #require(plist["NSExtension"] as? [String: Any])
+        #expect(point["NSExtensionPointIdentifier"] as? String == "com.apple.share-services")
+        #expect(point["NSExtensionPrincipalClass"] as? String == "GlanceShare.ShareViewController")
+        #expect(plist["CFBundleIdentifier"] as? String == "dev.vibe.Glance.Share")
+        #expect(plist["CFBundleDisplayName"] as? String == "Add to Glance Tray")
     }
 
     @Test("The Services entry names the method that takes it, and is on from the start")

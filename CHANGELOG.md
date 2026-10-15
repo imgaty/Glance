@@ -37,6 +37,8 @@
 - Added typing an item's name to select it, as in Finder.
 - Added a list in Settings of apps whose copies the tray never keeps.
 - Added Add to Glance Tray to the Services menu, in Finder and every other app.
+- Added Add to Glance Tray to the Share menu, for pictures, links, text and
+  files from Safari, Photos, Finder and every other app that shares.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening
