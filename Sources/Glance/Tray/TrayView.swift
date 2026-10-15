@@ -24,9 +24,13 @@ enum Shelf {
     }
 
     /// How far the row scrolls in a notch this wide.
-    /// The widest the tray grows: seven items, and half of the next, so a tray with more shows at a
+    /// The fewest items the tray is ever as narrow as: fewer sit in the middle of that width.
+    static let fewest = 3
+    /// The most it's as wide as: six items, and half of the next, so a tray with more shows at a
     /// glance that its row goes on.
-    static let peekWidth: CGFloat = inset + 7 * (tile.width + spacing) + tile.width / 2
+    static let most = 6
+    static let narrowest: CGFloat = width(count: fewest)
+    static let peekWidth: CGFloat = inset + CGFloat(most) * (tile.width + spacing) + tile.width / 2
 
     static func reach(count: Int, in width: CGFloat) -> CGFloat {
         max(self.width(count: count) - width, 0)

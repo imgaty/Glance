@@ -1087,7 +1087,7 @@ final class NotchController {
 
     // MARK: The player and the tray
 
-    /// The widest the tray grows: seven items and the next peeking, and never closer than 100
+    /// The widest the tray grows: six items and the next peeking, and never closer than 100
     /// points to either side of the display.
     static func widestTray(on screen: NSScreen) -> CGFloat {
         min(Shelf.peekWidth, screen.frame.width - 200)

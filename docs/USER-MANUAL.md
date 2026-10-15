@@ -202,9 +202,9 @@ and stays as long as copies do. Turn this off with
 
 ### Seeing everything
 
-The tray grows wider with what's in it, up to seven items, with the next one
-peeking in at its edge. Past that, swipe left or right with two fingers, or
-scroll a mouse's wheel, to see the rest.
+The tray grows wider with what's in it, from three items' width up to six
+items, with the next one peeking in at its edge. Past that, swipe left or right
+with two fingers, or scroll a mouse's wheel, to see the rest.
 
 <br>
 

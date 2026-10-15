@@ -123,19 +123,19 @@ struct TrayClickTests {
         #expect(tray.selection == [ids[0]])
     }
 
-    @Test("The tray is as wide as its items, on the player's padding, up to seven and half the next, then scrolls")
+    @Test("The tray is as wide as its items, on the player's padding, from three items up to six and half the next, then scrolls")
     func width() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         #expect(model.trayWidth == model.openSize.width)
-        model.trayItems = 2
-        // Never narrower than the camera with the padding either side.
-        #expect(model.trayWidth == 185 + PlayerLayout.padding * 2)
+        model.trayItems = 1
+        // Never narrower than three items.
+        #expect(model.trayWidth == Shelf.width(count: 3))
         model.trayItems = 5
         #expect(model.trayWidth == Shelf.width(count: 5))
         model.trayItems = 30
         #expect(model.trayWidth == Shelf.peekWidth)
-        // Seven fit whole, and the eighth shows by half, so there's plainly more.
-        #expect(Shelf.peekWidth > Shelf.width(count: 7) && Shelf.peekWidth < Shelf.width(count: 8))
+        // Six fit whole, and the seventh shows by half, so there's plainly more.
+        #expect(Shelf.peekWidth > Shelf.width(count: 6) && Shelf.peekWidth < Shelf.width(count: 7))
         model.page = .tray
         model.state = .open
         #expect(model.metrics.bodyWidth == Shelf.peekWidth)

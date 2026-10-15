@@ -143,15 +143,16 @@ final class NotchModel: ObservableObject {
     @Published var pageNudge: CGFloat = 0
     /// How many items the tray holds, which its width follows.
     @Published var trayItems = 0
-    /// The widest the tray grows: room for seven items, or less on a narrow display.
+    /// The widest the tray grows: room for six items and half the next, or less on a narrow display.
     var trayMaxWidth = Shelf.peekWidth
     /// The tray on the player's grid: the padding either side of its first and last icons, as of the
-    /// cover and the buttons, and under its row. As wide as its items, up to `trayMaxWidth`, past
-    /// which its row scrolls, and never narrower than the camera with the padding either side, its
-    /// row in the middle then. Empty, or with something dragged in, as wide as the player, for its
-    /// words and its two places to drop.
+    /// cover and the buttons, and under its row. As wide as its items, from three items' width,
+    /// fewer sitting in the middle of it, up to `trayMaxWidth`, past which its row scrolls; and
+    /// always wider than the camera with the padding either side. Empty, or with something dragged
+    /// in, as wide as the player, for its words and its two places to drop.
     var trayWidth: CGFloat {
-        let least = trayItems == 0 || dropping ? openSize.width : closedSize.width + PlayerLayout.padding * 2
+        let least =
+            trayItems == 0 || dropping ? openSize.width : max(Shelf.narrowest, closedSize.width + PlayerLayout.padding * 2)
         return min(max(Shelf.width(count: trayItems), least), max(trayMaxWidth, least))
     }
 
@@ -409,7 +410,7 @@ struct NotchView: View {
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
                 .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
-                .animation(Self.fade(in: playerShown)) { $0.opacity(playerShown ? 1 : 0).blur(radius: playerShown ? 0 : 4) }
+                .modifier(PageFade(hidden: !playerShown))
             if trayOn {
                 TrayView(
                     tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
@@ -418,15 +419,19 @@ struct NotchView: View {
                 .frame(width: model.trayWidth, height: model.trayHeight)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
-                .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
+                .modifier(PageFade(hidden: !trayShown))
                 .allowsHitTesting(places == nil && trayShown)
             }
             HeroArtwork(isOpen: isOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
                 .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
                 .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
                 .offset(x: model.nudge)
-                // On the tray, it steps aside with the rest of the player.
-                .opacity((isOpen ? !onTray : model.activity) ? 1 : 0)
+                // There open, or in the closed notch while something plays. Opening and closing, it
+                // comes and goes just as the player's words and buttons do.
+                .animation(isOpen || !model.activity ? Self.fade(in: isOpen) : .spring(response: 0.45, dampingFraction: 0.8)) {
+                    $0.opacity(isOpen || model.activity ? 1 : 0)
+                }
+                .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 // Over the tray, though unseen there: clicks go through it to the tray's items.
                 .allowsHitTesting(places == nil && !trayShown)
@@ -436,10 +441,16 @@ struct NotchView: View {
             )
             .matchedGeometryEffect(id: isOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
             .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
-            // Out of the way quickly when a new song's artist takes its place.
-            .animation(model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)) {
-                $0.opacity((isOpen ? !onTray : model.activity && !model.pop) ? 1 : 0)
+            // There open, or in the closed notch while something plays, out of the way quickly when a
+            // new song's artist takes its place. Opening and closing, it comes and goes just as the
+            // player's words and buttons do.
+            .animation(
+                isOpen || !model.activity
+                    ? Self.fade(in: isOpen) : model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)
+            ) {
+                $0.opacity(isOpen || (model.activity && !model.pop) ? 1 : 0)
             }
+            .modifier(PageFade(hidden: isOpen && onTray))
             .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil && !trayShown)
         }
@@ -600,7 +611,7 @@ struct NotchView: View {
 
     /// Content fades in once the notch has begun to grow, and out quickly as it shrinks, so it is
     /// never squeezed into the closing shape.
-    private static func fade(in showing: Bool) -> Animation {
+    fileprivate static func fade(in showing: Bool) -> Animation {
         showing ? .easeOut(duration: 0.3).delay(0.08) : .easeOut(duration: 0.12)
     }
 
@@ -641,6 +652,17 @@ struct NotchView: View {
             return .init(color: .black.opacity(inverted ? 1 - black : black), location: start + (1 - start) * t)
         }
         return [.init(color: .black.opacity(inverted ? 0 : 1), location: 0)] + fade
+    }
+}
+
+/// How everything on a page comes and goes as the notch opens, closes, or turns to the other page:
+/// the player's words and buttons, its cover and its waveform, and the tray, all with one fade and
+/// one blur, so nothing lingers or leaves ahead of the rest.
+private struct PageFade: ViewModifier {
+    let hidden: Bool
+
+    func body(content: Content) -> some View {
+        content.animation(NotchView.fade(in: !hidden)) { $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0) }
     }
 }
 
