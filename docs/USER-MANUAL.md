@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 13 October 2026`
+`Created: 11 October 2026` | `Last updated: 15 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -83,7 +83,8 @@ Three fingers anywhere else still move between desktops.
 
 Opened with a shortcut, the notch stays open until you press it again, click
 elsewhere, or move the pointer onto the notch and away. It takes the keyboard
-too, as Spotlight does, until it closes:
+too, as Spotlight does, until it closes. A click in the tray gives it the
+keyboard the same way:
 
 | Key | Operation |
 | --- | --- |
@@ -94,6 +95,7 @@ too, as Spotlight does, until it closes:
 | ⌘C | On the tray, copies the selected items |
 | ⌘A | On the tray, selects everything |
 | ⌘Delete | On the tray, removes the selected items |
+| ⌘Z | On the tray, brings back what you last removed, for a minute |
 
 ⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
 replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
@@ -149,8 +151,9 @@ record matches the song's title, artist and length.
 
 The tray keeps the files you drop on the notch, what you copy, and your
 screenshots, newest first, as Finder shows files: each item's icon, with its
-name under it. Copied text shows as a text clipping, and a link as its site's
-icon. Open it with ⇧⌘2, or switch to it from the player. Dragging a file, or
+name under it. Copied text shows as a page of its first words, and a link as
+its site's icon, with where on the site it goes under the site's name. Open it
+with ⇧⌘2, or switch to it from the player. Dragging a file, or
 anything else the tray takes, near the notch and holding it there a moment
 opens it too, ready for the drop, without reaching the top edge.
 
@@ -171,7 +174,7 @@ opens it too, ready for the drop, without reaching the top edge.
 | Shift-click an item | Selects everything from the last item selected to it |
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
 | Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder |
-| Swipe left or right with two fingers | Scrolls the tray |
+| Swipe left or right with two fingers, or scroll a mouse's wheel | Scrolls the tray |
 | Right-click an item | Open, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), and Remove from Tray |
 
 Something dragged onto the notch from another app gets two places to go:
@@ -188,7 +191,8 @@ Text, links, pictures and files you copy show up in the tray, and stay for
 30 minutes, 8 hours or 7 days, as set in **Settings > Tray**. Passwords, and
 anything an app marks as private, are never kept, and neither is what you copy
 on another device. Copying something that's already there moves it to the
-front.
+front. What you copy while the pointer is on the tray waits until it leaves, so
+nothing moves under the pointer.
 
 ### Screenshots
 
@@ -198,8 +202,9 @@ and stays as long as copies do. Turn this off with
 
 ### Seeing everything
 
-The tray grows wider with what's in it, up to room for seven items. Past that,
-swipe left or right with two fingers to scroll through the rest.
+The tray grows wider with what's in it, up to seven items, with the next one
+peeking in at its edge. Past that, swipe left or right with two fingers, or
+scroll a mouse's wheel, to see the rest.
 
 <br>
 

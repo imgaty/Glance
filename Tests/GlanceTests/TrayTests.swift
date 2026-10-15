@@ -147,7 +147,7 @@ struct TrayTests {
         #expect(ClipboardKeep.allCases.map(\.rawValue) == ["halfHour", "eightHours", "week"])
     }
 
-    @Test("The tray is still there after a restart, and removing an item takes its copy with it")
+    @Test("The tray is still there after a restart, and removing an item takes its copy with it once it can't come back")
     func kept() throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "GlanceTray-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -160,6 +160,9 @@ struct TrayTests {
         #expect(reopened.items == tray.items)
         reopened.remove(capture.item.id)
         #expect(reopened.items.isEmpty)
+        // Kept for ⌘Z; what's left of it when the tray starts again goes.
+        #expect(FileManager.default.fileExists(atPath: saved.path))
+        Tray(folder: folder, pasteboard: pasteboard { _ in }).dropLeftovers()
         #expect(!FileManager.default.fileExists(atPath: saved.path))
     }
 
@@ -262,7 +265,10 @@ struct TrayTests {
         let kept = try #require(tray.urls(of: tray.items[0]).first)
         #expect(kept.resolvingSymlinksInPath().path.hasPrefix(tray.folder.resolvingSymlinksInPath().path))
         #expect(try Data(contentsOf: kept) == Data("png".utf8))
+        // Taken out, it's kept a while, for ⌘Z; cleared, it's gone.
         tray.remove(tray.items[0].id)
+        #expect(FileManager.default.fileExists(atPath: kept.path))
+        tray.clear()
         #expect(!FileManager.default.fileExists(atPath: kept.path))
     }
 
@@ -330,6 +336,43 @@ struct TrayTests {
     func accepts() {
         #expect(Tray.accepts(pasteboard { $0.setString("words", forType: .string) }))
         #expect(!Tray.accepts(pasteboard { $0.setData(Data([1]), forType: .init("com.example.private")) }))
+    }
+
+    @Test("What's taken out comes back with ⌘Z, where it was, chosen")
+    func undo() throws {
+        let tray = tray()
+        for text in ["d", "c", "b", "a"] {
+            tray.add(try #require(TrayCapture.make(from: pasteboard { $0.setString(text, forType: .string) }, kept: false)))
+        }
+        let before = tray.items.map(\.id)
+        tray.remove([before[1], before[2]])
+        #expect(tray.items.map(\.id) == [before[0], before[3]])
+        #expect(Set(tray.undoRemove()) == [before[1], before[2]])
+        #expect(tray.items.map(\.id) == before)
+        #expect(tray.selection == [before[1], before[2]])
+        // Nothing more to bring back.
+        #expect(tray.undoRemove().isEmpty)
+    }
+
+    @Test("Copies wait while the pointer is on the tray, and join once it leaves; drops join at once")
+    func holding() throws {
+        let tray = tray()
+        let notch = NSObject()
+        tray.hold(true, for: notch)
+        tray.add(try #require(TrayCapture.make(from: pasteboard { $0.setString("copied", forType: .string) }, kept: false)))
+        #expect(tray.items.isEmpty)
+        #expect(tray.drop(pasteboard { $0.setString("dropped", forType: .string) }))
+        #expect(tray.items.map(\.text) == ["dropped"])
+        tray.hold(false, for: notch)
+        #expect(tray.items.map(\.text) == ["copied", "dropped"])
+    }
+
+    @Test("A link is named by its site, and on a second line, where on the site it goes")
+    func linkNames() throws {
+        let page = try #require(TrayCapture.make(from: pasteboard { $0.setString("https://github.com/imgaty/Glance/", forType: .string) }, kept: false))
+        #expect(TrayItemPicture.title(of: page.item) == "github.com\nimgaty/Glance")
+        let home = try #require(TrayCapture.make(from: pasteboard { $0.setString("https://www.apple.com/", forType: .string) }, kept: false))
+        #expect(TrayItemPicture.title(of: home.item) == "apple.com")
     }
 
     @Test("The shelf scrolls only as far as its last tile")

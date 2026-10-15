@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 13 October 2026`
+`Created: 11 October 2026` | `Last updated: 15 October 2026`
 
 <br>
 
@@ -21,8 +21,13 @@
   Shift-click for a run.
 - Added Quick Look and Share, with AirDrop in it, to each item's menu in the
   tray.
-- Added the tray growing wider with what's in it, up to seven items, then
-  scrolling.
+- Added the tray growing wider with what's in it, up to seven items with the
+  next one peeking in, then scrolling, with two fingers or a mouse's wheel.
+- Added a page of its first words for copied text, and where a link goes under
+  its site's name, so no two items look alike.
+- Added ⌘Z to bring back what was removed from the tray, for a minute.
+- Added holding what's copied while the pointer is on the tray, so the row never
+  moves under it.
 - Added a Tray page to Settings, and a step for the tray to the welcome tour.
 
 ### Opening
@@ -35,8 +40,9 @@
 - Added opening the tray when something is dragged near the notch and held
   there a moment.
 - Added keyboard shortcut settings in **Settings > Opening** to change them.
-- Added the keyboard to the notch opened with a shortcut: Escape, the arrows,
-  Space and Return, and ⌘C, ⌘A and ⌘Delete on the tray.
+- Added the keyboard to the notch opened with a shortcut, or after a click in
+  the tray: Escape, the arrows, Space and Return, and ⌘C, ⌘A, ⌘Delete and ⌘Z
+  on the tray.
 
 ### Accessibility
 
@@ -50,6 +56,10 @@
   light windows.
 - Made a new song's name, in the cover's color, light enough to read on the
   black notch.
+- Dimmed the glass further on the tray, so the items' names read over light
+  windows.
+- Made the tray's items fade in and out, and the player and the tray swap with
+  a fade, while Reduce Motion is on.
 
 ### Additional
 

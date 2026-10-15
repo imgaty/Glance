@@ -24,6 +24,10 @@ enum Shelf {
     }
 
     /// How far the row scrolls in a notch this wide.
+    /// The widest the tray grows: seven items, and half of the next, so a tray with more shows at a
+    /// glance that its row goes on.
+    static let peekWidth: CGFloat = inset + 7 * (tile.width + spacing) + tile.width / 2
+
     static func reach(count: Int, in width: CGFloat) -> CGFloat {
         max(self.width(count: count) - width, 0)
     }
@@ -46,6 +50,8 @@ struct TrayView: View {
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
     @AppStorage(Preferences.trayScreenshots) private var keepsScreenshots = true
+    /// With Reduce Motion on, items come and go with a fade alone.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Built only while it shows, and a moment after, to fade out: closed, or on the player, the
     /// tray costs nothing.
     @State private var built = false
@@ -121,7 +127,7 @@ struct TrayView: View {
             }
             ForEach(shown) { item in
                 ItemTile(item: item, tray: tray, isVisible: isVisible)
-                    .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .bottom)))
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.92, anchor: .bottom)))
             }
         }
         .padding(.horizontal, Shelf.inset)
@@ -156,9 +162,9 @@ struct TrayView: View {
             return "To keep what you copy, allow Glance in Privacy & Security, under Paste from Other Apps."
         }
         return switch (keepsCopies, keepsScreenshots) {
-        case (true, true): "Drop files here. What you copy and your screenshots show up here too."
-        case (true, false): "Drop files here. What you copy shows up here too."
-        case (false, true): "Drop files here. Your screenshots show up here too."
+        case (true, true): "Drop files here. Copies and screenshots show up too."
+        case (true, false): "Drop files here. Copies show up too."
+        case (false, true): "Drop files here. Screenshots show up too."
         case (false, false): "Drop files here to keep them close."
         }
     }
@@ -283,15 +289,18 @@ private struct DropZone<Glyph: View>: View {
     let radius: CGFloat
     @ViewBuilder let glyph: Glyph
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
+        // The symbol and its name dim together while the drag is elsewhere.
         VStack(spacing: 8) {
             glyph
                 .frame(height: 40)
-                .scaleEffect(lit ? 1.08 : 1)
+                .scaleEffect(lit && !reduceMotion ? 1.08 : 1)
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(lit ? 1 : 0.7))
         }
+        .foregroundStyle(.white.opacity(lit ? 1 : 0.7))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.white.opacity(lit ? 0.16 : 0.06), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .accessibilityElement(children: .combine)

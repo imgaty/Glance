@@ -54,6 +54,9 @@ enum GlassLook {
     /// On the tray, the least the glass blurs what's behind it, whatever it's set to: enough for
     /// the row and its name to read over a busy window, as a menu's glass does.
     static let trayBlur = 0.55
+    /// On the tray, the least black over the glass: the items' names are words to read, and Apple
+    /// keeps words on its frosted glass, so it's dimmed further than the player.
+    static let trayBlack = 0.6
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
@@ -141,7 +144,7 @@ final class NotchModel: ObservableObject {
     /// How many items the tray holds, which its width follows.
     @Published var trayItems = 0
     /// The widest the tray grows: room for seven items, or less on a narrow display.
-    var trayMaxWidth = Shelf.width(count: 7)
+    var trayMaxWidth = Shelf.peekWidth
     /// The tray as wide as its items, from the player's width up to `trayMaxWidth`, past which its
     /// row scrolls.
     var trayWidth: CGFloat { min(max(Shelf.width(count: trayItems), openSize.width), max(trayMaxWidth, openSize.width)) }
@@ -305,6 +308,8 @@ struct NotchView: View {
     /// Whether there are lyrics at all.
     @AppStorage(Preferences.lyrics) private var lyricsOn = true
     @Environment(\.notchThumbnail) private var thumbnail
+    /// With Reduce Motion on, the player and the tray swap with a fade, without sliding.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Preferences.tray) private var trayOn = true
     /// The tray shown: Glance's own, or the welcome tour's made-up one.
     @Environment(\.tray) private var trayStore
@@ -389,7 +394,7 @@ struct NotchView: View {
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
-                .offset(x: (onTray ? -Self.pageShift : 0) + (playerShown ? model.pageNudge : 0))
+                .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: playerShown)) { $0.opacity(playerShown ? 1 : 0).blur(radius: playerShown ? 0 : 4) }
             if trayOn {
                 TrayView(
@@ -398,7 +403,7 @@ struct NotchView: View {
                 )
                 .frame(width: model.trayWidth, height: model.openSize.height)
                 .environment(\.notchControls, trayShown)
-                .offset(x: (onTray ? 0 : Self.pageShift) + (trayShown ? model.pageNudge : 0))
+                .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
                 .animation(Self.fade(in: trayShown)) { $0.opacity(trayShown ? 1 : 0).blur(radius: trayShown ? 0 : 4) }
                 .allowsHitTesting(places == nil && trayShown)
             }
@@ -464,7 +469,7 @@ struct NotchView: View {
                         .mask { WithoutFlares(flare: m.flare) }
                         .mask { shape }
                         .opacity(visible)
-                    shape.fill(.black.opacity(GlassLook.black(darkness) * visible))
+                    shape.fill(.black.opacity((trayShown ? max(GlassLook.black(darkness), GlassLook.trayBlack) : GlassLook.black(darkness)) * visible))
                 }
             }
         }
@@ -494,7 +499,7 @@ struct NotchView: View {
 
     private var tray: Tray { trayStore ?? .shared }
     /// How far a page slides as the other takes its place.
-    private static let pageShift: CGFloat = 28
+    private var pageShift: CGFloat { reduceMotion ? 0 : 28 }
 
     /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
     private func toggleLyrics() {

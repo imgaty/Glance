@@ -120,6 +120,7 @@ final class NotchController {
     private var menuWatches: [AnyCancellable] = []
     private var pasteWatch: AnyCancellable?
     private var trayWatch: AnyCancellable?
+    private var trayTouch: AnyCancellable?
     /// Something for the tray is being dragged in the top half of this display: the notch is open on
     /// the tray to take it, wherever the pointer is.
     private var dragHold = false
@@ -245,6 +246,16 @@ final class NotchController {
                 Task { @MainActor in self.settleTray() }
             }
         }
+        // A click in the tray gives it the keyboard, as a click in a Finder window does: the arrows,
+        // Space, ⌘C and ⌘Z work it from then on, until it closes.
+        trayTouch = NotificationCenter.default.publisher(for: Tray.didTouch).sink { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self, self.model.state == .open, self.model.page == .tray,
+                    (note.object as? NSView)?.window === self.panel
+                else { return }
+                self.takeKeys()
+            }
+        }
         keyLoss = NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification, object: panel).sink { [weak self] _ in
             MainActor.assumeIsolated { self?.lostKeys() }
         }
@@ -292,6 +303,7 @@ final class NotchController {
     /// away.
     func tearDown(collapsing: Bool = false) {
         giveBackKeys()
+        Tray.shared.hold(false, for: self)
         dropDwell?.cancel()
         NotchSwipes.shared.set(nil, for: self)
         activityTask?.cancel()
@@ -546,6 +558,8 @@ final class NotchController {
             let capture = interactiveZone.contains(p)
             if panel.ignoresMouseEvents == capture { panel.ignoresMouseEvents = !capture }
         }
+        // With the pointer on the tray, new copies wait, so its row doesn't move under it.
+        Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
     func clicked(outsideAt p: CGPoint) {
@@ -727,8 +741,9 @@ final class NotchController {
     /// A key typed while the notch has the keyboard, as Finder and Music take them: Escape closes
     /// it. On the player, Space plays or pauses, and the arrows go to the song before or after. On
     /// the tray, the arrows choose an item (with Shift, a run of them), Space shows the chosen ones
-    /// in Quick Look, Return pastes them, ⌘C copies them, ⌘A chooses everything, and ⌘Delete
-    /// removes them. Returns whether the notch had a use for the key.
+    /// in Quick Look, Return pastes them, ⌘C copies them, ⌘A chooses everything, ⌘Delete removes
+    /// them, and ⌘Z brings back what was last removed. Returns whether the notch had a use for the
+    /// key.
     private func typed(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let command = flags.contains(.command), shift = flags.contains(.shift)
@@ -766,6 +781,10 @@ final class NotchController {
             tray.copy(tray.chosen)
         case (_, "a"):
             tray.choose(all: tray.items)
+        case (_, "z"):
+            // What was last taken out comes back, chosen, in sight.
+            guard let first = tray.undoRemove().first else { return false }
+            reveal(first)
         case (kVK_Delete, _) where command, (kVK_ForwardDelete, _) where command:
             guard !tray.chosen.isEmpty else { return false }
             tray.remove(Set(tray.chosen.map(\.id)))
@@ -981,6 +1000,12 @@ final class NotchController {
             }
             return
         }
+        // A mouse's wheel on a tray with more than fits scrolls its row, as a wheel scrolls any row on
+        // a Mac: down or with Shift, toward its end; up, back. A notch at a time, gliding there.
+        if onTray, event.phase.isEmpty, trayReach > 0 {
+            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+            return wheelTray(by: along * (event.hasPreciseScrollingDeltas ? 1 : 24))
+        }
         // Scrolling with Shift held goes sideways between the pages, as Shift makes any scroll go
         // sideways: toward the tray, which is to the right, or back to the player.
         let switches =
@@ -992,12 +1017,6 @@ final class NotchController {
             if along != 0 { turn(to: (along < 0) != switchReversed ? .tray : .player) }
             return
         }
-        // A wheel that tilts sideways scrolls the tray.
-        if onTray, event.phase.isEmpty, event.scrollingDeltaX != 0 {
-            scrollTray(by: event.scrollingDeltaX * (event.hasPreciseScrollingDeltas ? 1 : 8))
-            return settleTray()
-        }
-
         let defaults = UserDefaults.standard
         let opens = defaults.bool(forKey: Preferences.swipeToOpen), skips = defaults.bool(forKey: Preferences.swipeToSkip)
 
@@ -1068,10 +1087,10 @@ final class NotchController {
 
     // MARK: The player and the tray
 
-    /// The widest the tray grows: room for seven items, and never closer than 100 points to either
-    /// side of the display.
+    /// The widest the tray grows: seven items and the next peeking, and never closer than 100
+    /// points to either side of the display.
     static func widestTray(on screen: NSScreen) -> CGFloat {
-        min(Shelf.width(count: 7), screen.frame.width - 200)
+        min(Shelf.peekWidth, screen.frame.width - 200)
     }
 
     /// Whether a three-finger swipe starting here is the notch's: on it, open, with the tray on.
@@ -1131,6 +1150,13 @@ final class NotchController {
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) { model.trayScroll = min(max(next, -48), reach + 48) }
+    }
+
+    /// A wheel's notch: the row glides there, never past its ends.
+    private func wheelTray(by delta: CGFloat) {
+        let target = min(max(model.trayScroll - delta, 0), trayReach)
+        guard target != model.trayScroll else { return }
+        withAnimation(.smooth(duration: 0.2)) { model.trayScroll = target }
     }
 
     /// Back within the row's ends, springing.

@@ -73,6 +73,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
     override func mouseExited(with event: NSEvent) { hover?(false) }
 
     override func mouseDown(with event: NSEvent) {
+        NotificationCenter.default.post(name: Tray.didTouch, object: self)
         if event.modifierFlags.contains(.control) { return showMenu(event) }
         downAt = event.locationInWindow
         dragged = false
@@ -126,7 +127,10 @@ final class TileInteractionView: NSView, NSDraggingSource {
         }
     }
 
-    override func rightMouseDown(with event: NSEvent) { showMenu(event) }
+    override func rightMouseDown(with event: NSEvent) {
+        NotificationCenter.default.post(name: Tray.didTouch, object: self)
+        showMenu(event)
+    }
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         guard let item else { return [] }

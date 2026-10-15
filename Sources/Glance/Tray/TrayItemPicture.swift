@@ -11,11 +11,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// An item's icon, as Finder shows it. A picture or a document is a preview of what's in it, edged
-/// and lifted a little; anything else, its icon. Copied text is a text clipping and a link a web
-/// location, as each is once dragged to the desktop, or a link is its site's icon where the site has
-/// a sharp one. Several files kept together are a pile. A preview sits on the bottom of its square,
-/// just over its name, as Finder sets a wide photo; an icon fills its square, and a site's icon,
-/// shaped like an app's, sits in the middle of it, as an app icon sits on Apple's icon grid.
+/// and lifted a little; anything else, its icon. Copied text is a page of its words, as Finder
+/// shows a text file, so two notes never look alike; a link is its site's icon where the site has a
+/// sharp one, or a web location. Several files kept together are a pile. A preview sits on the
+/// bottom of its square, just over its name, as Finder sets a wide photo; an icon fills its square,
+/// and a site's icon, shaped like an app's, sits in the middle of it, as an app icon sits on Apple's
+/// icon grid.
 struct TrayItemPicture: View {
     let item: TrayItem
     let tray: Tray
@@ -41,7 +42,7 @@ struct TrayItemPicture: View {
     @ViewBuilder private var picture: some View {
         switch item.kind {
         case .text:
-            icon(Self.clipping)
+            TextPage(text: item.text ?? "", side: side)
         case .link:
             if let site = link?.icon, Self.isSharp(site) {
                 let shape = RoundedRectangle(cornerRadius: side * 0.18, style: .continuous)
@@ -72,20 +73,24 @@ struct TrayItemPicture: View {
 
     @ViewBuilder private var single: some View {
         if let thumbnail, !TrayThumbnails.isIcon(item) {
-            Image(nsImage: thumbnail).resizable().aspectRatio(contentMode: .fit)
-                .overlay { Rectangle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5) }
-                .shadow(color: .black.opacity(0.35), radius: 1.5, y: 1)
-                .padding(side * 0.06)
+            preview(thumbnail)
         } else {
             icon(thumbnail ?? Self.icon(for: item.names.first))
         }
+    }
+
+    /// What's in it, edged and lifted a little off the glass.
+    private func preview(_ image: NSImage) -> some View {
+        Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+            .overlay { Rectangle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.35), radius: 1.5, y: 1)
+            .padding(side * 0.06)
     }
 
     private func icon(_ image: NSImage) -> some View {
         Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
     }
 
-    private static let clipping = NSWorkspace.shared.icon(for: UTType("com.apple.finder.textclipping") ?? .plainText)
     private static let location = NSWorkspace.shared.icon(for: UTType("com.apple.web-internet-location") ?? .url)
 
     private static func icon(for name: String?) -> NSImage {
@@ -100,12 +105,17 @@ struct TrayItemPicture: View {
 
     // MARK: Names
 
-    /// What the item is called, under its tile: a file's name, a text's first line, a link's site.
+    /// What the item is called, under its tile: a file's name, a text's first line, a link's site,
+    /// and on a second line, where on the site it goes, so two links to one site can be told apart.
     static func title(of item: TrayItem) -> String {
         switch item.kind {
         case .files: item.title
         case .image: item.origin == .screenshot ? "Screenshot" : "Image"
-        case .link: item.title
+        case .link:
+            item.text.flatMap(URLComponents.init(string:)).map { link in
+                let path = link.path.split(separator: "/").joined(separator: "/")
+                return path.isEmpty ? item.title : item.title + "\n" + (path.removingPercentEncoding ?? path)
+            } ?? item.title
         case .text:
             (item.text ?? "").split(whereSeparator: \.isNewline).first.map {
                 String($0.trimmingCharacters(in: .whitespaces).prefix(48))
@@ -154,6 +164,28 @@ struct TrayItemPicture: View {
             .map { $0.hasSuffix(".app") ? String($0.dropLast(4)) : $0 }
         appNames[bundle] = name
         return name
+    }
+}
+
+/// Copied text as a page of its first words, as Finder draws a text file, so two notes never look
+/// alike: a sheet of paper, as tall as a document's preview, with the words small and dark at its top.
+private struct TextPage: View {
+    let text: String
+    let side: CGFloat
+
+    var body: some View {
+        let height = side * 0.88, width = height * 0.77
+        Text(text)
+            .font(.system(size: side * 0.1))
+            .foregroundStyle(Color(white: 0.25))
+            .frame(width: width - side * 0.12, height: height - side * 0.12, alignment: .topLeading)
+            .clipped()
+            .frame(width: width, height: height)
+            .background(.white)
+            .overlay { Rectangle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.35), radius: 1.5, y: 1)
+            .padding(.bottom, side * 0.06)
+            .accessibilityHidden(true)
     }
 }
 

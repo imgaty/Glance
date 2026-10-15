@@ -31,6 +31,8 @@ final class Tray: ObservableObject {
     var sharing = false
 
     static let didPaste = Notification.Name("TrayDidPaste")
+    /// An item was clicked or right-clicked, by the view posted with: its notch takes the keyboard.
+    static let didTouch = Notification.Name("TrayDidTouch")
     /// The most of either kind kept: the oldest goes first.
     static let limit = 200
 
@@ -71,6 +73,7 @@ final class Tray: ObservableObject {
         RunLoop.main.add(timer, forMode: .common)
         purgeTimer = timer
         purge()
+        dropLeftovers()
         Task { await checkFiles() }
     }
 
@@ -148,8 +151,32 @@ final class Tray: ObservableObject {
 
     // MARK: Adding and removing
 
-    /// New at the front; the same thing again moves to the front instead, kept if either was.
+    /// Copies and screenshots that came while the pointer was on the tray, held back so the row
+    /// doesn't move under it: they join once it leaves. What's dropped on the notch joins at once.
+    private var waiting: [TrayCapture] = []
+    /// Each notch whose tray the pointer is on.
+    private var holders: Set<ObjectIdentifier> = []
+
+    /// A notch's tray under the pointer, or no longer.
+    func hold(_ holding: Bool, for holder: AnyObject) {
+        let id = ObjectIdentifier(holder)
+        guard holders.contains(id) != holding else { return }
+        if holding { holders.insert(id) } else { holders.remove(id) }
+        guard holders.isEmpty, !waiting.isEmpty else { return }
+        let joining = waiting
+        waiting = []
+        joining.forEach(insert)
+    }
+
+    /// Something copied, or a screenshot: new at the front, unless the pointer is on the tray, when
+    /// it waits until it's gone.
     func add(_ capture: TrayCapture) {
+        guard holders.isEmpty else { return waiting.append(capture) }
+        insert(capture)
+    }
+
+    /// New at the front; the same thing again moves to the front instead, kept if either was.
+    private func insert(_ capture: TrayCapture) {
         var item = capture.item
         if let index = items.firstIndex(where: { $0.fingerprint == item.fingerprint }) {
             let old = items.remove(at: index)
@@ -194,7 +221,7 @@ final class Tray: ObservableObject {
             return true
         }
         guard let capture = TrayCapture.make(from: pasteboard, kept: true) else { return false }
-        add(capture)
+        insert(capture)
         return true
     }
 
@@ -231,7 +258,7 @@ final class Tray: ObservableObject {
 
     private func addFile(_ url: URL, id: UUID = UUID()) {
         guard let bookmark = try? url.bookmarkData() else { return }
-        add(
+        insert(
             TrayCapture(
                 item: TrayItem(
                     id: id, added: .now, kind: .files, kept: true, bookmarks: [bookmark], names: [url.lastPathComponent],
@@ -243,16 +270,72 @@ final class Tray: ObservableObject {
         remove([id])
     }
 
+    /// Taken out of the tray, as Finder moves a file to the Trash: ⌘Z brings them back, for a
+    /// minute, and what they kept goes for good after that.
     func remove(_ ids: Set<UUID>) {
-        discard(ids: ids)
+        let gone = items.enumerated().filter { ids.contains($0.element.id) }.map { Removed(index: $0.offset, item: $0.element) }
+        guard !gone.isEmpty else { return }
+        items.removeAll { ids.contains($0.id) }
+        selection.subtract(ids)
+        store()
+        let batch = UUID()
+        removed.append((batch, gone))
+        if removed.count > 20 { removed.removeFirst().items.forEach { discard($0.item) } }
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.undoTime)
+            self?.forget(batch)
+        }
     }
 
-    /// Everything, kept or copied. Files stay where they are.
+    /// An item taken out, and where it was in the row.
+    private struct Removed {
+        let index: Int
+        let item: TrayItem
+    }
+
+    /// What was last taken out, newest last, until it can't be brought back.
+    private var removed: [(id: UUID, items: [Removed])] = []
+    static let undoTime: Duration = .seconds(60)
+
+    private func forget(_ batch: UUID) {
+        guard let index = removed.firstIndex(where: { $0.id == batch }) else { return }
+        removed.remove(at: index).items.forEach { discard($0.item) }
+    }
+
+    /// The items last taken out, back where they were and chosen, so it shows what came back.
+    /// Returns them, or none if there's nothing to bring back.
+    @discardableResult
+    func undoRemove() -> [UUID] {
+        guard let batch = removed.popLast() else { return [] }
+        for entry in batch.items.sorted(by: { $0.index < $1.index }) where !items.contains(where: { $0.id == entry.item.id }) {
+            items.insert(entry.item, at: min(entry.index, items.count))
+        }
+        let ids = batch.items.map(\.item.id)
+        selection = Set(ids)
+        anchor = ids.first
+        lead = ids.first
+        store()
+        return ids
+    }
+
+    /// Everything, kept or copied, after asking. Files stay where they are.
     func clear() {
         items.forEach(discard)
+        removed.forEach { $0.items.forEach { discard($0.item) } }
+        removed = []
         items = []
         selection = []
         store()
+    }
+
+    /// What the tray kept for items no longer in it, as when Glance quit within a minute of one
+    /// being taken out.
+    func dropLeftovers() {
+        let ids = Set(items.map(\.id.uuidString))
+        let places = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        for place in places where UUID(uuidString: place.lastPathComponent) != nil && !ids.contains(place.lastPathComponent) {
+            try? FileManager.default.removeItem(at: place)
+        }
     }
 
     // MARK: Choosing several
