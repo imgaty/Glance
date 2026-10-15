@@ -181,7 +181,6 @@ struct TrayTests {
         tray.copy(tray.items[0])
         #expect(target.string(forType: .string) == "Hello")
         #expect(target.data(forType: .rtf) == rtf)
-        #expect(tray.justCopied == [capture.item.id])
         #expect(tray.items.count == 1)
     }
 
@@ -326,7 +325,6 @@ struct TrayTests {
         }
         tray.copy(tray.items)
         #expect(target.pasteboardItems?.count == 2)
-        #expect(tray.justCopied == Set(tray.items.map(\.id)))
         let shared = tray.shareable(tray.items)
         #expect(shared.first as? String == "Hello")
         #expect((shared.last as? URL)?.host() == "apple.com")

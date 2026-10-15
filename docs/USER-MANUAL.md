@@ -71,7 +71,7 @@ notch closes when the pointer leaves it.
 | Swipe up with two fingers | Closes the notch |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
 | Swipe left or right with three fingers, on the open notch | Switches to the tray, and back to the player (with `Accessibility` allowed) |
-| Hold Shift and scroll sideways | Switches to the tray, and back to the player |
+| Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
 | Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |
 | ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
@@ -153,9 +153,9 @@ The tray keeps the files you drop on the notch, what you copy, and your
 screenshots, newest first, as Finder shows files: each item's icon, with its
 name under it. Copied text shows as a page of its first words, and a link as
 its site's icon, with where on the site it goes under the site's name. Open it
-with ⇧⌘2, or switch to it from the player. Dragging a file, or
-anything else the tray takes, near the notch and holding it there a moment
-opens it too, ready for the drop, without reaching the top edge.
+with ⇧⌘2, or switch to it from the player. Dragging a file, or anything else
+the tray takes, near the notch and holding it there a moment opens it too, ready
+for the drop, without reaching the top edge.
 
 <img src="../assets/screenshots/tray.png"
      width="450"

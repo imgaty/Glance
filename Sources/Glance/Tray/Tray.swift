@@ -20,12 +20,10 @@ final class Tray: ObservableObject {
     /// macOS asks before Glance reads what's copied, or was told not to let it: copies aren't kept
     /// until it's allowed under Paste from Other Apps.
     @Published private(set) var pasteBlocked = false
-    /// The items just copied back, for a moment, to show they were.
-    @Published private(set) var justCopied: Set<UUID> = []
     /// Items chosen together, with ⌘ or Shift, to copy, drag, share or remove at once.
     @Published private(set) var selection: Set<UUID> = []
     private var anchor: UUID?
-    /// Items are being dragged out of the tray: the AirDrop well shows, to drop them on.
+    /// Items are being dragged out of the tray, which a drag over the notch from elsewhere isn't.
     @Published var draggingOut = false
     /// Share's picker is up over the notch, which stays open until it's done.
     var sharing = false
@@ -43,7 +41,6 @@ final class Tray: ObservableObject {
     private var changeCount: Int
     /// What Glance itself put on the pasteboard, which isn't a new copy.
     private var ownChange: Int?
-    private var copiedTask: Task<Void, Never>?
 
     init(folder: URL, pasteboard: NSPasteboard = .general) {
         self.folder = folder
@@ -342,13 +339,12 @@ final class Tray: ObservableObject {
 
     /// A click on an item with ⌘ adds it to the chosen ones or takes it out; with Shift, chooses
     /// every item from the last one chosen to it, as Finder does; with neither, chooses it alone.
-    func choose(_ id: UUID, toggling: Bool = false, extending: Bool = false, in order: [TrayItem]? = nil) {
-        let order = order ?? items
+    func choose(_ id: UUID, toggling: Bool = false, extending: Bool = false) {
         lead = id
-        if extending, let anchor, let from = order.firstIndex(where: { $0.id == anchor }),
-            let to = order.firstIndex(where: { $0.id == id })
+        if extending, let anchor, let from = items.firstIndex(where: { $0.id == anchor }),
+            let to = items.firstIndex(where: { $0.id == id })
         {
-            selection = Set(order[min(from, to)...max(from, to)].map(\.id))
+            selection = Set(items[min(from, to)...max(from, to)].map(\.id))
             return
         }
         if toggling {
@@ -486,13 +482,6 @@ final class Tray: ObservableObject {
         pasteboard.writeObjects(items.flatMap(writers))
         ownChange = pasteboard.changeCount
         changeCount = pasteboard.changeCount
-        copiedTask?.cancel()
-        justCopied = Set(items.map(\.id))
-        copiedTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
-            guard !Task.isCancelled else { return }
-            self?.justCopied = []
-        }
     }
 
     /// What the share menu and AirDrop are given for items: files as themselves, a picture as the

@@ -9,68 +9,32 @@ import AppKit
 import Quartz
 import SwiftUI
 
-/// What a tray tile does under the pointer, done by AppKit, which the notch's window, never the key
-/// one, still gives every event to: the pointer coming and going, a click to select, ⌘ or Shift to
-/// choose several, a double-click to paste, a drag out with every chosen item in it, and the menu.
+/// What a tray tile does under the pointer, done by AppKit, which the notch's window still gives
+/// every event to: a click to select, ⌘ or Shift to choose several, a double-click to paste, a drag
+/// out with every chosen item in it, and the menu.
 struct TileInteraction: NSViewRepresentable {
     let item: TrayItem
     let tray: Tray
-    /// Whose selected items a click changes, and a drag or the menu acts on.
-    let selector: TraySelecting
-    /// A click selects the item alone, as in Finder; otherwise it copies it.
-    let clickSelects: Bool
     /// Its page is showing, so the notch hands it the clicks on it (see `NotchEventView`).
-    var live = true
-    let hover: (Bool) -> Void
+    let live: Bool
 
     func makeNSView(context: Context) -> TileInteractionView { TileInteractionView() }
 
     func updateNSView(_ view: TileInteractionView, context: Context) {
         view.item = item
         view.tray = tray
-        view.selector = selector
-        view.clickSelects = clickSelects
         view.live = live
-        view.hover = hover
-    }
-}
-
-/// Items chosen together, with ⌘ or Shift, to copy, drag, share or remove at once.
-@MainActor
-protocol TraySelecting: AnyObject {
-    var selection: Set<UUID> { get }
-    func choose(_ id: UUID, toggling: Bool, extending: Bool)
-    func deselect()
-    /// Every chosen item, when the item is one of them; otherwise it alone.
-    func targets(of item: TrayItem) -> [TrayItem]
-}
-
-extension Tray: TraySelecting {
-    func choose(_ id: UUID, toggling: Bool, extending: Bool) {
-        choose(id, toggling: toggling, extending: extending, in: nil)
     }
 }
 
 final class TileInteractionView: NSView, NSDraggingSource {
     var item: TrayItem?
     var tray: Tray?
-    weak var selector: TraySelecting?
-    var clickSelects = false
     var live = false
-    var hover: ((Bool) -> Void)?
     private var downAt: NSPoint?
     private var dragged = false
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
-    }
-
-    override func mouseEntered(with event: NSEvent) { hover?(true) }
-    override func mouseExited(with event: NSEvent) { hover?(false) }
 
     override func mouseDown(with event: NSEvent) {
         NotificationCenter.default.post(name: Tray.didTouch, object: self)
@@ -80,16 +44,16 @@ final class TileInteractionView: NSView, NSDraggingSource {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let downAt, !dragged, let item, let tray, let selector else { return }
+        guard let downAt, !dragged, let item, let tray else { return }
         let moved = hypot(event.locationInWindow.x - downAt.x, event.locationInWindow.y - downAt.y)
         guard moved > 4 else { return }
         dragged = true
         // A chosen item takes every chosen one with it; any other goes alone.
-        if !selector.selection.contains(item.id) { selector.deselect() }
+        if !tray.selection.contains(item.id) { tray.deselect() }
         var items: [NSDraggingItem] = []
         let side = Shelf.icon
-        for target in selector.targets(of: item) {
-            let picture = TrayThumbnails.cached(target) ?? TileDrag.picture(for: target)
+        for target in tray.targets(of: item) {
+            let picture = TrayThumbnails.cached(target) ?? TileDrag.picture(for: target, in: tray)
             for writer in TileDrag.writers(for: target, in: tray) {
                 let dragging = NSDraggingItem(pasteboardWriter: writer)
                 // Fanned a little, as Finder fans files dragged together.
@@ -109,21 +73,17 @@ final class TileInteractionView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         defer { downAt = nil }
-        guard !dragged, let item, let tray, let selector else { return }
+        guard !dragged, let item, let tray else { return }
         let flags = event.modifierFlags
         if flags.contains(.command) {
-            selector.choose(item.id, toggling: true, extending: false)
+            tray.choose(item.id, toggling: true)
         } else if flags.contains(.shift) {
-            selector.choose(item.id, toggling: false, extending: true)
+            tray.choose(item.id, extending: true)
         } else if event.clickCount >= 2 {
             tray.paste(item)
-        } else if event.clickCount == 1, clickSelects {
+        } else {
             // As in Finder: this one alone. ⌘ above adds it to the others or takes it out.
-            selector.choose(item.id, toggling: false, extending: false)
-        } else if event.clickCount == 1 {
-            selector.deselect()
-            tray.copy(item)
-            Opening.tap()
+            tray.choose(item.id)
         }
     }
 
@@ -147,13 +107,11 @@ final class TileInteractionView: NSView, NSDraggingSource {
     // MARK: The menu
 
     private func showMenu(_ event: NSEvent) {
-        guard let item, let tray, let selector else { return }
+        guard let item, let tray else { return }
         // Right-clicked outside the chosen items: the menu is for this one alone, chosen, as Finder
         // chooses a file it shows the menu for.
-        if !selector.selection.contains(item.id) {
-            clickSelects ? selector.choose(item.id, toggling: false, extending: false) : selector.deselect()
-        }
-        NSMenu.popUpContextMenu(TrayMenu(items: selector.targets(of: item), tray: tray, anchor: self).menu, with: event, for: self)
+        if !tray.selection.contains(item.id) { tray.choose(item.id) }
+        NSMenu.popUpContextMenu(TrayMenu(items: tray.targets(of: item), tray: tray, anchor: self).menu, with: event, for: self)
     }
 }
 
@@ -170,22 +128,12 @@ enum TileDrag {
         }
     }
 
-    /// Text and links are dragged as their card: a symbol on a gray tile, the size of the picture.
-    static func picture(for item: TrayItem) -> NSImage {
-        let side = Shelf.icon
-        let symbol = NSImage(systemSymbolName: item.kind == .link ? "link" : "doc.plaintext", accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 20, weight: .medium).applying(.init(paletteColors: [.white])))
-        return NSImage(size: CGSize(width: side, height: side), flipped: false) { rect in
-            NSColor(white: 0.28, alpha: 0.95).setFill()
-            NSBezierPath(roundedRect: rect, xRadius: 10, yRadius: 10).fill()
-            if let symbol {
-                symbol.draw(
-                    in: CGRect(
-                        x: (side - symbol.size.width) / 2, y: (side - symbol.size.height) / 2, width: symbol.size.width,
-                        height: symbol.size.height))
-            }
-            return true
-        }
+    /// Without a thumbnail, as text and links are, an item is dragged as the tray draws it: a note
+    /// as its page of words, a link as its site's icon.
+    static func picture(for item: TrayItem, in tray: Tray) -> NSImage {
+        let renderer = ImageRenderer(content: TrayItemPicture(item: item, tray: tray, side: Shelf.icon).environment(\.colorScheme, .dark))
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        return renderer.nsImage ?? NSImage(size: CGSize(width: Shelf.icon, height: Shelf.icon))
     }
 }
 

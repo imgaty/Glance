@@ -24,6 +24,16 @@ struct TrayItemPicture: View {
     @State private var thumbnail: NSImage?
     @State private var link: LinkPreview?
 
+    /// Drawn at once from what's already made, so nothing flickers in, and so a picture of it, as
+    /// for a drag, has it too.
+    init(item: TrayItem, tray: Tray, side: CGFloat) {
+        self.item = item
+        self.tray = tray
+        self.side = side
+        _thumbnail = State(initialValue: TrayThumbnails.cached(item))
+        _link = State(initialValue: LinkPreviews.cached(item))
+    }
+
     var body: some View {
         picture
             .frame(width: side, height: side, alignment: .bottom)
@@ -142,15 +152,6 @@ struct TrayItemPicture: View {
             // As last looked, away from the notch (see Tray.checkFiles): never looked for here, as
             // the tray is drawn.
             return tray.folders[item.id].map { "In " + $0 } ?? "Dropped"
-        }
-    }
-
-    /// For menus and accessibility: a file's name; a link's site; text or a picture, by the app it
-    /// came from.
-    static func caption(for item: TrayItem) -> String {
-        switch item.kind {
-        case .files, .link: item.title
-        case .image, .text: item.app.flatMap(appName) ?? item.title
         }
     }
 

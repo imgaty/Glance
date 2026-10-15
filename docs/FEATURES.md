@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 13 October 2026`
+`Created: 11 October 2026` | `Last updated: 15 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -18,7 +18,7 @@ which apps show. See the [User Manual](USER-MANUAL.md#the-player).
 
 Drag files onto the notch to keep them close, and find what you copied and
 your screenshots, newest first. Click something to select it, double-click to
-paste it, drag it out, or drop it on AirDrop. Copies stay for 30 minutes,
+paste it, drag it out, or send it with AirDrop. Copies stay for 30 minutes,
 8 hours or 7 days, and passwords never do. ⇧⌘2 opens it, or three fingers on the
 open notch, and it grows wider with what it keeps. See the
 [User Manual](USER-MANUAL.md#the-tray).

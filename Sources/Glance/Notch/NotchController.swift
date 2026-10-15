@@ -121,8 +121,8 @@ final class NotchController {
     private var pasteWatch: AnyCancellable?
     private var trayWatch: AnyCancellable?
     private var trayTouch: AnyCancellable?
-    /// Something for the tray is being dragged in the top half of this display: the notch is open on
-    /// the tray to take it, wherever the pointer is.
+    /// Something for the tray was dragged near the notch and rested there: the notch is open on the
+    /// tray to take it, until the drag goes away or ends.
     private var dragHold = false
     /// A sideways swipe on the tray was let go and the row glides on.
     private var trayGliding = false
@@ -949,8 +949,8 @@ final class NotchController {
         if model.airDropTargeted { withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = false } }
     }
 
-    /// Onto the AirDrop well: sent, as soon as a device is picked. Anywhere else on the notch, from
-    /// another app: kept in the tray.
+    /// Onto AirDrop's place: sent, as soon as a device is picked. Anywhere else on the notch: kept in
+    /// the tray.
     private func dropped(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> Bool {
         guard !own else { return false }
         let onWell = isOnAirDrop(point)
@@ -985,7 +985,6 @@ final class NotchController {
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
         let right = event.scrollingDeltaX * direction
-        // The tray's row, widened or not.
         let onTray = model.state == .open && model.page == .tray
         // A swipe on the tray let go: the row glides on, and settles within its ends.
         guard event.momentumPhase.isEmpty else {

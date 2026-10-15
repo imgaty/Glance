@@ -205,7 +205,7 @@ private struct ItemTile: View {
             TrayItemPicture(item: item, tray: tray, side: Shelf.icon)
         }
         .overlay {
-            TileInteraction(item: item, tray: tray, selector: tray, clickSelects: true, live: isVisible) { _ in }
+            TileInteraction(item: item, tray: tray, live: isVisible)
         }
         .animation(.easeOut(duration: 0.12), value: chosen)
         .notchControl(enabled: isVisible)

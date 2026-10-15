@@ -162,8 +162,8 @@ final class NotchModel: ObservableObject {
     static func trayHeight(closed: CGSize) -> CGFloat {
         closed.height + PlayerLayout.cameraGap + Shelf.tile.height + PlayerLayout.padding
     }
-    /// Where the tray's AirDrop well is, in the notch's points, while it shows; and whether
-    /// something dragged is over it.
+    /// Where AirDrop's place to drop is, in the notch's points, while it shows; and whether something
+    /// dragged is over it.
     var airDropFrame: CGRect?
     @Published var airDropTargeted = false
 
