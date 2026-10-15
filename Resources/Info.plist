@@ -32,7 +32,7 @@
 			<key>NSMenuItem</key>
 			<dict>
 				<key>default</key>
-				<string>Add to Glance Tray</string>
+				<string>Glance Tray</string>
 			</dict>
 			<key>NSMessage</key>
 			<string>addToTray</string>

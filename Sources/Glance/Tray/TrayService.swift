@@ -7,7 +7,7 @@
 
 import AppKit
 
-/// Add to Glance Tray, in every app's Services menu and in Finder's (see NSServices in Info.plist),
+/// Glance Tray, in every app's Services menu and in Finder's (see NSServices in Info.plist),
 /// and in the Share menu, through the GlanceShare extension: what's chosen there is kept in the
 /// tray, as if it were dropped on the notch.
 @MainActor
@@ -35,7 +35,7 @@ final class TrayService: NSObject {
         if !tray.drop(pasteboard) { error.pointee = "The tray can't keep what's chosen." as NSString }
     }
 
-    /// Whether Add to Glance Tray is on in the Share menu. macOS lists a new app's Share extension
+    /// Whether Glance Tray is on in the Share menu. macOS lists a new app's Share extension
     /// turned off, until it's turned on in Login Items & Extensions; pluginkit marks it + once it is.
     /// Without the extension at all, as in a build run from its folder, there's nothing to turn on.
     nonisolated static func shareIsOn() async -> Bool {

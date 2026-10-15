@@ -168,7 +168,7 @@ struct TrayActionsTests {
         #expect(TrayMenu(items: tray.items, tray: tray, anchor: nil).menu.item(withTitle: "Open With") == nil)
     }
 
-    @Test("Add to Glance Tray in the Services menu keeps what's chosen, as if it were dropped")
+    @Test("Glance Tray in the Services menu keeps what's chosen, as if it were dropped")
     func service() {
         preservingDefaults([Preferences.tray]) {
             let tray = Tray(folder: folder(), pasteboard: pasteboard())
@@ -240,7 +240,7 @@ struct TrayActionsTests {
         #expect(point["NSExtensionPointIdentifier"] as? String == "com.apple.share-services")
         #expect(point["NSExtensionPrincipalClass"] as? String == "GlanceShare.ShareViewController")
         #expect(plist["CFBundleIdentifier"] as? String == "dev.vibe.Glance.Share")
-        #expect(plist["CFBundleDisplayName"] as? String == "Add to Glance Tray")
+        #expect(plist["CFBundleDisplayName"] as? String == "Glance Tray")
     }
 
     @Test("The Services entry names the method that takes it, and is on from the start")
@@ -254,6 +254,6 @@ struct TrayActionsTests {
         #expect(entry["NSPortName"] as? String == plist["CFBundleName"] as? String)
         // Without a context, macOS lists a new service turned off.
         #expect(entry["NSRequiredContext"] != nil)
-        #expect((entry["NSMenuItem"] as? [String: String])?["default"] == "Add to Glance Tray")
+        #expect((entry["NSMenuItem"] as? [String: String])?["default"] == "Glance Tray")
     }
 }

@@ -8,7 +8,7 @@ let package = Package(
         .executable(name: "Glance", targets: ["Glance"]),
         // Loaded by /usr/bin/perl, not the app; see NowPlayingHelper.swift.
         .library(name: "GlanceNowPlaying", type: .dynamic, targets: ["NowPlayingHelper"]),
-        // Add to Glance Tray in the Share menu, an app extension inside the app; see ShareViewController.swift.
+        // Glance Tray in the Share menu, an app extension inside the app; see ShareViewController.swift.
         .executable(name: "GlanceShare", targets: ["GlanceShare"]),
     ],
     dependencies: [

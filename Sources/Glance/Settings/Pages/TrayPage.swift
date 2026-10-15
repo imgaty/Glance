@@ -18,7 +18,7 @@ struct TrayPage: View {
     @AppStorage(Preferences.trayIgnoredApps) private var ignoredApps = ""
     @ObservedObject private var tray = Tray.shared
     @State private var confirmingClear = false
-    /// Add to Glance Tray is on in the Share menu, as last looked.
+    /// Glance Tray is on in the Share menu, as last looked.
     @State private var shareOn = true
 
     var body: some View {
@@ -82,7 +82,7 @@ struct TrayPage: View {
                 Section {
                     CenteredRow {
                         Text("Add from the Share menu")
-                        Text("Turn on Add to Glance Tray, under Extensions in Sharing, to share pictures, links and files to the tray.")
+                        Text("Turn on Glance Tray, under Extensions in Sharing, to share pictures, links and files to the tray.")
                     } trailing: {
                         Button("Open Login Items & Extensions") { NSWorkspace.shared.open(TrayService.extensionsSettings) }
                     }

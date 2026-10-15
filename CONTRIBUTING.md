@@ -38,7 +38,7 @@ from macOS.
 │   │   ├── Player/           # The player and its controls
 │   │   ├── Settings/         # The Settings window and pages
 │   │   └── Tray/             # The tray: files dropped and what's copied
-│   ├── GlanceShare/          # Add to Glance Tray, in the Share menu
+│   ├── GlanceShare/          # Glance Tray, in the Share menu
 │   └── NowPlayingHelper/     # Reads Now Playing inside perl
 ├── Tests/GlanceTests/        # Unit tests
 ├── updater/appcast.xml       # Every release, for Check for Updates…

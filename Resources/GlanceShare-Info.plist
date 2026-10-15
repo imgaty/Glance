@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Add to Glance Tray</string>
+	<string>Glance Tray</string>
 	<key>CFBundleExecutable</key>
 	<string>GlanceShare</string>
 	<key>CFBundleIdentifier</key>

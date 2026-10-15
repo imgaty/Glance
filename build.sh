@@ -30,7 +30,7 @@ ditto .build/release/Sparkle.framework "$FRAMEWORKS/Sparkle.framework"
 rm -rf "$FRAMEWORKS/Sparkle.framework/Versions/B/XPCServices" "$FRAMEWORKS/Sparkle.framework/XPCServices"
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Glance"
 cp Resources/Info.plist "$PLIST"
-# Add to Glance Tray in the Share menu, an app extension, at the app's own version.
+# Glance Tray in the Share menu, an app extension, at the app's own version.
 cp .build/release/GlanceShare "$SHARE/Contents/MacOS/GlanceShare"
 cp Resources/GlanceShare-Info.plist "$SHARE/Contents/Info.plist"
 for key in CFBundleShortVersionString CFBundleVersion; do

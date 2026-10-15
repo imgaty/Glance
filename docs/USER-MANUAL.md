@@ -178,8 +178,8 @@ for the drop, without reaching the top edge.
 | Swipe left or right with two fingers, or scroll a mouse's wheel | Scrolls the tray |
 | Right-click an item | Open, Open With, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), Keep, and Remove from Tray |
 | Hold Option in an item's menu | Turns Paste into Paste and Match Style, for text without its style |
-| Choose **Services > Add to Glance Tray** in Finder or any app | Keeps what's selected there in the tray, as a drop does |
-| Choose **Share > Add to Glance Tray** in Safari, Photos, Finder or any app | Keeps what's shared in the tray, as a drop does; a picture on a web page too |
+| Choose **Services > Glance Tray** in Finder or any app | Keeps what's selected there in the tray, as a drop does |
+| Choose **Share > Glance Tray** in Safari, Photos, Finder or any app | Keeps what's shared in the tray, as a drop does; a picture on a web page too |
 
 Something dragged onto the notch from another app gets two places to go:
 `Keep in Tray` and `AirDrop`. To send items already in the tray, right-click
@@ -293,7 +293,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
 | `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
-| `Add from the Share menu` | Shows only while Add to Glance Tray is off in the Share menu, with the way to turn it on |
+| `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
 
 ### Opening
@@ -384,12 +384,12 @@ their signature matches the one built into Glance.
 9. **Double-clicking an item copies it but doesn't paste it.** Turn on Glance
    under **System Settings > Privacy & Security > Accessibility**.
 
-10. **Add to Glance Tray isn't in the Services menu.** Turn it on under
+10. **Glance Tray isn't in the Services menu.** Turn it on under
     **System Settings > Keyboard > Keyboard Shortcuts > Services**. The
     Services menu offers it for selected text and files; for a picture on a web
     page, use the Share menu.
 
-11. **Add to Glance Tray isn't in the Share menu.** macOS adds a new app's
+11. **Glance Tray isn't in the Share menu.** macOS adds a new app's
     Share extension turned off. Turn it on under
     **System Settings > General > Login Items & Extensions**, in Sharing, or
     from **Settings > Tray**, which shows the way while it's off.

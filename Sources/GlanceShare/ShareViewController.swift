@@ -8,7 +8,7 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// Add to Glance Tray, in the Share menu of Safari, Finder, Photos and every app that shares: what's
+/// Glance Tray, in the Share menu of Safari, Finder, Photos and every app that shares: what's
 /// shared joins the tray as if it were dropped on the notch, with no window of its own, as Add to
 /// Reading List has none. It runs in a sandbox, apart from Glance: it leaves what it's given on a
 /// pasteboard of Glance's own, tells Glance it's there, and waits for Glance to have taken it, so a
