@@ -119,6 +119,29 @@ struct TrayActionsTests {
         #expect(tray.items.count == 1)
     }
 
+    @Test("Open opens a link's address and an item's files; text has nothing to open")
+    func openable() throws {
+        let tray = Tray(folder: folder(), pasteboard: pasteboard())
+        try copy("https://www.apple.com/macos/", into: tray)
+        try copy("Just words", into: tray)
+        tray.add(try #require(TrayCapture.make(from: pasteboard { $0.setData(Data([0x89, 0x50, 0x4E, 0x47]), forType: .png) }, kept: false)))
+        let (picture, words, link) = (tray.items[0], tray.items[1], tray.items[2])
+        #expect(link.address?.absoluteString == "https://www.apple.com/macos/")
+        #expect(words.address == nil)
+        #expect(tray.openable(link) == [try #require(link.address)])
+        #expect(tray.openable(words).isEmpty)
+        #expect(tray.openable(picture) == [tray.file(picture.files[0], of: picture)])
+        #expect(tray.files(of: tray.items) == [tray.file(picture.files[0], of: picture)])
+    }
+
+    @Test("Apps are named as Finder names them, and one that's gone by its identifier")
+    func appNames() {
+        #expect(InstalledApps.name("com.apple.TextEdit") == "TextEdit")
+        #expect(InstalledApps.name(at: URL(fileURLWithPath: "/System/Applications/TextEdit.app")) == "TextEdit")
+        #expect(InstalledApps.name("com.example.Missing") == nil)
+        #expect(MusicApps.name(of: "com.example.Missing") == "Missing")
+    }
+
     @Test("Typing a name chooses the first item it starts, whatever the case or accents")
     func typeToChoose() throws {
         let tray = Tray(folder: folder(), pasteboard: pasteboard())

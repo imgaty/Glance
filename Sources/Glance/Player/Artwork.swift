@@ -98,7 +98,7 @@ struct HeroArtwork: View {
                         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
                         .notchControl(enabled: showsBadge && isOpen)
                         .accessibilityLabel(
-                            nowPlaying.appBundleID.flatMap(TrayItemPicture.appName).map { "Open \($0)" } ?? "Open App"
+                            nowPlaying.appBundleID.flatMap(InstalledApps.name).map { "Open \($0)" } ?? "Open App"
                         )
                         .accessibilityHidden(!(showsBadge && isOpen))
                         .position(x: proxy.size.width + past - tile / 2, y: proxy.size.height + past - tile / 2)

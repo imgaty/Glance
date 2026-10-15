@@ -154,12 +154,9 @@ enum MusicApps {
         return players + others
     }
 
+    /// An app no longer installed is named from its identifier: com.google.Chrome as Chrome.
     static func name(of app: String) -> String {
-        // An app no longer installed is named from its identifier: com.google.Chrome as Chrome.
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app) else {
-            return app.split(separator: ".").last.map(String.init) ?? app
-        }
-        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+        InstalledApps.name(app) ?? app.split(separator: ".").last.map(String.init) ?? app
     }
 }
 

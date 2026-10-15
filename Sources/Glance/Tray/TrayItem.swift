@@ -54,6 +54,9 @@ struct TrayItem: Codable, Identifiable, Equatable {
     /// A copy or screenshot kept until it's removed, as what's dropped on the notch is.
     var keptCopy: Bool { kept && origin != .dropped }
 
+    /// A link's web address.
+    var address: URL? { kind == .link ? text.flatMap(URL.init(string:)) : nil }
+
     /// Copies and screenshots are kept for 30 minutes, 8 hours or 7 days, as Spotlight keeps its
     /// clipboard history.
     func expired(at date: Date, keep: ClipboardKeep) -> Bool {

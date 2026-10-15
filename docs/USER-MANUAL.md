@@ -96,7 +96,7 @@ keyboard the same way:
 | ⌘A | On the tray, selects everything |
 | ⌘Delete | On the tray, removes the selected items |
 | ⌘Z | On the tray, brings back what you last removed, for a minute |
-| Type a name | On the tray, selects the first item whose name starts with it |
+| Type a name | On the tray, selects the first item whose name starts with it; Space typed partway is part of the name |
 
 ⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
 replace Xcode's Welcome to Xcode and Devices and Simulators. To use other

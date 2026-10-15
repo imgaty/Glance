@@ -59,10 +59,12 @@ struct TrayPage: View {
                     Text("Never keep copies from")
                     Text("What you copy in these apps doesn't join the tray.")
                 } trailing: {
-                    Button("Add App…", action: addApps)
+                    Button("Add App…") {
+                        InstalledApps.choose(message: "Choose apps whose copies the tray never keeps.") { $0.forEach(TrayApps.add) }
+                    }
                 }
-                // Follows the stored list, so an app added shows at once.
-                ForEach(ignoredApps.split(separator: ",").map(String.init), id: \.self) { app in
+                // Follows the stored list, so an app added shows at once; by name, as Music's list is.
+                ForEach(ignored, id: \.self) { app in
                     CenteredRow {
                         Label {
                             Text(MusicApps.name(of: app))
@@ -111,26 +113,8 @@ struct TrayPage: View {
         }
     }
 
-    /// Chosen as apps are in System Settings' lists: from the Applications folder, any number at once.
-    private func addApps() {
-        let panel = NSOpenPanel()
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.allowedContentTypes = [.application]
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        panel.treatsFilePackagesAsDirectories = false
-        panel.prompt = "Add"
-        panel.message = "Choose apps whose copies the tray never keeps."
-        let add: (NSApplication.ModalResponse) -> Void = { response in
-            guard response == .OK else { return }
-            for url in panel.urls {
-                if let app = Bundle(url: url)?.bundleIdentifier, app != Bundle.main.bundleIdentifier { TrayApps.add(app) }
-            }
-        }
-        if let window = NSApp.keyWindow {
-            panel.beginSheetModal(for: window, completionHandler: add)
-        } else {
-            add(panel.runModal())
-        }
+    private var ignored: [String] {
+        ignoredApps.split(separator: ",").map(String.init)
+            .sorted { MusicApps.name(of: $0).localizedStandardCompare(MusicApps.name(of: $1)) == .orderedAscending }
     }
 }

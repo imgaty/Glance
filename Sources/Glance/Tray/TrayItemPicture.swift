@@ -145,7 +145,7 @@ struct TrayItemPicture: View {
     private static func source(of item: TrayItem, in tray: Tray) -> String {
         switch item.origin {
         case .copied:
-            return item.app.flatMap(appName).map { "Copied from \($0)" } ?? "Copied"
+            return item.app.flatMap(InstalledApps.name).map { "Copied from \($0)" } ?? "Copied"
         case .screenshot:
             return "Screenshot"
         case .dropped:
@@ -153,18 +153,6 @@ struct TrayItemPicture: View {
             // the tray is drawn.
             return tray.folders[item.id].map { "In " + $0 } ?? "Dropped"
         }
-    }
-
-    /// Looked up once for each app.
-    private static var appNames: [String: String?] = [:]
-
-    static func appName(_ bundle: String) -> String? {
-        if let name = appNames[bundle] { return name }
-        let name = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
-            .map { FileManager.default.displayName(atPath: $0.path) }
-            .map { $0.hasSuffix(".app") ? String($0.dropLast(4)) : $0 }
-        appNames[bundle] = name
-        return name
     }
 }
 

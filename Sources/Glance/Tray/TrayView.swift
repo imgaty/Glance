@@ -215,20 +215,27 @@ private struct ItemTile: View {
         .accessibilityLabel(TrayItemPicture.title(of: item))
         .accessibilityValue(TrayItemPicture.detail(of: item, in: tray))
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
-        // What a click and the item's menu do, for VoiceOver and Voice Control.
+        // What a click and the item's menu do, for VoiceOver and Voice Control: as in the menu, only
+        // what applies to the item.
         .accessibilityAction { tray.choose(item.id) }
-        .accessibilityAction(named: "Copy") { tray.copy(tray.targets(of: item)) }
-        .accessibilityAction(named: "Paste") { tray.paste(tray.targets(of: item)) }
-        .accessibilityAction(named: "Quick Look") {
-            TrayQuickLook.shared.show(TrayQuickLook.urls(for: tray.targets(of: item), in: tray))
-        }
         .accessibilityActions {
+            if item.kind != .text {
+                Button(item.kind == .link ? "Open Link" : "Open") { tray.openable(item).forEach { NSWorkspace.shared.open($0) } }
+            }
+            if item.kind == .files {
+                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(tray.urls(of: item)) }
+            }
+            if item.kind == .files || item.kind == .image {
+                Button("Quick Look") { TrayQuickLook.shared.show(tray.files(of: tray.targets(of: item))) }
+            }
+            Button("Copy") { tray.copy(tray.targets(of: item)) }
+            Button("Paste") { tray.paste(tray.targets(of: item)) }
             // What's dropped is always kept.
             if item.origin != .dropped {
                 Button(item.keptCopy ? "Don't Keep" : "Keep") { tray.keep(Set(tray.targets(of: item).map(\.id)), !item.keptCopy) }
             }
+            Button("Remove from Tray") { tray.remove(Set(tray.targets(of: item).map(\.id))) }
         }
-        .accessibilityAction(named: "Remove from Tray") { tray.remove(Set(tray.targets(of: item).map(\.id))) }
     }
 }
 

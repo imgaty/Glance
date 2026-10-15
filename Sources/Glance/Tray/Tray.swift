@@ -478,6 +478,23 @@ final class Tray: ObservableObject {
         .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
+    /// The files items are, for Quick Look, Open and dragging out: a file's own, wherever it is now,
+    /// or the one a picture is kept in. Text and links have none.
+    func files(of items: [TrayItem]) -> [URL] {
+        items.flatMap { item -> [URL] in
+            switch item.kind {
+            case .files: urls(of: item)
+            case .image: item.files.first.map { [file($0, of: item)] } ?? []
+            case .link, .text: []
+            }
+        }
+    }
+
+    /// What opening an item opens: a link's address, or its files.
+    func openable(_ item: TrayItem) -> [URL] {
+        item.address.map { [$0] } ?? files(of: [item])
+    }
+
     /// Where one of what the app gave is kept.
     func file(_ name: String, of item: TrayItem) -> URL {
         folder.appending(path: item.id.uuidString).appending(path: name)
@@ -513,9 +530,8 @@ final class Tray: ObservableObject {
     func shareable(_ items: [TrayItem]) -> [Any] {
         items.flatMap { item -> [Any] in
             switch item.kind {
-            case .files: urls(of: item)
-            case .image: item.files.first.map { [file($0, of: item)] } ?? []
-            case .link: item.text.flatMap(URL.init(string:)).map { [$0] } ?? []
+            case .files, .image: files(of: [item])
+            case .link: item.address.map { [$0] } ?? []
             case .text: item.text.map { [$0] } ?? []
             }
         }

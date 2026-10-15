@@ -122,8 +122,7 @@ enum TileDrag {
     /// the tray keeps it in; text and links as they were copied.
     static func writers(for item: TrayItem, in tray: Tray) -> [NSPasteboardWriting] {
         switch item.kind {
-        case .files: tray.urls(of: item).map { $0 as NSURL }
-        case .image: item.files.first.map { [tray.file($0, of: item) as NSURL] } ?? []
+        case .files, .image: tray.files(of: [item]).map { $0 as NSURL }
         case .link, .text: tray.writers(for: item)
         }
     }
@@ -170,7 +169,7 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         if items.contains(where: { $0.kind == .files }) {
             add("Show in Finder", "folder", #selector(reveal))
         }
-        if !TrayQuickLook.urls(for: items, in: tray).isEmpty { add("Quick Look" + many, "eye", #selector(quickLook)) }
+        if !tray.files(of: items).isEmpty { add("Quick Look" + many, "eye", #selector(quickLook)) }
         separate()
         add("Copy" + many, "doc.on.doc", #selector(copyItems))
         if CGPreflightPostEventAccess() {
@@ -246,15 +245,9 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         menu.addItem(.separator())
     }
 
-    /// What Open opens: the item's files, the file a picture is kept in, or a link's address.
+    /// What Open opens, for one item: its files, the file a picture is kept in, or a link's address.
     private var openable: [URL] {
-        guard let item = items.first, items.count == 1 else { return [] }
-        return switch item.kind {
-        case .files: tray.urls(of: item)
-        case .image: item.files.first.map { [tray.file($0, of: item)] } ?? []
-        case .link: item.text.flatMap(URL.init(string:)).map { [$0] } ?? []
-        case .text: []
-        }
+        items.count == 1 ? tray.openable(items[0]) : []
     }
 
     @objc private func open() {
@@ -274,7 +267,8 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
             let id = Bundle(url: app)?.bundleIdentifier ?? app.path
             return seen.insert(id).inserted && urls.dropFirst().allSatisfy { workspace.urlsForApplications(toOpen: $0).contains(app) }
         }
-        let others = apps.filter { $0 != standard }.sorted { Self.name(of: $0).localizedStandardCompare(Self.name(of: $1)) == .orderedAscending }
+        let name = InstalledApps.name(at:)
+        let others = apps.filter { $0 != standard }.sorted { name($0).localizedStandardCompare(name($1)) == .orderedAscending }
         guard standard != nil || !others.isEmpty else { return nil }
         let menu = NSMenu()
         func app(_ url: URL, _ title: String) {
@@ -284,17 +278,12 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
             item.image = workspace.icon(forFile: url.path)
             item.image?.size = CGSize(width: 16, height: 16)
         }
-        if let standard { app(standard, Self.name(of: standard) + " (default)") }
+        if let standard { app(standard, name(standard) + " (default)") }
         if standard != nil, !others.isEmpty { menu.addItem(.separator()) }
-        others.forEach { app($0, Self.name(of: $0)) }
+        others.forEach { app($0, name($0)) }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Other…", action: #selector(openInOther), keyEquivalent: "").target = self
         return menu
-    }
-
-    private static func name(of app: URL) -> String {
-        let name = FileManager.default.displayName(atPath: app.path)
-        return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
     }
 
     @objc private func openIn(_ sender: NSMenuItem) {
@@ -323,7 +312,7 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         NSWorkspace.shared.activateFileViewerSelecting(items.filter { $0.kind == .files }.flatMap(tray.urls))
     }
 
-    @objc private func quickLook() { TrayQuickLook.shared.show(TrayQuickLook.urls(for: items, in: tray)) }
+    @objc private func quickLook() { TrayQuickLook.shared.show(tray.files(of: items)) }
     @objc private func copyItems() { tray.copy(items) }
     @objc private func pasteItems() { tray.paste(items) }
     @objc private func pastePlain() { tray.paste(items, plain: true) }
@@ -338,16 +327,6 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
 final class TrayQuickLook: NSObject, QLPreviewPanelDataSource {
     static let shared = TrayQuickLook()
     private(set) var urls: [URL] = []
-
-    static func urls(for items: [TrayItem], in tray: Tray) -> [URL] {
-        items.flatMap { item -> [URL] in
-            switch item.kind {
-            case .files: tray.urls(of: item)
-            case .image: item.files.first.map { [tray.file($0, of: item)] } ?? []
-            case .link, .text: []
-            }
-        }
-    }
 
     func show(_ urls: [URL]) {
         guard !urls.isEmpty, let panel = QLPreviewPanel.shared() else { return }

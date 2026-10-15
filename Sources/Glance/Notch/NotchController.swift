@@ -773,8 +773,11 @@ final class NotchController {
         case (kVK_LeftArrow, nil), (kVK_RightArrow, nil):
             guard let id = tray.move(by: key == kVK_LeftArrow ? -1 : 1, extending: shift) else { return false }
             reveal(id)
+        case (kVK_Space, nil) where Date.now.timeIntervalSince(typedAt) < Self.typingPause:
+            // Partway through typing a name, as in Finder, a space is part of it.
+            return choose(typing: event)
         case (kVK_Space, nil):
-            let urls = TrayQuickLook.urls(for: tray.chosen, in: tray)
+            let urls = tray.files(of: tray.chosen)
             guard !urls.isEmpty else { return false }
             TrayQuickLook.shared.show(urls)
         case (kVK_Return, nil), (kVK_ANSI_KeypadEnter, nil):

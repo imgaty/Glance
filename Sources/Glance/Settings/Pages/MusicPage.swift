@@ -88,7 +88,9 @@ struct MusicPage: View {
                     Text("Other apps")
                     Text("Add apps to show or hide them.")
                 } trailing: {
-                    Button("Add App…", action: addApps)
+                    Button("Add App…") {
+                        InstalledApps.choose(message: "Choose apps to show in the notch.") { $0.forEach(MusicApps.add) }
+                    }
                 }
                 Toggle(isOn: $showsNewApps) {
                     Text("Show new apps")
@@ -100,29 +102,6 @@ struct MusicPage: View {
         }
         .sheet(isPresented: $customizing) {
             ControlsSheet(display: preview.display, top: preview.top)
-        }
-    }
-
-    /// Chosen as apps are in System Settings' lists: from the Applications folder, any number at once.
-    private func addApps() {
-        let panel = NSOpenPanel()
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.allowedContentTypes = [.application]
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        panel.treatsFilePackagesAsDirectories = false
-        panel.prompt = "Add"
-        panel.message = "Choose apps to show in the notch."
-        let add: (NSApplication.ModalResponse) -> Void = { response in
-            guard response == .OK else { return }
-            for url in panel.urls {
-                if let app = Bundle(url: url)?.bundleIdentifier, app != Bundle.main.bundleIdentifier { MusicApps.add(app) }
-            }
-        }
-        if let window = NSApp.keyWindow {
-            panel.beginSheetModal(for: window, completionHandler: add)
-        } else {
-            add(panel.runModal())
         }
     }
 }
