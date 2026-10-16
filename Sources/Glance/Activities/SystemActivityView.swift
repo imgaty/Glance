@@ -15,8 +15,6 @@ import SwiftUI
 /// plays. With Reduce Motion on, nothing turns or shakes.
 struct SystemActivityView: View {
     let restingHeight: CGFloat
-    /// How much taller than at rest the notch stands for the announcement.
-    var grow: CGFloat = 0
     let island: Bool
     let wing: CGFloat
     let alert: NotchAlert?
@@ -30,8 +28,8 @@ struct SystemActivityView: View {
         let lane = max(wing - edge - LiveActivityView.cameraGap, side)
         let size = LiveActivityView.textSize(for: restingHeight)
         ZStack {
-            if let alert, case .device(let symbol, let pictures, let battery) = alert.content {
-                device(symbol: symbol, pictures: pictures, battery: battery, size: size)
+            if let alert, case .device(let symbol, let earbuds, let pictures, let battery) = alert.content {
+                device(symbol: symbol, earbuds: earbuds, pictures: pictures, battery: battery, size: size)
                     .id(alert.id)
                     .transition(Self.announce)
                     .accessibilityElement(children: .ignore)
@@ -77,14 +75,16 @@ struct SystemActivityView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// A device arriving, laid out as the Dynamic Island lays out AirPods, by the notch's height as it
-    /// stands for them: the device, three fifths of it tall, in from the end; its battery's ring, a
-    /// little over half of it across, its circle concentric with the notch's rounded end.
-    private func device(symbol: String, pictures: [String], battery: Int?, size: CGFloat) -> some View {
-        let layout = DeviceLayout(height: restingHeight + grow)
+    /// A device arriving, laid out as the Dynamic Island lays out AirPods, by the notch's height: the
+    /// device a little under half of it tall, in from the end; its battery's ring a little over half
+    /// of it across, its circle concentric with the notch's rounded end.
+    private func device(symbol: String, earbuds: Earbuds?, pictures: [String], battery: Int?, size: CGFloat) -> some View {
+        let layout = DeviceLayout(height: restingHeight)
         return HStack(spacing: 0) {
             Group {
-                if let images = DevicePictures.images(pictures) {
+                if let earbuds, let turn = EarbudTurn.cached(earbuds) {
+                    TurningEarbuds(turn: turn, height: layout.picture)
+                } else if let images = DevicePictures.images(pictures) {
                     TurningPictures(images: images, height: layout.picture)
                 } else {
                     TurningSymbol(symbol: symbol, side: layout.picture)
@@ -153,12 +153,6 @@ struct SystemActivityView: View {
         restingHeight - LiveActivityView.inset(island: island) * 2
     }
 
-    /// A device arriving: the notch stands a quarter taller, as the Dynamic Island grows for AirPods.
-    static func grow(for alert: NotchAlert, restingHeight: CGFloat) -> CGFloat {
-        if case .device = alert.content { return (restingHeight * 0.25).rounded() }
-        return 0
-    }
-
     /// How wide each wing must be for an announcement, up to a limit, a little past a song's
     /// announcement's, beyond which a long name scrolls. A device's, with only symbols, is a little
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
@@ -171,10 +165,12 @@ struct SystemActivityView: View {
         let gap = LiveActivityView.cameraGap
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device(_, let pictures, let battery):
+            case .device(_, let earbuds, let pictures, let battery):
                 {
-                    let layout = DeviceLayout(height: restingHeight + grow(for: alert, restingHeight: restingHeight))
-                    let device = DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
+                    let layout = DeviceLayout(height: restingHeight)
+                    let device =
+                        earbuds.flatMap(EarbudTurn.cached).map { TurningEarbuds.width($0, height: layout.picture) }
+                        ?? DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
                     let end = battery == nil ? width("Connected", size, .semibold) + layout.leading : layout.ring + layout.trailing
                     return (layout.leading + device + gap, gap + end)
                 }()
@@ -214,15 +210,61 @@ struct SystemActivityView: View {
         removal: .opacity.animation(.easeOut(duration: 0.12)))
 }
 
-/// Where a device arriving sits, by the height the notch stands at for it, measured from the
-/// iPhone's own: the device 60% of the height tall, 30% of it in from the end; the ring 55% of it
-/// across, as far from the end as from the top and bottom.
+/// Where a device arriving sits, by the notch's height, measured from the iPhone's AirPods in the
+/// Dynamic Island, which stands no taller for them: the device 46% of the height tall, 40% of it in
+/// from the end; the ring 54% of it across, as far from the end as from the top and bottom.
 struct DeviceLayout {
     let height: CGFloat
-    var picture: CGFloat { (height * 0.6).rounded() }
-    var ring: CGFloat { (height * 0.55).rounded() }
-    var leading: CGFloat { (height * 0.3).rounded() }
+    var picture: CGFloat { (height * 0.46).rounded() }
+    var ring: CGFloat { (height * 0.54).rounded() }
+    var leading: CGFloat { (height * 0.4).rounded() }
     var trailing: CGFloat { ((height - ring) / 2).rounded() }
+}
+
+/// AirPods arriving, as the Dynamic Island shows them: the pair, in 3D, growing in as it turns a
+/// full turn, a little past, then settling face on. With Reduce Motion on, it only fades in.
+struct TurningEarbuds: View {
+    let turn: EarbudTurn
+    /// The pair's height, face on.
+    let height: CGFloat
+    @State private var start = Date.now
+    @State private var arrived = false
+    @State private var settled = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let spin = Spring(response: 1, dampingRatio: 0.8)
+    private static let delay = 0.15
+
+    /// The pair's width, face on.
+    static func width(_ turn: EarbudTurn, height: CGFloat) -> CGFloat { turn.rest.width * height / turn.rest.height }
+
+    /// How far round the pair is, a moment after it arrives: from a full turn back to face on.
+    static func degrees(after seconds: TimeInterval) -> Double {
+        spin.value(target: 360.0, time: max(seconds - delay, 0)) - 360
+    }
+
+    var body: some View {
+        let scale = height / turn.rest.height
+        TimelineView(.animation(paused: settled || reduceMotion)) { context in
+            Image(decorative: turn.frame(at: reduceMotion ? 0 : Self.degrees(after: context.date.timeIntervalSince(start))), scale: 1)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: turn.canvas.width * scale, height: turn.canvas.height * scale)
+        }
+        // Laid out face on; turning, it reaches past that, where nothing else is.
+        .offset(x: (turn.canvas.width / 2 - turn.rest.midX) * scale, y: (turn.canvas.height / 2 - turn.rest.midY) * scale)
+        .frame(width: Self.width(turn, height: height), height: height)
+        .scaleEffect(arrived ? 1 : 0.6)
+        .opacity(arrived ? 1 : 0)
+        .onAppear {
+            start = .now
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(Self.delay)) { arrived = true }
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(Self.delay + Self.spin.settlingDuration))
+            settled = true
+        }
+    }
 }
 
 /// A device arriving, as AirPods arrive in the Dynamic Island: its symbol turning in, a full turn and
