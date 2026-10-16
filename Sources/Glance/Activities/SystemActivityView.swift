@@ -70,8 +70,12 @@ struct SystemActivityView: View {
 
     @ViewBuilder private func leading(_ content: NotchAlert.Content, side: CGFloat, size: CGFloat) -> some View {
         switch content {
-        case .device(let symbol, _):
-            TurningSymbol(symbol: symbol, side: side)
+        case .device(let symbol, let pictures, _):
+            if let images = DevicePictures.images(pictures) {
+                TurningPictures(images: images, height: Self.pictureHeight(side))
+            } else {
+                TurningSymbol(symbol: symbol, side: side)
+            }
         case .battery(let title, _):
             Text(title)
                 .font(.system(size: size, weight: .semibold))
@@ -86,7 +90,7 @@ struct SystemActivityView: View {
 
     @ViewBuilder private func trailing(_ content: NotchAlert.Content, side: CGFloat, size: CGFloat) -> some View {
         switch content {
-        case .device(_, let battery):
+        case .device(_, _, let battery):
             if let battery {
                 BatteryRing(percent: battery, side: side)
             } else {
@@ -120,10 +124,15 @@ struct SystemActivityView: View {
         restingHeight - LiveActivityView.inset(island: island) * 2
     }
 
+    /// AirPods' pictures stand a little taller than a symbol's square, as the iPhone's fill its
+    /// island's height.
+    static func pictureHeight(_ side: CGFloat) -> CGFloat { side * 1.2 }
+
     /// How wide each wing must be for an announcement, up to a limit, a little past a song's
     /// announcement's, beyond which a long name scrolls. A device's, with only symbols, is a little
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
     /// wider one.
+    @MainActor
     static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool) -> CGFloat {
         let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
         let size = LiveActivityView.textSize(for: restingHeight)
@@ -131,8 +140,11 @@ struct SystemActivityView: View {
         let gap = LiveActivityView.cameraGap
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device(_, let battery):
-                (edge + side + gap, gap + (battery == nil ? width("Connected", size, .semibold) : side) + edge)
+            case .device(_, let pictures, let battery):
+                (
+                    edge + (DevicePictures.images(pictures).map { TurningPictures.width($0, height: pictureHeight(side)) } ?? side) + gap,
+                    gap + (battery == nil ? width("Connected", size, .semibold) : side) + edge
+                )
             case .battery(let title, let level):
                 (
                     edge + width(title, size, .semibold) + gap,
@@ -191,6 +203,41 @@ private struct TurningSymbol: View {
                 withAnimation(.easeOut(duration: 0.25).delay(0.15)) { shown = true }
                 withAnimation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15)) { turn = 0 }
             }
+    }
+}
+
+/// AirPods arriving, as they do in the Dynamic Island: each earbud spinning in on its own, the left
+/// one first, the two turning opposite ways, then settling face on; headphones turning in whole.
+private struct TurningPictures: View {
+    let images: [NSImage]
+    let height: CGFloat
+    @State private var arrived = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The earbuds overlap a little, as they're pictured side by side.
+    static func overlap(_ height: CGFloat) -> CGFloat { height * 0.1 }
+
+    static func width(_ images: [NSImage], height: CGFloat) -> CGFloat {
+        let widths = images.map { $0.size.height > 0 ? $0.size.width / $0.size.height * height : height }
+        return widths.reduce(0, +) - overlap(height) * CGFloat(max(images.count - 1, 0))
+    }
+
+    var body: some View {
+        HStack(spacing: -Self.overlap(height)) {
+            ForEach(images.indices, id: \.self) { index in
+                Image(nsImage: images[index])
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: height)
+                    .rotation3DEffect(
+                        .degrees(arrived || reduceMotion ? 0 : (index == 0 ? -200 : 200)), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
+                    .scaleEffect(arrived ? 1 : 0.6)
+                    .opacity(arrived ? 1 : 0)
+                    .animation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15 + Double(index) * 0.09), value: arrived)
+            }
+        }
+        .onAppear { arrived = true }
     }
 }
 
