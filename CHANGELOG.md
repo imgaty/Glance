@@ -6,7 +6,7 @@
 
 ## Release 0.2.0
 
-`Released: not yet`
+`Released: 16 October 2026`
 
 ### Tray
 
