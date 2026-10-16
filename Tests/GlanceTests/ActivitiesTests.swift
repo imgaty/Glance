@@ -186,7 +186,7 @@ struct ActivitiesTests {
         #expect(layout.picture == 24)
         #expect(layout.ring == 22)
         // The ring as far from the end as from the top and bottom: concentric with the notch's end.
-        #expect(layout.trailing == 9, "\(layout.trailing) \(layout.ring)")
+        #expect(layout.trailing == 9)
     }
 
     @Test("Time left reads as a clock shows it, and the lengths are named")
