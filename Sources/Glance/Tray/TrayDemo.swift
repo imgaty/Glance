@@ -54,18 +54,19 @@ extension Tray {
         return tray
     }()
 
-    /// One of macOS's own desktop pictures, made small.
+    /// A photo from macOS's own desktop pictures, the Big Sur coast, made small: a real place, as a
+    /// photo kept in the tray would be, rather than one of the abstract ones.
     private static func photo(in folder: URL) -> URL? {
         let pictures = URL(fileURLWithPath: "/System/Library/Desktop Pictures")
+        let photos = [".thumbnails/Big Sur Coastline.heic", ".thumbnails/Big Sur Aerial.heic", ".thumbnails/Catalina Coast.heic"]
         guard
-            let original = ["Sonoma.heic", "iMac Blue.heic", "Mac Blue.heic"].map({ pictures.appending(path: $0) })
-                .first(where: { FileManager.default.fileExists(atPath: $0.path) }),
+            let original = photos.map({ pictures.appending(path: $0) }).first(where: { FileManager.default.fileExists(atPath: $0.path) }),
             let source = CGImageSourceCreateWithURL(original as CFURL, nil),
             let image = CGImageSourceCreateThumbnailAtIndex(
                 source, 0,
                 [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 1200] as CFDictionary)
         else { return nil }
-        let url = folder.appending(path: "Weekend.jpg")
+        let url = folder.appending(path: "Big Sur.jpg")
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
         CGImageDestinationAddImage(destination, image, nil)
         return CGImageDestinationFinalize(destination) ? url : nil
