@@ -502,10 +502,6 @@ private struct SwitchRow: View {
 
 // MARK: - The notch in the pictures
 
-/// The real notch, at the top of a picture of the screen, playing the page's song, as a step shows
-/// it. On the step to try it, it opens and closes as the notch on the screen does; on the lyrics'
-/// step, the pointer shows the waveform opening them, and it can be clicked. The page behind it
-/// holds still, so the tour moves smoothly.
 /// The steps' picture: the notch as a step shows it, rounded and outlined.
 private struct StepPicture: View {
     let scene: NotchScene
@@ -519,31 +515,53 @@ private struct StepPicture: View {
     }
 }
 
+/// The real notch, at the top of a picture of the screen, playing the page's song, as a step shows
+/// it. On the step to try it, it opens and closes as the notch on the screen does; on the layouts'
+/// step, it turns from one layout to the other until one is chosen; on the tray's, a photo is
+/// dragged to it and dropped in the tray. The page behind it holds still, so the tour moves
+/// smoothly.
 private struct NotchScenePicture: View {
     let scene: NotchScene
     @AppStorage(Preferences.musicTrackPop) private var announces = true
     @EnvironmentObject private var nowPlaying: NowPlaying
     @EnvironmentObject private var preview: SettingsPreview
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
+    /// A layout's been chosen below: the picture shows it, rather than turning between them.
+    @State private var chosen = false
 
     var body: some View {
         NotchPreview(
             model: preview.model, display: preview.display, top: preview.top,
             interactive: scene == .tryOpening || scene == .liveActivity, hintsOpening: scene == .tryOpening, still: true,
             // As large as Settings draws it.
-            scaleWidth: PreviewHeader.width
+            scaleWidth: PreviewHeader.width, demo: demo
         )
         // A layout chosen below reshapes the notch in place, as on screen.
-        .onChange(of: layout) { withAnimation(.spring(response: 0.5, dampingFraction: 1)) { preview.model.use(layout) } }
+        .onChange(of: layout) {
+            chosen = true
+            withAnimation(.spring(response: 0.5, dampingFraction: 1)) { preview.model.use(layout) }
+        }
         .task(id: scene) { await play() }
         .task(id: scene == .liveActivity && announces) { await announce() }
     }
 
     /// Takes the notch from how the last step left it to how this one shows it, before your eyes:
     /// closed, to be opened, or open, as it opens on screen.
+    private var demo: NotchDemo? {
+        switch scene {
+        case .layouts: chosen ? nil : .layouts
+        case .tray: .dropInTray
+        case .tryOpening, .liveActivity: nil
+        }
+    }
+
     private func play() async {
         let model = preview.model
         model.songPlaying = true
+        // Left in the other layout by the layouts' step, it's back in the one chosen.
+        if scene != .layouts, model.layout != layout {
+            withAnimation(model.state == .open ? .spring(response: 0.5, dampingFraction: 1) : nil) { model.use(layout) }
+        }
         // The tray's step shows the tray; every other, the player.
         let page: NotchPage = scene == .tray ? .tray : .player
         if model.page != page {
@@ -552,7 +570,10 @@ private struct NotchScenePicture: View {
         switch scene {
         case .tryOpening:
             preview.setInteractive(true, animated: true)
-        case .player, .tray:
+        case .tray:
+            // Closed, for the photo to be dragged to; the drop opens it (see NotchDemoScene).
+            preview.setInteractive(true, animated: true)
+        case .layouts:
             preview.setInteractive(false, animated: true)
             guard model.state != .open else { return }
             try? await Task.sleep(for: .seconds(0.45))

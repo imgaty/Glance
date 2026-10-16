@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 15 October 2026`
+`Created: 11 October 2026` | `Last updated: 16 October 2026`
 
 <br>
 
@@ -76,6 +76,9 @@
 
 - Added Undo, Redo, Delete, Zoom, Bring All to Front and Services to the menu
   bar, and moved Close to a File menu.
+- Added two scenes to the welcome tour's pictures: the player turning between
+  its two layouts until you choose one, and a photo dragged to the notch and
+  dropped in the tray.
 
 <br>
 

@@ -38,12 +38,14 @@ controls, or press ⇧⌘1 in any app to open it.
 Glance has two layouts: one inspired by the iPhone's Dynamic Island, and one
 shaped to better suit the MacBook's proportions.
 
-<img src="./assets/screenshots/player-side.png"
+<img src="./assets/screenshots/layouts.gif"
      width="450"
-     alt="The open notch with the large cover of Paranoid by Black Sabbath on the
-     left and the song's name, progress bar and controls to its right.">
+     alt="The open notch playing Paranoid by Black Sabbath, turning from the
+     layout with a small cover beside the song's name and the controls under
+     them, to the layout with a large cover on the left and the name, progress
+     bar and controls to its right, and back.">
 <br>
-<sub>Showcase of the player with the cover on the side.</sub>
+<sub>Showcase of the two layouts.</sub>
 
 <br>
 
@@ -81,7 +83,8 @@ whenever LRCLIB has timed lyrics for it.
 ### Tray
 
 Drag files onto the notch to keep them close, and find what you copied and your
-screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app to open it.
+screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app, or swipe
+left or right with three fingers on the player, to open it.
 
 <img src="./assets/screenshots/tray.gif"
      width="450"

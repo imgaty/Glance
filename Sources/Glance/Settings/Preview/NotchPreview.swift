@@ -27,6 +27,9 @@ struct NotchPreview: View {
     /// Drawn to the scale a picture this wide would draw it, rather than its own width's: the
     /// welcome tour's pictures, wider, draw the notch as large as Settings' preview does.
     var scaleWidth: CGFloat?
+    /// A scene it plays by itself, round after round; while it plays, the pointer leaves the notch
+    /// be.
+    var demo: NotchDemo?
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.liveActivity) private var liveActivity = true
     @AppStorage(Preferences.openTrigger) private var trigger = OpenTrigger.both
@@ -64,6 +67,9 @@ struct NotchPreview: View {
                     let path = hintPath(proxy.size, geometry)
                     TryItPointer(from: path.from, to: path.to, active: hinting, start: hintStart, trigger: trigger)
                 }
+                if let demo {
+                    NotchDemoScene(demo: demo, model: model, size: proxy.size, geometry: geometry)
+                }
             }
             // The notch answers the pointer showing how, as it answers the real one.
             .task(id: "\(hinting) \(trigger) \(proxy.size.width) \(proxy.size.height)") {
@@ -74,6 +80,7 @@ struct NotchPreview: View {
             // gets the pointer and the clicks.
             .contentShape(Rectangle())
             .onContinuousHover { phase in
+                guard demo == nil else { return }
                 switch phase {
                 case .active(let p):
                     hovering = true
@@ -86,12 +93,13 @@ struct NotchPreview: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { drag in
-                        if !pressing {
+                        if demo == nil, !pressing {
                             pressing = true
                             preview.press(at: drag.startLocation, geometry)
                         }
                     }
                     .onEnded { drag in
+                        guard pressing else { return }
                         pressing = false
                         preview.release(at: drag.location, geometry)
                     })

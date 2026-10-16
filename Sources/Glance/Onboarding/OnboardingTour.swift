@@ -51,11 +51,11 @@ struct OnboardingStep: Identifiable {
 enum NotchScene {
     /// Closed, to be opened right there, as the notch on the screen is.
     case tryOpening
-    /// Open on the player.
-    case player
+    /// Open on the player, turning from one layout to the other until one is chosen.
+    case layouts
     /// Closed, with the cover and the waveform beside the camera, announcing the song now and then.
     case liveActivity
-    /// Open on the tray.
+    /// A photo dragged up to the notch and dropped in the tray, round after round.
     case tray
 }
 
@@ -97,7 +97,7 @@ extension OnboardingFeature {
                     id: "open", title: "Choose How the Notch Opens", scene: .tryOpening,
                     settings: [.openTrigger, .switches([OnboardingSwitch(key: Preferences.haptics, title: "Haptic feedback")])]),
                 OnboardingStep(
-                    id: "look", title: "Choose a Layout and Background", scene: .player, settings: [.look]),
+                    id: "look", title: "Choose a Layout and Background", scene: .layouts, settings: [.look]),
                 OnboardingStep(
                     id: "activity", title: "See What's Playing at a Glance", scene: .liveActivity,
                     settings: [
