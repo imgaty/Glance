@@ -236,7 +236,7 @@ to show what just happened, then goes back to what it showed:
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery |
 | A MacBook's battery at 20%, and again at 10% | `Low Battery`, and its level, in red |
-| AirPods or other headphones connecting | The AirPods themselves in 3D, turning a full turn as they arrive (AirPods Max as macOS pictures them, other headphones their symbol), and their battery as a ring: the lower earbud's |
+| AirPods or other headphones connecting | The AirPods themselves in 3D, turning slowly while they show (AirPods Max as macOS pictures them, other headphones their symbol), and their battery as a ring: the lower earbud's |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring when it tells the Mac |
 | The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
 | The internet lost for a few seconds | `No Internet` |

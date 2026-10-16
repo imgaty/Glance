@@ -218,17 +218,20 @@ struct ActivitiesTests {
         #expect(edges.allSatisfy { $0.value == 1 && edges[[$0.key.y, $0.key.x]] == 1 })
     }
 
-    @Test("AirPods turn a full turn as they arrive, in frames a few degrees apart, and settle face on")
+    @Test("AirPods turn as on a turntable while they show, from face on, in frames a degree or two apart")
     func earbudTurn() throws {
         let turn = try #require(EarbudTurn.render(.pro))
         #expect(turn.frames.count == EarbudTurn.frameCount)
         #expect(CGRect(origin: .zero, size: turn.canvas).insetBy(dx: -1, dy: -1).contains(turn.rest))
         #expect(turn.frame(at: 0) === turn.frames[0])
         #expect(turn.frame(at: -360) === turn.frames[0])
-        #expect(turn.frame(at: 3) === turn.frames[1])
-        #expect(turn.frame(at: -3) === turn.frames[EarbudTurn.frameCount - 1])
-        #expect(TurningEarbuds.degrees(after: 0) == -360)
-        #expect(abs(TurningEarbuds.degrees(after: 5)) < 0.5)
+        let step = 360 / Double(EarbudTurn.frameCount)
+        #expect(turn.frame(at: step) === turn.frames[1])
+        #expect(turn.frame(at: -step) === turn.frames[EarbudTurn.frameCount - 1])
+        #expect(turn.frame(at: 360 + step) === turn.frames[1])
+        #expect(TurningEarbuds.degrees(after: 0) == 0)
+        // A full turn every six seconds, after it grows in.
+        #expect(abs(TurningEarbuds.degrees(after: 6.15) - 360) < 0.001)
     }
 
     @Test("Time left reads as a clock shows it, and the lengths are named")
