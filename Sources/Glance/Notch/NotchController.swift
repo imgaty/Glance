@@ -442,10 +442,14 @@ final class NotchController {
     /// Something the Mac announces: the wings widen to show it, and fold back once it's said.
     private func show(_ alert: NotchAlert?) {
         guard let alert else {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.alert = nil }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) {
+                model.alert = nil
+                model.alertGrow = 0
+            }
             return
         }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            model.alertGrow = SystemActivityView.grow(for: alert, restingHeight: model.closedSize.height)
             model.alertWing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, island: model.island)
             model.alert = alert
         }
