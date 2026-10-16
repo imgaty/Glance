@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 15 October 2026`
+`Created: 11 October 2026` | `Last updated: 16 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -42,6 +42,10 @@ the cover's colors or your Mac's accent color.
 
 While something plays, the closed notch shows its cover and a waveform that
 moves with the music. When a new song starts, its name slides out for a moment.
+As on the iPhone, it also shows the battery charging or running low, headphones
+and accessories connecting, sound going to AirPlay, and the internet lost and
+back, and counts down a timer started from the menu bar. See the
+[User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
 
@@ -80,6 +84,7 @@ Universal Clipboard, isn't kept in the tray.
 ## Roadmap
 
 - [x] `Animated covers`: Apple Music's animated album covers.
+- [x] `More Live Activities`: battery, devices, connectivity and a timer.
 - [x] `Displays without a notch`: a notch or a Dynamic Island on any display.
 - [x] `Now Playing`: whatever is playing, in any app, with its controls.
 - [x] `Shortcuts`: shortcuts to open the player and the tray.
@@ -88,7 +93,7 @@ Universal Clipboard, isn't kept in the tray.
 - [x] `Updates`: check for updates, and install them automatically.
 - [ ] `AI overview`: AI usage and a chat box on the notch.
 - [ ] `Homebrew`: install with `brew install --cask glance`.
-- [ ] `More Live Activities`: connectivity, battery, calls, timers and more.
+- [ ] `Calls`: FaceTime and iPhone calls beside the camera.
 - [ ] `Notarized releases`: open the first time without the extra step.
 
 <br>

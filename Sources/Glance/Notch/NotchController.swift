@@ -96,6 +96,9 @@ final class NotchController {
     private var settingsWatch: AnyCancellable?
     private var songWatch: AnyCancellable?
     private var popTask: Task<Void, Never>?
+    /// What the Mac announces, and the timer, followed into the closed notch.
+    private var alertWatch: AnyCancellable?
+    private var timerWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
     /// A trackpad gesture's direction, settled by its first movement.
@@ -264,6 +267,13 @@ final class NotchController {
             MainActor.assumeIsolated { self?.lostKeys() }
         }
 
+        alertWatch = Activities.shared.$alert.removeDuplicates().sink { [weak self] alert in
+            MainActor.assumeIsolated { self?.show(alert) }
+        }
+        timerWatch = NotchTimer.shared.$state.removeDuplicates().sink { [weak self] state in
+            MainActor.assumeIsolated { self?.show(state) }
+        }
+
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in
             MainActor.assumeIsolated { self?.showActivity(playing) }
@@ -427,6 +437,28 @@ final class NotchController {
     func relayout() {
         guard PlayerLayout.current != model.layout else { return }
         withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.use(PlayerLayout.current) }
+    }
+
+    /// Something the Mac announces: the wings widen to show it, and fold back once it's said.
+    private func show(_ alert: NotchAlert?) {
+        guard let alert else {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.alert = nil }
+            return
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            model.alertWing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, island: model.island)
+            model.alert = alert
+        }
+    }
+
+    /// A timer started, paused or ended: its wings come, or go.
+    private func show(_ timer: NotchTimer.State?) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            if let timer {
+                model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
+            }
+            model.timer = timer
+        }
     }
 
     /// A new song: the closed notch's wings widen for a few seconds to show its title and artist.
@@ -627,6 +659,8 @@ final class NotchController {
     /// drop.
     private func open(on page: NotchPage = .player, forDrop: Bool = false) {
         guard model.state != .open else { return }
+        // A timer that's done has been seen: it stops chiming.
+        NotchTimer.shared.stop(ifDone: true)
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil

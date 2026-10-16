@@ -299,7 +299,7 @@ struct PlayerOptionsTests {
 struct SettingsPaneTests {
     @Test("The sidebar's pages, in order")
     func order() {
-        #expect(SettingsPane.allCases.map(\.title) == ["General", "Appearance", "Music", "Tray", "Opening", "Displays"])
+        #expect(SettingsPane.allCases.map(\.title) == ["General", "Appearance", "Music", "Tray", "Live Activities", "Opening", "Displays"])
     }
 
     @Test("Each page has its own icon", arguments: SettingsPane.allCases)

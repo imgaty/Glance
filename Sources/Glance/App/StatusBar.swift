@@ -56,6 +56,7 @@ final class StatusBarController: NSObject {
         rebuildItem.target = self
         let quit = NSMenuItem(title: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu.autoenablesItems = false
+        menu.delegate = self
         menu.addItem(updatesItem)
         state.canRebuild = BuildInfo.sourceDirectory != nil
         if state.canRebuild { menu.addItem(rebuildItem) }
@@ -90,11 +91,18 @@ final class StatusBarController: NSObject {
                 case .rebuild: rebuild()
                 case .settings: onOpenSettings?()
                 case .quit: NSApp.terminate(nil)
+                case .timer(let minutes): NotchTimer.shared.start(seconds: TimeInterval(minutes * 60))
                 }
             })
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
+    @objc private func startTimer(_ item: NSMenuItem) { NotchTimer.shared.start(seconds: TimeInterval(item.tag * 60)) }
+    @objc private func pauseOrResumeTimer() {
+        NotchTimer.shared.state?.isRunning == true ? NotchTimer.shared.pause() : NotchTimer.shared.resume()
+    }
+    @objc private func cancelTimer() { NotchTimer.shared.cancel() }
+    @objc private func stopTimer() { NotchTimer.shared.stop() }
     @objc private func rebuildFromMenu() { rebuild() }
     @objc private func settingsFromMenu() { onOpenSettings?() }
 
@@ -179,6 +187,45 @@ final class StatusBarController: NSObject {
         let image = NSImage(systemSymbolName: name, accessibilityDescription: description) ?? NSImage()
         return image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)) ?? image
     }
+}
+
+extension StatusBarController: NSMenuDelegate {
+    /// The notch's right-click menu starts with the timer: lengths to start one, or, while one runs,
+    /// Pause and Cancel, or, once it's done, Stop. Made afresh each time it opens.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        for item in menu.items where item.tag == Self.timerItem { menu.removeItem(item) }
+        let timer = NotchTimer.shared
+        var items: [NSMenuItem] = []
+        func add(_ title: String, _ action: Selector) {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            item.target = self
+            items.append(item)
+        }
+        if let state = timer.state {
+            add(state.isRunning ? "Pause Timer" : "Resume Timer", #selector(pauseOrResumeTimer))
+            add("Cancel Timer", #selector(cancelTimer))
+        } else if timer.ringing {
+            add("Stop Timer", #selector(stopTimer))
+        } else {
+            let lengths = NSMenu()
+            for minutes in NotchTimer.presets {
+                let item = lengths.addItem(withTitle: NotchTimer.name(minutes: minutes), action: #selector(startTimer(_:)), keyEquivalent: "")
+                item.target = self
+                item.tag = minutes
+            }
+            let start = NSMenuItem(title: "Start Timer", action: nil, keyEquivalent: "")
+            start.submenu = lengths
+            items.append(start)
+        }
+        items.append(.separator())
+        for (index, item) in items.enumerated() {
+            item.tag = Self.timerItem
+            menu.insertItem(item, at: index)
+        }
+    }
+
+    /// Marks the timer's items in the menu, to take them out before it's made again.
+    private static let timerItem = 7_000
 }
 
 /// The menu bar icon, drawn a frame at a time so macOS still colors it as it does every menu bar
@@ -297,7 +344,10 @@ final class StatusMenuState {
 /// points tall one after another, lit under the pointer with corners as much rounder than the
 /// menu's as they're inset, and a real switch at the top.
 private struct StatusMenu: View {
-    enum Action { case checkForUpdates, rebuild, settings, quit }
+    enum Action {
+        case checkForUpdates, rebuild, settings, quit
+        case timer(minutes: Int)
+    }
 
     let state: StatusMenuState
     let perform: (Action) -> Void
@@ -322,6 +372,8 @@ private struct StatusMenu: View {
             }
             .padding(.horizontal, 9)
             .frame(height: 36)
+            separator
+            StatusTimer(timer: NotchTimer.shared) { perform(.timer(minutes: $0)) }
             separator
             StatusMenuRow(title: "Check for Updates…", enabled: updater.canCheck) { perform(.checkForUpdates) }
             // Only in builds made from source, which know where it is.
@@ -485,4 +537,103 @@ private final class MenuPanel: NSPanel {
     /// isn't the flat look of a window behind.
     @objc func _hasActiveAppearance() -> Bool { true }
     @objc func _hasActiveAppearanceIgnoringKeyFocus() -> Bool { true }
+}
+
+/// The timer, as Control Center lays out a module: its name, and a row of lengths to start one with,
+/// in minutes; while one runs, the time left beside its name, with buttons to pause it and cancel
+/// it; done, a button to stop its chime. Starting one closes the menu, so the notch's countdown
+/// shows.
+private struct StatusTimer: View {
+    @ObservedObject var timer: NotchTimer
+    let start: (Int) -> Void
+    static let lengths = [1, 5, 10, 15, 30, 60]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Text("Timer")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer(minLength: 8)
+                if let state = timer.state {
+                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        Text(NotchTimer.format(state.left(at: context.date)))
+                            .font(.system(size: 13, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.orange)
+                            .opacity(state.isRunning ? 1 : 0.55)
+                    }
+                    StatusRoundButton(symbol: state.isRunning ? "pause.fill" : "play.fill", label: state.isRunning ? "Pause" : "Resume") {
+                        state.isRunning ? timer.pause() : timer.resume()
+                    }
+                    StatusRoundButton(symbol: "xmark", label: "Cancel") { timer.cancel() }
+                } else if timer.ringing {
+                    Text("Done").font(.system(size: 13, weight: .medium)).foregroundStyle(.orange)
+                    StatusRoundButton(symbol: "stop.fill", label: "Stop") { timer.stop() }
+                } else {
+                    Text("minutes").font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+            if timer.state == nil, !timer.ringing {
+                HStack(spacing: 6) {
+                    ForEach(Self.lengths, id: \.self) { minutes in
+                        StatusLengthButton(minutes: minutes) { start(minutes) }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+    }
+}
+
+/// A length to start a timer with, as a small rounded button.
+private struct StatusLengthButton: View {
+    let minutes: Int
+    let action: () -> Void
+    @State private var hovering = false
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Text("\(minutes)")
+            .font(.system(size: 12, weight: .medium).monospacedDigit())
+            .frame(maxWidth: .infinity, minHeight: 24)
+            .background {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(scheme == .dark ? Color.white : Color.black)
+                    .opacity(hovering ? (scheme == .dark ? 0.2 : 0.12) : (scheme == .dark ? 0.1 : 0.06))
+            }
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .onTapGesture(perform: action)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Start a \(NotchTimer.name(minutes: minutes).lowercased()) timer")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { action() }
+    }
+}
+
+/// A small round button with a symbol, as Control Center's modules have.
+private struct StatusRoundButton: View {
+    let symbol: String
+    let label: String
+    let action: () -> Void
+    @State private var hovering = false
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 10, weight: .bold))
+            .frame(width: 24, height: 24)
+            .background {
+                Circle()
+                    .fill(scheme == .dark ? Color.white : Color.black)
+                    .opacity(hovering ? (scheme == .dark ? 0.2 : 0.12) : (scheme == .dark ? 0.1 : 0.06))
+            }
+            .contentShape(Circle())
+            .onHover { hovering = $0 }
+            .onTapGesture(perform: action)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { action() }
+    }
 }

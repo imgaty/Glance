@@ -127,6 +127,13 @@ final class NotchModel: ObservableObject {
     @Published var pop = false
     /// Each wing's width while a new song is announced: just enough for its title and artist.
     @Published var popWing: CGFloat = NotchModel.maxPopWing
+    /// What the Mac announces (see Activities), and each wing's width for it: for a few seconds the
+    /// wings show it, over whatever else they show.
+    @Published var alert: NotchAlert?
+    @Published var alertWing: CGFloat = 0
+    /// A timer counting down beside the camera, and each wing's width for it.
+    @Published var timer: NotchTimer.State?
+    @Published var timerWing: CGFloat = 0
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -214,10 +221,14 @@ final class NotchModel: ObservableObject {
     /// wider while a new song is announced.
     var wing: CGFloat {
         let resting = island ? (closedSize.height * 1.25).rounded() : closedSize.height
-        return activity ? (pop ? max(popWing, resting) : resting) : 0
+        if alert != nil { return max(alertWing, resting) }
+        if activity, pop { return max(popWing, resting) }
+        if timer != nil { return max(timerWing, resting) }
+        return activity ? resting : 0
     }
 
-    /// The closed notch's width, with the activity's wings while music plays.
+    /// The closed notch's width, with the activity's wings while music plays, a timer runs, or
+    /// something's announced.
     var restingWidth: CGFloat { closedSize.width + wing * 2 }
 
     var metrics: NotchMetrics { metrics(for: state) }
@@ -390,7 +401,15 @@ struct NotchView: View {
             LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
                 .frame(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
-                .animation(.easeOut(duration: 0.2)) { $0.opacity(model.activity && !isOpen ? 1 : 0) }
+                .animation(.easeOut(duration: 0.2)) { $0.opacity(model.activity && model.alert == nil && !isOpen ? 1 : 0) }
+            // What the Mac announces, and a timer, in the same wings.
+            SystemActivityView(
+                restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
+                timer: model.activity && model.pop ? nil : model.timer, music: model.activity
+            )
+            .frame(width: m.bodyWidth, height: m.height)
+            .allowsHitTesting(false)
+            .animation(.easeOut(duration: 0.2)) { $0.opacity(isOpen ? 0 : 1) }
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -429,7 +448,7 @@ struct NotchView: View {
                 // There open, or in the closed notch while something plays. Opening and closing, it
                 // comes and goes just as the player's words and buttons do.
                 .animation(isOpen || !model.activity ? Self.fade(in: isOpen) : .spring(response: 0.45, dampingFraction: 0.8)) {
-                    $0.opacity(isOpen || model.activity ? 1 : 0)
+                    $0.opacity(isOpen || (model.activity && model.alert == nil) ? 1 : 0)
                 }
                 .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
@@ -448,7 +467,7 @@ struct NotchView: View {
                 isOpen || !model.activity
                     ? Self.fade(in: isOpen) : model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)
             ) {
-                $0.opacity(isOpen || (model.activity && !model.pop) ? 1 : 0)
+                $0.opacity(isOpen || (model.activity && !model.pop && model.alert == nil && model.timer == nil) ? 1 : 0)
             }
             .modifier(PageFade(hidden: isOpen && onTray))
             .environment(\.notchControls, !trayShown)

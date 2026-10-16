@@ -172,6 +172,7 @@ private struct PageContent: View {
         case .appearance: AppearancePage()
         case .music: MusicPage()
         case .tray: TrayPage()
+        case .activities: ActivitiesPage()
         case .opening: OpeningPage()
         case .displays: DisplaysPage()
         }
@@ -188,7 +189,7 @@ extension EnvironmentValues {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, appearance, music, tray, opening, displays
+    case general, appearance, music, tray, activities, opening, displays
 
     var id: Self { self }
     var title: String {
@@ -197,6 +198,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "Appearance"
         case .music: "Music"
         case .tray: "Tray"
+        case .activities: "Live Activities"
         case .opening: "Opening"
         case .displays: "Displays"
         }
@@ -209,6 +211,8 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "circle.lefthalf.filled"
         case .music: "music.note"
         case .tray: "tray.full.fill"
+        // The Dynamic Island's own shape.
+        case .activities: "capsule.fill"
         case .opening: "cursorarrow.click.2"
         case .displays: "sun.max.fill"
         }
@@ -223,6 +227,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: Color(white: 0.15)
         case .music: .pink
         case .tray: .indigo
+        case .activities: .green
         case .opening: .orange
         case .displays: .blue
         }
@@ -236,6 +241,8 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .music:
             "player apps sources apple music spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics waveform animated art live activity announce songs closed"
         case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look"
+        case .activities:
+            "live activity activities dynamic island battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay wifi wi-fi internet offline online hotspot network timer countdown"
         case .opening: "hover click delay hold haptic feedback gestures swipe trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }
@@ -314,6 +321,7 @@ private enum SystemIcons {
         case .displays: existing(settings.appending(path: "DisplaysExt.appex"))
         case .music: described(pane, symbol: "music.note", color: "Red")
         case .tray: described(pane, symbol: "tray.full.fill", color: "Indigo")
+        case .activities: described(pane, symbol: "capsule.fill", color: "Green")
         case .opening: described(pane, symbol: "cursorarrow.click.2", color: "Orange")
         }
     }

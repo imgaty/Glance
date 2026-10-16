@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.servicesProvider = trayService
         NSUpdateDynamicServices()
         trayService.start()
+        Activities.shared.start()
         NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
         NotchSwipes.shared.start()
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
@@ -176,6 +177,10 @@ enum Preferences {
             trayClipboard: true,
             trayClipboardKeep: ClipboardKeep.eightHours.rawValue,
             trayScreenshots: true,
+            activityCharging: true,
+            activityLowBattery: true,
+            activityDevices: true,
+            activityConnectivity: true,
             swipeToSwitch: true,
         ])
     }
@@ -256,6 +261,12 @@ enum Preferences {
     static let trayScreenshots = "trayScreenshots"
     /// Apps whose copies are never kept, comma separated (see TrayApps).
     static let trayIgnoredApps = "trayIgnoredApps"
+    /// What the Mac announces beside the camera (see Activities): plugged in, low on battery, a
+    /// device connecting or the sound going to AirPlay, and the internet lost and back.
+    static let activityCharging = "activityCharging"
+    static let activityLowBattery = "activityLowBattery"
+    static let activityDevices = "activityDevices"
+    static let activityConnectivity = "activityConnectivity"
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"

@@ -1,0 +1,175 @@
+//
+//  ActivitiesTests.swift
+//  GlanceTests
+//
+//  Created by Gaty on 16/10/2026.
+//
+
+import AppKit
+import CoreAudio
+import Foundation
+import Testing
+
+@testable import Glance
+
+/// What the Mac announces beside the camera, and the timer: what's worth announcing, in turn, and
+/// how wide the notch grows for it.
+@MainActor
+@Suite("Live activities", .serialized)
+struct ActivitiesTests {
+    private func alert(_ kind: NotchAlert.Kind, _ title: String = "Title") -> NotchAlert {
+        NotchAlert(kind: kind, title: title)
+    }
+
+    @Test("Announcements show one at a time, in turn; the same kind again takes its place in line")
+    func queue() {
+        let activities = Activities()
+        activities.post(alert(.charging))
+        #expect(activities.alert?.kind == .charging)
+        activities.post(alert(.device, "AirPods"))
+        activities.post(alert(.online))
+        activities.post(alert(.device, "Magic Mouse"))
+        #expect(activities.alert?.kind == .charging)
+        #expect(activities.waiting.map(\.title) == ["Magic Mouse", "Title"])
+        // A short line: the oldest of too many goes.
+        activities.post(alert(.offline))
+        activities.post(alert(.hotspot))
+        #expect(activities.waiting.count == 3)
+        #expect(activities.waiting.first?.kind == .online)
+    }
+
+    @Test("One that stays shows until it's dismissed")
+    func staying() {
+        let activities = Activities()
+        activities.post(NotchAlert(kind: .timerDone, title: "Timer", stays: true))
+        activities.dismiss(.charging)
+        #expect(activities.alert?.kind == .timerDone)
+        activities.dismiss(.timerDone)
+        #expect(activities.alert == nil)
+    }
+
+    @Test("Plugged in is announced with the level; running low, at 20% and again at 10%")
+    func battery() {
+        typealias Reading = BatteryWatch.Reading
+        let charging = BatteryWatch.alert(from: Reading(percent: 54, onPower: false, charging: false), to: Reading(percent: 54, onPower: true, charging: true))
+        #expect(charging?.kind == .charging)
+        #expect(charging?.title == "Charging")
+        #expect(charging?.detail == "54%")
+        #expect(charging?.battery == BatteryLevel(percent: 54, charging: true))
+        // Held at 80% by Optimized Charging: plugged in, not charging.
+        let held = BatteryWatch.alert(from: Reading(percent: 80, onPower: false, charging: false), to: Reading(percent: 80, onPower: true, charging: false))
+        #expect(held?.title == "Plugged In")
+        #expect(BatteryWatch.alert(from: Reading(percent: 80, onPower: true, charging: false), to: Reading(percent: 80, onPower: false, charging: false)) == nil)
+        func low(_ from: Int, _ to: Int) -> Bool {
+            BatteryWatch.alert(from: Reading(percent: from, onPower: false, charging: false), to: Reading(percent: to, onPower: false, charging: false))?
+                .kind == .lowBattery
+        }
+        #expect(low(21, 20))
+        #expect(low(25, 19))
+        #expect(!low(20, 19))
+        #expect(low(11, 10))
+        #expect(!low(10, 9))
+        #expect(!low(30, 29))
+    }
+
+    @Test("The connection: back after it was said to be lost, and onto a hotspot; a blip says nothing")
+    func network() {
+        typealias Link = NetworkWatch.Link
+        let wifi = Link(online: true, kind: .wifi, hotspot: false)
+        let wired = Link(online: true, kind: .wired, hotspot: false)
+        let hotspot = Link(online: true, kind: .wifi, hotspot: true)
+        let none = Link(online: false, kind: .other, hotspot: false)
+        #expect(NetworkWatch.change(from: none, to: wifi, saidOffline: true) == .online(.wifi))
+        #expect(NetworkWatch.change(from: none, to: wired, saidOffline: true) == .online(.wired))
+        #expect(NetworkWatch.change(from: none, to: wifi, saidOffline: false) == nil)
+        #expect(NetworkWatch.change(from: wifi, to: hotspot, saidOffline: false) == .hotspot)
+        #expect(NetworkWatch.change(from: none, to: hotspot, saidOffline: true) == .hotspot)
+        #expect(NetworkWatch.change(from: hotspot, to: hotspot, saidOffline: false) == nil)
+        #expect(NetworkWatch.change(from: wifi, to: none, saidOffline: false) == nil)
+        #expect(NetworkWatch.alert(for: .offline).title == "Offline")
+        #expect(NetworkWatch.alert(for: .online(.wired)).title == "Ethernet")
+    }
+
+    @Test("Accessories are named by what they are; headphones' own buttons aren't announced twice")
+    func accessories() {
+        #expect(DeviceWatch.symbol(product: "Magic Keyboard with Touch ID", usagePage: 1, usage: 6) == "keyboard")
+        #expect(DeviceWatch.symbol(product: "Magic Mouse", usagePage: 1, usage: 2) == "magicmouse")
+        #expect(DeviceWatch.symbol(product: "Magic Trackpad", usagePage: 1, usage: 2) == "rectangle.and.hand.point.up.left")
+        #expect(DeviceWatch.symbol(product: "MX Master 3S", usagePage: 1, usage: 2) == "computermouse")
+        #expect(DeviceWatch.symbol(product: "DualSense Wireless Controller", usagePage: 1, usage: 5) == "gamecontroller")
+        #expect(DeviceWatch.symbol(product: "Hilário's AirPods Pro", usagePage: 12, usage: 1) == nil)
+        let mouse = DeviceWatch.alert(name: "Magic Mouse", symbol: "magicmouse", battery: 15)
+        #expect(mouse.detail == "15%")
+        #expect(mouse.detailTint == .red)
+        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").detail == "Connected")
+        #expect(DeviceWatch.shortName("Hilário\u{2019}s AirPods Pro") == "AirPods Pro")
+        #expect(DeviceWatch.shortName("Sam's Magic Keyboard") == "Magic Keyboard")
+        #expect(DeviceWatch.shortName("MX Master 3S") == "MX Master 3S")
+        #expect(DeviceWatch.isBluetooth(kAudioDeviceTransportTypeBluetoothLE))
+        #expect(!DeviceWatch.isBluetooth(kAudioDeviceTransportTypeAirPlay))
+    }
+
+    @Test("A timer counts down, pauses, resumes and cancels; done, it says so until it's stopped")
+    func timer() {
+        let activities = Activities()
+        let timer = NotchTimer(activities: activities, sound: nil)
+        timer.start(seconds: 300)
+        #expect(timer.state?.isRunning == true)
+        #expect(abs((timer.state?.left() ?? 0) - 300) < 1)
+        timer.pause()
+        #expect(timer.state?.isRunning == false)
+        #expect(abs((timer.state?.left() ?? 0) - 300) < 1)
+        timer.resume()
+        #expect(timer.state?.isRunning == true)
+        timer.cancel()
+        #expect(timer.state == nil)
+        timer.start(seconds: 60)
+        timer.done()
+        #expect(timer.state == nil)
+        #expect(timer.ringing)
+        #expect(activities.alert?.kind == .timerDone)
+        // Opening the notch stops only a timer that's done.
+        timer.start(seconds: 60)
+        timer.stop(ifDone: true)
+        #expect(timer.state != nil)
+        timer.done()
+        timer.stop(ifDone: true)
+        #expect(!timer.ringing)
+        #expect(activities.alert == nil)
+    }
+
+    @Test("Time left reads as a clock shows it, and the lengths are named")
+    func timerText() {
+        #expect(NotchTimer.format(59) == "0:59")
+        #expect(NotchTimer.format(299.2) == "5:00")
+        #expect(NotchTimer.format(3725) == "1:02:05")
+        #expect(NotchTimer.format(0) == "0:00")
+        #expect(NotchTimer.name(minutes: 1) == "1 Minute")
+        #expect(NotchTimer.name(minutes: 15) == "15 Minutes")
+        #expect(NotchTimer.name(minutes: 60) == "1 Hour")
+    }
+
+    @Test("The wings widen for an announcement over a song's, and for a timer, as far as their words need")
+    func wings() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        let resting = model.closedSize.height
+        #expect(model.wing == 0)
+        model.activity = true
+        #expect(model.wing == resting)
+        model.timer = .running(until: .now + 300, total: 300)
+        model.timerWing = SystemActivityView.wing(for: model.timer!, restingHeight: resting, island: false)
+        #expect(model.wing == model.timerWing)
+        model.pop = true
+        model.popWing = 120
+        #expect(model.wing == 120)
+        let alert = NotchAlert(kind: .device, symbol: "airpods.pro", title: "Hilário's AirPods Pro", detail: "Connected")
+        model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, island: false)
+        model.alert = alert
+        #expect(model.wing == model.alertWing)
+        #expect(model.alertWing > resting && model.alertWing <= SystemActivityView.maxWing)
+        // An hour or more takes more room than minutes.
+        let minutes = SystemActivityView.wing(for: .running(until: .now, total: 300), restingHeight: resting, island: false)
+        let hours = SystemActivityView.wing(for: .running(until: .now, total: 3_700), restingHeight: resting, island: false)
+        #expect(hours > minutes)
+    }
+}
