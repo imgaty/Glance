@@ -8,25 +8,34 @@
 import AppKit
 import SwiftUI
 
-/// A moment the Mac announces beside the camera, as the iPhone's Dynamic Island does: plugged in,
-/// low on battery, headphones or a keyboard connecting, the sound going to AirPlay, the internet
-/// lost or back, a timer done. It takes the closed notch's sides over for a few seconds, then
-/// whatever was there comes back.
+/// A moment the Mac announces beside the camera, drawn as the iPhone's Dynamic Island draws its
+/// own: plugged in, low on battery, AirPods or a keyboard connecting, the sound going to AirPlay, the
+/// internet lost or back, a timer done. It takes the closed notch's sides over for a few seconds,
+/// then whatever was there comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
         case charging, lowBattery, device, output, offline, online, hotspot, timerDone
     }
 
+    /// What shows on either side of the camera.
+    enum Content: Equatable {
+        /// A device connecting, as AirPods do: its symbol turning in on the left, its battery as a
+        /// ring on the right, when it tells it.
+        case device(symbol: String, battery: Int?)
+        /// The Mac's battery: a word on the left, its level and a battery on the right.
+        case battery(title: String, level: BatteryLevel)
+        /// A state, as Silent Mode and a Focus are shown: a symbol in its color on the left, a word
+        /// or a name on the right.
+        case status(symbol: String, tint: Color, text: String)
+        /// A timer that's done: its symbol, shaking, and a way to stop it.
+        case timerDone
+    }
+
     let id = UUID()
     let kind: Kind
-    /// Beside the camera on the left: a symbol, in its color, then a title.
-    var symbol: String?
-    var tint: Color = .white
-    var title: String
-    /// On the right: a few words, or a battery's level.
-    var detail: String?
-    var detailTint: Color = .white.opacity(0.6)
-    var battery: BatteryLevel?
+    let content: Content
+    /// What VoiceOver says of it.
+    let spoken: String
     /// How long it shows; one that stays shows until it's dismissed.
     var seconds: Double = 3
     var stays = false
@@ -38,6 +47,9 @@ struct NotchAlert: Identifiable, Equatable {
 struct BatteryLevel: Equatable {
     var percent: Int
     var charging: Bool
+
+    /// Green, or red at 20% and below, charging or not, as the iPhone's.
+    var color: Color { percent <= 20 ? .red : .green }
 }
 
 /// Every display's notch shows what's announced, one thing at a time, in turn: each waits for the
@@ -92,6 +104,10 @@ final class Activities: ObservableObject {
 
     private func show(_ alert: NotchAlert) {
         self.alert = alert
+        // Said to VoiceOver too, which can't see the notch change.
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: alert.spoken, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         shownTask?.cancel()
         guard !alert.stays else { return }
         shownTask = Task { [weak self] in

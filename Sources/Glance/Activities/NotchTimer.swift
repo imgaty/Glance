@@ -101,9 +101,7 @@ final class NotchTimer: ObservableObject {
         finish?.cancel()
         state = nil
         ringing = true
-        activities.post(
-            NotchAlert(
-                kind: .timerDone, symbol: "timer", tint: .orange, title: "Timer", detail: "Done", detailTint: .orange, stays: true))
+        activities.post(NotchAlert(kind: .timerDone, content: .timerDone, spoken: "Timer done", stays: true))
         chime?.cancel()
         guard let sound else { return }
         chime = Task { [weak self] in

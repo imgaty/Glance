@@ -234,14 +234,16 @@ to show what just happened, then goes back to what it showed:
 
 | Moment | What shows |
 | --- | --- |
-| Plugging in a MacBook | `Charging` and the battery's level, in green |
-| A MacBook's battery at 20%, and again at 10% | `Low Battery` and its level, in red |
-| Headphones or AirPods connecting | Their name and symbol |
-| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its name, and its battery when it tells the Mac |
-| The sound going to an AirPlay speaker or TV | Its name, and `AirPlay` |
-| The internet lost for a few seconds | `Offline` |
-| The internet back after that | `Wi-Fi` or `Ethernet`, and `Connected` |
-| Joining an iPhone's Personal Hotspot | `Personal Hotspot` |
+| Plugging in a MacBook | `Charging`, and the battery's level beside a battery |
+| A MacBook's battery at 20%, and again at 10% | `Low Battery`, and its level, in red |
+| AirPods or other headphones connecting | Their symbol turning in, and their battery as a ring: the lower earbud's, for AirPods |
+| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring when it tells the Mac |
+| The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
+| The internet lost for a few seconds | `No Internet` |
+| The internet back after that | Wi-Fi's or Ethernet's symbol, and `Connected` |
+| Joining an iPhone's Personal Hotspot | `Hotspot` |
+
+Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 
 What's connected when Glance starts, or reconnects as the Mac wakes, isn't
 announced. Turn each of these off in **Settings > Live Activities**.
@@ -250,9 +252,9 @@ announced. Turn each of these off in **Settings > Live Activities**.
 
 Start a timer from Glance's menu in the menu bar, from the notch's right-click
 menu, or from **Settings > Live Activities**. It counts down beside the
-camera, next to the cover while something plays. When it's done, the notch
-says so and chimes until you open or click the notch, or stop it from the menu.
-Pause, resume and cancel it from the same menus.
+camera, next to the cover while something plays. When it's done, its symbol
+shakes beside `Stop`, and it chimes until you open or click the notch, or stop
+it from the menu. Pause, resume and cancel it from the same menus.
 
 <br>
 

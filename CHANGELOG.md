@@ -12,9 +12,9 @@
 
 - Added charging and low battery announcements beside the camera, with the
   battery's level, on MacBooks.
-- Added headphones, AirPods, keyboards, mice, trackpads and game controllers
-  announced as they connect, with their battery when they tell it, and sound
-  going to AirPlay.
+- Added AirPods, headphones, keyboards, mice, trackpads and game controllers
+  announced as they connect, as the iPhone shows AirPods: their symbol turning
+  in beside their battery as a ring. And sound going to AirPlay.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera and chiming when it's done.

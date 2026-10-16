@@ -18,7 +18,7 @@ import Testing
 @Suite("Live activities", .serialized)
 struct ActivitiesTests {
     private func alert(_ kind: NotchAlert.Kind, _ title: String = "Title") -> NotchAlert {
-        NotchAlert(kind: kind, title: title)
+        NotchAlert(kind: kind, content: .status(symbol: "wifi", tint: .blue, text: title), spoken: title)
     }
 
     @Test("Announcements show one at a time, in turn; the same kind again takes its place in line")
@@ -30,7 +30,7 @@ struct ActivitiesTests {
         activities.post(alert(.online))
         activities.post(alert(.device, "Magic Mouse"))
         #expect(activities.alert?.kind == .charging)
-        #expect(activities.waiting.map(\.title) == ["Magic Mouse", "Title"])
+        #expect(activities.waiting.map(\.spoken) == ["Magic Mouse", "Title"])
         // A short line: the oldest of too many goes.
         activities.post(alert(.offline))
         activities.post(alert(.hotspot))
@@ -41,7 +41,7 @@ struct ActivitiesTests {
     @Test("One that stays shows until it's dismissed")
     func staying() {
         let activities = Activities()
-        activities.post(NotchAlert(kind: .timerDone, title: "Timer", stays: true))
+        activities.post(NotchAlert(kind: .timerDone, content: .timerDone, spoken: "Timer done", stays: true))
         activities.dismiss(.charging)
         #expect(activities.alert?.kind == .timerDone)
         activities.dismiss(.timerDone)
@@ -53,12 +53,14 @@ struct ActivitiesTests {
         typealias Reading = BatteryWatch.Reading
         let charging = BatteryWatch.alert(from: Reading(percent: 54, onPower: false, charging: false), to: Reading(percent: 54, onPower: true, charging: true))
         #expect(charging?.kind == .charging)
-        #expect(charging?.title == "Charging")
-        #expect(charging?.detail == "54%")
-        #expect(charging?.battery == BatteryLevel(percent: 54, charging: true))
+        #expect(charging?.content == .battery(title: "Charging", level: BatteryLevel(percent: 54, charging: true)))
+        #expect(charging?.spoken == "Charging, 54 percent")
         // Held at 80% by Optimized Charging: plugged in, not charging.
         let held = BatteryWatch.alert(from: Reading(percent: 80, onPower: false, charging: false), to: Reading(percent: 80, onPower: true, charging: false))
-        #expect(held?.title == "Plugged In")
+        #expect(held?.content == .battery(title: "Plugged In", level: BatteryLevel(percent: 80, charging: false)))
+        // Red at 20% and below, charging or not, as the iPhone's.
+        #expect(BatteryLevel(percent: 20, charging: true).color == .red)
+        #expect(BatteryLevel(percent: 21, charging: false).color == .green)
         #expect(BatteryWatch.alert(from: Reading(percent: 80, onPower: true, charging: false), to: Reading(percent: 80, onPower: false, charging: false)) == nil)
         func low(_ from: Int, _ to: Int) -> Bool {
             BatteryWatch.alert(from: Reading(percent: from, onPower: false, charging: false), to: Reading(percent: to, onPower: false, charging: false))?
@@ -86,8 +88,10 @@ struct ActivitiesTests {
         #expect(NetworkWatch.change(from: none, to: hotspot, saidOffline: true) == .hotspot)
         #expect(NetworkWatch.change(from: hotspot, to: hotspot, saidOffline: false) == nil)
         #expect(NetworkWatch.change(from: wifi, to: none, saidOffline: false) == nil)
-        #expect(NetworkWatch.alert(for: .offline).title == "Offline")
-        #expect(NetworkWatch.alert(for: .online(.wired)).title == "Ethernet")
+        #expect(NetworkWatch.alert(for: .offline).content == .status(symbol: "wifi.slash", tint: .red, text: "No Internet"))
+        #expect(NetworkWatch.alert(for: .online(.wired)).content == .status(symbol: "network", tint: .blue, text: "Connected"))
+        #expect(NetworkWatch.alert(for: .online(.wired)).spoken == "Ethernet connected")
+        #expect(NetworkWatch.alert(for: .hotspot).content == .status(symbol: "personalhotspot", tint: .green, text: "Hotspot"))
     }
 
     @Test("Accessories are named by what they are; headphones' own buttons aren't announced twice")
@@ -99,14 +103,36 @@ struct ActivitiesTests {
         #expect(DeviceWatch.symbol(product: "DualSense Wireless Controller", usagePage: 1, usage: 5) == "gamecontroller")
         #expect(DeviceWatch.symbol(product: "Hilário's AirPods Pro", usagePage: 12, usage: 1) == nil)
         let mouse = DeviceWatch.alert(name: "Magic Mouse", symbol: "magicmouse", battery: 15)
-        #expect(mouse.detail == "15%")
-        #expect(mouse.detailTint == .red)
-        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").detail == "Connected")
+        #expect(mouse.content == .device(symbol: "magicmouse", battery: 15))
+        #expect(mouse.spoken == "Magic Mouse connected, 15 percent")
+        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", battery: nil))
+        let airPlay = DeviceWatch.alert(name: "Living Room", symbol: "airplay.audio", kind: .output)
+        #expect(airPlay.content == .status(symbol: "airplay.audio", tint: .blue, text: "Living Room"))
         #expect(DeviceWatch.shortName("Hilário\u{2019}s AirPods Pro") == "AirPods Pro")
         #expect(DeviceWatch.shortName("Sam's Magic Keyboard") == "Magic Keyboard")
         #expect(DeviceWatch.shortName("MX Master 3S") == "MX Master 3S")
         #expect(DeviceWatch.isBluetooth(kAudioDeviceTransportTypeBluetoothLE))
         #expect(!DeviceWatch.isBluetooth(kAudioDeviceTransportTypeAirPlay))
+    }
+
+    @Test("AirPods' battery and model, from System Information's report: the lower earbud's level")
+    func bluetoothReport() throws {
+        let report = Data(
+            """
+            {"SPBluetoothDataType":[{"controller_properties":{},"device_connected":[{"Airpods Pro":{"device_batteryLevelCase":"42%",
+            "device_batteryLevelLeft":"31%","device_batteryLevelRight":"39%","device_minorType":"Headphones","device_productID":"0x2024",
+            "device_vendorID":"0x004C"}},{"Keychron Q1 Max":{"device_batteryLevelMain":"80%","device_minorType":"Keyboard"}}],
+            "device_not_connected":[{"iPad":{}}]}]}
+            """.utf8)
+        let connected = DeviceWatch.connected(in: report)
+        #expect(connected["airpods pro"] == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024))
+        #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil))
+        #expect(connected["ipad"] == nil)
+        #expect(DeviceWatch.connected(in: Data("not json".utf8)).isEmpty)
+        // As macOS names the models.
+        #expect(DeviceWatch.symbol(product: 0x2024) == "airpods.pro")
+        #expect(DeviceWatch.symbol(product: 8223) == "airpods.max")
+        #expect(DeviceWatch.symbol(product: 0x0001) == nil)
     }
 
     @Test("A timer counts down, pauses, resumes and cancels; done, it says so until it's stopped")
@@ -162,7 +188,7 @@ struct ActivitiesTests {
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
-        let alert = NotchAlert(kind: .device, symbol: "airpods.pro", title: "Hilário's AirPods Pro", detail: "Connected")
+        let alert = NotchAlert(kind: .device, content: .device(symbol: "airpods.pro", battery: 31), spoken: "AirPods Pro connected")
         model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, island: false)
         model.alert = alert
         #expect(model.wing == model.alertWing)

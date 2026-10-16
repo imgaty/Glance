@@ -77,16 +77,22 @@ final class NetworkWatch {
         Activities.shared.post(Self.alert(for: change))
     }
 
+    /// As Silent Mode is shown: a symbol in its color, and a word. Wi-Fi in the blue Control Center
+    /// lights it with, a hotspot in its green.
     static func alert(for change: Change) -> NotchAlert {
         switch change {
         case .offline:
-            NotchAlert(kind: .offline, symbol: "wifi.slash", tint: .red, title: "Offline", detail: "No Internet", seconds: 4)
+            NotchAlert(
+                kind: .offline, content: .status(symbol: "wifi.slash", tint: .red, text: "No Internet"), spoken: "No internet connection",
+                seconds: 4)
         case .online(let kind):
             NotchAlert(
-                kind: .online, symbol: kind == .wired ? "network" : "wifi", tint: .green,
-                title: kind == .wired ? "Ethernet" : kind == .wifi ? "Wi-Fi" : "Online", detail: "Connected")
+                kind: .online, content: .status(symbol: kind == .wired ? "network" : "wifi", tint: .blue, text: "Connected"),
+                spoken: kind == .wired ? "Ethernet connected" : kind == .wifi ? "Wi-Fi connected" : "Connected to the internet")
         case .hotspot:
-            NotchAlert(kind: .hotspot, symbol: "personalhotspot", tint: .green, title: "Personal Hotspot", detail: "Connected")
+            NotchAlert(
+                kind: .hotspot, content: .status(symbol: "personalhotspot", tint: .green, text: "Hotspot"),
+                spoken: "Connected to Personal Hotspot")
         }
     }
 }
