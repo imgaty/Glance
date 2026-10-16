@@ -231,7 +231,8 @@ private struct TurningPictures: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(height: height)
                     .rotation3DEffect(
-                        .degrees(arrived || reduceMotion ? 0 : (index == 0 ? -200 : 200)), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
+                        .degrees(arrived || reduceMotion ? 0 : (index == 0 ? -200 : 200)), axis: (x: 0, y: 1, z: 0), perspective: 0.45
+                    )
                     .scaleEffect(arrived ? 1 : 0.6)
                     .opacity(arrived ? 1 : 0)
                     .animation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15 + Double(index) * 0.09), value: arrived)
