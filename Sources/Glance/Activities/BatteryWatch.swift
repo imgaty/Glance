@@ -9,9 +9,9 @@ import Foundation
 import IOKit.ps
 import SwiftUI
 
-/// A MacBook's battery, as the iPhone's Dynamic Island shows its own: plugged in, its level in
-/// green as it charges; running low, at 20% and again at 10%, in red. A Mac without a battery has
-/// nothing to say.
+/// A MacBook's battery, as the iPhone's Dynamic Island shows its own: plugged in, Charging and its
+/// level beside a battery; running low, at 20% and again at 10%, Low Battery. Green, or red at 20%
+/// and below. A Mac without a battery has nothing to say.
 @MainActor
 final class BatteryWatch {
     /// The battery as last read.
@@ -55,15 +55,15 @@ final class BatteryWatch {
     /// What's worth saying about the battery going from one reading to the next: plugged in, or
     /// running down past a warning.
     static func alert(from old: Reading, to new: Reading) -> NotchAlert? {
-        let battery = BatteryLevel(percent: new.percent, charging: new.charging)
+        let level = BatteryLevel(percent: new.percent, charging: new.charging)
         if new.onPower, !old.onPower {
-            return NotchAlert(
-                kind: .charging, title: new.charging ? "Charging" : "Plugged In", detail: "\(new.percent)%", detailTint: .green,
-                battery: battery)
+            let title = new.charging ? "Charging" : "Plugged In"
+            return NotchAlert(kind: .charging, content: .battery(title: title, level: level), spoken: "\(title), \(new.percent) percent")
         }
         if !new.onPower, warnings.contains(where: { new.percent <= $0 && old.percent > $0 }) {
             return NotchAlert(
-                kind: .lowBattery, title: "Low Battery", detail: "\(new.percent)%", detailTint: .red, battery: battery, seconds: 4)
+                kind: .lowBattery, content: .battery(title: "Low Battery", level: level), spoken: "Low battery, \(new.percent) percent",
+                seconds: 4)
         }
         return nil
     }

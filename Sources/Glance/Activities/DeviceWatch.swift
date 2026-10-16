@@ -9,12 +9,14 @@ import AppKit
 import CoreAudio
 import IOKit
 import IOKit.hid
+import UniformTypeIdentifiers
 
-/// Devices connecting, as the iPhone's Dynamic Island shows AirPods connecting: headphones and
-/// speakers over Bluetooth, as Core Audio sees them arrive; keyboards, mice, trackpads and game
-/// controllers over Bluetooth, as the Mac's list of devices sees them, with their battery when they
-/// tell it; and the sound going to an AirPlay speaker or TV. Neither needs a permission. What's
-/// connected as Glance starts, or reconnects as the Mac wakes, isn't announced.
+/// Devices connecting, as the iPhone's Dynamic Island shows AirPods connecting, their symbol
+/// turning in beside their battery: headphones and speakers over Bluetooth, as Core Audio sees them
+/// arrive, by their model and battery as System Information reports them; keyboards, mice,
+/// trackpads and game controllers over Bluetooth, as the Mac's list of devices sees them; and the
+/// sound going to an AirPlay speaker or TV. None of it needs a permission. What's connected as
+/// Glance starts, or reconnects as the Mac wakes, isn't announced.
 @MainActor
 final class DeviceWatch {
     /// Sound devices there are, by ID.
@@ -45,7 +47,18 @@ final class DeviceWatch {
         let now = AudioOutput.outputs()
         let arrived = now.filter { !outputs.contains($0.id) && Self.isBluetooth($0.transport) }
         outputs = Set(now.map(\.id))
-        for device in arrived { announce(device.name, symbol: device.symbol) }
+        for device in arrived {
+            Task { [weak self] in
+                // Its battery, which AirPods tell a moment after they connect.
+                var info = await Self.bluetooth(named: device.name)
+                if info?.battery == nil {
+                    try? await Task.sleep(for: .seconds(1.5))
+                    info = await Self.bluetooth(named: device.name) ?? info
+                }
+                let symbol = info?.product.flatMap(Self.symbol(product:)) ?? device.symbol
+                self?.announce(device.name, symbol: symbol, battery: info?.battery)
+            }
+        }
     }
 
     /// To AirPlay: the speaker or TV the sound now plays on.
@@ -55,7 +68,7 @@ final class DeviceWatch {
         defaultOutput = id
         guard let device = AudioOutput.outputs().first(where: { $0.id == id }), device.transport == kAudioDeviceTransportTypeAirPlay
         else { return }
-        announce(device.name, symbol: "airplay.audio", detail: "AirPlay", kind: .output)
+        announce(device.name, symbol: "airplay.audio", kind: .output)
     }
 
     static func isBluetooth(_ transport: UInt32) -> Bool {
@@ -91,8 +104,10 @@ final class DeviceWatch {
             IOObjectRetain(entry)
             Task { [weak self] in
                 try? await Task.sleep(for: .seconds(1.5))
-                let battery = Self.battery(of: entry)
+                var battery = Self.battery(of: entry)
                 IOObjectRelease(entry)
+                // Others tell System Information instead.
+                if battery == nil { battery = await Self.bluetooth(named: accessory.name)?.battery }
                 self?.announce(accessory.name, symbol: accessory.symbol, battery: battery)
             }
         }
@@ -134,16 +149,90 @@ final class DeviceWatch {
         return (value as? Int).flatMap { (0...100).contains($0) ? $0 : nil }
     }
 
+    // MARK: Bluetooth's own report
+
+    /// What System Information reports of a connected Bluetooth device, by its name: its battery,
+    /// the lower of two earbuds', and its model, by product ID. It asks the Bluetooth service, which
+    /// needs no permission of Glance's; it takes a moment, so it's never on the main thread.
+    nonisolated static func bluetooth(named name: String) async -> BluetoothInfo? {
+        await Task.detached(priority: .utility) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
+            process.arguments = ["SPBluetoothDataType", "-json"]
+            let output = Pipe()
+            process.standardOutput = output
+            process.standardError = FileHandle.nullDevice
+            guard (try? process.run()) != nil else { return nil }
+            let data = output.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            return connected(in: data)[name.lowercased()]
+        }.value
+    }
+
+    struct BluetoothInfo: Equatable, Sendable {
+        var battery: Int?
+        var product: Int?
+    }
+
+    /// Each connected device in System Information's report, by its name in lowercase.
+    nonisolated static func connected(in report: Data) -> [String: BluetoothInfo] {
+        guard let json = try? JSONSerialization.jsonObject(with: report) as? [String: Any],
+            let controllers = json["SPBluetoothDataType"] as? [[String: Any]]
+        else { return [:] }
+        var found: [String: BluetoothInfo] = [:]
+        for devices in controllers.compactMap({ $0["device_connected"] as? [[String: [String: Any]]] }) {
+            for device in devices {
+                for (name, info) in device {
+                    func percent(_ key: String) -> Int? {
+                        (info[key] as? String).flatMap { Int($0.trimmingCharacters(in: CharacterSet(charactersIn: "% "))) }
+                    }
+                    let buds = [percent("device_batteryLevelLeft"), percent("device_batteryLevelRight")].compactMap { $0 }
+                    let battery = buds.min() ?? percent("device_batteryLevelMain") ?? percent("device_batteryLevelCase")
+                    let product = (info["device_productID"] as? String).flatMap { Int($0.replacingOccurrences(of: "0x", with: ""), radix: 16) }
+                    found[name.lowercased()] = BluetoothInfo(battery: battery, product: product)
+                }
+            }
+        }
+        return found
+    }
+
+    /// An Apple or Beats model's own symbol, by its product ID, as macOS names the model.
+    static func symbol(product: Int) -> String? {
+        let tag = UTTagClass(rawValue: "com.apple.device-model-code")
+        guard let model = UTType(tag: "Device1,\(product)", tagClass: tag, conformingTo: nil)?.identifier else { return nil }
+        let candidates: [String] =
+            if model.contains("airpods-max") {
+                ["airpods.max"]
+            } else if model.contains("airpods-pro") {
+                ["airpods.pro"]
+            } else if model.contains("airpods-gen4") || model.contains("airpods-gen5") {
+                ["airpods.gen4", "airpods"]
+            } else if model.contains("airpods-gen3") {
+                ["airpods.gen3", "airpods"]
+            } else if model.contains("airpods") {
+                ["airpods"]
+            } else if model.contains("beats-studio-pro") || model.contains("beats-solo") {
+                ["beats.headphones"]
+            } else if model.contains("beats-pill") {
+                ["beats.pill", "hifispeaker"]
+            } else if model.contains("beats") {
+                ["beats.earphones", "beats.headphones"]
+            } else {
+                []
+            }
+        return candidates.first { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil }
+    }
+
     // MARK: Announcing
 
-    private func announce(_ name: String, symbol: String, detail: String = "Connected", battery: Int? = nil, kind: NotchAlert.Kind = .device) {
+    private func announce(_ name: String, symbol: String, battery: Int? = nil, kind: NotchAlert.Kind = .device) {
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
         guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
             return
         }
         recent[name] = now
-        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, detail: detail, battery: battery, kind: kind))
+        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, battery: battery, kind: kind))
     }
 
     /// Without its owner's name, as the iPhone names AirPods: Hilário's AirPods Pro as AirPods Pro.
@@ -154,14 +243,13 @@ final class DeviceWatch {
         return name
     }
 
-    static func alert(
-        name: String, symbol: String, detail: String = "Connected", battery: Int? = nil, kind: NotchAlert.Kind = .device
-    )
-        -> NotchAlert
-    {
-        guard let battery else { return NotchAlert(kind: kind, symbol: symbol, title: name, detail: detail) }
-        return NotchAlert(
-            kind: kind, symbol: symbol, title: name, detail: "\(battery)%", detailTint: battery <= 20 ? .red : .green,
-            battery: BatteryLevel(percent: battery, charging: false))
+    /// A device: its symbol and battery, as AirPods are shown. The sound going to AirPlay: AirPlay's
+    /// symbol, in the blue Control Center lights it with, and where it plays.
+    static func alert(name: String, symbol: String, battery: Int? = nil, kind: NotchAlert.Kind = .device) -> NotchAlert {
+        guard kind == .device else {
+            return NotchAlert(kind: kind, content: .status(symbol: symbol, tint: .blue, text: name), spoken: "Playing on \(name)")
+        }
+        let level = battery.map { ", \($0) percent" } ?? ""
+        return NotchAlert(kind: kind, content: .device(symbol: symbol, battery: battery), spoken: "\(name) connected\(level)")
     }
 }
