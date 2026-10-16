@@ -4,6 +4,24 @@
 
 <br>
 
+## Release 0.3.0
+
+`Released: not yet`
+
+### Live Activities
+
+- Added charging and low battery announcements beside the camera, with the
+  battery's level, on MacBooks.
+- Added headphones, AirPods, keyboards, mice, trackpads and game controllers
+  announced as they connect, with their battery when they tell it, and sound
+  going to AirPlay.
+- Added the internet lost and back, and joining a Personal Hotspot.
+- Added a timer, started from the menu bar, the notch's right-click menu or
+  Settings, counting down beside the camera and chiming when it's done.
+- Added a Live Activities page to Settings, to turn each one off.
+
+<br>
+
 ## Release 0.2.0
 
 `Released: 16 October 2026`

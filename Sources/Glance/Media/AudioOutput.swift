@@ -67,19 +67,21 @@ final class AudioOutput: NSObject, ObservableObject {
 
     // MARK: Core Audio
 
-    private struct Device {
+    /// A place the sound can go, with its symbol, and how it's connected.
+    struct Device {
         let id: AudioDeviceID
         let name: String
         let symbol: String
+        let transport: UInt32
     }
 
-    private static var defaultOutput: AudioDeviceID {
+    static var defaultOutput: AudioDeviceID {
         var id = AudioDeviceID(0)
         _ = AudioProperty.read(AudioProperty.system, kAudioHardwarePropertyDefaultOutputDevice, &id)
         return id
     }
 
-    private static func outputs() -> [Device] {
+    static func outputs() -> [Device] {
         AudioProperty.readArray(AudioProperty.system, kAudioHardwarePropertyDevices)
             .filter { AudioProperty.size(of: $0, kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeOutput) > 0 }
             .filter { !(AudioProperty.uid(of: $0)?.hasPrefix(AudioProperty.ownDevicePrefix) ?? false) }
@@ -89,11 +91,11 @@ final class AudioOutput: NSObject, ObservableObject {
                 _ = AudioProperty.read(id, kAudioObjectPropertyName, &name)
                 _ = AudioProperty.read(id, kAudioDevicePropertyTransportType, &transport)
                 let title = name?.takeRetainedValue() as String? ?? "Output"
-                return Device(id: id, name: title, symbol: symbol(name: title, transport: transport))
+                return Device(id: id, name: title, symbol: symbol(name: title, transport: transport), transport: transport)
             }
     }
 
-    private static func symbol(name: String, transport: UInt32) -> String {
+    static func symbol(name: String, transport: UInt32) -> String {
         let name = name.lowercased()
         if name.contains("airpods max") { return "airpods.max" }
         if name.contains("airpods pro") { return "airpods.pro" }

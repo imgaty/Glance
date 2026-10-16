@@ -227,6 +227,33 @@ appear beside the notch for a moment.
 Turn these off with **Live Activities** and **Announce new audio** in
 **Settings > Music**.
 
+### What the Mac announces
+
+As the iPhone's Dynamic Island does, the closed notch widens for a few seconds
+to show what just happened, then goes back to what it showed:
+
+| Moment | What shows |
+| --- | --- |
+| Plugging in a MacBook | `Charging` and the battery's level, in green |
+| A MacBook's battery at 20%, and again at 10% | `Low Battery` and its level, in red |
+| Headphones or AirPods connecting | Their name and symbol |
+| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its name, and its battery when it tells the Mac |
+| The sound going to an AirPlay speaker or TV | Its name, and `AirPlay` |
+| The internet lost for a few seconds | `Offline` |
+| The internet back after that | `Wi-Fi` or `Ethernet`, and `Connected` |
+| Joining an iPhone's Personal Hotspot | `Personal Hotspot` |
+
+What's connected when Glance starts, or reconnects as the Mac wakes, isn't
+announced. Turn each of these off in **Settings > Live Activities**.
+
+### Timer
+
+Start a timer from Glance's menu in the menu bar, from the notch's right-click
+menu, or from **Settings > Live Activities**. It counts down beside the
+camera, next to the cover while something plays. When it's done, the notch
+says so and chimes until you open or click the notch, or stop it from the menu.
+Pause, resume and cancel it from the same menus.
+
 <br>
 
 ## Menu bar
@@ -236,6 +263,7 @@ Glance's icon in the menu bar opens a menu:
 | Item | Operation |
 | --- | --- |
 | `Glance` switch | Turns the notch off on every display, until it's turned back on |
+| `Timer` | Starts a timer of 1 to 60 minutes; while one runs, pauses or cancels it |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
@@ -280,7 +308,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Tint progress bar` | Colors the progress bar with the accent color |
 | `Animated art` | Plays an album's animated cover, when it has one |
 | `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
-| `Live Activities` | The cover and waveform around the closed notch |
+| `Live Activities` | What's playing around the closed notch |
 | `Announce new audio` | Briefly shows what starts playing |
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
@@ -296,6 +324,16 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
 | `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
+
+### Live Activities
+
+| Setting | Operation |
+| --- | --- |
+| `Charging` | Shows the battery's level when you plug in (MacBooks only) |
+| `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
+| `Devices` | Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay |
+| `Connectivity` | Shows when the Mac goes offline, comes back, or joins a Personal Hotspot |
+| `Timer` | Starts a timer, or pauses or cancels the one running |
 
 ### Opening
 
