@@ -176,6 +176,19 @@ struct ActivitiesTests {
         #expect(activities.alert == nil)
     }
 
+    @Test("A device arrives as AirPods do on the iPhone: the notch a quarter taller, the device and its ring by its height")
+    func deviceLayout() {
+        let device = NotchAlert(kind: .device, content: .device(symbol: "airpods.pro", battery: 31), spoken: "")
+        let status = NetworkWatch.alert(for: .offline)
+        #expect(SystemActivityView.grow(for: device, restingHeight: 32) == 8)
+        #expect(SystemActivityView.grow(for: status, restingHeight: 32) == 0)
+        let layout = DeviceLayout(height: 40)
+        #expect(layout.picture == 24)
+        #expect(layout.ring == 22)
+        // The ring as far from the end as from the top and bottom: concentric with the notch's end.
+        #expect(layout.trailing == 9, "\(layout.trailing) \(layout.ring)")
+    }
+
     @Test("Time left reads as a clock shows it, and the lengths are named")
     func timerText() {
         #expect(NotchTimer.format(59) == "0:59")

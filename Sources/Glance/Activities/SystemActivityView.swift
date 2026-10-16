@@ -15,6 +15,8 @@ import SwiftUI
 /// plays. With Reduce Motion on, nothing turns or shakes.
 struct SystemActivityView: View {
     let restingHeight: CGFloat
+    /// How much taller than at rest the notch stands for the announcement.
+    var grow: CGFloat = 0
     let island: Bool
     let wing: CGFloat
     let alert: NotchAlert?
@@ -28,7 +30,13 @@ struct SystemActivityView: View {
         let lane = max(wing - edge - LiveActivityView.cameraGap, side)
         let size = LiveActivityView.textSize(for: restingHeight)
         ZStack {
-            if let alert {
+            if let alert, case .device(let symbol, let pictures, let battery) = alert.content {
+                device(symbol: symbol, pictures: pictures, battery: battery, size: size)
+                    .id(alert.id)
+                    .transition(Self.announce)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(alert.spoken)
+            } else if let alert {
                 HStack(spacing: 0) {
                     leading(alert.content, side: side, size: size)
                         .frame(width: lane, alignment: .leading)
@@ -36,6 +44,7 @@ struct SystemActivityView: View {
                     trailing(alert.content, side: side, size: size)
                         .frame(width: lane, alignment: .trailing)
                 }
+                .padding(.horizontal, edge)
                 .id(alert.id)
                 .transition(Self.announce)
                 .accessibilityElement(children: .ignore)
@@ -60,22 +69,49 @@ struct SystemActivityView: View {
                             .opacity(timer.isRunning ? 1 : 0.55)
                     }
                 }
+                .padding(.horizontal, edge)
                 .transition(Self.announce)
                 .accessibilityElement(children: .combine)
             }
         }
-        .padding(.horizontal, edge)
         .frame(maxHeight: .infinity)
+    }
+
+    /// A device arriving, laid out as the Dynamic Island lays out AirPods, by the notch's height as it
+    /// stands for them: the device, three fifths of it tall, in from the end; its battery's ring, a
+    /// little over half of it across, its circle concentric with the notch's rounded end.
+    private func device(symbol: String, pictures: [String], battery: Int?, size: CGFloat) -> some View {
+        let layout = DeviceLayout(height: restingHeight + grow)
+        return HStack(spacing: 0) {
+            Group {
+                if let images = DevicePictures.images(pictures) {
+                    TurningPictures(images: images, height: layout.picture)
+                } else {
+                    TurningSymbol(symbol: symbol, side: layout.picture)
+                }
+            }
+            .padding(.leading, layout.leading)
+            Spacer(minLength: 0)
+            Group {
+                if let battery {
+                    BatteryRing(percent: battery, diameter: layout.ring)
+                        .padding(.trailing, layout.trailing)
+                } else {
+                    Text("Connected")
+                        .font(.system(size: size, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1)
+                        .padding(.trailing, layout.leading)
+                }
+            }
+        }
     }
 
     @ViewBuilder private func leading(_ content: NotchAlert.Content, side: CGFloat, size: CGFloat) -> some View {
         switch content {
-        case .device(let symbol, let pictures, _):
-            if let images = DevicePictures.images(pictures) {
-                TurningPictures(images: images, height: Self.pictureHeight(side))
-            } else {
-                TurningSymbol(symbol: symbol, side: side)
-            }
+        // Laid out on its own (see `device`).
+        case .device:
+            EmptyView()
         case .battery(let title, _):
             Text(title)
                 .font(.system(size: size, weight: .semibold))
@@ -90,15 +126,8 @@ struct SystemActivityView: View {
 
     @ViewBuilder private func trailing(_ content: NotchAlert.Content, side: CGFloat, size: CGFloat) -> some View {
         switch content {
-        case .device(_, _, let battery):
-            if let battery {
-                BatteryRing(percent: battery, side: side)
-            } else {
-                Text("Connected")
-                    .font(.system(size: size, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .lineLimit(1)
-            }
+        case .device:
+            EmptyView()
         case .battery(_, let level):
             HStack(spacing: 5) {
                 Text("\(level.percent)%")
@@ -124,9 +153,11 @@ struct SystemActivityView: View {
         restingHeight - LiveActivityView.inset(island: island) * 2
     }
 
-    /// AirPods' pictures stand a little taller than a symbol's square, as the iPhone's fill its
-    /// island's height.
-    static func pictureHeight(_ side: CGFloat) -> CGFloat { side * 1.2 }
+    /// A device arriving: the notch stands a quarter taller, as the Dynamic Island grows for AirPods.
+    static func grow(for alert: NotchAlert, restingHeight: CGFloat) -> CGFloat {
+        if case .device = alert.content { return (restingHeight * 0.25).rounded() }
+        return 0
+    }
 
     /// How wide each wing must be for an announcement, up to a limit, a little past a song's
     /// announcement's, beyond which a long name scrolls. A device's, with only symbols, is a little
@@ -141,10 +172,12 @@ struct SystemActivityView: View {
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
             case .device(_, let pictures, let battery):
-                (
-                    edge + (DevicePictures.images(pictures).map { TurningPictures.width($0, height: pictureHeight(side)) } ?? side) + gap,
-                    gap + (battery == nil ? width("Connected", size, .semibold) : side) + edge
-                )
+                {
+                    let layout = DeviceLayout(height: restingHeight + grow(for: alert, restingHeight: restingHeight))
+                    let device = DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
+                    let end = battery == nil ? width("Connected", size, .semibold) + layout.leading : layout.ring + layout.trailing
+                    return (layout.leading + device + gap, gap + end)
+                }()
             case .battery(let title, let level):
                 (
                     edge + width(title, size, .semibold) + gap,
@@ -181,6 +214,17 @@ struct SystemActivityView: View {
         removal: .opacity.animation(.easeOut(duration: 0.12)))
 }
 
+/// Where a device arriving sits, by the height the notch stands at for it, measured from the
+/// iPhone's own: the device 60% of the height tall, 30% of it in from the end; the ring 55% of it
+/// across, as far from the end as from the top and bottom.
+struct DeviceLayout {
+    let height: CGFloat
+    var picture: CGFloat { (height * 0.6).rounded() }
+    var ring: CGFloat { (height * 0.55).rounded() }
+    var leading: CGFloat { (height * 0.3).rounded() }
+    var trailing: CGFloat { ((height - ring) / 2).rounded() }
+}
+
 /// A device arriving, as AirPods arrive in the Dynamic Island: its symbol turning in, a full turn and
 /// a little past, then settling face on.
 private struct TurningSymbol: View {
@@ -192,7 +236,7 @@ private struct TurningSymbol: View {
 
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: side * 0.95, weight: .medium))
+            .font(.system(size: side * 0.8, weight: .medium))
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.white)
             .frame(width: side, height: side)
@@ -246,22 +290,23 @@ private struct TurningPictures: View {
 /// filling to its level as it arrives.
 struct BatteryRing: View {
     let percent: Int
-    let side: CGFloat
+    let diameter: CGFloat
     @State private var filled = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let line = max(side * 0.14, 2.5)
+        // As thick as the iPhone's: an eighth of the ring across.
+        let line = max(diameter * 0.12, 2)
         let color: Color = percent <= 20 ? .red : .green
         ZStack {
-            Circle().stroke(color.opacity(0.25), lineWidth: line)
+            Circle().stroke(color.opacity(0.3), lineWidth: line)
             Circle()
                 .trim(from: 0, to: filled || reduceMotion ? CGFloat(percent) / 100 : 0)
                 .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
         }
-        .padding(line / 2 + 1)
-        .frame(width: side, height: side)
+        .padding(line / 2)
+        .frame(width: diameter, height: diameter)
         .onAppear { withAnimation(.easeOut(duration: 0.7).delay(0.35)) { filled = true } }
         .accessibilityLabel("\(percent) percent")
     }
