@@ -131,9 +131,6 @@ final class NotchModel: ObservableObject {
     /// wings show it, over whatever else they show.
     @Published var alert: NotchAlert?
     @Published var alertWing: CGFloat = 0
-    /// How much taller the closed notch stands for it: a device arriving, as the Dynamic Island
-    /// grows for AirPods.
-    @Published var alertGrow: CGFloat = 0
     /// A timer counting down beside the camera, and each wing's width for it.
     @Published var timer: NotchTimer.State?
     @Published var timerWing: CGFloat = 0
@@ -243,7 +240,7 @@ final class NotchModel: ObservableObject {
             case .closed:
                 (
                     (restingWidth + 10 * proximity + pull * 0.4) * (1 - squeeze) + closedSize.height * squeeze,
-                    closedSize.height + alertGrow + 3 * proximity + pull
+                    closedSize.height + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, closedSize.height + 7 + pull)
             case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
@@ -407,7 +404,7 @@ struct NotchView: View {
                 .animation(.easeOut(duration: 0.2)) { $0.opacity(model.activity && model.alert == nil && !isOpen ? 1 : 0) }
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
-                restingHeight: closed.height, grow: model.alertGrow, island: model.island, wing: model.wing, alert: model.alert,
+                restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 timer: model.activity && model.pop ? nil : model.timer, music: model.activity
             )
             .frame(width: m.bodyWidth, height: m.height)

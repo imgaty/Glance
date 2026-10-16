@@ -9,6 +9,7 @@ import AppKit
 import CoreAudio
 import Foundation
 import Testing
+import simd
 
 @testable import Glance
 
@@ -176,17 +177,58 @@ struct ActivitiesTests {
         #expect(activities.alert == nil)
     }
 
-    @Test("A device arrives as AirPods do on the iPhone: the notch a quarter taller, the device and its ring by its height")
+    @Test("A device arrives as AirPods do on the iPhone: the device and its ring by the notch's height")
     func deviceLayout() {
-        let device = NotchAlert(kind: .device, content: .device(symbol: "airpods.pro", battery: 31), spoken: "")
-        let status = NetworkWatch.alert(for: .offline)
-        #expect(SystemActivityView.grow(for: device, restingHeight: 32) == 8)
-        #expect(SystemActivityView.grow(for: status, restingHeight: 32) == 0)
-        let layout = DeviceLayout(height: 40)
-        #expect(layout.picture == 24)
-        #expect(layout.ring == 22)
-        // The ring as far from the end as from the top and bottom: concentric with the notch's end.
-        #expect(layout.trailing == 9)
+        // The iPhone's Dynamic Island, 110 pixels tall for AirPods, as for anything else: the AirPods
+        // 51 tall, 44 in from the end; the ring 59 across, concentric with the end.
+        let island = DeviceLayout(height: 110)
+        #expect(island.picture == 51)
+        #expect(island.leading == 44)
+        #expect(island.ring == 59)
+        #expect(abs(island.trailing - 25) <= 1)
+        let notch = DeviceLayout(height: 32)
+        #expect(notch.picture == 15)
+        #expect(notch.ring == 17)
+    }
+
+    @Test("AirPods that sit in the ear are known by their model; headphones and Beats aren't")
+    func earbudModels() {
+        #expect(Earbuds(product: 0x200E) == .pro)
+        #expect(Earbuds(product: 0x2014) == .pro)
+        #expect(Earbuds(product: 0x2027) == .pro)
+        #expect(Earbuds(product: 0x2019) == .open)
+        #expect(Earbuds(product: 0x200F) == .classic)
+        #expect(Earbuds(product: 0x200A) == nil)
+        #expect(Earbuds(product: 0x2010) == nil)
+    }
+
+    @Test("A shape's surface is closed, on the shape, and faces out")
+    func surfaceMesh() {
+        let mesh = SurfaceMesh({ simd_length($0) - 5 }, from: [-6, -6, -6], to: [6, 6, 6], cell: 0.5)
+        #expect(!mesh.indices.isEmpty)
+        for p in mesh.positions { #expect(abs(simd_length(p) - 5) < 0.05) }
+        // Every edge is shared by exactly two triangles, going opposite ways: no holes.
+        var edges: [SIMD2<UInt32>: Int] = [:]
+        for t in stride(from: 0, to: mesh.indices.count, by: 3) {
+            let (a, b, c) = (mesh.indices[t], mesh.indices[t + 1], mesh.indices[t + 2])
+            for (from, to) in [(a, b), (b, c), (c, a)] { edges[[from, to], default: 0] += 1 }
+            let face = simd_cross(mesh.positions[Int(b)] - mesh.positions[Int(a)], mesh.positions[Int(c)] - mesh.positions[Int(a)])
+            #expect(simd_dot(face, mesh.positions[Int(a)]) > 0)
+        }
+        #expect(edges.allSatisfy { $0.value == 1 && edges[[$0.key.y, $0.key.x]] == 1 })
+    }
+
+    @Test("AirPods turn a full turn as they arrive, in frames a few degrees apart, and settle face on")
+    func earbudTurn() throws {
+        let turn = try #require(EarbudTurn.render(.pro))
+        #expect(turn.frames.count == EarbudTurn.frameCount)
+        #expect(CGRect(origin: .zero, size: turn.canvas).insetBy(dx: -1, dy: -1).contains(turn.rest))
+        #expect(turn.frame(at: 0) === turn.frames[0])
+        #expect(turn.frame(at: -360) === turn.frames[0])
+        #expect(turn.frame(at: 3) === turn.frames[1])
+        #expect(turn.frame(at: -3) === turn.frames[EarbudTurn.frameCount - 1])
+        #expect(TurningEarbuds.degrees(after: 0) == -360)
+        #expect(abs(TurningEarbuds.degrees(after: 5)) < 0.5)
     }
 
     @Test("Time left reads as a clock shows it, and the lengths are named")
