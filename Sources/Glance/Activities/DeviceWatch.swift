@@ -250,7 +250,9 @@ final class DeviceWatch {
 
     /// A device: its symbol and battery, as AirPods are shown. The sound going to AirPlay: AirPlay's
     /// symbol, in the blue Control Center lights it with, and where it plays.
-    static func alert(name: String, symbol: String, pictures: [String] = [], battery: Int? = nil, kind: NotchAlert.Kind = .device)
+    static func alert(
+        name: String, symbol: String, pictures: [String] = [], battery: Int? = nil, kind: NotchAlert.Kind = .device
+    )
         -> NotchAlert
     {
         guard kind == .device else {
