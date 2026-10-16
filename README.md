@@ -83,14 +83,15 @@ whenever LRCLIB has timed lyrics for it.
 Drag files onto the notch to keep them close, and find what you copied and your
 screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app to open it.
 
-<img src="./assets/screenshots/tray.png"
+<img src="./assets/screenshots/tray.gif"
      width="450"
-     alt="The open notch on the tray, showing its items as Finder does: a
-     photo of the Big Sur coast, a note copied from Notes as a page of its
-     words, a PDF, and a link to github.com with the site's icon, each with
-     its name under it.">
+     alt="A photo of the Big Sur coast dragged up to the closed notch, which
+     opens with two places to drop it, Keep in Tray and AirDrop. Let go on Keep
+     in Tray, the photo joins the front of the tray, beside a note copied from
+     Notes, a PDF and a link to github.com, and the notch closes as the
+     pointer leaves.">
 <br>
-<sub>Showcase of the tray, with files and copies.</sub>
+<sub>Showcase of a photo dropped into the tray.</sub>
 
 <br>
 
