@@ -928,7 +928,7 @@ final class NotchController {
     }
 
     /// How far around the open notch a drag for the tray opens it.
-    private static let dropReach: CGFloat = 80
+    static let dropReach: CGFloat = 80
 
     private func openForDrop() {
         dragHold = true

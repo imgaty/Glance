@@ -79,8 +79,9 @@ struct NotchDemoScene: View {
 
     // MARK: Dropping in the tray
 
-    /// The round: up from below to the notch, a moment's rest while it opens for the drop, over to
-    /// Keep in Tray, let go, a rest on the tray, then away, the notch closing behind.
+    /// The round: up from below straight to Keep in Tray, the notch opening for the drop on the way
+    /// as the pointer comes within reach of it; let go, a rest on the tray, then away, the notch
+    /// closing behind.
     private func dropInTray() async {
         guard let tray = demoTray, let photo = tray.items.first(where: { $0.kind == .files }) else { return }
         // Taken out while it's carried; put back however the round ends.
@@ -100,33 +101,37 @@ struct NotchDemoScene: View {
                 model.close()
                 guard await wait(0.6) else { return }
             }
+            // Closed, its places to drop ready for when it opens.
             var still = Transaction()
             still.disablesAnimations = true
             withTransaction(still) {
                 model.state = .closed
                 model.page = .tray
-                model.dropping = false
+                model.dropping = true
                 model.airDropTargeted = false
             }
             tray.remove(photo.id)
             out = true
             carried = photo
             letGo = false
-            let closed = geometry.rect(.closed)
-            let from = CGPoint(x: size.width * 0.76, y: size.height + 24)
-            let near = CGPoint(x: closed.midX + 28, y: closed.maxY + 26)
-            guard await glide(from, near, over: 1.1), await wait(0.25) else { return }
-
-            // Near the notch a moment, as a folder springs open under a dragged file.
-            withAnimation(.smooth(duration: 0.3)) { model.dropping = true }
-            model.open()
-            guard await wait(0.15) else { return }
-            let open = geometry.rect(.open)
+            let closed = geometry.rect(.closed), open = geometry.rect(.open)
             let keep = CGRect(x: open.minX, y: open.minY + open.height * 0.25, width: open.width / 2, height: open.height * 0.7)
             let side = Shelf.icon * geometry.scale
+            let from = CGPoint(x: size.width * 0.76, y: size.height + 24)
             // The photo over Keep in Tray's symbol, leaving its name in sight.
             let zone = CGPoint(x: open.minX + open.width * 0.26 + 6, y: open.minY + open.height * 0.5 - side / 2 + 10)
-            guard await glide(near, zone, over: 0.8, step: { copying = keep.contains($0) }), await wait(0.45) else { return }
+            // As on screen: within reach of the notch, it opens for the drop, without the pointer
+            // stopping.
+            let reach = NotchController.dropReach * geometry.scale
+            guard
+                await glide(
+                    from, zone, over: 1.6,
+                    step: { point in
+                        if model.state == .closed, closed.distance(to: point) < reach { model.open() }
+                        copying = model.state == .open && keep.contains(point)
+                    }),
+                await wait(0.45)
+            else { return }
 
             withAnimation(.easeIn(duration: 0.18)) { letGo = true }
             copying = false
@@ -139,7 +144,7 @@ struct NotchDemoScene: View {
             let away = CGPoint(x: size.width * 0.64, y: size.height + 30)
             guard await glide(zone, away, over: 0.9, at: 0.45, do: { model.close() }) else { return }
             tip = nil
-            guard await wait(0.5) else { return }
+            guard await wait(0.3) else { return }
         }
     }
 
