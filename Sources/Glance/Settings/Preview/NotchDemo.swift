@@ -125,7 +125,7 @@ struct NotchDemoScene: View {
             let reach = NotchController.dropReach * geometry.scale
             guard
                 await glide(
-                    from, zone, over: 1.6,
+                    HandMove(from: from, to: zone), over: 1.5,
                     step: { point in
                         if model.state == .closed, closed.distance(to: point) < reach { model.open() }
                         copying = model.state == .open && keep.contains(point)
@@ -138,11 +138,13 @@ struct NotchDemoScene: View {
             withAnimation(.smooth(duration: 0.3)) { model.dropping = false }
             withAnimation(.smooth(duration: 0.35)) { putBack(tray) }
             out = false
-            guard await wait(1.45) else { return }
+            // The hand eases off the button, and the pointer drifts a little.
+            let rest = CGPoint(x: zone.x + 3, y: zone.y + 4)
+            guard await glide(HandMove(from: zone, to: rest, corrects: false), over: 0.35), await wait(1.1) else { return }
             carried = nil
 
-            let away = CGPoint(x: size.width * 0.64, y: size.height + 30)
-            guard await glide(zone, away, over: 0.9, at: 0.45, do: { model.close() }) else { return }
+            let away = CGPoint(x: size.width * 0.6, y: size.height + 30)
+            guard await glide(HandMove(from: rest, to: away, flicks: true), over: 0.6, at: 0.4, do: { model.close() }) else { return }
             tip = nil
             guard await wait(0.3) else { return }
         }
@@ -154,21 +156,17 @@ struct NotchDemoScene: View {
         tray.deselect()
     }
 
-    /// The pointer from one place to another on a gentle curve, the way a hand moves it, easing in
-    /// and out; partway, if asked, something happens. Whether it got there before the demo ended.
+    /// The pointer moved by hand from one place to another (see HandMove); partway, if asked,
+    /// something happens. Whether it got there before the demo ended.
     private func glide(
-        _ from: CGPoint, _ to: CGPoint, over seconds: Double, step: (CGPoint) -> Void = { _ in }, at moment: Double = 2,
+        _ move: HandMove, over seconds: Double, step: (CGPoint) -> Void = { _ in }, at moment: Double = 2,
         do action: () -> Void = {}
     ) async -> Bool {
         let start = Date.now
         var acted = false
         while true {
             let s = min(Date.now.timeIntervalSince(start) / seconds, 1)
-            let e = CGFloat(s * s * (3 - 2 * s))
-            let bend = CGPoint(x: (from.x + to.x) / 2 + (from.x - to.x) * 0.5, y: (from.y + to.y) / 2)
-            let u = 1 - e
-            let point = CGPoint(
-                x: u * u * from.x + 2 * u * e * bend.x + e * e * to.x, y: u * u * from.y + 2 * u * e * bend.y + e * e * to.y)
+            let point = move.point(at: s)
             tip = point
             step(point)
             if s >= moment, !acted {
@@ -184,5 +182,56 @@ struct NotchDemoScene: View {
     private func wait(_ seconds: Double) async -> Bool {
         try? await Task.sleep(for: .seconds(seconds))
         return !Task.isCancelled
+    }
+}
+
+/// How a hand moves a pointer, rather than how a machine would: a quick main movement along a slight
+/// arc, fastest early on, that lands a little short of the place and to one side, then a small,
+/// slower correction onto it. Leaving, a flick that speeds up as it goes, with no place to land.
+struct HandMove {
+    let from: CGPoint
+    let to: CGPoint
+    /// Lands short and corrects; otherwise it lands right where it's going, as a small move does.
+    var corrects = true
+    var flicks = false
+
+    /// The share of the time the main movement takes; the correction takes the rest.
+    static let main = 0.76
+
+    /// Where the pointer is, a share of the way through the time.
+    func point(at s: Double) -> CGPoint {
+        let s = min(max(s, 0), 1)
+        let dx = to.x - from.x, dy = to.y - from.y
+        let length = hypot(dx, dy)
+        guard length > 0 else { return to }
+        // Along the way, and across it, to its left.
+        let along = CGPoint(x: dx / length, y: dy / length)
+        let across = CGPoint(x: -along.y, y: along.x)
+        if flicks {
+            // Off the picture: a slight arc, speeding up.
+            return arc(from, to, bow: 0.06 * length, across: across, at: s * s)
+        }
+        guard corrects else { return arc(from, to, bow: 0, across: across, at: Self.reach(s)) }
+        // Short of the place by a few points, and aside by fewer.
+        let short = min(0.05 * length, 9), aside = min(0.03 * length, 5)
+        let landing = CGPoint(x: to.x - along.x * short + across.x * aside, y: to.y - along.y * short + across.y * aside)
+        if s < Self.main {
+            return arc(from, landing, bow: 0.1 * length, across: across, at: Self.reach(s / Self.main))
+        }
+        return arc(landing, to, bow: 0, across: across, at: Self.reach((s - Self.main) / (1 - Self.main)))
+    }
+
+    /// From one point to another, bowed to one side at its middle by as much as asked.
+    private func arc(_ a: CGPoint, _ b: CGPoint, bow: CGFloat, across: CGPoint, at t: Double) -> CGPoint {
+        let t = CGFloat(t), u = 1 - t
+        let control = CGPoint(x: (a.x + b.x) / 2 + across.x * bow, y: (a.y + b.y) / 2 + across.y * bow)
+        return CGPoint(x: u * u * a.x + 2 * u * t * control.x + t * t * b.x, y: u * u * a.y + 2 * u * t * control.y + t * t * b.y)
+    }
+
+    /// How far through a reach, a share of the way through its time: quick to get going and slow to
+    /// settle (minimum jerk), its speed peaking a little early, as a hand's does.
+    static func reach(_ x: Double) -> Double {
+        let t = pow(min(max(x, 0), 1), 0.8)
+        return t * t * t * (10 - 15 * t + 6 * t * t)
     }
 }

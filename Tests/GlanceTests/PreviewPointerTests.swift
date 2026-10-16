@@ -101,4 +101,23 @@ struct LiveActivitySpacingTests {
         let corner = CGPoint(x: edge + radius, y: inset + radius)
         #expect(isClose(hypot(end.x - corner.x, end.y - corner.y) + radius, height / 2 - inset, tolerance: 0.01))
     }
+
+    @Test("The demos' pointer moves as a hand does: off quickly, short of the place, then onto it")
+    func handMove() {
+        let from = CGPoint(x: 360, y: 214), to = CGPoint(x: 168, y: 62)
+        let length = hypot(to.x - from.x, to.y - from.y)
+        func gone(_ p: CGPoint) -> CGFloat { 1 - hypot(to.x - p.x, to.y - p.y) / length }
+        for move in [HandMove(from: from, to: to), HandMove(from: from, to: to, corrects: false), HandMove(from: from, to: to, flicks: true)] {
+            #expect(move.point(at: 0) == from)
+            #expect(isClose(move.point(at: 1).x, to.x, tolerance: 0.001) && isClose(move.point(at: 1).y, to.y, tolerance: 0.001))
+        }
+        let reach = HandMove(from: from, to: to)
+        // Most of the way in the first half of the time; the main movement lands short, then corrects.
+        #expect(gone(reach.point(at: 0.5)) > 0.6)
+        let landing = reach.point(at: HandMove.main)
+        let short = hypot(to.x - landing.x, to.y - landing.y)
+        #expect(short > 2 && short < 12)
+        // A flick, leaving, speeds up: it's covered less than half the way halfway through.
+        #expect(gone(HandMove(from: from, to: to, flicks: true).point(at: 0.5)) < 0.5)
+    }
 }
