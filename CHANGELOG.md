@@ -1,6 +1,16 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 16 October 2026`
+`Created: 11 October 2026` | `Last updated: 24 October 2026`
+
+<br>
+
+## Release 0.2.1
+
+`Released: not yet`
+
+### Tray
+
+- Fixed the photo in the tray's demo being enlarged from a smaller picture.
 
 <br>
 
