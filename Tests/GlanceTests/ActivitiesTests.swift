@@ -103,9 +103,9 @@ struct ActivitiesTests {
         #expect(DeviceWatch.symbol(product: "DualSense Wireless Controller", usagePage: 1, usage: 5) == "gamecontroller")
         #expect(DeviceWatch.symbol(product: "Hilário's AirPods Pro", usagePage: 12, usage: 1) == nil)
         let mouse = DeviceWatch.alert(name: "Magic Mouse", symbol: "magicmouse", battery: 15)
-        #expect(mouse.content == .device(symbol: "magicmouse", battery: 15))
+        #expect(mouse.content == .device(symbol: "magicmouse", pictures: [], battery: 15))
         #expect(mouse.spoken == "Magic Mouse connected, 15 percent")
-        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", battery: nil))
+        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", pictures: [], battery: nil))
         let airPlay = DeviceWatch.alert(name: "Living Room", symbol: "airplay.audio", kind: .output)
         #expect(airPlay.content == .status(symbol: "airplay.audio", tint: .blue, text: "Living Room"))
         #expect(DeviceWatch.shortName("Hilário\u{2019}s AirPods Pro") == "AirPods Pro")
@@ -126,6 +126,18 @@ struct ActivitiesTests {
             """.utf8)
         let connected = DeviceWatch.connected(in: report)
         #expect(connected["airpods pro"] == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024))
+        // Listed again for the case alone, they keep their earbuds' battery and model.
+        let twice = DeviceWatch.connected(
+            in: Data(
+                """
+                {"SPBluetoothDataType":[{"device_connected":[{"Airpods Pro":{"device_batteryLevelLeft":"31%","device_batteryLevelRight":"39%",
+                "device_productID":"0x2024"}},{"Airpods Pro":{"device_batteryLevelCase":"42%"}}]}]}
+                """.utf8))
+        #expect(twice["airpods pro"] == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024))
+        // Pictured as macOS pictures them, earbud by earbud, or a model it doesn't picture, none.
+        #expect(DevicePictures.names(product: 0x2024) == ["airpod_left", "airpod_right"])
+        #expect(DevicePictures.names(product: 0x201F) == ["B515d-Default"])
+        #expect(DevicePictures.names(product: 0x2019).isEmpty)
         #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil))
         #expect(connected["ipad"] == nil)
         #expect(DeviceWatch.connected(in: Data("not json".utf8)).isEmpty)
@@ -188,7 +200,9 @@ struct ActivitiesTests {
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
-        let alert = NotchAlert(kind: .device, content: .device(symbol: "airpods.pro", battery: 31), spoken: "AirPods Pro connected")
+        let alert = NotchAlert(
+            kind: .device, content: .device(symbol: "airpods.pro", pictures: ["airpod_left", "airpod_right"], battery: 31),
+            spoken: "AirPods Pro connected")
         model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, island: false)
         model.alert = alert
         #expect(model.wing == model.alertWing)

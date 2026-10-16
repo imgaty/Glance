@@ -56,7 +56,8 @@ final class DeviceWatch {
                     info = await Self.bluetooth(named: device.name) ?? info
                 }
                 let symbol = info?.product.flatMap(Self.symbol(product:)) ?? device.symbol
-                self?.announce(device.name, symbol: symbol, battery: info?.battery)
+                let pictures = info?.product.map(DevicePictures.names(product:)) ?? []
+                self?.announce(device.name, symbol: symbol, pictures: pictures, battery: info?.battery)
             }
         }
     }
@@ -189,7 +190,11 @@ final class DeviceWatch {
                     let buds = [percent("device_batteryLevelLeft"), percent("device_batteryLevelRight")].compactMap { $0 }
                     let battery = buds.min() ?? percent("device_batteryLevelMain") ?? percent("device_batteryLevelCase")
                     let product = (info["device_productID"] as? String).flatMap { Int($0.replacingOccurrences(of: "0x", with: ""), radix: 16) }
-                    found[name.lowercased()] = BluetoothInfo(battery: battery, product: product)
+                    // AirPods are listed twice, the second time for their case alone: what the first
+                    // told stays, the earbuds' battery and the model.
+                    let earlier = found[name.lowercased()]
+                    found[name.lowercased()] = BluetoothInfo(
+                        battery: buds.isEmpty ? earlier?.battery ?? battery : battery, product: product ?? earlier?.product)
                 }
             }
         }
@@ -225,14 +230,14 @@ final class DeviceWatch {
 
     // MARK: Announcing
 
-    private func announce(_ name: String, symbol: String, battery: Int? = nil, kind: NotchAlert.Kind = .device) {
+    private func announce(_ name: String, symbol: String, pictures: [String] = [], battery: Int? = nil, kind: NotchAlert.Kind = .device) {
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
         guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
             return
         }
         recent[name] = now
-        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, battery: battery, kind: kind))
+        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, pictures: pictures, battery: battery, kind: kind))
     }
 
     /// Without its owner's name, as the iPhone names AirPods: Hilário's AirPods Pro as AirPods Pro.
@@ -245,11 +250,14 @@ final class DeviceWatch {
 
     /// A device: its symbol and battery, as AirPods are shown. The sound going to AirPlay: AirPlay's
     /// symbol, in the blue Control Center lights it with, and where it plays.
-    static func alert(name: String, symbol: String, battery: Int? = nil, kind: NotchAlert.Kind = .device) -> NotchAlert {
+    static func alert(name: String, symbol: String, pictures: [String] = [], battery: Int? = nil, kind: NotchAlert.Kind = .device)
+        -> NotchAlert
+    {
         guard kind == .device else {
             return NotchAlert(kind: kind, content: .status(symbol: symbol, tint: .blue, text: name), spoken: "Playing on \(name)")
         }
         let level = battery.map { ", \($0) percent" } ?? ""
-        return NotchAlert(kind: kind, content: .device(symbol: symbol, battery: battery), spoken: "\(name) connected\(level)")
+        return NotchAlert(
+            kind: kind, content: .device(symbol: symbol, pictures: pictures, battery: battery), spoken: "\(name) connected\(level)")
     }
 }
