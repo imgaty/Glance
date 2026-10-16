@@ -221,31 +221,29 @@ struct DeviceLayout {
     var trailing: CGFloat { ((height - ring) / 2).rounded() }
 }
 
-/// AirPods arriving, as the Dynamic Island shows them: the pair, in 3D, growing in as it turns a
-/// full turn, a little past, then settling face on. With Reduce Motion on, it only fades in.
+/// AirPods arriving: the pair, in 3D, growing in face on and turning slowly, as on a turntable, the
+/// whole time it shows. With Reduce Motion on, it fades in and stays face on.
 struct TurningEarbuds: View {
     let turn: EarbudTurn
     /// The pair's height, face on.
     let height: CGFloat
     @State private var start = Date.now
     @State private var arrived = false
-    @State private var settled = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let spin = Spring(response: 1, dampingRatio: 0.8)
+    /// A full turn every six seconds.
+    static let degreesPerSecond = 60.0
     private static let delay = 0.15
 
     /// The pair's width, face on.
     static func width(_ turn: EarbudTurn, height: CGFloat) -> CGFloat { turn.rest.width * height / turn.rest.height }
 
-    /// How far round the pair is, a moment after it arrives: from a full turn back to face on.
-    static func degrees(after seconds: TimeInterval) -> Double {
-        spin.value(target: 360.0, time: max(seconds - delay, 0)) - 360
-    }
+    /// How far round the pair has turned since it arrived.
+    static func degrees(after seconds: TimeInterval) -> Double { max(seconds - delay, 0) * degreesPerSecond }
 
     var body: some View {
         let scale = height / turn.rest.height
-        TimelineView(.animation(paused: settled || reduceMotion)) { context in
+        TimelineView(.animation(paused: reduceMotion)) { context in
             Image(decorative: turn.frame(at: reduceMotion ? 0 : Self.degrees(after: context.date.timeIntervalSince(start))), scale: 1)
                 .resizable()
                 .interpolation(.high)
@@ -259,10 +257,6 @@ struct TurningEarbuds: View {
         .onAppear {
             start = .now
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(Self.delay)) { arrived = true }
-        }
-        .task {
-            try? await Task.sleep(for: .seconds(Self.delay + Self.spin.settlingDuration))
-            settled = true
         }
     }
 }

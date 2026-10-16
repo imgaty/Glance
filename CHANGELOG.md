@@ -14,9 +14,8 @@
   battery's level, on MacBooks.
 - Added AirPods, headphones, keyboards, mice, trackpads and game controllers
   announced as they connect, as the iPhone shows AirPods: AirPods in 3D,
-  turning a full turn as they arrive, AirPods Max as macOS pictures them,
-  others as their symbol, beside their battery as a ring. And sound going to
-  AirPlay.
+  turning slowly while they show, AirPods Max as macOS pictures them, others
+  as their symbol, beside their battery as a ring. And sound going to AirPlay.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera and chiming when it's done.

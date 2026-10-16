@@ -284,9 +284,9 @@ struct EarbudTurn {
     /// Degrees each earbud of the pair is turned, face on.
     private static let yaw: Float = 45
     /// How many frames make a full turn.
-    static let frameCount = 120
+    static let frameCount = 240
     /// The pair's height in the frames, in pixels: more than a notch shows it at on a 2× display.
-    static let pixelHeight: CGFloat = 56
+    static let pixelHeight: CGFloat = 44
 
     static func render(_ earbuds: Earbuds) -> EarbudTurn? {
         let shape = earbuds.shape
