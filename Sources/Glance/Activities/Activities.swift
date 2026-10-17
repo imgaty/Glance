@@ -37,8 +37,9 @@ struct NotchAlert: Identifiable, Equatable {
     let content: Content
     /// What VoiceOver says of it.
     let spoken: String
-    /// How long it shows; one that stays shows until it's dismissed.
-    var seconds: Double = 3
+    /// How long it shows, as long as the Dynamic Island shows AirPods arriving, from when it starts
+    /// to open until it starts to fold; one that stays shows until it's dismissed.
+    var seconds: Double = 2.82
     var stays = false
 
     static func == (a: NotchAlert, b: NotchAlert) -> Bool { a.id == b.id }
@@ -112,7 +113,8 @@ final class Activities: ObservableObject {
         shownTask?.cancel()
         guard !alert.stays else { return }
         shownTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(alert.seconds))
+            // To the frame, as the Dynamic Island's: the system would otherwise wake it when it suits.
+            try? await Task.sleep(for: .seconds(alert.seconds), tolerance: .zero)
             guard !Task.isCancelled else { return }
             self?.next()
         }

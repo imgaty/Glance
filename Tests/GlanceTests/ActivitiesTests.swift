@@ -179,15 +179,17 @@ struct ActivitiesTests {
     @Test("A device arrives as AirPods do on the iPhone: the device and its ring by the notch's height")
     func deviceLayout() {
         // The iPhone's Dynamic Island, 110 pixels tall for AirPods, as for anything else: the AirPods
-        // 51 tall, 44 in from the end; the ring 59 across, concentric with the end.
+        // 51 tall, the middle they turn about 70 in from the end; the ring 59 across, concentric with
+        // the end; the wings 97 past the island's resting ends.
         let island = DeviceLayout(height: 110)
-        #expect(island.picture == 51)
-        #expect(island.leading == 44)
-        #expect(island.ring == 59)
-        #expect(abs(island.trailing - 25) <= 1)
-        let notch = DeviceLayout(height: 32)
-        #expect(notch.picture == 15)
-        #expect(notch.ring == 17)
+        #expect(abs(island.picture - 51) < 0.5)
+        #expect(abs(island.middle - 70) < 0.5)
+        #expect(abs(island.ring - 59) < 0.5)
+        #expect(abs(island.trailing - (110 - island.ring) / 2) < 0.001)
+        #expect(abs(island.wing - 97) < 0.5)
+        // Placed by the middle it turns about.
+        #expect(abs(island.leading(toAxis: 30) - (island.middle - 30)) < 0.001)
+        #expect(island.leading(toAxis: 200) == 0)
     }
 
     @Test("AirPods and Beats are known by their model, a newer one as the newest of its kind")

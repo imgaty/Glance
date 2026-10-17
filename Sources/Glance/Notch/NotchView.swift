@@ -365,7 +365,8 @@ struct NotchView: View {
 
     var body: some View {
         let m = model.metrics
-        let shape = NotchShape(corners: model.corners)
+        // With wings out, their ends round as the Dynamic Island's do.
+        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0)
         let isOpen = model.state == .open
         let onTray = trayOn && model.page == .tray
         // Open on the player, rather than on the tray.
@@ -402,8 +403,10 @@ struct NotchView: View {
                     $0.opacity(lit ? lightOpacity : 0)
                 }
                 .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
+            // As wide as the notch is at each step, so what the wings show rides in and out with their
+            // ends, as the Dynamic Island's activities do.
             LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
-                .frame(width: m.bodyWidth, height: m.height)
+                .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
                 .allowsHitTesting(places == nil)
                 .islandFade(liveShown, instead: isOpen ? Self.fade(in: false) : nil)
             // What the Mac announces, and a timer, in the same wings.
@@ -411,17 +414,19 @@ struct NotchView: View {
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 timer: model.activity && model.pop || model.switching ? nil : model.timer, music: model.activity
             )
-            .frame(width: m.bodyWidth, height: m.height)
+            .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
             .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.2)) { $0.opacity(isOpen ? 0 : 1) }
             // The notch at rest, sharp, over what the wings show, as the Dynamic Island keeps its own
             // shape over an activity coming or going: what rides in with the wings' ends as they fold
-            // passes under it.
-            shape.fill(.black)
-                .frame(width: restingBody(m) + m.flare * 2, height: m.height)
+            // passes under it. Kept at the closed size while open, so closing it never shrinks from the
+            // open notch's height over the glass, and back only once the notch has all but closed.
+            let rest = isOpen ? model.metrics(for: .closed) : m
+            NotchShape(corners: model.corners).fill(.black)
+                .frame(width: restingBody(m) + rest.flare * 2, height: rest.height)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
-                .animation(.easeOut(duration: 0.1)) { $0.opacity(isOpen ? 0 : 1) }
+                .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -747,9 +752,22 @@ extension EnvironmentValues {
 /// the rect's height, so they change continuously while the frame animates.
 struct NotchShape: Shape {
     var corners: NotchCorners
+    /// 1 with wings out beside the camera, whose ends then round as the Dynamic Island's do, half
+    /// the height across; 0 at rest.
+    var wingEnds: CGFloat = 0
+
+    var animatableData: CGFloat {
+        get { wingEnds }
+        set { wingEnds = newValue }
+    }
 
     func path(in rect: CGRect) -> Path {
-        let radii = corners.radii(forHeight: rect.height)
+        var radii = corners.radii(forHeight: rect.height)
+        if !corners.island, wingEnds > 0 {
+            // Opening, the open notch's own corners take over.
+            let open = min(max((rect.height - corners.restingHeight) / max(corners.openHeight - corners.restingHeight, 1), 0), 1)
+            radii.bottom += (rect.height / 2 - radii.bottom) * wingEnds * (1 - open)
+        }
         let flare = max(0, min(radii.flare, rect.width / 4, rect.height / 2))
         let body = rect.insetBy(dx: flare, dy: 0)
         if corners.island {
@@ -797,6 +815,31 @@ private struct SteppedFrame: ViewModifier, Animatable {
 
     func body(content: Content) -> some View {
         content.frame(width: width, height: height, alignment: .top)
+            .environment(\.notchStep, width)
+    }
+}
+
+extension EnvironmentValues {
+    /// The notch's width at this step as it animates, flares and all (see `SteppedFrame`).
+    @Entry var notchStep: CGFloat?
+}
+
+extension View {
+    /// As wide as the notch is at each step as it animates, less its flares, so what the wings show
+    /// rides in and out with their ends, as the Dynamic Island's activities do.
+    fileprivate func atNotchStep(flare: CGFloat, height: CGFloat, otherwise width: CGFloat) -> some View {
+        modifier(AtNotchStep(flare: flare, height: height, width: width))
+    }
+}
+
+private struct AtNotchStep: ViewModifier {
+    @Environment(\.notchStep) private var step
+    let flare: CGFloat
+    let height: CGFloat
+    let width: CGFloat
+
+    func body(content: Content) -> some View {
+        content.frame(width: step.map { max($0 - flare * 2, 0) } ?? width, height: height)
     }
 }
 

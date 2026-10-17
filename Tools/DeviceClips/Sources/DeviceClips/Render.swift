@@ -9,8 +9,8 @@ import AppKit
 import SceneKit
 
 /// A device's turn, drawn from its maker's 3D model as the iPhone's Dynamic Island shows AirPods:
-/// seen level, without perspective, on one disk turning about its middle, a frame every degree and
-/// a half, face on first.
+/// seen level, without perspective, on one disk turning about a middle a little behind earbuds, a
+/// frame every degree and a half, face on first.
 enum Render {
     /// How many frames make a full turn.
     static let frameCount = 240
@@ -93,10 +93,18 @@ enum Render {
         let bottom = standing.bottom - margin, top = standing.top + margin
         look(from: bottom, to: top)
 
+        // Earbuds stand a little in front of the middle they turn about, as the iPhone turns AirPods:
+        // the pair drifts in and out by a fifth of its height as it turns.
+        var turning = reach
+        if case .whole = model.kind {} else {
+            let forward = (standing.top - standing.bottom) * 0.19
+            pair.position.z += forward
+            turning = [low.x, high.x].flatMap { x in [low.z, high.z].map { z in hypot(x - middle.x, z - middle.z + forward) } }.max() ?? reach
+        }
         let scale = pixelHeight / (standing.top - standing.bottom)
         // Even, as video wants.
         func even(_ x: CGFloat) -> CGFloat { (x / 2).rounded(.up) * 2 }
-        let canvas = CGSize(width: even((reach + margin) * 2 * scale), height: even((top - bottom) * scale))
+        let canvas = CGSize(width: even((turning + margin) * 2 * scale), height: even((top - bottom) * scale))
         // White AirPods lit as bright as the iPhone shows them: the models are made each their own
         // way, some brighter than others.
         if let target = model.brightness {
