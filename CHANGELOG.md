@@ -17,9 +17,11 @@
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
   battery as a ring. And sound going to AirPlay.
-- Added announcements coming and going as the Dynamic Island's do: the notch
-  widens and folds with its springs, what it shows fades in and out through a
-  blur, and the notch at rest stays sharp over it.
+- Added every live activity coming and going as the Dynamic Island's do:
+  announcements, music's cover and waveform, a new song's name and the timer.
+  The notch widens and folds with its springs, what it shows fades in and out
+  through a blur, and the notch at rest stays sharp over it. Between two, it
+  folds to rest before opening for the next.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera and chiming when it's done.

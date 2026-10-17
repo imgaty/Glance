@@ -427,7 +427,7 @@ final class NotchController {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
             }
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            withAnimation(shown ? IslandMotion.open : IslandMotion.fold) {
                 self?.model.activity = shown
                 if !shown { self?.model.pop = false }
             }
@@ -447,8 +447,7 @@ final class NotchController {
     /// opens again from there; once it's said, it folds, and what was there opens again.
     private func show(_ alert: NotchAlert?) {
         switchTask?.cancel()
-        let fold = Animation.spring(response: 0.42, dampingFraction: 1)
-        let open = Animation.spring(response: 0.5, dampingFraction: 0.82)
+        let fold = IslandMotion.fold, open = IslandMotion.open
         let wingsShowing = model.activity || model.timer != nil
         guard let alert else {
             withAnimation(fold) {
@@ -486,7 +485,7 @@ final class NotchController {
 
     /// A timer started, paused or ended: its wings come, or go.
     private func show(_ timer: NotchTimer.State?) {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+        withAnimation(timer == nil ? IslandMotion.fold : IslandMotion.open) {
             if let timer {
                 model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
             }
@@ -507,7 +506,7 @@ final class NotchController {
             guard let model = self?.model, let nowPlaying = self?.nowPlaying, !Task.isCancelled,
                 nowPlaying.isPlaying, nowPlaying.hasMedia, model.state == .closed
             else { return }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            withAnimation(IslandMotion.open) {
                 model.popWing = LiveActivityView.popWing(
                     title: nowPlaying.title, artist: nowPlaying.artist,
                     restingHeight: model.closedSize.height, island: model.island)
@@ -516,7 +515,7 @@ final class NotchController {
             }
             try? await Task.sleep(for: .seconds(3.5))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false }
+            withAnimation(IslandMotion.fold) { model.pop = false }
         }
     }
 

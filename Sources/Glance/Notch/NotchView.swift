@@ -405,8 +405,8 @@ struct NotchView: View {
             LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
                 .frame(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
-                .animation(.easeOut(duration: 0.2)) {
-                    $0.opacity(model.activity && !musicAway && !isOpen ? 1 : 0).blur(radius: musicAway ? 6 : 0)
+                .animation(isOpen ? Self.fade(in: false) : liveShown ? IslandMotion.fadeIn : IslandMotion.fadeOut) {
+                    $0.modifier(BlurFade(shown: liveShown, arriving: liveShown))
                 }
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
@@ -460,9 +460,10 @@ struct NotchView: View {
                 .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays. Opening and closing, it
-                // comes and goes just as the player's words and buttons do.
-                .animation(isOpen || !model.activity ? Self.fade(in: isOpen) : .spring(response: 0.45, dampingFraction: 0.8)) {
-                    $0.opacity(isOpen || (model.activity && !musicAway) ? 1 : 0).blur(radius: musicAway && !isOpen ? 6 : 0)
+                // comes and goes just as the player's words and buttons do; in the closed notch, as the
+                // Dynamic Island's activities do.
+                .animation(isOpen ? Self.fade(in: true) : artworkShown ? IslandMotion.fadeIn : IslandMotion.fadeOut) {
+                    $0.modifier(BlurFade(shown: isOpen || artworkShown, arriving: isOpen || artworkShown))
                 }
                 .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
@@ -474,15 +475,11 @@ struct NotchView: View {
             )
             .matchedGeometryEffect(id: isOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
             .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
-            // There open, or in the closed notch while something plays, out of the way quickly when a
-            // new song's artist takes its place. Opening and closing, it comes and goes just as the
-            // player's words and buttons do.
-            .animation(
-                isOpen || !model.activity
-                    ? Self.fade(in: isOpen) : model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)
-            ) {
-                $0.opacity(isOpen || (model.activity && !model.pop && !musicAway && model.timer == nil) ? 1 : 0)
-                    .blur(radius: musicAway && !isOpen ? 6 : 0)
+            // There open, or in the closed notch while something plays, out of the way when a new
+            // song's artist takes its place. Opening and closing, it comes and goes just as the
+            // player's words and buttons do; in the closed notch, as the Dynamic Island's activities do.
+            .animation(isOpen ? Self.fade(in: true) : waveformShown ? IslandMotion.fadeIn : IslandMotion.fadeOut) {
+                $0.modifier(BlurFade(shown: isOpen || waveformShown, arriving: isOpen || waveformShown))
             }
             .modifier(PageFade(hidden: isOpen && onTray))
             .environment(\.notchControls, !trayShown)
@@ -558,6 +555,11 @@ struct NotchView: View {
 
     /// The music's wings make way for what's announced, blurring away as the notch folds.
     private var musicAway: Bool { model.alert != nil || model.switching }
+    /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist or
+    /// a timer takes its place.
+    private var liveShown: Bool { model.activity && !musicAway && model.state != .open }
+    private var artworkShown: Bool { model.activity && !musicAway }
+    private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.timer == nil }
 
     /// The closed notch's width without its wings, as it narrows to a dot while turning off.
     private func restingBody(_ m: NotchMetrics) -> CGFloat {

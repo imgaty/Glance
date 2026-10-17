@@ -74,7 +74,7 @@ struct LiveActivityView: View {
                     // In the cover's color, made light enough to read on the black notch.
                     MarqueeText(text: nowPlaying.title, font: .system(size: size, weight: .semibold), active: true)
                         .foregroundStyle(accent.readableOnBlack())
-                        .transition(Self.announce)
+                        .transition(IslandMotion.fade)
                 }
             }
             .frame(width: lane, alignment: .leading)
@@ -86,7 +86,7 @@ struct LiveActivityView: View {
                 if pop {
                     MarqueeText(text: nowPlaying.artist, font: .system(size: size), active: true, alignment: .trailing)
                         .foregroundStyle(accent.readableOnBlack(opacity: 0.7))
-                        .transition(Self.announce)
+                        .transition(IslandMotion.fade)
                 }
             }
             .frame(width: lane, alignment: .trailing)
@@ -94,9 +94,4 @@ struct LiveActivityView: View {
         .padding(.horizontal, edge)
         .frame(maxHeight: .infinity)
     }
-
-    /// The words come in once the wings have opened, and leave before they fold.
-    private static let announce = AnyTransition.asymmetric(
-        insertion: .opacity.animation(.easeOut(duration: 0.3).delay(0.25)),
-        removal: .opacity.animation(.easeOut(duration: 0.12)))
 }

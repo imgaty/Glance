@@ -31,7 +31,7 @@ struct SystemActivityView: View {
             if let alert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size)
                     .id(alert.id)
-                    .transition(Self.announce)
+                    .transition(IslandMotion.fade)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(alert.spoken)
             } else if let alert {
@@ -44,7 +44,7 @@ struct SystemActivityView: View {
                 }
                 .padding(.horizontal, edge)
                 .id(alert.id)
-                .transition(Self.announce)
+                .transition(IslandMotion.fade)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(alert.spoken)
             } else if let timer {
@@ -68,7 +68,7 @@ struct SystemActivityView: View {
                     }
                 }
                 .padding(.horizontal, edge)
-                .transition(Self.announce)
+                .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
             }
         }
@@ -203,15 +203,6 @@ struct SystemActivityView: View {
         // A point to spare, so rounding never sets text that fits scrolling.
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
     }
-
-    /// As the Dynamic Island brings an activity in, measured from it: as the wings open, it fades in
-    /// from a heavy blur, sharpening last; as they start to fold, it blurs away at once,
-    /// riding in with their ends under the notch, which stays sharp over it.
-    private static let announce = AnyTransition.asymmetric(
-        insertion: .modifier(active: BlurFade(shown: false, arriving: true), identity: BlurFade(shown: true, arriving: true))
-            .animation(.linear(duration: 0.22).delay(0.1)),
-        removal: .modifier(active: BlurFade(shown: false, arriving: false), identity: BlurFade(shown: true, arriving: false))
-            .animation(.linear(duration: 0.12)))
 }
 
 /// Where a device arriving sits, by the notch's height, measured from the iPhone's AirPods in the
@@ -257,6 +248,23 @@ struct TurningDevice: View {
         .frame(width: Self.width(turn, height: height), height: height)
         .onAppear { start = .now }
     }
+}
+
+/// How the Dynamic Island's activities come and go, measured from it, for everything the closed
+/// notch shows: its wings open with a touch of bounce and fold without; what they show fades in
+/// from a heavy blur as they open, sharpening last, and blurs away at once as they fold, riding in
+/// with their ends under the notch, which stays sharp over it.
+enum IslandMotion {
+    static let open = Animation.spring(response: 0.5, dampingFraction: 0.82)
+    static let fold = Animation.spring(response: 0.42, dampingFraction: 1)
+    /// Once the wings are on their way open.
+    static let fadeIn = Animation.linear(duration: 0.22).delay(0.1)
+    static let fadeOut = Animation.linear(duration: 0.12)
+    static let fade = AnyTransition.asymmetric(
+        insertion: .modifier(active: BlurFade(shown: false, arriving: true), identity: BlurFade(shown: true, arriving: true))
+            .animation(fadeIn),
+        removal: .modifier(active: BlurFade(shown: false, arriving: false), identity: BlurFade(shown: true, arriving: false))
+            .animation(fadeOut))
 }
 
 /// Coming and going through a blur, as the Dynamic Island's activities do, measured from it, over a
