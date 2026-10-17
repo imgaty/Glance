@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 16 October 2026`
+`Created: 11 October 2026` | `Last updated: 17 October 2026`
 
 <br>
 
@@ -13,9 +13,13 @@
 - Added charging and low battery announcements beside the camera, with the
   battery's level, on MacBooks.
 - Added AirPods, headphones, keyboards, mice, trackpads and game controllers
-  announced as they connect, as the iPhone shows AirPods: AirPods in 3D,
-  turning slowly while they show, AirPods Max as macOS pictures them, others
-  as their symbol, beside their battery as a ring. And sound going to AirPlay.
+  announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
+  3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
+  AirPods Max as macOS pictures them, others as their symbol, beside their
+  battery as a ring. And sound going to AirPlay.
+- Added announcements coming and going as the Dynamic Island's do: the notch
+  widens and folds with its springs, what it shows fades in and out through a
+  blur, and the notch at rest stays sharp over it.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera and chiming when it's done.

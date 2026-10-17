@@ -1,10 +1,11 @@
 # Third-Party Notices
 
-`Created: 11 October 2026` | `Last updated: 11 October 2026`
+`Created: 11 October 2026` | `Last updated: 17 October 2026`
 
 Glance bundles one third-party library, Sparkle, for its updates. Its license,
 along with the licenses of the code Sparkle includes, is reproduced in full
-below.
+below. It also bundles clips of AirPods and Beats turning, drawn from their
+makers' own 3D models.
 
 Glance also connects to three online services while it runs. It bundles none of
 their code or content.
@@ -153,6 +154,19 @@ STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 ```
+
+<br>
+
+## AirPods and Beats
+
+`Resources/Headphones`
+
+Clips of AirPods and Beats turning, drawn from Apple's and Beats' own 3D
+models, © Apple Inc.: AirPods Pro, AirPods Pro 2 and 3, AirPods 3 and 4 from
+the AirPods pages of [apple.com](https://www.apple.com/airpods/), where they're
+shown in AR, and Beats from the product pages of
+[beatsbydre.com](https://www.beatsbydre.com). The models themselves aren't
+included; `Tools/DeviceClips` downloads them to draw the clips again.
 
 <br>
 

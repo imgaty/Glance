@@ -57,10 +57,10 @@ final class DeviceWatch {
                 }
                 let symbol = info?.product.flatMap(Self.symbol(product:)) ?? device.symbol
                 let pictures = info?.product.map(DevicePictures.names(product:)) ?? []
-                // AirPods turn in 3D: drawn once, before they're shown.
-                let earbuds = info?.product.flatMap(Earbuds.init(product:))
-                if let earbuds { _ = await EarbudTurn.prepare(earbuds) }
-                self?.announce(device.name, symbol: symbol, earbuds: earbuds, pictures: pictures, battery: info?.battery)
+                // AirPods and Beats turn in 3D, from a clip read once, before they're shown.
+                let model = info?.product.flatMap(Headphones.init(product:))
+                if let model { _ = await DeviceTurn.prepare(model) }
+                self?.announce(device.name, symbol: symbol, model: model, pictures: pictures, battery: info?.battery)
             }
         }
     }
@@ -234,7 +234,7 @@ final class DeviceWatch {
     // MARK: Announcing
 
     private func announce(
-        _ name: String, symbol: String, earbuds: Earbuds? = nil, pictures: [String] = [], battery: Int? = nil,
+        _ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil,
         kind: NotchAlert.Kind = .device
     ) {
         let now = Date.now
@@ -244,7 +244,7 @@ final class DeviceWatch {
         }
         recent[name] = now
         Activities.shared.post(
-            Self.alert(name: Self.shortName(name), symbol: symbol, earbuds: earbuds, pictures: pictures, battery: battery, kind: kind))
+            Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery, kind: kind))
     }
 
     /// Without its owner's name, as the iPhone names AirPods: Hilário's AirPods Pro as AirPods Pro.
@@ -258,7 +258,7 @@ final class DeviceWatch {
     /// A device: its symbol and battery, as AirPods are shown. The sound going to AirPlay: AirPlay's
     /// symbol, in the blue Control Center lights it with, and where it plays.
     static func alert(
-        name: String, symbol: String, earbuds: Earbuds? = nil, pictures: [String] = [], battery: Int? = nil,
+        name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil,
         kind: NotchAlert.Kind = .device
     )
         -> NotchAlert
@@ -268,7 +268,7 @@ final class DeviceWatch {
         }
         let level = battery.map { ", \($0) percent" } ?? ""
         return NotchAlert(
-            kind: kind, content: .device(symbol: symbol, earbuds: earbuds, pictures: pictures, battery: battery),
+            kind: kind, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
             spoken: "\(name) connected\(level)")
     }
 }

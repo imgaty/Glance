@@ -30,6 +30,10 @@ ditto .build/release/Sparkle.framework "$FRAMEWORKS/Sparkle.framework"
 rm -rf "$FRAMEWORKS/Sparkle.framework/Versions/B/XPCServices" "$FRAMEWORKS/Sparkle.framework/XPCServices"
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Glance"
 cp Resources/Info.plist "$PLIST"
+# AirPods and Beats turning, drawn from their makers' 3D models (see Tools/DeviceClips), shown
+# beside the camera as they connect.
+mkdir -p "$APP/Contents/Resources"
+cp -R Resources/Headphones "$APP/Contents/Resources/"
 # Glance Tray in the Share menu, an app extension, at the app's own version.
 cp .build/release/GlanceShare "$SHARE/Contents/MacOS/GlanceShare"
 cp Resources/GlanceShare-Info.plist "$SHARE/Contents/Info.plist"
