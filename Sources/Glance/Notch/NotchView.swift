@@ -408,7 +408,7 @@ struct NotchView: View {
             LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
                 .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
                 .allowsHitTesting(places == nil)
-                .islandFade(liveShown, instead: isOpen ? Self.fade(in: false) : nil)
+                .islandFade(liveShown)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
@@ -416,7 +416,7 @@ struct NotchView: View {
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
             .allowsHitTesting(false)
-            .animation(.easeOut(duration: 0.2)) { $0.opacity(isOpen ? 0 : 1) }
+            .islandFade(!isOpen)
             // The notch at rest, sharp, over what the wings show, as the Dynamic Island keeps its own
             // shape over an activity coming or going: what rides in with the wings' ends as they fold
             // passes under it. Kept at the closed size while open, so closing it never shrinks from the
@@ -437,7 +437,7 @@ struct NotchView: View {
                 .padding(.top, lyricsTop)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .mask { awayFromCamera }
-                .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
+                .islandFade(lyricsShown)
                 .allowsHitTesting(places == nil)
             // The player and the tray side by side, as pages are: going to the tray, the player
             // slides off to the left as the tray comes in from the right, and back.
@@ -462,10 +462,9 @@ struct NotchView: View {
                 .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
                 .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
                 .offset(x: model.nudge)
-                // There open, or in the closed notch while something plays. Opening and closing, it
-                // comes and goes just as the player's words and buttons do; in the closed notch, as the
-                // Dynamic Island's activities do.
-                .islandFade(isOpen || artworkShown, instead: isOpen ? Self.fade(in: true) : nil)
+                // There open, or in the closed notch while something plays, coming and going as the
+                // Dynamic Island's activities do, as everything in the notch does.
+                .islandFade(isOpen || artworkShown)
                 .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 // Over the tray, though unseen there: clicks go through it to the tray's items.
@@ -477,9 +476,8 @@ struct NotchView: View {
             .matchedGeometryEffect(id: isOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
             .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
             // There open, or in the closed notch while something plays, out of the way when a new
-            // song's artist takes its place. Opening and closing, it comes and goes just as the
-            // player's words and buttons do; in the closed notch, as the Dynamic Island's activities do.
-            .islandFade(isOpen || waveformShown, instead: isOpen ? Self.fade(in: true) : nil)
+            // song's artist takes its place, coming and going as the Dynamic Island's activities do.
+            .islandFade(isOpen || waveformShown)
             .modifier(PageFade(hidden: isOpen && onTray))
             .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil && !trayShown)
@@ -656,12 +654,6 @@ struct NotchView: View {
         .compositingGroup()
     }
 
-    /// Content fades in once the notch has begun to grow, and out quickly as it shrinks, so it is
-    /// never squeezed into the closing shape.
-    fileprivate static func fade(in showing: Bool) -> Animation {
-        showing ? .easeOut(duration: 0.3).delay(0.08) : .easeOut(duration: 0.12)
-    }
-
     /// In place of the glass: visible exactly where the black at the top lets the glass show, as if
     /// it were under it. Full screen and the spotlight shine over the black, so this lifts away.
     private func belowTheBlack(lifted lights: Bool) -> some View {
@@ -703,13 +695,13 @@ struct NotchView: View {
 }
 
 /// How everything on a page comes and goes as the notch opens, closes, or turns to the other page:
-/// the player's words and buttons, its cover and its waveform, and the tray, all with one fade and
-/// one blur, so nothing lingers or leaves ahead of the rest.
+/// the player's words and buttons, its cover and its waveform, and the tray, as the Dynamic Island's
+/// activities come and go, so nothing lingers or leaves ahead of the rest.
 private struct PageFade: ViewModifier {
     let hidden: Bool
 
     func body(content: Content) -> some View {
-        content.animation(NotchView.fade(in: !hidden)) { $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0) }
+        content.islandFade(!hidden)
     }
 }
 

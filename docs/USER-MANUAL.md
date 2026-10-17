@@ -61,7 +61,9 @@ again, use **Settings > General > Permissions > Review…**.
 
 Hover over the notch or click it, depending on
 **Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
-notch closes when the pointer leaves it.
+notch closes when the pointer leaves it. The player, the tray and the lyrics
+come and go as the Dynamic Island's activities do, fading in out of a blur and
+away into one, as the notch opens, closes, or switches between them.
 
 | Gesture | Operation |
 | --- | --- |
@@ -224,7 +226,8 @@ While something plays, the closed notch shows the cover on its left and a
 waveform on its right. When something new starts playing, its name and artist
 appear beside the notch for a moment. Everything here comes and goes as on the
 iPhone's Dynamic Island: the notch widens and folds, and what it shows rides
-in and out with its ends, fading in out of a blur and away into one.
+in and out with its ends, fading in out of a blur and away into one. A new
+song's cover comes in the same way as the last one goes.
 
 Turn these off with **Live Activities** and **Announce new audio** in
 **Settings > Music**.

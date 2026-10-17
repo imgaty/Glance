@@ -342,27 +342,25 @@ private struct IslandFade: Transition {
 
 extension View {
     /// Shown or hidden in place, coming and going as the Dynamic Island's activities do, whatever
-    /// else changes with it, or as `instead` does. SwiftUI's own blur and opacity, each on its own
-    /// curve: the notch draws a fade of one's own only once it's done.
-    func islandFade(_ shown: Bool, instead: Animation? = nil) -> some View {
-        modifier(IslandFadeModifier(shown: shown, instead: instead))
+    /// else changes with it: everything in the notch, closed or open. SwiftUI's own blur and opacity,
+    /// each on its own curve: the notch draws a fade of one's own only once it's done.
+    func islandFade(_ shown: Bool) -> some View {
+        modifier(IslandFadeModifier(shown: shown))
     }
 }
 
 private struct IslandFadeModifier: ViewModifier {
     let shown: Bool
-    let instead: Animation?
     @Environment(\.closedNotch) private var closed
 
     func body(content: Content) -> some View {
-        // Hidden, blurred by the notch's height, as the Dynamic Island's activities are by its own;
-        // opening or closing the notch, only lightly.
-        let hidden = instead == nil ? closed.height * IslandCurve.blur : IslandCurve.notchBlur
+        // Hidden, blurred by the closed notch's height, as the Dynamic Island's activities are by its
+        // own.
         content
-            .animation(instead ?? .init(IslandCurve(shown ? .blurIn : .blurOut))) {
-                $0.blur(radius: shown ? 0 : hidden)
+            .animation(.init(IslandCurve(shown ? .blurIn : .blurOut))) {
+                $0.blur(radius: shown ? 0 : closed.height * IslandCurve.blur)
             }
-            .animation(instead ?? .init(IslandCurve(shown ? .opacityIn : .opacityOut))) {
+            .animation(.init(IslandCurve(shown ? .opacityIn : .opacityOut))) {
                 $0.opacity(shown ? 1 : 0)
             }
     }
@@ -375,7 +373,6 @@ private struct IslandCurve: CustomAnimation {
     enum Part: Hashable { case blurIn, opacityIn, blurOut, opacityOut, ringIn, ringOut }
     /// Hidden, blurred by this much of the height.
     static let blur: CGFloat = 0.16
-    static let notchBlur: CGFloat = 1.5
     let part: Part
 
     init(_ part: Part) { self.part = part }

@@ -38,18 +38,26 @@ struct HeroArtwork: View {
         // cropped to fill it.
         Color.clear
             .overlay {
-                if let artwork = nowPlaying.artwork {
-                    Image(nsImage: artwork).resizable().aspectRatio(contentMode: .fill)
-                } else {
-                    // A disc while nothing plays; a note for a song without artwork.
-                    GeometryReader { proxy in
-                        Image(systemName: nowPlaying.hasMedia ? "music.note" : "opticaldisc.fill")
-                            .font(.system(size: proxy.size.width * 0.34))
-                            .foregroundStyle(.white.opacity(0.5))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // A new song's cover comes in as the last one goes, as the Dynamic Island's activities
+                // come and go.
+                ZStack {
+                    if let artwork = nowPlaying.artwork {
+                        Image(nsImage: artwork).resizable().aspectRatio(contentMode: .fill)
+                            .id(ObjectIdentifier(artwork))
+                            .transition(IslandMotion.fade)
+                    } else {
+                        // A disc while nothing plays; a note for a song without artwork.
+                        GeometryReader { proxy in
+                            Image(systemName: nowPlaying.hasMedia ? "music.note" : "opticaldisc.fill")
+                                .font(.system(size: proxy.size.width * 0.34))
+                                .foregroundStyle(.white.opacity(0.5))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .background(.white.opacity(0.08))
+                        .transition(IslandMotion.fade)
                     }
-                    .background(.white.opacity(0.08))
                 }
+                .animation(IslandMotion.open, value: nowPlaying.artwork.map(ObjectIdentifier.init))
             }
             .overlay {
                 // The moving cover, in the open player, once it can show its first frame.
@@ -103,11 +111,9 @@ struct HeroArtwork: View {
                         .accessibilityHidden(!(showsBadge && isOpen))
                         .position(x: proxy.size.width + past - tile / 2, y: proxy.size.height + past - tile / 2)
                     }
-                    // Only its fading has timing of its own; where it is and how large come with the
-                    // cover's own motion.
-                    .animation(isOpen ? .easeOut(duration: 0.15) : .easeOut(duration: 0.1)) {
-                        $0.opacity(isOpen && showsBadge ? 1 : 0)
-                    }
+                    // Only its fading has timing of its own, as everything in the notch comes and goes;
+                    // where it is and how large come with the cover's own motion.
+                    .islandFade(isOpen && showsBadge)
                     .allowsHitTesting(showsBadge && isOpen)
                 }
             }

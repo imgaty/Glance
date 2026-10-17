@@ -24,6 +24,9 @@
   blur and away into one, under the notch at rest, which stays sharp over it.
   An announcement shows as long as the iPhone shows AirPods arriving. Between
   two, it folds to rest before opening for the next.
+- Changed the player, the tray and the lyrics to come and go with the same
+  fade and blur as the notch opens, closes or turns its page, and a new song's
+  cover to come in the same way as the last one goes.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera and chiming when it's done.
