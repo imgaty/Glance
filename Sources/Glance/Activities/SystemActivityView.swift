@@ -257,38 +257,54 @@ struct TurningDevice: View {
 enum IslandMotion {
     static let open = Animation.spring(response: 0.5, dampingFraction: 0.82)
     static let fold = Animation.spring(response: 0.42, dampingFraction: 1)
-    /// Once the wings are on their way open.
-    static let fadeIn = Animation.linear(duration: 0.22).delay(0.1)
-    static let fadeOut = Animation.linear(duration: 0.12)
-    static let fade = AnyTransition.asymmetric(
-        insertion: .modifier(active: BlurFade(shown: false, arriving: true), identity: BlurFade(shown: true, arriving: true))
-            .animation(fadeIn),
-        removal: .modifier(active: BlurFade(shown: false, arriving: false), identity: BlurFade(shown: true, arriving: false))
-            .animation(fadeOut))
+    /// What comes and goes with the wings, as `islandFade` shows and hides it.
+    static let fade = AnyTransition(IslandFade())
 }
 
-/// Coming and going through a blur, as the Dynamic Island's activities do, measured from it, over a
-/// steady `progress`. Arriving, it comes in solid quickly out of a heavy blur that clears more
-/// slowly, so it sharpens last. Leaving, it blurs at once and fades.
-struct BlurFade: ViewModifier, Animatable {
-    var progress: Double
-    let arriving: Bool
-
-    init(shown: Bool, arriving: Bool = true) {
-        progress = shown ? 1 : 0
-        self.arriving = arriving
+private struct IslandFade: Transition {
+    func body(content: Content, phase: TransitionPhase) -> some View {
+        content.islandFade(phase.isIdentity)
     }
+}
 
-    var animatableData: Double {
-        get { progress }
-        set { progress = newValue }
+extension View {
+    /// Shown or hidden in place, coming and going as the Dynamic Island's activities do, whatever
+    /// else changes with it, or as `instead` does. Once the wings are on their way open, it comes in
+    /// solid quickly out of a heavy blur that clears more slowly, so it sharpens last; as they fold,
+    /// it blurs at once and fades. SwiftUI's own blur and opacity, each on its own curve: the notch
+    /// draws a fade of one's own only once it's done.
+    func islandFade(_ shown: Bool, instead: Animation? = nil) -> some View {
+        animation(instead ?? .init(IslandCurve(shown ? .blurIn : .blurOut)).delay(shown ? 0.1 : 0)) {
+            $0.blur(radius: shown ? 0 : IslandCurve.blur)
+        }
+        .animation(instead ?? .init(IslandCurve(shown ? .opacityIn : .opacityOut)).delay(shown ? 0.1 : 0)) {
+            $0.opacity(shown ? 1 : 0)
+        }
     }
+}
 
-    func body(content: Content) -> some View {
-        let p = min(max(progress, 0), 1)
-        content
-            .blur(radius: arriving ? 8 * pow(1 - p, 2) : 9 * pow(1 - p, 0.7))
-            .opacity(arriving ? 1 - pow(1 - p, 2.5) : p)
+/// The fade's curves, over 0.22 seconds in and 0.12 out: hidden, it's blurred as far as it blurs
+/// leaving, and arriving it starts a little sharper.
+private struct IslandCurve: CustomAnimation {
+    enum Part: Hashable { case blurIn, opacityIn, blurOut, opacityOut }
+    static let blur: CGFloat = 9
+    let part: Part
+
+    init(_ part: Part) { self.part = part }
+
+    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context: inout AnimationContext<V>) -> V? {
+        let arriving = part == .blurIn || part == .opacityIn
+        let duration = arriving ? 0.22 : 0.12
+        guard time < duration else { return nil }
+        let u = time / duration
+        let done: Double =
+            switch part {
+            case .blurIn: 1 - 8 / Self.blur * pow(1 - u, 2)
+            case .opacityIn: 1 - pow(1 - u, 2.5)
+            case .blurOut: pow(u, 0.7)
+            case .opacityOut: u
+            }
+        return value.scaled(by: done)
     }
 }
 
