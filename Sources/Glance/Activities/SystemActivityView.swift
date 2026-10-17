@@ -21,41 +21,54 @@ struct SystemActivityView: View {
     let timer: NotchTimer.State?
     /// Music is playing: its cover keeps the left wing beside a timer.
     let music: Bool
+    /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
+    /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
+    /// start, so it never leaves as well as fading.
+    @State private var leaving: NotchAlert?
+    @State private var leavingTimer: NotchTimer.State?
+    /// Counted, so what's kept goes only if nothing has come since.
+    @State private var changes = (alert: 0, timer: 0)
 
     var body: some View {
         let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
         let side = Self.side(restingHeight, island)
         let lane = max(wing - edge - LiveActivityView.cameraGap, side)
         let size = LiveActivityView.textSize(for: restingHeight)
+        let shownAlert = alert ?? leaving
+        let shownTimer = shownAlert == nil ? timer ?? leavingTimer : nil
         ZStack {
-            if let alert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
-                device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size)
+            if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
+                device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size, leaving: self.alert == nil)
+                    .islandFade(self.alert != nil)
                     .id(alert.id)
                     .transition(IslandMotion.fade)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(alert.spoken)
-            } else if let alert {
-                HStack(spacing: 0) {
+            } else if let alert = shownAlert {
+                // Each side kept to its own end, so it rides in and out with it.
+                ZStack {
                     leading(alert.content, side: side, size: size)
                         .frame(width: lane, alignment: .leading)
-                    Spacer(minLength: 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     trailing(alert.content, side: side, size: size)
                         .frame(width: lane, alignment: .trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .padding(.horizontal, edge)
+                .islandFade(self.alert != nil)
                 .id(alert.id)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(alert.spoken)
-            } else if let timer {
-                HStack(spacing: 0) {
+            } else if let timer = shownTimer {
+                ZStack {
                     Image(systemName: "timer")
                         .font(.system(size: size + 1, weight: .semibold))
                         .foregroundStyle(.orange)
                         .frame(width: side, height: side)
                         // While music plays, its cover is there instead.
                         .opacity(music ? 0 : 1)
-                    Spacer(minLength: 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
                         Text(NotchTimer.format(timer.left(at: context.date)))
                             .font(.system(size: size + 1, weight: .semibold).monospacedDigit())
@@ -65,21 +78,46 @@ struct SystemActivityView: View {
                             .animation(.snappy, value: NotchTimer.format(timer.left(at: context.date)))
                             // Paused, it waits, dimmed.
                             .opacity(timer.isRunning ? 1 : 0.55)
+                            .fixedSize()
                     }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .padding(.horizontal, edge)
+                .islandFade(self.timer != nil)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
             }
         }
         .frame(maxHeight: .infinity)
+        .onChange(of: alert, initial: true) { _, new in
+            changes.alert += 1
+            if let new { leaving = new; return }
+            let change = changes.alert
+            Task { @MainActor in
+                try? await Task.sleep(for: Self.folding)
+                if changes.alert == change { leaving = nil }
+            }
+        }
+        .onChange(of: timer, initial: true) { _, new in
+            changes.timer += 1
+            if let new { leavingTimer = new; return }
+            let change = changes.timer
+            Task { @MainActor in
+                try? await Task.sleep(for: Self.folding)
+                if changes.timer == change { leavingTimer = nil }
+            }
+        }
     }
 
+    /// Long enough for what's leaving to have faded as the wings fold.
+    static let folding = Duration.milliseconds(300)
+
     /// A device arriving, laid out as the Dynamic Island lays out AirPods, by the notch's height: the
-    /// device a little under half of it tall, in from the end; its battery's ring a little over half
-    /// of it across, its circle concentric with the notch's rounded end.
-    private func device(symbol: String, model: Headphones?, pictures: [String], battery: Int?, size: CGFloat) -> some View {
+    /// device a little under half of it tall, its middle in from the end; its battery's ring a little
+    /// over half of it across, its circle concentric with the wing's rounded end.
+    private func device(symbol: String, model: Headphones?, pictures: [String], battery: Int?, size: CGFloat, leaving: Bool) -> some View {
         let layout = DeviceLayout(height: restingHeight)
+        let axis = Self.deviceAxis(model: model, pictures: pictures, layout: layout)
         return HStack(spacing: 0) {
             Group {
                 if let model, let turn = DeviceTurn.cached(model) {
@@ -90,18 +128,19 @@ struct SystemActivityView: View {
                     TurningSymbol(symbol: symbol, side: layout.picture)
                 }
             }
-            .padding(.leading, layout.leading)
+            .padding(.leading, layout.leading(toAxis: axis))
             Spacer(minLength: 0)
             Group {
                 if let battery {
                     BatteryRing(percent: battery, diameter: layout.ring)
+                        .modifier(RingArrival(leaving: leaving))
                         .padding(.trailing, layout.trailing)
                 } else {
                     Text("Connected")
                         .font(.system(size: size, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(1)
-                        .padding(.trailing, layout.leading)
+                        .padding(.trailing, layout.textInset)
                 }
             }
         }
@@ -163,17 +202,22 @@ struct SystemActivityView: View {
         let size = LiveActivityView.textSize(for: restingHeight)
         let side = side(restingHeight, island)
         let gap = LiveActivityView.cameraGap
+        // A device's wings reach as far past the notch as the Dynamic Island's do for AirPods, or as
+        // far as the device turns, so none of it goes under the camera.
+        if case .device(_, let model, let pictures, let battery) = alert.content {
+            let layout = DeviceLayout(height: restingHeight)
+            let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
+            let reach =
+                model.flatMap(DeviceTurn.cached).map { TurningDevice.reach($0, height: layout.picture) }
+                ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
+            let device = layout.leading(toAxis: axis) + axis + reach
+            let end = battery == nil ? width("Connected", size, .semibold) + layout.textInset : layout.ring + layout.trailing
+            return min(max(device, end, layout.wing), maxWing)
+        }
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device(_, let model, let pictures, let battery):
-                {
-                    let layout = DeviceLayout(height: restingHeight)
-                    let device =
-                        model.flatMap(DeviceTurn.cached).map { TurningDevice.width($0, height: layout.picture) }
-                        ?? DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
-                    let end = battery == nil ? width("Connected", size, .semibold) + layout.leading : layout.ring + layout.trailing
-                    return (layout.leading + device + gap, gap + end)
-                }()
+            case .device:
+                (0, 0)
             case .battery(let title, let level):
                 (
                     edge + width(title, size, .semibold) + gap,
@@ -188,6 +232,20 @@ struct SystemActivityView: View {
     }
 
     static let maxWing: CGFloat = 170
+
+    /// A device's width face on.
+    @MainActor
+    static func deviceWidth(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
+        model.flatMap(DeviceTurn.cached).map { TurningDevice.width($0, height: layout.picture) }
+            ?? DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
+    }
+
+    /// From a device's left face on to the middle it turns about.
+    @MainActor
+    static func deviceAxis(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
+        model.flatMap(DeviceTurn.cached).map { TurningDevice.axis($0, height: layout.picture) }
+            ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
+    }
 
     /// Room for the timer's time, as long as it can get, and its symbol.
     static func wing(for timer: NotchTimer.State, restingHeight: CGFloat, island: Bool) -> CGFloat {
@@ -205,15 +263,24 @@ struct SystemActivityView: View {
     }
 }
 
-/// Where a device arriving sits, by the notch's height, measured from the iPhone's AirPods in the
-/// Dynamic Island, which stands no taller for them: the device 46% of the height tall, 40% of it in
-/// from the end; the ring 54% of it across, as far from the end as from the top and bottom.
+/// Where a device arriving sits, by the notch's height, measured frame by frame from the iPhone's
+/// AirPods in the Dynamic Island, which stands no taller for them: the device 46.4% of the height
+/// tall, the middle it turns about 63.8% of it in from the end; the ring 54% of it across,
+/// concentric with the end. The wings reach 88.1% of it past the island's resting ends.
 struct DeviceLayout {
     let height: CGFloat
-    var picture: CGFloat { (height * 0.46).rounded() }
-    var ring: CGFloat { (height * 0.54).rounded() }
-    var leading: CGFloat { (height * 0.4).rounded() }
-    var trailing: CGFloat { ((height - ring) / 2).rounded() }
+    var picture: CGFloat { height * 0.464 }
+    var ring: CGFloat { height * 0.54 }
+    var trailing: CGFloat { (height - ring) / 2 }
+    /// From the end to the middle the device turns about.
+    var middle: CGFloat { height * 0.638 }
+    /// How far the wings reach past the notch, at least.
+    var wing: CGFloat { height * 0.881 }
+    /// Beside a word in place of the ring.
+    var textInset: CGFloat { height * 0.4 }
+
+    /// From the end to the device's left face on, given how far in from there it turns.
+    func leading(toAxis axis: CGFloat) -> CGFloat { max(middle - axis, 0) }
 }
 
 /// AirPods or Beats arriving, in 3D, facing you as they arrive and turning steadily about their
@@ -226,11 +293,17 @@ struct TurningDevice: View {
     @State private var start = Date.now
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// About a turn every six seconds, measured from the iPhone.
-    static let degreesPerSecond = 62.0
+    /// A turn every five and a half seconds, measured frame by frame from the iPhone.
+    static let degreesPerSecond = 66.1
 
     /// The pair's width, face on.
     static func width(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.rest.width * height / turn.rest.height }
+
+    /// From the pair's left, face on, to the middle it turns about.
+    static func axis(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { (turn.canvas.width / 2 - turn.rest.minX) * height / turn.rest.height }
+
+    /// The furthest it reaches from the middle it turns about, either side, all the way round.
+    static func reach(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.reach * height / turn.rest.height }
 
     /// How far round the pair has turned since it arrived.
     static func degrees(after seconds: TimeInterval) -> Double { max(seconds, 0) * degreesPerSecond }
@@ -250,13 +323,13 @@ struct TurningDevice: View {
     }
 }
 
-/// How the Dynamic Island's activities come and go, measured from it, for everything the closed
-/// notch shows: its wings open with a touch of bounce and fold without; what they show fades in
-/// from a heavy blur as they open, sharpening last, and blurs away at once as they fold, riding in
-/// with their ends under the notch, which stays sharp over it.
+/// How the Dynamic Island's activities come and go, measured frame by frame from it, for everything
+/// the closed notch shows: its wings open with a touch of bounce and fold without, what they show
+/// riding in and out with their ends; it fades in out of a blur as they open, sharpening as it comes,
+/// and fades away into one at once as they fold.
 enum IslandMotion {
-    static let open = Animation.spring(response: 0.5, dampingFraction: 0.82)
-    static let fold = Animation.spring(response: 0.42, dampingFraction: 1)
+    static let open = Animation.spring(response: 0.55, dampingFraction: 0.8)
+    static let fold = Animation.spring(response: 0.315, dampingFraction: 1.18)
     /// What comes and goes with the wings, as `islandFade` shows and hides it.
     static let fade = AnyTransition(IslandFade())
 }
@@ -269,42 +342,101 @@ private struct IslandFade: Transition {
 
 extension View {
     /// Shown or hidden in place, coming and going as the Dynamic Island's activities do, whatever
-    /// else changes with it, or as `instead` does. Once the wings are on their way open, it comes in
-    /// solid quickly out of a heavy blur that clears more slowly, so it sharpens last; as they fold,
-    /// it blurs at once and fades. SwiftUI's own blur and opacity, each on its own curve: the notch
-    /// draws a fade of one's own only once it's done.
+    /// else changes with it, or as `instead` does. SwiftUI's own blur and opacity, each on its own
+    /// curve: the notch draws a fade of one's own only once it's done.
     func islandFade(_ shown: Bool, instead: Animation? = nil) -> some View {
-        animation(instead ?? .init(IslandCurve(shown ? .blurIn : .blurOut)).delay(shown ? 0.1 : 0)) {
-            $0.blur(radius: shown ? 0 : IslandCurve.blur)
-        }
-        .animation(instead ?? .init(IslandCurve(shown ? .opacityIn : .opacityOut)).delay(shown ? 0.1 : 0)) {
-            $0.opacity(shown ? 1 : 0)
-        }
+        modifier(IslandFadeModifier(shown: shown, instead: instead))
     }
 }
 
-/// The fade's curves, over 0.22 seconds in and 0.12 out: hidden, it's blurred as far as it blurs
-/// leaving, and arriving it starts a little sharper.
+private struct IslandFadeModifier: ViewModifier {
+    let shown: Bool
+    let instead: Animation?
+    @Environment(\.closedNotch) private var closed
+
+    func body(content: Content) -> some View {
+        // Hidden, blurred by the notch's height, as the Dynamic Island's activities are by its own;
+        // opening or closing the notch, only lightly.
+        let hidden = instead == nil ? closed.height * IslandCurve.blur : IslandCurve.notchBlur
+        content
+            .animation(instead ?? .init(IslandCurve(shown ? .blurIn : .blurOut))) {
+                $0.blur(radius: shown ? 0 : hidden)
+            }
+            .animation(instead ?? .init(IslandCurve(shown ? .opacityIn : .opacityOut))) {
+                $0.opacity(shown ? 1 : 0)
+            }
+    }
+}
+
+/// The fade's curves, measured frame by frame from the iPhone's AirPods arriving and leaving, with
+/// what its island's resting shape hides taken out, since the notch's own hides what rides under it
+/// just as much: from when the wings start to move, how far along it is.
 private struct IslandCurve: CustomAnimation {
-    enum Part: Hashable { case blurIn, opacityIn, blurOut, opacityOut }
-    static let blur: CGFloat = 9
+    enum Part: Hashable { case blurIn, opacityIn, blurOut, opacityOut, ringIn, ringOut }
+    /// Hidden, blurred by this much of the height.
+    static let blur: CGFloat = 0.16
+    static let notchBlur: CGFloat = 1.5
     let part: Part
 
     init(_ part: Part) { self.part = part }
 
+    /// Seconds, and how far along.
+    private static let curves: [Part: [(Double, Double)]] = [
+        // Half there while it's still all but under the resting shape, then the rest as it rides out.
+        .opacityIn: [
+            (0.050, 0), (0.074, 0.15), (0.090, 0.30), (0.107, 0.42), (0.124, 0.48), (0.140, 0.52), (0.157, 0.56),
+            (0.174, 0.60), (0.190, 0.64), (0.207, 0.68), (0.224, 0.70), (0.240, 0.72), (0.257, 0.745), (0.274, 0.78),
+            (0.290, 0.81), (0.307, 0.85), (0.324, 0.88), (0.340, 0.91), (0.357, 0.94), (0.374, 0.96), (0.390, 0.97),
+            (0.407, 0.99), (0.424, 1),
+        ],
+        .blurIn: [
+            (0.134, 0), (0.167, 0.125), (0.184, 0.25), (0.200, 0.34), (0.217, 0.46), (0.234, 0.59), (0.251, 0.69),
+            (0.267, 0.76), (0.284, 0.825), (0.300, 0.875), (0.317, 0.925), (0.350, 0.96), (0.434, 1),
+        ],
+        .opacityOut: [
+            (0, 0), (0.013, 0.09), (0.030, 0.21), (0.046, 0.35), (0.063, 0.60), (0.080, 0.73), (0.096, 0.86),
+            (0.113, 0.94), (0.130, 0.97), (0.146, 0.99), (0.163, 1),
+        ],
+        // Blurring on past where it rests hidden while it's still seen; it's gone by the time it's back.
+        .blurOut: [
+            (0, 0), (0.013, 0.10), (0.030, 0.28), (0.046, 0.55), (0.063, 0.88), (0.080, 1.05), (0.096, 1.12), (0.113, 1.15),
+            (0.163, 1.15),
+        ],
+        // Of what's arrived, how much of a battery's ring shows: it comes in a little after, and goes
+        // a little ahead.
+        .ringIn: [
+            (0.124, 0), (0.150, 0.25), (0.167, 0.42), (0.184, 0.55), (0.200, 0.65), (0.217, 0.72), (0.234, 0.78),
+            (0.251, 0.83), (0.267, 0.87), (0.284, 0.90), (0.301, 0.93), (0.317, 0.95), (0.334, 0.98), (0.351, 0.99),
+            (0.367, 1),
+        ],
+        .ringOut: [(0, 0), (0.013, 0.07), (0.030, 0.16), (0.046, 0.24), (0.063, 0.31), (0.080, 0.36), (0.096, 0.44), (0.113, 0.5), (0.163, 1)],
+    ]
+
     func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context: inout AnimationContext<V>) -> V? {
-        let arriving = part == .blurIn || part == .opacityIn
-        let duration = arriving ? 0.22 : 0.12
-        guard time < duration else { return nil }
-        let u = time / duration
-        let done: Double =
-            switch part {
-            case .blurIn: 1 - 8 / Self.blur * pow(1 - u, 2)
-            case .opacityIn: 1 - pow(1 - u, 2.5)
-            case .blurOut: pow(u, 0.7)
-            case .opacityOut: u
+        let curve = Self.curves[part]!
+        guard let last = curve.last, time < last.0 else { return nil }
+        var done = 0.0
+        if let after = curve.firstIndex(where: { $0.0 > time }) {
+            if after > 0 {
+                let (t0, v0) = curve[after - 1], (t1, v1) = curve[after]
+                done = v0 + (v1 - v0) * (time - t0) / (t1 - t0)
             }
+        }
         return value.scaled(by: done)
+    }
+}
+
+/// A battery's ring arriving a moment after its device, and leaving a little ahead of it, as the
+/// iPhone's does beside AirPods.
+private struct RingArrival: ViewModifier {
+    let leaving: Bool
+    @State private var arrived = false
+
+    func body(content: Content) -> some View {
+        let shown = arrived && !leaving
+        content
+            .animation(.init(IslandCurve(shown ? .ringIn : .ringOut))) { $0.opacity(shown ? 1 : 0) }
+            .onAppear { arrived = true }
     }
 }
 
@@ -372,11 +504,13 @@ private struct TurningPictures: View {
 struct BatteryRing: View {
     let percent: Int
     let diameter: CGFloat
+    /// The iPhone's, as it shows AirPods' battery.
+    static let green = Color(red: 68 / 255, green: 231 / 255, blue: 114 / 255)
 
     var body: some View {
         // As thick as the iPhone's: an eighth of the ring across.
         let line = max(diameter * 0.12, 2)
-        let color: Color = percent <= 20 ? .red : .green
+        let color: Color = percent <= 20 ? .red : Self.green
         ZStack {
             Circle().stroke(color.opacity(0.3), lineWidth: line)
             Circle()

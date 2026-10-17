@@ -223,17 +223,18 @@ with two fingers, or scroll a mouse's wheel, to see the rest.
 While something plays, the closed notch shows the cover on its left and a
 waveform on its right. When something new starts playing, its name and artist
 appear beside the notch for a moment. Everything here comes and goes as on the
-iPhone's Dynamic Island: the notch widens and folds, and what it shows fades
-in and out through a blur.
+iPhone's Dynamic Island: the notch widens and folds, and what it shows rides
+in and out with its ends, fading in out of a blur and away into one.
 
 Turn these off with **Live Activities** and **Announce new audio** in
 **Settings > Music**.
 
 ### What the Mac announces
 
-As the iPhone's Dynamic Island does, the closed notch widens for a few seconds
-to show what just happened, then goes back to what it showed. What it shows
-fades in and out through a blur, sliding under the notch as it folds:
+As the iPhone's Dynamic Island does, the closed notch widens for a few seconds,
+as long as the iPhone shows AirPods arriving, to show what just happened, then
+goes back to what it showed. What it shows fades in and out through a blur,
+sliding under the notch as it folds:
 
 | Moment | What shows |
 | --- | --- |

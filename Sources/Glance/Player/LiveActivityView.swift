@@ -59,39 +59,65 @@ struct LiveActivityView: View {
         return min(max(left, right, restingHeight), NotchModel.maxPopWing)
     }
 
+    /// A new song's name, kept on once its moment is over as it fades while the wings fold, so it
+    /// rides in with their ends, as the Dynamic Island's activities do, rather than standing where it
+    /// was; and the room it had. Kept from the start, so it never leaves as well as fading.
+    @State private var popKept = false
+    @State private var popLane: CGFloat = 0
+    /// Counted, so the name goes only if nothing has changed since.
+    @State private var popChanges = 0
+
     var body: some View {
         let edge = Self.edgeInset(island: island, restingHeight: restingHeight)
         let side = restingHeight - Self.inset(island: island) * 2
-        let lane = max(wing - edge - Self.cameraGap, side)
+        let popLeaving = popKept && !pop
+        let lane = popLeaving ? max(popLane, wing - edge - Self.cameraGap, side) : max(wing - edge - Self.cameraGap, side)
         let size = Self.textSize(for: restingHeight)
         let accent = nowPlaying.accent(from: accentSource)
-        HStack(spacing: 0) {
+        let words = pop || popKept
+        // Each side kept to its own end, so it rides in and out with it.
+        ZStack {
             HStack(spacing: Self.textGap) {
                 Color.clear
                     .frame(width: side, height: side)
                     .matchedGeometryEffect(id: Hero.liveArtwork, in: hero)
-                if pop {
+                if words {
                     // In the cover's color, made light enough to read on the black notch.
                     MarqueeText(text: nowPlaying.title, font: .system(size: size, weight: .semibold), active: true)
                         .foregroundStyle(accent.readableOnBlack())
+                        .islandFade(pop)
                         .transition(IslandMotion.fade)
                 }
             }
             .frame(width: lane, alignment: .leading)
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
             ZStack(alignment: .trailing) {
                 Color.clear
                     .frame(width: side, height: side)
                     .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
-                if pop {
+                if words {
                     MarqueeText(text: nowPlaying.artist, font: .system(size: size), active: true, alignment: .trailing)
                         .foregroundStyle(accent.readableOnBlack(opacity: 0.7))
+                        .islandFade(pop)
                         .transition(IslandMotion.fade)
                 }
             }
             .frame(width: lane, alignment: .trailing)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(.horizontal, edge)
         .frame(maxHeight: .infinity)
+        .onChange(of: wing, initial: true) {
+            if pop { popLane = max(wing - edge - Self.cameraGap, side) }
+        }
+        .onChange(of: pop, initial: true) { _, new in
+            popChanges += 1
+            if new { popKept = true; return }
+            let change = popChanges
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if popChanges == change { popKept = false }
+            }
+        }
     }
 }

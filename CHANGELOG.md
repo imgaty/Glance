@@ -19,9 +19,11 @@
   battery as a ring. And sound going to AirPlay.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
-  The notch widens and folds with its springs, what it shows fades in and out
-  through a blur, and the notch at rest stays sharp over it. Between two, it
-  folds to rest before opening for the next.
+  The notch widens and folds with its springs, its wings' ends round as the
+  island's do, and what it shows rides in and out with them, fading in out of a
+  blur and away into one, under the notch at rest, which stays sharp over it.
+  An announcement shows as long as the iPhone shows AirPods arriving. Between
+  two, it folds to rest before opening for the next.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera and chiming when it's done.

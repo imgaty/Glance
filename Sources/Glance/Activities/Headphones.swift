@@ -83,6 +83,9 @@ struct DeviceTurn {
     let rest: CGRect
     /// The frames' size, in pixels.
     let canvas: CGSize
+    /// The furthest the device reaches from the middle it turns about, either side, all the way
+    /// round, in pixels.
+    let reach: CGFloat
 
     func frame(at degrees: Double) -> CGImage {
         let step = 360 / Double(frames.count)
@@ -121,7 +124,9 @@ struct DeviceTurn {
             if let frame = context.createCGImage(image, from: image.extent) { frames.append(frame) }
         }
         guard let first = frames.first, let rest = opaque(first) else { return nil }
-        return DeviceTurn(frames: frames, rest: rest, canvas: CGSize(width: first.width, height: first.height))
+        let middle = CGFloat(first.width) / 2
+        let reach = frames.compactMap(opaque).map { max($0.maxX - middle, middle - $0.minX) }.max() ?? rest.width / 2
+        return DeviceTurn(frames: frames, rest: rest, canvas: CGSize(width: first.width, height: first.height), reach: reach)
     }
 
     /// Where a picture isn't clear, in its pixels, from the top left.
