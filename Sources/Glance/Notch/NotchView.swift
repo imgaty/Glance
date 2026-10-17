@@ -405,9 +405,7 @@ struct NotchView: View {
             LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
                 .frame(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
-                .animation(isOpen ? Self.fade(in: false) : liveShown ? IslandMotion.fadeIn : IslandMotion.fadeOut) {
-                    $0.modifier(BlurFade(shown: liveShown, arriving: liveShown))
-                }
+                .islandFade(liveShown, instead: isOpen ? Self.fade(in: false) : nil)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
@@ -462,9 +460,7 @@ struct NotchView: View {
                 // There open, or in the closed notch while something plays. Opening and closing, it
                 // comes and goes just as the player's words and buttons do; in the closed notch, as the
                 // Dynamic Island's activities do.
-                .animation(isOpen ? Self.fade(in: true) : artworkShown ? IslandMotion.fadeIn : IslandMotion.fadeOut) {
-                    $0.modifier(BlurFade(shown: isOpen || artworkShown, arriving: isOpen || artworkShown))
-                }
+                .islandFade(isOpen || artworkShown, instead: isOpen ? Self.fade(in: true) : nil)
                 .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 // Over the tray, though unseen there: clicks go through it to the tray's items.
@@ -478,9 +474,7 @@ struct NotchView: View {
             // There open, or in the closed notch while something plays, out of the way when a new
             // song's artist takes its place. Opening and closing, it comes and goes just as the
             // player's words and buttons do; in the closed notch, as the Dynamic Island's activities do.
-            .animation(isOpen ? Self.fade(in: true) : waveformShown ? IslandMotion.fadeIn : IslandMotion.fadeOut) {
-                $0.modifier(BlurFade(shown: isOpen || waveformShown, arriving: isOpen || waveformShown))
-            }
+            .islandFade(isOpen || waveformShown, instead: isOpen ? Self.fade(in: true) : nil)
             .modifier(PageFade(hidden: isOpen && onTray))
             .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil && !trayShown)
