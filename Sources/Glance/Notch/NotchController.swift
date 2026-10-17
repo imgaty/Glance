@@ -96,6 +96,8 @@ final class NotchController {
     private var settingsWatch: AnyCancellable?
     private var songWatch: AnyCancellable?
     private var popTask: Task<Void, Never>?
+    /// Folding to rest before an announcement opens, or before what it covered comes back.
+    private var switchTask: Task<Void, Never>?
     /// What the Mac announces, and the timer, followed into the closed notch.
     private var alertWatch: AnyCancellable?
     private var timerWatch: AnyCancellable?
@@ -439,17 +441,48 @@ final class NotchController {
         withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.use(PlayerLayout.current) }
     }
 
-    /// Something the Mac announces: the wings widen to show it, and fold back once it's said.
+    /// Something the Mac announces: the wings widen to show it, and fold back once it's said, with
+    /// the Dynamic Island's springs, measured from it: a touch of bounce opening, none folding. With
+    /// music or a timer showing, the notch first folds to rest, what it shows blurring away, and
+    /// opens again from there; once it's said, it folds, and what was there opens again.
     private func show(_ alert: NotchAlert?) {
+        switchTask?.cancel()
+        let fold = Animation.spring(response: 0.42, dampingFraction: 1)
+        let open = Animation.spring(response: 0.5, dampingFraction: 0.82)
+        let wingsShowing = model.activity || model.timer != nil
         guard let alert else {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.alert = nil }
+            withAnimation(fold) {
+                model.alert = nil
+                model.switching = wingsShowing
+            }
+            guard wingsShowing else { return }
+            switchTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(Self.switchPause))
+                guard let self, !Task.isCancelled else { return }
+                withAnimation(open) { self.model.switching = false }
+            }
             return
         }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-            model.alertWing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, island: model.island)
-            model.alert = alert
+        let wing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, island: model.island)
+        func announce() {
+            withAnimation(open) {
+                model.switching = false
+                model.alertWing = wing
+                model.alert = alert
+            }
+        }
+        guard wingsShowing, model.alert == nil, !model.switching else { return announce() }
+        withAnimation(fold) { model.switching = true }
+        switchTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.switchPause))
+            guard self != nil, !Task.isCancelled else { return }
+            announce()
         }
     }
+
+    /// How long the notch rests between one activity folding and the next opening, as the Dynamic
+    /// Island's does.
+    private static let switchPause = 0.18
 
     /// A timer started, paused or ended: its wings come, or go.
     private func show(_ timer: NotchTimer.State?) {

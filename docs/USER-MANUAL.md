@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 16 October 2026`
+`Created: 11 October 2026` | `Last updated: 17 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -230,13 +230,14 @@ Turn these off with **Live Activities** and **Announce new audio** in
 ### What the Mac announces
 
 As the iPhone's Dynamic Island does, the closed notch widens for a few seconds
-to show what just happened, then goes back to what it showed:
+to show what just happened, then goes back to what it showed. What it shows
+fades in and out through a blur, sliding under the notch as it folds:
 
 | Moment | What shows |
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery |
 | A MacBook's battery at 20%, and again at 10% | `Low Battery`, and its level, in red |
-| AirPods or other headphones connecting | The AirPods themselves in 3D, turning slowly while they show (AirPods Max as macOS pictures them, other headphones their symbol), and their battery as a ring: the lower earbud's |
+| AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring when it tells the Mac |
 | The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
 | The internet lost for a few seconds | `No Internet` |

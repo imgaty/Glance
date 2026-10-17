@@ -131,6 +131,9 @@ final class NotchModel: ObservableObject {
     /// wings show it, over whatever else they show.
     @Published var alert: NotchAlert?
     @Published var alertWing: CGFloat = 0
+    /// Between what the wings show and what's announced, the notch folds to rest first and opens
+    /// again from there, as the Dynamic Island switches between activities.
+    @Published var switching = false
     /// A timer counting down beside the camera, and each wing's width for it.
     @Published var timer: NotchTimer.State?
     @Published var timerWing: CGFloat = 0
@@ -221,6 +224,7 @@ final class NotchModel: ObservableObject {
     /// wider while a new song is announced.
     var wing: CGFloat {
         let resting = island ? (closedSize.height * 1.25).rounded() : closedSize.height
+        if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
         if timer != nil { return max(timerWing, resting) }
@@ -401,15 +405,25 @@ struct NotchView: View {
             LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
                 .frame(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
-                .animation(.easeOut(duration: 0.2)) { $0.opacity(model.activity && model.alert == nil && !isOpen ? 1 : 0) }
+                .animation(.easeOut(duration: 0.2)) {
+                    $0.opacity(model.activity && !musicAway && !isOpen ? 1 : 0).blur(radius: musicAway ? 6 : 0)
+                }
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
-                timer: model.activity && model.pop ? nil : model.timer, music: model.activity
+                timer: model.activity && model.pop || model.switching ? nil : model.timer, music: model.activity
             )
             .frame(width: m.bodyWidth, height: m.height)
             .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.2)) { $0.opacity(isOpen ? 0 : 1) }
+            // The notch at rest, sharp, over what the wings show, as the Dynamic Island keeps its own
+            // shape over an activity coming or going: what rides in with the wings' ends as they fold
+            // passes under it.
+            shape.fill(.black)
+                .frame(width: restingBody(m) + m.flare * 2, height: m.height)
+                .frame(width: m.totalWidth, height: m.height, alignment: .top)
+                .allowsHitTesting(false)
+                .animation(.easeOut(duration: 0.1)) { $0.opacity(isOpen ? 0 : 1) }
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -448,7 +462,7 @@ struct NotchView: View {
                 // There open, or in the closed notch while something plays. Opening and closing, it
                 // comes and goes just as the player's words and buttons do.
                 .animation(isOpen || !model.activity ? Self.fade(in: isOpen) : .spring(response: 0.45, dampingFraction: 0.8)) {
-                    $0.opacity(isOpen || (model.activity && model.alert == nil) ? 1 : 0)
+                    $0.opacity(isOpen || (model.activity && !musicAway) ? 1 : 0).blur(radius: musicAway && !isOpen ? 6 : 0)
                 }
                 .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
@@ -467,7 +481,8 @@ struct NotchView: View {
                 isOpen || !model.activity
                     ? Self.fade(in: isOpen) : model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)
             ) {
-                $0.opacity(isOpen || (model.activity && !model.pop && model.alert == nil && model.timer == nil) ? 1 : 0)
+                $0.opacity(isOpen || (model.activity && !model.pop && !musicAway && model.timer == nil) ? 1 : 0)
+                    .blur(radius: musicAway && !isOpen ? 6 : 0)
             }
             .modifier(PageFade(hidden: isOpen && onTray))
             .environment(\.notchControls, !trayShown)
@@ -539,6 +554,15 @@ struct NotchView: View {
         .animation(.easeInOut(duration: 0.45), value: darkness)
         .animation(.easeInOut(duration: 0.45), value: followsSystem)
         .animation(.easeInOut(duration: 0.45), value: blur)
+    }
+
+    /// The music's wings make way for what's announced, blurring away as the notch folds.
+    private var musicAway: Bool { model.alert != nil || model.switching }
+
+    /// The closed notch's width without its wings, as it narrows to a dot while turning off.
+    private func restingBody(_ m: NotchMetrics) -> CGFloat {
+        let closed = model.closedSize
+        return closed.width * (1 - model.squeeze) + closed.height * model.squeeze
     }
 
     /// The notch's own points, from the top left of its whole shape, flares and all.

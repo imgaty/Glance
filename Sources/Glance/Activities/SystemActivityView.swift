@@ -28,8 +28,8 @@ struct SystemActivityView: View {
         let lane = max(wing - edge - LiveActivityView.cameraGap, side)
         let size = LiveActivityView.textSize(for: restingHeight)
         ZStack {
-            if let alert, case .device(let symbol, let earbuds, let pictures, let battery) = alert.content {
-                device(symbol: symbol, earbuds: earbuds, pictures: pictures, battery: battery, size: size)
+            if let alert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
+                device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size)
                     .id(alert.id)
                     .transition(Self.announce)
                     .accessibilityElement(children: .ignore)
@@ -78,12 +78,12 @@ struct SystemActivityView: View {
     /// A device arriving, laid out as the Dynamic Island lays out AirPods, by the notch's height: the
     /// device a little under half of it tall, in from the end; its battery's ring a little over half
     /// of it across, its circle concentric with the notch's rounded end.
-    private func device(symbol: String, earbuds: Earbuds?, pictures: [String], battery: Int?, size: CGFloat) -> some View {
+    private func device(symbol: String, model: Headphones?, pictures: [String], battery: Int?, size: CGFloat) -> some View {
         let layout = DeviceLayout(height: restingHeight)
         return HStack(spacing: 0) {
             Group {
-                if let earbuds, let turn = EarbudTurn.cached(earbuds) {
-                    TurningEarbuds(turn: turn, height: layout.picture)
+                if let model, let turn = DeviceTurn.cached(model) {
+                    TurningDevice(turn: turn, height: layout.picture)
                 } else if let images = DevicePictures.images(pictures) {
                     TurningPictures(images: images, height: layout.picture)
                 } else {
@@ -165,11 +165,11 @@ struct SystemActivityView: View {
         let gap = LiveActivityView.cameraGap
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device(_, let earbuds, let pictures, let battery):
+            case .device(_, let model, let pictures, let battery):
                 {
                     let layout = DeviceLayout(height: restingHeight)
                     let device =
-                        earbuds.flatMap(EarbudTurn.cached).map { TurningEarbuds.width($0, height: layout.picture) }
+                        model.flatMap(DeviceTurn.cached).map { TurningDevice.width($0, height: layout.picture) }
                         ?? DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
                     let end = battery == nil ? width("Connected", size, .semibold) + layout.leading : layout.ring + layout.trailing
                     return (layout.leading + device + gap, gap + end)
@@ -204,10 +204,14 @@ struct SystemActivityView: View {
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
     }
 
-    /// The words come in once the wings have opened, and leave before they fold.
+    /// As the Dynamic Island brings an activity in, measured from it: as the wings open, it fades in
+    /// from a heavy blur, sharpening last; as they start to fold, it blurs away at once,
+    /// riding in with their ends under the notch, which stays sharp over it.
     private static let announce = AnyTransition.asymmetric(
-        insertion: .opacity.animation(.easeOut(duration: 0.3).delay(0.2)),
-        removal: .opacity.animation(.easeOut(duration: 0.12)))
+        insertion: .modifier(active: BlurFade(shown: false, arriving: true), identity: BlurFade(shown: true, arriving: true))
+            .animation(.linear(duration: 0.22).delay(0.1)),
+        removal: .modifier(active: BlurFade(shown: false, arriving: false), identity: BlurFade(shown: true, arriving: false))
+            .animation(.linear(duration: 0.12)))
 }
 
 /// Where a device arriving sits, by the notch's height, measured from the iPhone's AirPods in the
@@ -221,25 +225,24 @@ struct DeviceLayout {
     var trailing: CGFloat { ((height - ring) / 2).rounded() }
 }
 
-/// AirPods arriving: the pair, in 3D, growing in face on and turning slowly, as on a turntable, the
-/// whole time it shows. With Reduce Motion on, it fades in and stays face on.
-struct TurningEarbuds: View {
-    let turn: EarbudTurn
+/// AirPods or Beats arriving, in 3D, facing you as they arrive and turning steadily about their
+/// middle, as on a turntable, the whole time they show, as fast as the iPhone turns AirPods. With
+/// Reduce Motion on, they stay face on.
+struct TurningDevice: View {
+    let turn: DeviceTurn
     /// The pair's height, face on.
     let height: CGFloat
     @State private var start = Date.now
-    @State private var arrived = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// A full turn every six seconds.
-    static let degreesPerSecond = 60.0
-    private static let delay = 0.15
+    /// About a turn every six seconds, measured from the iPhone.
+    static let degreesPerSecond = 62.0
 
     /// The pair's width, face on.
-    static func width(_ turn: EarbudTurn, height: CGFloat) -> CGFloat { turn.rest.width * height / turn.rest.height }
+    static func width(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.rest.width * height / turn.rest.height }
 
     /// How far round the pair has turned since it arrived.
-    static func degrees(after seconds: TimeInterval) -> Double { max(seconds - delay, 0) * degreesPerSecond }
+    static func degrees(after seconds: TimeInterval) -> Double { max(seconds, 0) * degreesPerSecond }
 
     var body: some View {
         let scale = height / turn.rest.height
@@ -252,12 +255,32 @@ struct TurningEarbuds: View {
         // Laid out face on; turning, it reaches past that, where nothing else is.
         .offset(x: (turn.canvas.width / 2 - turn.rest.midX) * scale, y: (turn.canvas.height / 2 - turn.rest.midY) * scale)
         .frame(width: Self.width(turn, height: height), height: height)
-        .scaleEffect(arrived ? 1 : 0.6)
-        .opacity(arrived ? 1 : 0)
-        .onAppear {
-            start = .now
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(Self.delay)) { arrived = true }
-        }
+        .onAppear { start = .now }
+    }
+}
+
+/// Coming and going through a blur, as the Dynamic Island's activities do, measured from it, over a
+/// steady `progress`. Arriving, it comes in solid quickly out of a heavy blur that clears more
+/// slowly, so it sharpens last. Leaving, it blurs at once and fades.
+struct BlurFade: ViewModifier, Animatable {
+    var progress: Double
+    let arriving: Bool
+
+    init(shown: Bool, arriving: Bool = true) {
+        progress = shown ? 1 : 0
+        self.arriving = arriving
+    }
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let p = min(max(progress, 0), 1)
+        content
+            .blur(radius: arriving ? 8 * pow(1 - p, 2) : 9 * pow(1 - p, 0.7))
+            .opacity(arriving ? 1 - pow(1 - p, 2.5) : p)
     }
 }
 
@@ -286,8 +309,8 @@ private struct TurningSymbol: View {
     }
 }
 
-/// AirPods arriving, as they do in the Dynamic Island: each earbud spinning in on its own, the left
-/// one first, the two turning opposite ways, then settling face on; headphones turning in whole.
+/// Headphones arriving as macOS pictures them, AirPods Max, or AirPods when their 3D model can't
+/// be drawn: turning in together as one, then settling face on.
 private struct TurningPictures: View {
     let images: [NSImage]
     let height: CGFloat
@@ -310,25 +333,21 @@ private struct TurningPictures: View {
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
                     .frame(height: height)
-                    .rotation3DEffect(
-                        .degrees(arrived || reduceMotion ? 0 : (index == 0 ? -200 : 200)), axis: (x: 0, y: 1, z: 0), perspective: 0.45
-                    )
-                    .scaleEffect(arrived ? 1 : 0.6)
-                    .opacity(arrived ? 1 : 0)
-                    .animation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15 + Double(index) * 0.09), value: arrived)
             }
         }
+        .rotation3DEffect(.degrees(arrived || reduceMotion ? 0 : -200), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
+        .scaleEffect(arrived ? 1 : 0.6)
+        .opacity(arrived ? 1 : 0)
+        .animation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15), value: arrived)
         .onAppear { arrived = true }
     }
 }
 
 /// A battery as a ring, as AirPods' is in the Dynamic Island: green, or red at 20% and below,
-/// filling to its level as it arrives.
+/// already at its level as it fades in.
 struct BatteryRing: View {
     let percent: Int
     let diameter: CGFloat
-    @State private var filled = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         // As thick as the iPhone's: an eighth of the ring across.
@@ -337,13 +356,12 @@ struct BatteryRing: View {
         ZStack {
             Circle().stroke(color.opacity(0.3), lineWidth: line)
             Circle()
-                .trim(from: 0, to: filled || reduceMotion ? CGFloat(percent) / 100 : 0)
+                .trim(from: 0, to: CGFloat(percent) / 100)
                 .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
         }
         .padding(line / 2)
         .frame(width: diameter, height: diameter)
-        .onAppear { withAnimation(.easeOut(duration: 0.7).delay(0.35)) { filled = true } }
         .accessibilityLabel("\(percent) percent")
     }
 }

@@ -9,7 +9,6 @@ import AppKit
 import CoreAudio
 import Foundation
 import Testing
-import simd
 
 @testable import Glance
 
@@ -191,47 +190,56 @@ struct ActivitiesTests {
         #expect(notch.ring == 17)
     }
 
-    @Test("AirPods that sit in the ear are known by their model; headphones and Beats aren't")
-    func earbudModels() {
-        #expect(Earbuds(product: 0x200E) == .pro)
-        #expect(Earbuds(product: 0x2014) == .pro)
-        #expect(Earbuds(product: 0x2027) == .pro)
-        #expect(Earbuds(product: 0x2019) == .open)
-        #expect(Earbuds(product: 0x200F) == .classic)
-        #expect(Earbuds(product: 0x200A) == nil)
-        #expect(Earbuds(product: 0x2010) == nil)
+    @Test("AirPods and Beats are known by their model, a newer one as the newest of its kind")
+    func headphoneModels() {
+        // AirPods Pro, the first, the second with Lightning and with USB-C, and the third.
+        #expect(Headphones(product: 0x200E) == .airpodsPro)
+        #expect(Headphones(product: 0x2014) == .airpodsPro2)
+        #expect(Headphones(product: 0x2024) == .airpodsPro2)
+        #expect(Headphones(product: 0x2027) == .airpodsPro3)
+        // AirPods 3, 4 with and without noise cancellation, and 5.
+        #expect(Headphones(product: 0x2013) == .airpods3)
+        #expect(Headphones(product: 0x2019) == .airpods4)
+        #expect(Headphones(product: 0x201B) == .airpods4)
+        #expect(Headphones(product: 0x2030) == .airpods4)
+        // Beats.
+        #expect(Headphones(product: 0x2010) == .beatsFlex)
+        #expect(Headphones(product: 0x2011) == .beatsStudioBudsPlus)
+        #expect(Headphones(product: 0x2016) == .beatsStudioBudsPlus)
+        #expect(Headphones(product: 0x2017) == .beatsStudioPro)
+        #expect(Headphones(product: 0x201A) == .beatsPill)
+        #expect(Headphones(product: 0x201D) == .powerbeatsPro2)
+        #expect(Headphones(product: 0x2025) == .beatsSolo4)
+        #expect(Headphones(product: 0x2026) == .beatsSoloBuds)
+        #expect(Headphones(product: 0x202F) == .powerbeatsFit)
+        #expect(Headphones(product: 0x2038) == .beats360)
+        // AirPods 2, AirPods Max, and nothing at all.
+        #expect(Headphones(product: 0x200F) == nil)
+        #expect(Headphones(product: 0x200A) == nil)
+        #expect(Headphones(product: 0x202D) == nil)
+        #expect(Headphones(product: 0x1234) == nil)
     }
 
-    @Test("A shape's surface is closed, on the shape, and faces out")
-    func surfaceMesh() {
-        let mesh = SurfaceMesh({ simd_length($0) - 5 }, from: [-6, -6, -6], to: [6, 6, 6], cell: 0.5)
-        #expect(!mesh.indices.isEmpty)
-        for p in mesh.positions { #expect(abs(simd_length(p) - 5) < 0.05) }
-        // Every edge is shared by exactly two triangles, going opposite ways: no holes.
-        var edges: [SIMD2<UInt32>: Int] = [:]
-        for t in stride(from: 0, to: mesh.indices.count, by: 3) {
-            let (a, b, c) = (mesh.indices[t], mesh.indices[t + 1], mesh.indices[t + 2])
-            for (from, to) in [(a, b), (b, c), (c, a)] { edges[[from, to], default: 0] += 1 }
-            let face = simd_cross(mesh.positions[Int(b)] - mesh.positions[Int(a)], mesh.positions[Int(c)] - mesh.positions[Int(a)])
-            #expect(simd_dot(face, mesh.positions[Int(a)]) > 0)
-        }
-        #expect(edges.allSatisfy { $0.value == 1 && edges[[$0.key.y, $0.key.x]] == 1 })
+    /// The clips, as the repository keeps them.
+    static func clip(_ headphones: Headphones) -> URL {
+        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appending(path: "Resources/Headphones/\(headphones.rawValue).mov")
     }
 
-    @Test("AirPods turn as on a turntable while they show, from face on, in frames a degree or two apart")
-    func earbudTurn() throws {
-        let turn = try #require(EarbudTurn.render(.pro))
-        #expect(turn.frames.count == EarbudTurn.frameCount)
-        #expect(CGRect(origin: .zero, size: turn.canvas).insetBy(dx: -1, dy: -1).contains(turn.rest))
+    @Test("Every device turns as on a turntable, from face on, a frame every degree and a half", arguments: Headphones.allCases)
+    func deviceTurn(_ headphones: Headphones) async throws {
+        let turn = try #require(await DeviceTurn.load(Self.clip(headphones)))
+        #expect(turn.frames.count == 240)
+        #expect(CGRect(origin: .zero, size: turn.canvas).contains(turn.rest))
+        // Drawn as tall as it shows on a 2× display and then some.
+        #expect(abs(turn.rest.height - 44) <= 3)
         #expect(turn.frame(at: 0) === turn.frames[0])
         #expect(turn.frame(at: -360) === turn.frames[0])
-        let step = 360 / Double(EarbudTurn.frameCount)
-        #expect(turn.frame(at: step) === turn.frames[1])
-        #expect(turn.frame(at: -step) === turn.frames[EarbudTurn.frameCount - 1])
-        #expect(turn.frame(at: 360 + step) === turn.frames[1])
-        #expect(TurningEarbuds.degrees(after: 0) == 0)
-        // A full turn every six seconds, after it grows in.
-        #expect(abs(TurningEarbuds.degrees(after: 6.15) - 360) < 0.001)
+        #expect(turn.frame(at: 1.5) === turn.frames[1])
+        #expect(turn.frame(at: -1.5) === turn.frames[239])
+        // Face on as it arrives, then turning steadily, as fast as the iPhone turns AirPods.
+        #expect(TurningDevice.degrees(after: 0) == 0)
+        #expect(abs(TurningDevice.degrees(after: 360 / TurningDevice.degreesPerSecond) - 360) < 0.001)
     }
 
     @Test("Time left reads as a clock shows it, and the lengths are named")
