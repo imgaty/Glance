@@ -9,8 +9,9 @@ import AppKit
 import SwiftUI
 
 /// A timer, started from Glance in the menu bar, counting down beside the camera as the iPhone's
-/// does in the Dynamic Island. Done, it says so there and chimes until the notch is opened or
-/// clicked, or it's stopped from the menu; after a minute it stops chiming by itself.
+/// does in the Dynamic Island. Done, it says so there and chimes until it's stopped or started
+/// again from there, the notch is opened, or it's stopped from the menu; after a minute it stops
+/// chiming by itself.
 @MainActor
 final class NotchTimer: ObservableObject {
     static let shared = NotchTimer()
@@ -37,6 +38,8 @@ final class NotchTimer: ObservableObject {
     @Published private(set) var state: State?
     /// Done, and still saying so.
     @Published private(set) var ringing = false
+    /// How long the last one was set for, to start it again once it's done.
+    private(set) var lastLength: TimeInterval?
     /// The choices in the menu, in minutes, as Clock's own timers start.
     static let presets = [1, 3, 5, 10, 15, 30, 60]
 
@@ -53,6 +56,7 @@ final class NotchTimer: ObservableObject {
 
     func start(seconds: TimeInterval) {
         stop()
+        lastLength = seconds
         state = .running(until: .now + seconds, total: seconds)
         schedule()
     }
@@ -73,6 +77,12 @@ final class NotchTimer: ObservableObject {
     func cancel() {
         finish?.cancel()
         state = nil
+    }
+
+    /// Done, the same length again, as the Timer's Repeat does.
+    func repeatLast() {
+        guard let lastLength else { return stop() }
+        start(seconds: lastLength)
     }
 
     /// Done and chiming, it stops; or, asked to stop only once it's done, a timer still going goes on.
@@ -99,9 +109,10 @@ final class NotchTimer: ObservableObject {
     /// The time's up: said beside the camera, and heard, every couple of seconds, for a minute.
     func done() {
         finish?.cancel()
+        let length = state?.total ?? lastLength ?? 0
         state = nil
         ringing = true
-        activities.post(NotchAlert(kind: .timerDone, content: .timerDone, spoken: "Timer done", stays: true))
+        activities.post(NotchAlert(kind: .timerDone, content: .timerDone(length: length), spoken: "Timer done", stays: true))
         chime?.cancel()
         guard let sound else { return }
         chime = Task { [weak self] in
@@ -121,6 +132,15 @@ final class NotchTimer: ObservableObject {
         let whole = Int(seconds.rounded(.up))
         let hours = whole / 3600, minutes = whole / 60 % 60, rest = whole % 60
         return hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
+    }
+
+    /// As the Dynamic Island counts down beside the camera, whole minutes gone by: 14m, then 59s
+    /// in the last minute, and 1h 5m past an hour.
+    static func condensed(_ seconds: TimeInterval) -> String {
+        if seconds < 60 { return "\(min(Int(seconds.rounded(.up)), 59))s" }
+        let minutes = Int(seconds / 60)
+        guard minutes >= 60 else { return "\(minutes)m" }
+        return minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(minutes % 60)m"
     }
 
     /// A preset's name in the menu: 1 Minute, 5 Minutes, 1 Hour.

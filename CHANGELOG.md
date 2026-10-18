@@ -11,7 +11,8 @@
 ### Live Activities
 
 - Added charging and low battery announcements beside the camera, with the
-  battery's level, on MacBooks.
+  battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
+  MacBooks.
 - Added AirPods, headphones, keyboards, mice, trackpads and game controllers
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
@@ -25,14 +26,19 @@
   blur and away into one, under the notch at rest, which stays sharp over it.
   An announcement shows as long as the iPhone shows AirPods arriving. Between
   two, it folds to rest before opening for the next. With Reduce Motion on, the
-  notch widens without bouncing and nothing blurs.
+  notch widens without bouncing and nothing blurs. In full screen, a thin line
+  in the activity's color outlines the collapsed notch, as around the Dynamic
+  Island, fading out as it expands.
 - Changed the player, the tray and the lyrics to come and go with the same
   fade and blur as the notch opens, closes or turns its page, and a new song's
   cover to come in the same way as the last one goes.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
-  Settings, counting down beside the camera, with a pause symbol while paused,
-  and chiming when it's done until Stop beside it is clicked.
+  Settings, counting down beside the camera as the iPhone's Timer does: a ring
+  emptying beside the minutes left, with a pause symbol while paused. Opened
+  while nothing plays, it shows buttons to pause and cancel it beside the time.
+  Done, it grows as tall as the iPhone's Alarm, with buttons to start it again
+  or stop its chime.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

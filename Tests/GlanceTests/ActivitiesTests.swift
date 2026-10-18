@@ -41,7 +41,7 @@ struct ActivitiesTests {
     @Test("One that stays shows until it's dismissed")
     func staying() {
         let activities = Activities()
-        activities.post(NotchAlert(kind: .timerDone, content: .timerDone, spoken: "Timer done", stays: true))
+        activities.post(NotchAlert(kind: .timerDone, content: .timerDone(length: 300), spoken: "Timer done", stays: true))
         activities.dismiss(.charging)
         #expect(activities.alert?.kind == .timerDone)
         activities.dismiss(.timerDone)
@@ -51,16 +51,21 @@ struct ActivitiesTests {
     @Test("Plugged in is announced with the level; running low, at 20% and again at 10%")
     func battery() {
         typealias Reading = BatteryWatch.Reading
-        let charging = BatteryWatch.alert(from: Reading(percent: 54, onPower: false, charging: false), to: Reading(percent: 54, onPower: true, charging: true))
+        let charging = BatteryWatch.alert(from: Reading(percent: 54, onPower: false, charging: false), to: Reading(percent: 54, onPower: true, charging: true), lowPower: false)
         #expect(charging?.kind == .charging)
         #expect(charging?.content == .battery(title: "Charging", level: BatteryLevel(percent: 54, charging: true)))
         #expect(charging?.spoken == "Charging, 54 percent")
         // Held at 80% by Optimized Charging: plugged in, not charging.
-        let held = BatteryWatch.alert(from: Reading(percent: 80, onPower: false, charging: false), to: Reading(percent: 80, onPower: true, charging: false))
+        let held = BatteryWatch.alert(from: Reading(percent: 80, onPower: false, charging: false), to: Reading(percent: 80, onPower: true, charging: false), lowPower: false)
         #expect(held?.content == .battery(title: "Plugged In", level: BatteryLevel(percent: 80, charging: false)))
         // Red at 20% and below, charging or not, as the iPhone's.
         #expect(BatteryLevel(percent: 20, charging: true).color == .red)
         #expect(BatteryLevel(percent: 21, charging: false).color == .green)
+        // Yellow in Low Power Mode, as the iPhone's.
+        #expect(BatteryLevel(percent: 6, charging: true, lowPower: true).color == .yellow)
+        let saving = BatteryWatch.alert(
+            from: Reading(percent: 6, onPower: false, charging: false), to: Reading(percent: 6, onPower: true, charging: true), lowPower: true)
+        #expect(saving?.content == .battery(title: "Charging", level: BatteryLevel(percent: 6, charging: true, lowPower: true)))
         #expect(BatteryWatch.alert(from: Reading(percent: 80, onPower: true, charging: false), to: Reading(percent: 80, onPower: false, charging: false)) == nil)
         func low(_ from: Int, _ to: Int) -> Bool {
             BatteryWatch.alert(from: Reading(percent: from, onPower: false, charging: false), to: Reading(percent: to, onPower: false, charging: false))?
@@ -276,9 +281,48 @@ struct ActivitiesTests {
         #expect(model.wing == model.alertWing)
         #expect(model.alertWing > resting && model.alertWing <= SystemActivityView.maxWing)
         // An hour or more takes more room than minutes.
-        let minutes = SystemActivityView.wing(for: .running(until: .now, total: 300), restingHeight: resting, island: false)
-        let hours = SystemActivityView.wing(for: .running(until: .now, total: 3_700), restingHeight: resting, island: false)
+        let minutes = SystemActivityView.wing(for: .running(until: .now + 300, total: 300), restingHeight: resting, island: false)
+        let hours = SystemActivityView.wing(for: .running(until: .now + 3_700, total: 3_700), restingHeight: resting, island: false)
         #expect(hours > minutes)
+    }
+
+    @Test("Beside the camera, a timer counts down in whole minutes, then seconds, as the Dynamic Island's does")
+    func condensedTime() {
+        #expect(NotchTimer.condensed(14 * 60 + 3) == "14m")
+        #expect(NotchTimer.condensed(14 * 60 + 59) == "14m")
+        #expect(NotchTimer.condensed(60) == "1m")
+        #expect(NotchTimer.condensed(59.2) == "59s")
+        #expect(NotchTimer.condensed(1) == "1s")
+        #expect(NotchTimer.condensed(3600) == "1h")
+        #expect(NotchTimer.condensed(3900) == "1h 5m")
+    }
+
+    @Test("A done timer is as tall as the Alarm, the closed notch with it; repeating it starts the same length again")
+    func doneTimer() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        #expect(model.restingHeight == 32)
+        model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300), spoken: "Timer done", stays: true)
+        #expect(model.restingTall)
+        #expect(model.restingHeight == (32 * TimerLayout.tall).rounded())
+        #expect(model.metrics(for: .closed).height == model.restingHeight)
+        let timer = NotchTimer(activities: Activities(), sound: nil)
+        timer.start(seconds: 300)
+        timer.done()
+        #expect(timer.ringing && timer.state == nil)
+        timer.repeatLast()
+        #expect(!timer.ringing && timer.state?.total == 300)
+        timer.cancel()
+    }
+
+    @Test("Opened while a timer runs and nothing plays, the notch is as tall as the Timer's expanded view")
+    func expandedTimer() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.timer = .running(until: .now + 300, total: 300)
+        model.expanded = .timer
+        let open = model.metrics(for: .open)
+        #expect(open.height == (32 * TimerLayout.tall).rounded())
+        #expect(open.bodyWidth > 185 + 2 * 32 * TimerLayout.button)
+        #expect(open.flare == NotchCorners.restingFlare)
     }
 
     @Test("Paused, a timer makes room for its pause symbol; a device not in 3D, for its level; a long name scrolls within the limit")
@@ -294,5 +338,10 @@ struct ActivitiesTests {
         let speaker = DeviceWatch.alert(name: "The Living Room Speaker Upstairs, By the Window", symbol: "airplayaudio", kind: .output)
         #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false) == SystemActivityView.maxWing)
         #expect(SystemActivityView.maxWing <= 120)
+        // Counting minutes, and in its last minute seconds, a timer's wings stay about as narrow as the
+        // iPhone's, a little wider only where the camera housing stops what they show going under it.
+        let early = SystemActivityView.wing(for: .running(until: .now + 600, total: 600), restingHeight: resting, island: false)
+        let late = SystemActivityView.wing(for: .running(until: .now + 600, total: 600), restingHeight: resting, island: false, at: .now + 550)
+        for wing in [early, late] { #expect(wing >= resting * TimerLayout.wing && wing <= resting * 1.3) }
     }
 }

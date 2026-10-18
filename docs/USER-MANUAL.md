@@ -229,7 +229,9 @@ appear beside the notch for a moment. Everything here comes and goes as on the
 iPhone's Dynamic Island: the notch widens and folds, and what it shows rides
 in and out with its ends, fading in out of a blur and away into one. A new
 song's cover comes in the same way as the last one goes. With Reduce Motion on,
-the notch widens without bouncing, and what it shows fades without a blur.
+the notch widens without bouncing, and what it shows fades without a blur. In
+full screen, where it's all black around the notch, a thin line in the
+activity's color outlines it while it's collapsed, as around the Dynamic Island.
 
 Turn these off with **Cover and waveform** and **Announce new audio** in
 **Settings > Music**.
@@ -243,7 +245,7 @@ sliding under the notch as it folds:
 
 | Moment | What shows |
 | --- | --- |
-| Plugging in a MacBook | `Charging`, and the battery's level beside a battery |
+| Plugging in a MacBook | `Charging`, and the battery's level beside a battery, yellow in Low Power Mode |
 | A MacBook's battery at 20%, and again at 10% | `Low Battery`, and its level, in red |
 | AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's, with its level beside it for those not in 3D |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and, when it tells the Mac, its battery's level beside a ring |
@@ -261,10 +263,18 @@ announced. Turn each of these off in **Settings > Live Activities**.
 
 Start a timer from Glance's menu in the menu bar, from the notch's right-click
 menu, or from **Settings > Live Activities**. It counts down beside the
-camera, next to the cover while something plays, with a pause symbol before the
-time while it's paused. When it's done, its symbol shakes beside **Stop**, and
-it chimes until you click **Stop**, which leaves the notch closed, open the
-notch, or stop it from the menu. Pause, resume and cancel it from the same
+camera as the iPhone's Timer does, a ring emptying beside the minutes left, then
+the seconds in its last minute; next to the cover while something plays, and
+with a pause symbol before the time while it's paused.
+
+Hover over or click the notch while a timer runs and nothing plays, and it opens
+to the timer: pause or resume it, or cancel it, with the round buttons beside
+the time.
+
+When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
+shaking, and it chimes. Click **Repeat** to start the same length again, or
+**✕** to stop it; both leave the notch closed. Opening the notch, or stopping
+it from the menu, stops it too. Pause, resume and cancel it from the same
 menus.
 
 <br>

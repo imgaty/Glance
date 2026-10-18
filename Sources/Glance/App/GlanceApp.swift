@@ -428,11 +428,15 @@ final class NotchManager {
         .joined(separator: "; ")
     }
 
-    /// Hides each notch while a full-screen app covers its display, if the user chose that.
+    /// Tells each notch when a full-screen app covers its display, where it's drawn as the Dynamic
+    /// Island is, its outline showing; and hides it then, if the user chose that.
     private func updateFullScreen() {
-        let covered = UserDefaults.standard.bool(forKey: Preferences.hideInFullScreen) ? Self.fullScreenDisplays() : []
+        let covered = Self.fullScreenDisplays()
+        let hides = UserDefaults.standard.bool(forKey: Preferences.hideInFullScreen)
         for controller in controllers {
-            controller.fullScreen = covered.contains(controller.screenFrame)
+            let full = covered.contains(controller.screenFrame)
+            controller.coveredByFullScreen = full
+            controller.fullScreen = hides && full
         }
     }
 

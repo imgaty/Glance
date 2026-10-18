@@ -42,7 +42,8 @@ struct LiveActivityView: View {
     /// Between the artwork and the title.
     static let textGap: CGFloat = 8
 
-    static func textSize(for restingHeight: CGFloat) -> CGFloat { min(max(restingHeight * 0.4, 11), 13) }
+    /// As the iPhone's words and numbers beside the camera, measured from it.
+    static func textSize(for restingHeight: CGFloat) -> CGFloat { min(max(restingHeight * 0.426, 11), 14) }
 
     /// How wide each wing must be for the title and the artist to show in full, up to a limit
     /// past which they scroll instead. The notch stays centered, so both wings take the wider one.

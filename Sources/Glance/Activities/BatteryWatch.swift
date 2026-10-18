@@ -54,8 +54,8 @@ final class BatteryWatch {
 
     /// What's worth saying about the battery going from one reading to the next: plugged in, or
     /// running down past a warning.
-    static func alert(from old: Reading, to new: Reading) -> NotchAlert? {
-        let level = BatteryLevel(percent: new.percent, charging: new.charging)
+    static func alert(from old: Reading, to new: Reading, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> NotchAlert? {
+        let level = BatteryLevel(percent: new.percent, charging: new.charging, lowPower: lowPower)
         if new.onPower, !old.onPower {
             let title = new.charging ? "Charging" : "Plugged In"
             return NotchAlert(kind: .charging, content: .battery(title: title, level: level), spoken: "\(title), \(new.percent) percent")

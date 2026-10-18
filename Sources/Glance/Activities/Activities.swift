@@ -28,8 +28,27 @@ struct NotchAlert: Identifiable, Equatable {
         /// A state, as Silent Mode and a Focus are shown: a symbol in its color on the left, a word
         /// or a name on the right.
         case status(symbol: String, tint: Color, text: String)
-        /// A timer that's done: its symbol, shaking, and a way to stop it.
-        case timerDone
+        /// A timer that's done, as the Alarm goes off: its symbol shaking, its length, and buttons to
+        /// start it again or stop it.
+        case timerDone(length: TimeInterval)
+
+        var tint: Color {
+            switch self {
+            case .device(_, _, _, let battery): battery.map(BatteryRing.color(for:)) ?? .white
+            case .battery(_, let level): level.color
+            case .status(_, let tint, _): tint
+            case .timerDone: .orange
+            }
+        }
+    }
+
+    /// Its color, for the line the Dynamic Island draws around it over a dark background.
+    var tint: Color { content.tint }
+
+    /// Taller than the notch, as the Dynamic Island's Alarm is, for what's to be acted on.
+    var tall: Bool {
+        if case .timerDone = content { return true }
+        return false
     }
 
     let id = UUID()
@@ -49,9 +68,11 @@ struct NotchAlert: Identifiable, Equatable {
 struct BatteryLevel: Equatable {
     var percent: Int
     var charging: Bool
+    /// Low Power Mode is on.
+    var lowPower = false
 
-    /// Green, or red at 20% and below, charging or not, as the iPhone's.
-    var color: Color { percent <= 20 ? .red : .green }
+    /// Green, or red at 20% and below, charging or not; yellow in Low Power Mode, as the iPhone's.
+    var color: Color { lowPower ? .yellow : percent <= 20 ? .red : .green }
 }
 
 /// Every display's notch shows what's announced, one thing at a time, in turn: each waits for the

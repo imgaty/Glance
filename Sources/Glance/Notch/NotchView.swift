@@ -70,7 +70,7 @@ struct NotchCorners: Equatable {
     /// and closed, a capsule.
     var island = false
 
-    private static let restingFlare: CGFloat = 6
+    static let restingFlare: CGFloat = 6
     private static let restingBottomRadius: CGFloat = 12
 
     struct Radii {
@@ -184,10 +184,19 @@ final class NotchModel: ObservableObject {
     @Published var nudge: CGFloat = 0
     /// Where the player's buttons sit, so the window can hand clicks there to them.
     var controlFrames: [CGRect] = []
-    /// Where a timer that's done has its Stop, which works in the closed notch, and whether the
-    /// pointer is on it.
-    var stopFrame: CGRect?
-    @Published var stopHovered = false
+    /// Where a timer that's done has its buttons, which work in the closed notch, and which one the
+    /// pointer is on.
+    var alertButtons: [AlertButton: CGRect] = [:]
+    @Published var hoveredButton: AlertButton?
+    /// A full-screen app covers the display: around the notch it's all black.
+    @Published var fullScreen = false
+    /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
+    /// player: a timer, while nothing plays.
+    @Published var expanded: ExpandedActivity?
+
+    enum ExpandedActivity: Equatable {
+        case timer
+    }
 
     /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
     @Published var island: Bool {
@@ -239,6 +248,15 @@ final class NotchModel: ObservableObject {
     /// something's announced.
     var restingWidth: CGFloat { closedSize.width + wing * 2 }
 
+    /// What's announced is as tall as the Dynamic Island's Alarm (see `NotchAlert.tall`).
+    var restingTall: Bool { alert?.tall == true && !switching }
+
+    /// The closed notch's height: more than twice as tall while what's announced is.
+    var restingHeight: CGFloat { restingTall ? (closedSize.height * TimerLayout.tall).rounded() : closedSize.height }
+
+    /// Open on an activity's own view, rather than the player or the tray.
+    var expandedShown: Bool { state == .open && expanded != nil }
+
     var metrics: NotchMetrics { metrics(for: state) }
 
     func metrics(for state: NotchState) -> NotchMetrics {
@@ -248,17 +266,25 @@ final class NotchModel: ObservableObject {
             case .closed:
                 (
                     (restingWidth + 10 * proximity + pull * 0.4) * (1 - squeeze) + closedSize.height * squeeze,
-                    closedSize.height + 3 * proximity + pull
+                    restingHeight + 3 * proximity + pull
                 )
-            case .peek: (restingWidth + 28 + pull * 0.4, closedSize.height + 7 + pull)
+            case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
+            case .open where expanded == .timer:
+                (
+                    closedSize.width + ExpandedTimerView.wing(for: timer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height) * 2
+                        + pull * 0.35,
+                    (closedSize.height * TimerLayout.tall).rounded() + pull
+                )
             case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
         // which the glass, sized afresh with the notch, doesn't follow.
         let press: CGFloat = pressed ? 0.975 : 1
-        return NotchMetrics(
-            bodyWidth: bodyWidth * press, height: height * press, flare: corners.radii(forHeight: height * press).flare)
+        // As tall as the Dynamic Island's expanded activities, it keeps the notch's small flares.
+        let tall = state == .open ? expanded != nil : restingTall
+        let flare = tall && !island ? NotchCorners.restingFlare : corners.radii(forHeight: height * press).flare
+        return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare)
     }
 }
 
@@ -348,6 +374,7 @@ struct NotchView: View {
     /// The tray shown: Glance's own, or the welcome tour's made-up one.
     @Environment(\.tray) private var trayStore
     @Namespace private var hero
+    @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
 
     init(model: NotchModel, display: String, background: MusicBackground? = nil) {
         self.model = model
@@ -369,25 +396,32 @@ struct NotchView: View {
 
     var body: some View {
         let m = model.metrics
-        // With wings out, their ends round as the Dynamic Island's do.
-        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0)
         let isOpen = model.state == .open
+        // Open on an activity's own view, which shows instead of the player or the tray.
+        let expandedShown = model.expandedShown
+        // As tall as the Dynamic Island's expanded activities, it's black all through, as they are.
+        let tall = isOpen ? model.expanded != nil : model.restingTall
+        // With wings out, their ends round as the Dynamic Island's do.
+        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0)
         let onTray = trayOn && model.page == .tray
         // Open on the player, rather than on the tray.
-        let playerShown = isOpen && !onTray
-        let trayShown = isOpen && onTray
+        let heroOpen = isOpen && !expandedShown
+        let playerShown = heroOpen && !onTray
+        let trayShown = heroOpen && onTray
         let glassBlur = trayShown ? max(blur, GlassLook.trayBlur) : blur
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
-        let visible: Double = model.state != .closed ? 1 : 0
+        let visible: Double = model.state != .closed && !tall ? 1 : 0
         // With Increase Contrast on, the player's words and buttons sit on plain black.
         let lit = playerShown && nowPlaying.artwork != nil && background != .none && !accessibility.increasesContrast
-        let lyricsShown = isOpen && model.showsLyrics
+        let lyricsShown = heroOpen && model.showsLyrics
         // The closed notch swells under the pointer, and the artwork and waveform with it.
-        let swell = isOpen ? 1 : m.height / closed.height
+        let swell = isOpen ? 1 : m.height / model.restingHeight
 
         ZStack(alignment: .top) {
             shade
+            Color.black
+                .animation(.easeOut(duration: 0.2)) { $0.opacity(tall ? 1 : 0) }
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
             // black at the top, just where the glass shows; full screen, it covers the whole notch;
             // as a spotlight, it's a soft circle around the cover. Choosing between them morphs one
@@ -417,7 +451,7 @@ struct NotchView: View {
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 timer: model.activity && model.pop || model.switching ? nil : model.timer, music: model.activity,
-                stopHovered: model.stopHovered
+                hoveredButton: model.hoveredButton
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
             .allowsHitTesting(false)
@@ -432,6 +466,7 @@ struct NotchView: View {
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
+            expandedTimer(shown: expandedShown && model.expanded == .timer)
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -463,27 +498,27 @@ struct NotchView: View {
                 .modifier(PageFade(hidden: !trayShown))
                 .allowsHitTesting(places == nil && trayShown)
             }
-            HeroArtwork(isOpen: isOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
-                .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
-                .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
+            HeroArtwork(isOpen: heroOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
+                .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
+                .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .leading)
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays, coming and going as the
                 // Dynamic Island's activities do, as everything in the notch does.
-                .islandFade(isOpen || artworkShown)
-                .modifier(PageFade(hidden: isOpen && onTray))
+                .islandFade(heroOpen || artworkShown && !expandedShown)
+                .modifier(PageFade(hidden: heroOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 // Over the tray, though unseen there: clicks go through it to the tray's items.
                 .allowsHitTesting(places == nil && !trayShown)
             HeroWaveform(
-                isOpen: isOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
+                isOpen: heroOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
                 toggleLyrics: toggleLyrics
             )
-            .matchedGeometryEffect(id: isOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
-            .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
+            .matchedGeometryEffect(id: heroOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
+            .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .trailing)
             // There open, or in the closed notch while something plays, out of the way when a new
             // song's artist takes its place, coming and going as the Dynamic Island's activities do.
-            .islandFade(isOpen || waveformShown)
-            .modifier(PageFade(hidden: isOpen && onTray))
+            .islandFade(heroOpen || waveformShown && !expandedShown)
+            .modifier(PageFade(hidden: heroOpen && onTray))
             .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil && !trayShown)
         }
@@ -502,6 +537,7 @@ struct NotchView: View {
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
+        .overlay { keyLine(shape) }
         .background {
             ZStack {
                 if thumbnail {
@@ -548,7 +584,7 @@ struct NotchView: View {
         .coordinateSpace(.named(ControlFrames.space))
         .onPreferenceChange(ControlFrames.self) { model.controlFrames = $0 }
         .onPreferenceChange(AirDropFrame.self) { model.airDropFrame = $0 }
-        .onPreferenceChange(StopFrame.self) { model.stopFrame = $0 }
+        .onPreferenceChange(AlertButtonFrames.self) { model.alertButtons = $0 }
         // A change in Settings eases in rather than snapping.
         .animation(.easeInOut(duration: 0.6), value: background)
         .animation(.easeInOut(duration: 0.45), value: darkness)
@@ -563,6 +599,41 @@ struct NotchView: View {
     private var liveShown: Bool { model.activity && !musicAway && model.state != .open }
     private var artworkShown: Bool { model.activity && !musicAway }
     private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.timer == nil }
+
+    /// Opened while a timer runs and nothing plays: the timer's own view, laid out at its open size,
+    /// as the player is, so the growing shape reveals it.
+    @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
+        if let timer = model.timer {
+            let h = model.closedSize.height
+            ExpandedTimerView(state: timer, restingHeight: h)
+                .frame(
+                    width: model.closedSize.width + ExpandedTimerView.wing(for: timer, restingHeight: h) * 2,
+                    height: (h * TimerLayout.tall).rounded())
+                .modifier(PageFade(hidden: !shown))
+                .allowsHitTesting(places == nil && shown)
+        }
+    }
+
+    /// The line in the activity's color around the notch in full screen, all black around it, as the
+    /// Dynamic Island draws one over a dark background; only while it's collapsed, fading out as it
+    /// expands.
+    private func keyLine(_ shape: NotchShape) -> some View {
+        let tint = keyTint
+        let shown = tint != nil && model.fullScreen && model.state != .open && !model.restingTall
+        return KeyLine(notch: shape, width: model.closedSize.height * KeyLine.width)
+            .fill((tint ?? .clear).opacity(0.18))
+            .animation(.easeOut(duration: 0.3)) { $0.opacity(shown ? 1 : 0) }
+            .allowsHitTesting(false)
+    }
+
+    /// The color of what shows: what's announced, a timer, or the music's.
+    private var keyTint: Color? {
+        if model.switching { return nil }
+        if let alert = model.alert { return alert.content.tint }
+        if model.timer != nil, !(model.activity && model.pop) { return .orange }
+        if model.activity { return nowPlaying.accent(from: accentSource) }
+        return nil
+    }
 
     /// The closed notch's width without its wings, as it narrows to a dot while turning off.
     private func restingBody(_ m: NotchMetrics) -> CGFloat {
@@ -753,20 +824,39 @@ struct NotchShape: Shape {
     /// 1 with wings out beside the camera, whose ends then round as the Dynamic Island's do, half
     /// the height across; 0 at rest.
     var wingEnds: CGFloat = 0
+    /// 1 for what's as tall as the Dynamic Island's expanded activities, more than twice the notch:
+    /// its ends round right across, half its height, and its top keeps the notch's small flares.
+    var tall: CGFloat = 0
 
-    var animatableData: CGFloat {
-        get { wingEnds }
-        set { wingEnds = newValue }
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(wingEnds, tall) }
+        set { (wingEnds, tall) = (newValue.first, newValue.second) }
     }
 
-    func path(in rect: CGRect) -> Path {
+    var island: Bool { corners.island }
+
+    private func radii(in rect: CGRect) -> NotchCorners.Radii {
         var radii = corners.radii(forHeight: rect.height)
         if !corners.island, wingEnds > 0 {
             // Opening, the open notch's own corners take over.
             let open = min(max((rect.height - corners.restingHeight) / max(corners.openHeight - corners.restingHeight, 1), 0), 1)
             radii.bottom += (rect.height / 2 - radii.bottom) * wingEnds * (1 - open)
         }
-        let flare = max(0, min(radii.flare, rect.width / 4, rect.height / 2))
+        if tall > 0 {
+            radii.bottom += (rect.height / 2 - radii.bottom) * tall
+            if !corners.island { radii.flare += (NotchCorners.restingFlare - radii.flare) * tall }
+        }
+        return radii
+    }
+
+    /// How far the top corners flare out on each side, at this size.
+    func flare(in rect: CGRect) -> CGFloat {
+        max(0, min(radii(in: rect).flare, rect.width / 4, rect.height / 2))
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let radii = radii(in: rect)
+        let flare = flare(in: rect)
         let body = rect.insetBy(dx: flare, dy: 0)
         if corners.island {
             let radius = min(radii.bottom, rect.width / 2, rect.height / 2)

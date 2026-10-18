@@ -108,8 +108,10 @@ final class NotchController {
     private var swipe: CGFloat = 0
     /// Whether the current click began on a closed notch, so letting go opens rather than closes it.
     private var pressBeganClosed = false
-    /// Pressed on a timer's Stop, which stops it rather than opening the notch.
-    private var stopPressed = false
+    /// Fits the timer's wings to its seconds as its last minute starts.
+    private var timerWingTask: Task<Void, Never>?
+    /// Pressed on one of a done timer's buttons, which acts rather than opening the notch.
+    private var pressedButton: AlertButton?
     /// A menu opened from inside the open notch, like the sound output's, is up: the pointer is on
     /// the menu, outside the notch, but the notch stays open under it until it's gone.
     private var menuHold = false
@@ -146,6 +148,15 @@ final class NotchController {
         didSet {
             guard fullScreen != oldValue else { return }
             if fullScreen { tuck() } else { untuck() }
+        }
+    }
+
+    /// A full-screen app covers this display, around the notch all black, as around the Dynamic
+    /// Island: the notch's outline shows then.
+    var coveredByFullScreen = false {
+        didSet {
+            guard coveredByFullScreen != oldValue else { return }
+            model.fullScreen = coveredByFullScreen
         }
     }
 
@@ -485,8 +496,21 @@ final class NotchController {
     /// Island's does.
     private static let switchPause = 0.18
 
-    /// A timer started, paused or ended: its wings come, or go.
+    /// A timer started, paused or ended: its wings come, or go. Opened to it, ended or cancelled,
+    /// the notch closes, for what it's done to show.
     private func show(_ timer: NotchTimer.State?) {
+        if timer == nil, model.expanded == .timer, model.state == .open { close(holdUntilExit: true) }
+        // Into its last minute it counts in seconds, which take a little more room.
+        timerWingTask?.cancel()
+        if let timer, case .running = timer, timer.left() > 60 {
+            timerWingTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(timer.left() - 59.5))
+                guard let self, !Task.isCancelled, let now = self.model.timer else { return }
+                withAnimation(IslandMotion.open) {
+                    self.model.timerWing = SystemActivityView.wing(for: now, restingHeight: self.model.closedSize.height, island: self.model.island)
+                }
+            }
+        }
         withAnimation(timer == nil ? IslandMotion.fold : IslandMotion.open) {
             if let timer {
                 model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
@@ -604,12 +628,12 @@ final class NotchController {
         // Where three fingers turn the page: the open notch, kept up to date as it opens and closes.
         NotchSwipes.shared.set(swipeZone, for: self)
         if fullScreen, followMenuBar(p) { return }
-        let stop = onStop(p)
-        if model.stopHovered != stop { model.stopHovered = stop }
+        let button = alertButton(at: p)
+        if model.hoveredButton != button { model.hoveredButton = button }
         switch model.state {
         case .closed, .peek:
-            if stop {
-                // On a timer's Stop the notch stays as it is, so a click there stops the timer.
+            if button != nil {
+                // On a done timer's button the notch stays as it is, so a click there is the button's.
                 openTask?.cancel()
             } else if interactiveZone.contains(p) {
                 if model.state == .closed, !holdUntilExit { peek() }
@@ -637,13 +661,12 @@ final class NotchController {
         Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
-    /// Whether a point on the screen is on the Stop of a timer that's done, in the closed notch.
-    private func onStop(_ p: CGPoint) -> Bool {
-        guard NotchTimer.shared.ringing, model.state != .open, let stop = model.stopFrame, let view = panel.contentView else {
-            return false
-        }
+    /// The button of a timer that's done, in the closed notch, at a point on the screen.
+    private func alertButton(at p: CGPoint) -> AlertButton? {
+        guard NotchTimer.shared.ringing, model.state != .open, let view = panel.contentView else { return nil }
         let local = view.convert(panel.convertPoint(fromScreen: p), from: nil)
-        return stop.contains(CGPoint(x: local.x, y: local.y - Layout.pastTop))
+        let inNotch = CGPoint(x: local.x, y: local.y - Layout.pastTop)
+        return model.alertButtons.first { $0.value.contains(inNotch) }?.key
     }
 
     func clicked(outsideAt p: CGPoint) {
@@ -653,9 +676,9 @@ final class NotchController {
     /// Pressing the closed notch squeezes it, and letting go opens it. The open notch ignores
     /// clicks outside its controls: it closes when the pointer leaves or with a swipe up.
     private func press() {
-        // A timer's Stop, in the closed notch, is a button of its own.
-        stopPressed = onStop(NSEvent.mouseLocation)
-        if stopPressed { return }
+        // A done timer's buttons, in the closed notch, are buttons of their own.
+        pressedButton = alertButton(at: NSEvent.mouseLocation)
+        if pressedButton != nil { return }
         pressBeganClosed = model.state != .open
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
@@ -669,12 +692,14 @@ final class NotchController {
     }
 
     private func release() {
-        if stopPressed {
-            stopPressed = false
-            if onStop(NSEvent.mouseLocation) {
-                NotchTimer.shared.stop()
-                model.stopHovered = false
+        if let button = pressedButton {
+            pressedButton = nil
+            guard alertButton(at: NSEvent.mouseLocation) == button else { return }
+            switch button {
+            case .again: NotchTimer.shared.repeatLast()
+            case .stop: NotchTimer.shared.stop()
             }
+            model.hoveredButton = nil
             return
         }
         guard pressBeganClosed else { return }
@@ -724,10 +749,12 @@ final class NotchController {
         closeTask?.cancel()
         closeTask = nil
         popTask?.cancel()
-        // Closed, nothing of either page shows: the page is simply set.
+        // Closed, nothing of either page shows: the page is simply set. Hovered or clicked while a
+        // timer runs and nothing plays, it opens to the timer, as the Dynamic Island expands it.
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) {
+            model.expanded = page == .player && !forDrop && !keyboardHold && model.timer != nil && !model.activity ? .timer : nil
             model.page = page
             model.pageNudge = 0
             if !forDrop {
@@ -1251,8 +1278,9 @@ final class NotchController {
 
     /// To the other page, sliding, the notch taking the new page's width.
     private func turn(to page: NotchPage) {
-        guard model.page != page else { return }
+        guard model.page != page || model.expanded != nil else { return }
         withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+            model.expanded = nil
             model.page = page
             model.pageNudge = 0
         }
@@ -1314,7 +1342,7 @@ final class NotchController {
 
     /// An island's floats a little below the top of the screen.
     private var restingRect: CGRect {
-        let width = model.restingWidth, height = model.closedSize.height
+        let width = model.restingWidth, height = model.restingHeight
         return CGRect(x: centerX - width / 2, y: topY - model.gap - height, width: width, height: height)
     }
 

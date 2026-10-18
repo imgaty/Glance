@@ -21,8 +21,8 @@ struct SystemActivityView: View {
     let timer: NotchTimer.State?
     /// Music is playing: its cover keeps the left wing beside a timer.
     let music: Bool
-    /// The pointer is on a timer's Stop, which the notch then leaves closed for it.
-    var stopHovered = false
+    /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
+    var hoveredButton: AlertButton? = nil
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
     /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
     /// start, so it never leaves as well as fading.
@@ -32,14 +32,20 @@ struct SystemActivityView: View {
     @State private var changes = (alert: 0, timer: 0)
 
     var body: some View {
-        let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
         let side = Self.side(restingHeight, island)
-        let lane = max(wing - edge - LiveActivityView.cameraGap, side)
         let size = LiveActivityView.textSize(for: restingHeight)
         let shownAlert = alert ?? leaving
         let shownTimer = shownAlert == nil ? timer ?? leavingTimer : nil
+        let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight, island: island)
         ZStack {
-            if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
+            if let alert = shownAlert, case .timerDone(let length) = alert.content {
+                TimerDoneView(length: length, restingHeight: restingHeight, hovered: hoveredButton)
+                    .islandFade(self.alert != nil)
+                    .id(alert.id)
+                    .transition(IslandMotion.fade)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(alert.spoken)
+            } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size, leaving: self.alert == nil)
                     .islandFade(self.alert != nil)
                     .id(alert.id)
@@ -50,24 +56,25 @@ struct SystemActivityView: View {
                 // Each side kept to its own end, so it rides in and out with it.
                 ZStack {
                     leading(alert.content, side: side, size: size)
-                        .frame(width: lane, alignment: .leading)
+                        .frame(width: max(wing - inset - LiveActivityView.cameraGap, side), alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     trailing(alert.content, side: side, size: size)
-                        .frame(width: lane, alignment: .trailing)
+                        .frame(width: max(wing - outset - LiveActivityView.cameraGap, side), alignment: .trailing)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .padding(.horizontal, edge)
+                .padding(.leading, inset)
+                .padding(.trailing, outset)
                 .islandFade(self.alert != nil)
                 .id(alert.id)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(alert.spoken)
             } else if let timer = shownTimer {
+                // As the iPhone's Timer beside the camera: a ring emptying as the time runs out on the
+                // left, the minutes left on the right.
                 ZStack {
-                    Image(systemName: "timer")
-                        .font(.system(size: size + 1, weight: .semibold))
-                        .foregroundStyle(.orange)
-                        .frame(width: side, height: side)
+                    TimerRing(state: timer, height: restingHeight)
+                        .padding(.leading, restingHeight * TimerLayout.ringInset)
                         // While music plays, its cover is there instead.
                         .opacity(music ? 0 : 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -79,18 +86,18 @@ struct SystemActivityView: View {
                                     .font(.system(size: size - 1, weight: .semibold))
                                     .frame(width: Self.pauseWidth(size))
                             }
-                            Text(NotchTimer.format(timer.left(at: context.date)))
-                                .font(.system(size: size + 1, weight: .semibold).monospacedDigit())
+                            Text(NotchTimer.condensed(timer.left(at: context.date)))
+                                .font(.system(size: size, weight: .semibold))
                                 // The digits roll down as they change, as the Timer's own do.
                                 .contentTransition(.numericText(countsDown: true))
-                                .animation(.snappy, value: NotchTimer.format(timer.left(at: context.date)))
+                                .animation(.snappy, value: NotchTimer.condensed(timer.left(at: context.date)))
                         }
                         .foregroundStyle(.orange)
                         .fixedSize()
                     }
+                    .padding(.trailing, restingHeight * TimerLayout.textInset)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .padding(.horizontal, edge)
                 .islandFade(self.timer != nil)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
@@ -182,8 +189,9 @@ struct SystemActivityView: View {
                 .lineLimit(1)
         case .status(let symbol, let tint, _):
             ArrivingSymbol(symbol: symbol, color: tint, size: size + 2, side: side)
+        // Laid out on its own (see `TimerDoneView`).
         case .timerDone:
-            ArrivingSymbol(symbol: "timer", color: .orange, size: size + 2, side: side, shakes: true)
+            EmptyView()
         }
     }
 
@@ -192,31 +200,26 @@ struct SystemActivityView: View {
         case .device:
             EmptyView()
         case .battery(_, let level):
-            HStack(spacing: 5) {
+            HStack(spacing: restingHeight * BatteryGlyph.gap) {
                 Text("\(level.percent)%")
                     .font(.system(size: size, weight: .semibold).monospacedDigit())
                     .foregroundStyle(level.color)
-                BatteryGlyph(level: level, color: level.color, height: size * 0.92)
+                BatteryGlyph(level: level, color: level.color, height: restingHeight * BatteryGlyph.height)
             }
         case .status(_, _, let text):
             MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
                 .foregroundStyle(.white)
         case .timerDone:
-            // A button of its own in the closed notch: orange on a faint orange, as the Timer's are,
-            // brighter under the pointer. The notch hands its clicks to it by where it is.
-            Text("Stop")
-                .font(.system(size: size, weight: .semibold))
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 10)
-                .frame(height: side)
-                .background(Capsule().fill(.orange.opacity(stopHovered ? 0.32 : 0.2)))
-                .animation(.easeOut(duration: 0.15), value: stopHovered)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(key: StopFrame.self, value: proxy.frame(in: .named(ControlFrames.space)))
-                    }
-                }
+            EmptyView()
         }
+    }
+
+    /// In from each end: a battery's words and its level as far in as the iPhone's Charging has
+    /// them; the rest as far as the cover is.
+    static func insets(for content: NotchAlert.Content?, restingHeight h: CGFloat, island: Bool) -> (CGFloat, CGFloat) {
+        if case .battery = content { return (h * 0.355, h * 0.309) }
+        let edge = LiveActivityView.edgeInset(island: island, restingHeight: h)
+        return (edge, edge)
     }
 
     /// A symbol's square, as the cover's beside the camera.
@@ -230,7 +233,6 @@ struct SystemActivityView: View {
     /// wider one.
     @MainActor
     static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool) -> CGFloat {
-        let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
         let size = LiveActivityView.textSize(for: restingHeight)
         let side = side(restingHeight, island)
         let gap = LiveActivityView.cameraGap
@@ -247,19 +249,21 @@ struct SystemActivityView: View {
             let end = battery == nil ? width("Connected", size, .semibold) + layout.textInset : level + layout.ring + layout.trailing
             return min(max(device, end, layout.wing), maxWing)
         }
+        // As tall as the Alarm, as wide as its words or its buttons.
+        if case .timerDone(let length) = alert.content { return TimerDoneView.wing(length: length, restingHeight: restingHeight) }
+        let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight, island: island)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device:
+            case .device, .timerDone:
                 (0, 0)
             case .battery(let title, let level):
                 (
-                    edge + width(title, size, .semibold) + gap,
-                    gap + width("\(level.percent)%", size, .semibold) + 5 + BatteryGlyph.width(height: size * 0.92) + edge
+                    inset + width(title, size, .semibold) + gap,
+                    gap + width("\(level.percent)%", size, .semibold) + restingHeight * BatteryGlyph.gap
+                        + BatteryGlyph.width(height: restingHeight * BatteryGlyph.height) + outset
                 )
             case .status(_, _, let text):
-                (edge + side + gap, gap + width(text, size, .semibold) + edge)
-            case .timerDone:
-                (edge + side + gap, gap + width("Stop", size, .semibold) + 20 + edge)
+                (inset + side + gap, gap + width(text, size, .semibold) + outset)
             }
         return min(max(left, right, restingHeight * 1.4), maxWing)
     }
@@ -280,16 +284,23 @@ struct SystemActivityView: View {
             ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
     }
 
-    /// Room for the timer's time, as long as it can get, and its symbol; paused, for the pause
-    /// symbol before the time too.
-    static func wing(for timer: NotchTimer.State, restingHeight: CGFloat, island: Bool) -> CGFloat {
-        let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
-        let size = LiveActivityView.textSize(for: restingHeight)
-        // Every digit as wide as a 0, as the time's are.
-        let longest = NotchTimer.format(timer.total).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
+    /// As far as the iPhone's Timer reaches past the island, or as its ring and its time need: the
+    /// widest the time gets while it counts in minutes, or, in its last minute, in seconds; paused,
+    /// with the pause symbol too.
+    static func wing(for timer: NotchTimer.State, restingHeight h: CGFloat, island: Bool, at date: Date = .now) -> CGFloat {
+        let size = LiveActivityView.textSize(for: h)
+        let minutes = Int(timer.left(at: date) / 60)
+        let shown =
+            minutes >= 1
+            ? [Int](1...minutes).map { NotchTimer.condensed(TimeInterval($0 * 60)) }
+            : (1...59).map { NotchTimer.condensed(TimeInterval($0)) }
+        // As wide as the time is, with nothing to spare: it never scrolls.
+        let font = NSFont.systemFont(ofSize: size, weight: .semibold)
+        let longest = shown.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
         let paused = timer.isRunning ? 0 : pauseWidth(size) + pauseGap
-        let right = LiveActivityView.cameraGap + paused + width(longest, size + 1, .semibold) + edge
-        return max(right, edge + side(restingHeight, island) + LiveActivityView.cameraGap, restingHeight)
+        let right = h * TimerLayout.textInset + paused + longest + h * TimerLayout.snug
+        let left = h * (TimerLayout.ringInset + TimerLayout.ring + TimerLayout.snug)
+        return max(right, left, h * TimerLayout.wing)
     }
 
     private static func width(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
@@ -563,7 +574,7 @@ struct BatteryRing: View {
 
 /// A state's symbol in its color, bouncing in as the iPhone's do; a timer that's done, shaking until
 /// it's stopped. With Reduce Motion on, it does neither.
-private struct ArrivingSymbol: View {
+struct ArrivingSymbol: View {
     let symbol: String
     let color: Color
     let size: CGFloat
@@ -590,47 +601,39 @@ extension NotchTimer.State {
     }
 }
 
-/// A battery, as the iPhone draws one beside its level: an outline with a cap, filled as far as it's
-/// charged, with a bolt while it charges.
+/// A battery, as the iPhone draws one beside its level in the Dynamic Island: its body filled faintly
+/// in its color, as far as it's charged brightly, its cap apart, measured from it.
 struct BatteryGlyph: View {
     let level: BatteryLevel
     let color: Color
     let height: CGFloat
 
-    static func width(height: CGFloat) -> CGFloat { height * 2.05 }
+    /// Its height, and the space before it, by the notch's.
+    static let height: CGFloat = 0.473
+    static let gap: CGFloat = 0.173
+    /// The body, the space before the cap and the cap, by its own height.
+    private static let main: CGFloat = 1.88
+    private static let space: CGFloat = 0.074
+    private static let cap: CGFloat = 0.127
+
+    static func width(height: CGFloat) -> CGFloat { height * (main + space + cap) }
 
     var body: some View {
-        let width = Self.width(height: height)
-        let cap = height * 0.12, line = max(height * 0.09, 1)
-        HStack(spacing: line) {
+        let width = height * Self.main, radius = height * 0.3
+        HStack(spacing: height * Self.space) {
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: height * 0.3, style: .continuous)
-                    .strokeBorder(color.opacity(0.45), lineWidth: line)
-                RoundedRectangle(cornerRadius: height * 0.18, style: .continuous)
+                Rectangle().fill(color.opacity(0.45))
+                Rectangle()
                     .fill(color)
-                    .frame(width: max((width - cap - line * 5) * CGFloat(level.percent) / 100, line))
-                    .padding(line * 2)
+                    .frame(width: max(width * CGFloat(level.percent) / 100, height * 0.3))
             }
-            .overlay {
-                if level.charging {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: height * 0.7, weight: .bold))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.4), radius: 1)
-                }
-            }
-            RoundedRectangle(cornerRadius: cap / 2)
+            .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            RoundedRectangle(cornerRadius: height * Self.cap / 2, style: .continuous)
                 .fill(color.opacity(0.45))
-                .frame(width: cap, height: height * 0.36)
+                .frame(width: height * Self.cap, height: height * 0.4)
         }
-        .frame(width: width, height: height)
+        .frame(width: Self.width(height: height), height: height)
         .accessibilityLabel("\(level.percent) percent\(level.charging ? ", charging" : "")")
     }
-}
-
-/// Where a timer's Stop is, in the notch's points, while it shows, so the closed notch can hand it
-/// its clicks.
-struct StopFrame: PreferenceKey {
-    static let defaultValue: CGRect? = nil
-    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) { value = nextValue() ?? value }
 }
