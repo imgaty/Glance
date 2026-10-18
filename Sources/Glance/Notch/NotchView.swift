@@ -184,6 +184,10 @@ final class NotchModel: ObservableObject {
     @Published var nudge: CGFloat = 0
     /// Where the player's buttons sit, so the window can hand clicks there to them.
     var controlFrames: [CGRect] = []
+    /// Where a timer that's done has its Stop, which works in the closed notch, and whether the
+    /// pointer is on it.
+    var stopFrame: CGRect?
+    @Published var stopHovered = false
 
     /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
     @Published var island: Bool {
@@ -412,7 +416,8 @@ struct NotchView: View {
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
-                timer: model.activity && model.pop || model.switching ? nil : model.timer, music: model.activity
+                timer: model.activity && model.pop || model.switching ? nil : model.timer, music: model.activity,
+                stopHovered: model.stopHovered
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
             .allowsHitTesting(false)
@@ -543,6 +548,7 @@ struct NotchView: View {
         .coordinateSpace(.named(ControlFrames.space))
         .onPreferenceChange(ControlFrames.self) { model.controlFrames = $0 }
         .onPreferenceChange(AirDropFrame.self) { model.airDropFrame = $0 }
+        .onPreferenceChange(StopFrame.self) { model.stopFrame = $0 }
         // A change in Settings eases in rather than snapping.
         .animation(.easeInOut(duration: 0.6), value: background)
         .animation(.easeInOut(duration: 0.45), value: darkness)

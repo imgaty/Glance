@@ -55,7 +55,7 @@ struct LiveActivityView: View {
         }
         let side = restingHeight - inset * 2
         let left = edge + side + textGap + width(title, .semibold) + cameraGap
-        let right = cameraGap + width(artist, .regular) + edge
+        let right = cameraGap + width(artist, .medium) + edge
         return min(max(left, right, restingHeight), NotchModel.maxPopWing)
     }
 
@@ -96,7 +96,7 @@ struct LiveActivityView: View {
                     .frame(width: side, height: side)
                     .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
                 if words {
-                    MarqueeText(text: nowPlaying.artist, font: .system(size: size), active: true, alignment: .trailing)
+                    MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .trailing)
                         .foregroundStyle(accent.readableOnBlack(opacity: 0.7))
                         .islandFade(pop)
                         .transition(IslandMotion.fade)

@@ -55,8 +55,8 @@ struct MusicPage: View {
             }
             Section {
                 Toggle(isOn: $liveActivity) {
-                    Text("Live Activities")
-                    Text("Shows what's playing around the closed notch.")
+                    Text("Cover and waveform")
+                    Text("Shows what's playing beside the camera while the notch is closed.")
                 }
                 Toggle(isOn: $trackPop) {
                     Text("Announce new audio")

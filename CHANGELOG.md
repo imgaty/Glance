@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 17 October 2026`
+`Created: 11 October 2026` | `Last updated: 18 October 2026`
 
 <br>
 
@@ -16,21 +16,27 @@
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
-  battery as a ring. And sound going to AirPlay.
+  battery as a ring, with its level in numbers when they aren't in 3D. And
+  sound going to AirPlay.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the
   island's do, and what it shows rides in and out with them, fading in out of a
   blur and away into one, under the notch at rest, which stays sharp over it.
   An announcement shows as long as the iPhone shows AirPods arriving. Between
-  two, it folds to rest before opening for the next.
+  two, it folds to rest before opening for the next. With Reduce Motion on, the
+  notch widens without bouncing and nothing blurs.
 - Changed the player, the tray and the lyrics to come and go with the same
   fade and blur as the notch opens, closes or turns its page, and a new song's
   cover to come in the same way as the last one goes.
 - Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
-  Settings, counting down beside the camera and chiming when it's done.
-- Added a Live Activities page to Settings, to turn each one off.
+  Settings, counting down beside the camera, with a pause symbol while paused,
+  and chiming when it's done until Stop beside it is clicked.
+- Added a Live Activities page to Settings, to turn each one off, with a way to
+  Music's own.
+- Changed Music's Live Activities setting to Cover and waveform, so it isn't
+  mistaken for the Live Activities page.
 
 <br>
 

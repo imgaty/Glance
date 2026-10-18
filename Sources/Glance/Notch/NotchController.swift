@@ -108,6 +108,8 @@ final class NotchController {
     private var swipe: CGFloat = 0
     /// Whether the current click began on a closed notch, so letting go opens rather than closes it.
     private var pressBeganClosed = false
+    /// Pressed on a timer's Stop, which stops it rather than opening the notch.
+    private var stopPressed = false
     /// A menu opened from inside the open notch, like the sound output's, is up: the pointer is on
     /// the menu, outside the notch, but the notch stays open under it until it's gone.
     private var menuHold = false
@@ -602,9 +604,14 @@ final class NotchController {
         // Where three fingers turn the page: the open notch, kept up to date as it opens and closes.
         NotchSwipes.shared.set(swipeZone, for: self)
         if fullScreen, followMenuBar(p) { return }
+        let stop = onStop(p)
+        if model.stopHovered != stop { model.stopHovered = stop }
         switch model.state {
         case .closed, .peek:
-            if interactiveZone.contains(p) {
+            if stop {
+                // On a timer's Stop the notch stays as it is, so a click there stops the timer.
+                openTask?.cancel()
+            } else if interactiveZone.contains(p) {
                 if model.state == .closed, !holdUntilExit { peek() }
             } else {
                 holdUntilExit = false
@@ -630,6 +637,15 @@ final class NotchController {
         Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
+    /// Whether a point on the screen is on the Stop of a timer that's done, in the closed notch.
+    private func onStop(_ p: CGPoint) -> Bool {
+        guard NotchTimer.shared.ringing, model.state != .open, let stop = model.stopFrame, let view = panel.contentView else {
+            return false
+        }
+        let local = view.convert(panel.convertPoint(fromScreen: p), from: nil)
+        return stop.contains(CGPoint(x: local.x, y: local.y - Layout.pastTop))
+    }
+
     func clicked(outsideAt p: CGPoint) {
         if model.state == .open, !openZone.contains(p) { close(holdUntilExit: false) }
     }
@@ -637,6 +653,9 @@ final class NotchController {
     /// Pressing the closed notch squeezes it, and letting go opens it. The open notch ignores
     /// clicks outside its controls: it closes when the pointer leaves or with a swipe up.
     private func press() {
+        // A timer's Stop, in the closed notch, is a button of its own.
+        stopPressed = onStop(NSEvent.mouseLocation)
+        if stopPressed { return }
         pressBeganClosed = model.state != .open
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
@@ -650,6 +669,14 @@ final class NotchController {
     }
 
     private func release() {
+        if stopPressed {
+            stopPressed = false
+            if onStop(NSEvent.mouseLocation) {
+                NotchTimer.shared.stop()
+                model.stopHovered = false
+            }
+            return
+        }
         guard pressBeganClosed else { return }
         model.press(false)
         let opening = Opening.current

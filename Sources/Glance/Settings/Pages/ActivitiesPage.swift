@@ -9,17 +9,27 @@ import AppKit
 import SwiftUI
 
 /// What the Mac announces beside the camera, each turned on or off, as the iPhone's Dynamic Island
-/// shows them; and the timer. The battery's choices show only on a Mac with one.
+/// shows them; and the timer. The battery's choices show only on a Mac with one. Music's own, with
+/// the rest of Music, are a click away.
 struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
     @AppStorage(Preferences.activityConnectivity) private var connectivity = true
     @ObservedObject private var timer = NotchTimer.shared
+    @Environment(\.showPane) private var showPane
     private let hasBattery = BatteryWatch.hasBattery
 
     var body: some View {
         Form {
+            Section {
+                CenteredRow {
+                    Text("Music")
+                    Text("The cover and waveform beside the camera, and new songs as they start, are in Music settings.")
+                } trailing: {
+                    Button("Music Settings") { showPane.action(.music) }
+                }
+            }
             if hasBattery {
                 Section {
                     Toggle(isOn: $charging) {
@@ -45,7 +55,7 @@ struct ActivitiesPage: View {
             Section {
                 CenteredRow {
                     Text("Timer")
-                    Text("Counts down beside the camera. Glance in the menu bar starts one too.")
+                    Text("Counts down beside the camera. You can also start one from Glance in the menu bar.")
                 } trailing: {
                     if let state = timer.state {
                         HStack {

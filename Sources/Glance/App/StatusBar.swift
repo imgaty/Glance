@@ -547,33 +547,44 @@ private struct StatusTimer: View {
     @ObservedObject var timer: NotchTimer
     let start: (Int) -> Void
     static let lengths = [1, 5, 10, 15, 30, 60]
+    /// Between the buttons, as far apart as their bezels need.
+    static let spacing: CGFloat = 10
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: Self.spacing) {
                 Text("Timer")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 8)
                 if let state = timer.state {
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                        Text(NotchTimer.format(state.left(at: context.date)))
-                            .font(.system(size: 13, weight: .medium).monospacedDigit())
-                            .foregroundStyle(.orange)
-                            .opacity(state.isRunning ? 1 : 0.55)
+                        // Paused, it says so with a symbol before the time, which waits. In the label's
+                        // own color, which the glass keeps readable whatever is behind it; an orange
+                        // can't be.
+                        HStack(spacing: 4) {
+                            if !state.isRunning {
+                                Image(systemName: "pause.fill")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .accessibilityLabel("Paused")
+                            }
+                            Text(NotchTimer.format(state.left(at: context.date)))
+                                .font(.system(size: 13, weight: .medium).monospacedDigit())
+                        }
+                        .foregroundStyle(.primary)
                     }
                     StatusRoundButton(symbol: state.isRunning ? "pause.fill" : "play.fill", label: state.isRunning ? "Pause" : "Resume") {
                         state.isRunning ? timer.pause() : timer.resume()
                     }
                     StatusRoundButton(symbol: "xmark", label: "Cancel") { timer.cancel() }
                 } else if timer.ringing {
-                    Text("Done").font(.system(size: 13, weight: .medium)).foregroundStyle(.orange)
+                    Text("Done").font(.system(size: 13, weight: .medium))
                     StatusRoundButton(symbol: "stop.fill", label: "Stop") { timer.stop() }
                 } else {
                     Text("minutes").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
             if timer.state == nil, !timer.ringing {
-                HStack(spacing: 6) {
+                HStack(spacing: Self.spacing) {
                     ForEach(Self.lengths, id: \.self) { minutes in
                         StatusLengthButton(minutes: minutes) { start(minutes) }
                     }
@@ -589,25 +600,15 @@ private struct StatusTimer: View {
 private struct StatusLengthButton: View {
     let minutes: Int
     let action: () -> Void
-    @State private var hovering = false
-    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        Text("\(minutes)")
-            .font(.system(size: 12, weight: .medium).monospacedDigit())
-            .frame(maxWidth: .infinity, minHeight: 24)
-            .background {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(scheme == .dark ? Color.white : Color.black)
-                    .opacity(hovering ? (scheme == .dark ? 0.2 : 0.12) : (scheme == .dark ? 0.1 : 0.06))
-            }
-            .contentShape(Rectangle())
-            .onHover { hovering = $0 }
-            .onTapGesture(perform: action)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Start a \(NotchTimer.name(minutes: minutes).lowercased()) timer")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action() }
+        Button(action: action) {
+            Text("\(minutes)")
+                .font(.system(size: 12, weight: .medium).monospacedDigit())
+                .frame(maxWidth: .infinity, minHeight: 28)
+        }
+        .buttonStyle(StatusTimerButtonStyle(shape: RoundedRectangle(cornerRadius: 8, style: .continuous)))
+        .accessibilityLabel("Start a \(NotchTimer.name(minutes: minutes).lowercased()) timer")
     }
 }
 
@@ -616,24 +617,41 @@ private struct StatusRoundButton: View {
     let symbol: String
     let label: String
     let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .bold))
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(StatusTimerButtonStyle(shape: Circle()))
+        .accessibilityLabel(label)
+    }
+}
+
+/// The timer's buttons: a faint fill, fainter at rest than under the pointer or pressed. Buttons of
+/// their own, so the keyboard reaches them too.
+private struct StatusTimerButtonStyle<S: Shape>: ButtonStyle {
+    let shape: S
+
+    func makeBody(configuration: Configuration) -> some View {
+        StatusTimerButtonBody(label: configuration.label, pressed: configuration.isPressed, shape: shape)
+    }
+}
+
+private struct StatusTimerButtonBody<Label: View, S: Shape>: View {
+    let label: Label
+    let pressed: Bool
+    let shape: S
     @State private var hovering = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 10, weight: .bold))
-            .frame(width: 24, height: 24)
-            .background {
-                Circle()
-                    .fill(scheme == .dark ? Color.white : Color.black)
-                    .opacity(hovering ? (scheme == .dark ? 0.2 : 0.12) : (scheme == .dark ? 0.1 : 0.06))
-            }
-            .contentShape(Circle())
+        let dark = scheme == .dark
+        let fill = pressed ? (dark ? 0.28 : 0.18) : hovering ? (dark ? 0.2 : 0.12) : (dark ? 0.1 : 0.06)
+        label
+            .background(shape.fill(dark ? Color.white : Color.black).opacity(fill))
+            .contentShape(shape)
             .onHover { hovering = $0 }
-            .onTapGesture(perform: action)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(label)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action() }
     }
 }

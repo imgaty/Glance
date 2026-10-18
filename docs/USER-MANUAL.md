@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 17 October 2026`
+`Created: 11 October 2026` | `Last updated: 18 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -63,7 +63,8 @@ Hover over the notch or click it, depending on
 **Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
 notch closes when the pointer leaves it. The player, the tray and the lyrics
 come and go as the Dynamic Island's activities do, fading in out of a blur and
-away into one, as the notch opens, closes, or switches between them.
+away into one, as the notch opens, closes, or switches between them. With
+Reduce Motion on, they only fade.
 
 | Gesture | Operation |
 | --- | --- |
@@ -227,9 +228,10 @@ waveform on its right. When something new starts playing, its name and artist
 appear beside the notch for a moment. Everything here comes and goes as on the
 iPhone's Dynamic Island: the notch widens and folds, and what it shows rides
 in and out with its ends, fading in out of a blur and away into one. A new
-song's cover comes in the same way as the last one goes.
+song's cover comes in the same way as the last one goes. With Reduce Motion on,
+the notch widens without bouncing, and what it shows fades without a blur.
 
-Turn these off with **Live Activities** and **Announce new audio** in
+Turn these off with **Cover and waveform** and **Announce new audio** in
 **Settings > Music**.
 
 ### What the Mac announces
@@ -243,8 +245,8 @@ sliding under the notch as it folds:
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery |
 | A MacBook's battery at 20%, and again at 10% | `Low Battery`, and its level, in red |
-| AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's |
-| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring when it tells the Mac |
+| AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's, with its level beside it for those not in 3D |
+| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and, when it tells the Mac, its battery's level beside a ring |
 | The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
 | The internet lost for a few seconds | `No Internet` |
 | The internet back after that | Wi-Fi's or Ethernet's symbol, and `Connected` |
@@ -259,9 +261,11 @@ announced. Turn each of these off in **Settings > Live Activities**.
 
 Start a timer from Glance's menu in the menu bar, from the notch's right-click
 menu, or from **Settings > Live Activities**. It counts down beside the
-camera, next to the cover while something plays. When it's done, its symbol
-shakes beside `Stop`, and it chimes until you open or click the notch, or stop
-it from the menu. Pause, resume and cancel it from the same menus.
+camera, next to the cover while something plays, with a pause symbol before the
+time while it's paused. When it's done, its symbol shakes beside **Stop**, and
+it chimes until you click **Stop**, which leaves the notch closed, open the
+notch, or stop it from the menu. Pause, resume and cancel it from the same
+menus.
 
 <br>
 
@@ -317,7 +321,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Tint progress bar` | Colors the progress bar with the accent color |
 | `Animated art` | Plays an album's animated cover, when it has one |
 | `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
-| `Live Activities` | What's playing around the closed notch |
+| `Cover and waveform` | What's playing beside the camera while the notch is closed |
 | `Announce new audio` | Briefly shows what starts playing |
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
@@ -338,6 +342,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 
 | Setting | Operation |
 | --- | --- |
+| `Music` | **Music Settings** goes to the cover and waveform, and new songs, in **Settings > Music** |
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay |

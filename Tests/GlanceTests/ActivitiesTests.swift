@@ -280,4 +280,19 @@ struct ActivitiesTests {
         let hours = SystemActivityView.wing(for: .running(until: .now, total: 3_700), restingHeight: resting, island: false)
         #expect(hours > minutes)
     }
+
+    @Test("Paused, a timer makes room for its pause symbol; a device not in 3D, for its level; a long name scrolls within the limit")
+    func roomForWhatShows() {
+        let resting: CGFloat = 32
+        let running = SystemActivityView.wing(for: .running(until: .now + 300, total: 300), restingHeight: resting, island: false)
+        let paused = SystemActivityView.wing(for: .paused(left: 300, total: 300), restingHeight: resting, island: false)
+        #expect(paused > running)
+        let layout = DeviceLayout(height: resting)
+        let keyboard = NotchAlert(
+            kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "Magic Keyboard connected, 15 percent")
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) > layout.ring + layout.trailing + 15)
+        let speaker = DeviceWatch.alert(name: "The Living Room Speaker Upstairs, By the Window", symbol: "airplayaudio", kind: .output)
+        #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false) == SystemActivityView.maxWing)
+        #expect(SystemActivityView.maxWing <= 120)
+    }
 }

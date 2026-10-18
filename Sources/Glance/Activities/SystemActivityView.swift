@@ -21,6 +21,8 @@ struct SystemActivityView: View {
     let timer: NotchTimer.State?
     /// Music is playing: its cover keeps the left wing beside a timer.
     let music: Bool
+    /// The pointer is on a timer's Stop, which the notch then leaves closed for it.
+    var stopHovered = false
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
     /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
     /// start, so it never leaves as well as fading.
@@ -70,15 +72,21 @@ struct SystemActivityView: View {
                         .opacity(music ? 0 : 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                        Text(NotchTimer.format(timer.left(at: context.date)))
-                            .font(.system(size: size + 1, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(.orange)
-                            // The digits roll down as they change, as the Timer's own do.
-                            .contentTransition(.numericText(countsDown: true))
-                            .animation(.snappy, value: NotchTimer.format(timer.left(at: context.date)))
-                            // Paused, it waits, dimmed.
-                            .opacity(timer.isRunning ? 1 : 0.55)
-                            .fixedSize()
+                        HStack(spacing: Self.pauseGap) {
+                            // Paused, it says so with a symbol before the time, which waits.
+                            if !timer.isRunning {
+                                Image(systemName: "pause.fill")
+                                    .font(.system(size: size - 1, weight: .semibold))
+                                    .frame(width: Self.pauseWidth(size))
+                            }
+                            Text(NotchTimer.format(timer.left(at: context.date)))
+                                .font(.system(size: size + 1, weight: .semibold).monospacedDigit())
+                                // The digits roll down as they change, as the Timer's own do.
+                                .contentTransition(.numericText(countsDown: true))
+                                .animation(.snappy, value: NotchTimer.format(timer.left(at: context.date)))
+                        }
+                        .foregroundStyle(.orange)
+                        .fixedSize()
                     }
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -112,6 +120,13 @@ struct SystemActivityView: View {
     /// Long enough for what's leaving to have faded as the wings fold.
     static let folding = Duration.milliseconds(300)
 
+    /// Between a device's level and its ring.
+    static let percentGap: CGFloat = 5
+
+    /// The pause symbol before a paused timer's time, and the space between them.
+    static func pauseWidth(_ size: CGFloat) -> CGFloat { (size * 0.8).rounded() }
+    static let pauseGap: CGFloat = 4
+
     /// A device arriving, laid out as the Dynamic Island lays out AirPods, by the notch's height: the
     /// device a little under half of it tall, its middle in from the end; its battery's ring a little
     /// over half of it across, its circle concentric with the wing's rounded end.
@@ -132,9 +147,18 @@ struct SystemActivityView: View {
             Spacer(minLength: 0)
             Group {
                 if let battery {
-                    BatteryRing(percent: battery, diameter: layout.ring)
-                        .modifier(RingArrival(leaving: leaving))
-                        .padding(.trailing, layout.trailing)
+                    HStack(spacing: Self.percentGap) {
+                        // Beside a device that isn't turning in 3D, its level in words too: low, a ring
+                        // alone reads as something loading.
+                        if model.flatMap(DeviceTurn.cached) == nil {
+                            Text("\(battery)%")
+                                .font(.system(size: size, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(BatteryRing.color(for: battery))
+                        }
+                        BatteryRing(percent: battery, diameter: layout.ring)
+                    }
+                    .modifier(RingArrival(leaving: leaving))
+                    .padding(.trailing, layout.trailing)
                 } else {
                     Text("Connected")
                         .font(.system(size: size, weight: .semibold))
@@ -178,12 +202,20 @@ struct SystemActivityView: View {
             MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
                 .foregroundStyle(.white)
         case .timerDone:
+            // A button of its own in the closed notch: orange on a faint orange, as the Timer's are,
+            // brighter under the pointer. The notch hands its clicks to it by where it is.
             Text("Stop")
                 .font(.system(size: size, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.orange)
                 .padding(.horizontal, 10)
                 .frame(height: side)
-                .background(Capsule().fill(.orange))
+                .background(Capsule().fill(.orange.opacity(stopHovered ? 0.32 : 0.2)))
+                .animation(.easeOut(duration: 0.15), value: stopHovered)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: StopFrame.self, value: proxy.frame(in: .named(ControlFrames.space)))
+                    }
+                }
         }
     }
 
@@ -192,8 +224,8 @@ struct SystemActivityView: View {
         restingHeight - LiveActivityView.inset(island: island) * 2
     }
 
-    /// How wide each wing must be for an announcement, up to a limit, a little past a song's
-    /// announcement's, beyond which a long name scrolls. A device's, with only symbols, is a little
+    /// How wide each wing must be for an announcement, up to a limit, so it covers little of the menu
+    /// bar beside the notch, beyond which a long name scrolls. A device's, with only symbols, is a little
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
     /// wider one.
     @MainActor
@@ -211,7 +243,8 @@ struct SystemActivityView: View {
                 model.flatMap(DeviceTurn.cached).map { TurningDevice.reach($0, height: layout.picture) }
                 ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
             let device = layout.leading(toAxis: axis) + axis + reach
-            let end = battery == nil ? width("Connected", size, .semibold) + layout.textInset : layout.ring + layout.trailing
+            let level = battery.map { model.flatMap(DeviceTurn.cached) == nil ? width("\($0)%", size, .semibold) + percentGap : 0 } ?? 0
+            let end = battery == nil ? width("Connected", size, .semibold) + layout.textInset : level + layout.ring + layout.trailing
             return min(max(device, end, layout.wing), maxWing)
         }
         let (left, right): (CGFloat, CGFloat) =
@@ -231,7 +264,7 @@ struct SystemActivityView: View {
         return min(max(left, right, restingHeight * 1.4), maxWing)
     }
 
-    static let maxWing: CGFloat = 170
+    static let maxWing: CGFloat = 120
 
     /// A device's width face on.
     @MainActor
@@ -247,13 +280,15 @@ struct SystemActivityView: View {
             ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
     }
 
-    /// Room for the timer's time, as long as it can get, and its symbol.
+    /// Room for the timer's time, as long as it can get, and its symbol; paused, for the pause
+    /// symbol before the time too.
     static func wing(for timer: NotchTimer.State, restingHeight: CGFloat, island: Bool) -> CGFloat {
         let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
         let size = LiveActivityView.textSize(for: restingHeight)
         // Every digit as wide as a 0, as the time's are.
         let longest = NotchTimer.format(timer.total).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-        let right = LiveActivityView.cameraGap + width(longest, size + 1, .semibold) + edge
+        let paused = timer.isRunning ? 0 : pauseWidth(size) + pauseGap
+        let right = LiveActivityView.cameraGap + paused + width(longest, size + 1, .semibold) + edge
         return max(right, edge + side(restingHeight, island) + LiveActivityView.cameraGap, restingHeight)
     }
 
@@ -326,10 +361,12 @@ struct TurningDevice: View {
 /// How the Dynamic Island's activities come and go, measured frame by frame from it, for everything
 /// the closed notch shows: its wings open with a touch of bounce and fold without, what they show
 /// riding in and out with their ends; it fades in out of a blur as they open, sharpening as it comes,
-/// and fades away into one at once as they fold.
+/// and fades away into one at once as they fold. With Reduce Motion on, the wings open without their
+/// bounce, as they fold, and nothing blurs.
 enum IslandMotion {
-    static let open = Animation.spring(response: 0.55, dampingFraction: 0.8)
+    static var open: Animation { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? fold : opening }
     static let fold = Animation.spring(response: 0.315, dampingFraction: 1.18)
+    private static let opening = Animation.spring(response: 0.55, dampingFraction: 0.8)
     /// What comes and goes with the wings, as `islandFade` shows and hides it.
     static let fade = AnyTransition(IslandFade())
 }
@@ -352,13 +389,14 @@ extension View {
 private struct IslandFadeModifier: ViewModifier {
     let shown: Bool
     @Environment(\.closedNotch) private var closed
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         // Hidden, blurred by the closed notch's height, as the Dynamic Island's activities are by its
-        // own.
+        // own; with Reduce Motion on, only faded.
         content
             .animation(.init(IslandCurve(shown ? .blurIn : .blurOut))) {
-                $0.blur(radius: shown ? 0 : closed.height * IslandCurve.blur)
+                $0.blur(radius: shown || reduceMotion ? 0 : closed.height * IslandCurve.blur)
             }
             .animation(.init(IslandCurve(shown ? .opacityIn : .opacityOut))) {
                 $0.opacity(shown ? 1 : 0)
@@ -453,7 +491,7 @@ private struct TurningSymbol: View {
             .foregroundStyle(.white)
             .frame(width: side, height: side)
             .rotation3DEffect(.degrees(reduceMotion ? 0 : turn), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-            .scaleEffect(shown ? 1 : 0.6)
+            .scaleEffect(shown || reduceMotion ? 1 : 0.6)
             .opacity(shown ? 1 : 0)
             .onAppear {
                 withAnimation(.easeOut(duration: 0.25).delay(0.15)) { shown = true }
@@ -489,7 +527,7 @@ private struct TurningPictures: View {
             }
         }
         .rotation3DEffect(.degrees(arrived || reduceMotion ? 0 : -200), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
-        .scaleEffect(arrived ? 1 : 0.6)
+        .scaleEffect(arrived || reduceMotion ? 1 : 0.6)
         .opacity(arrived ? 1 : 0)
         .animation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15), value: arrived)
         .onAppear { arrived = true }
@@ -504,10 +542,12 @@ struct BatteryRing: View {
     /// The iPhone's, as it shows AirPods' battery.
     static let green = Color(red: 68 / 255, green: 231 / 255, blue: 114 / 255)
 
+    static func color(for percent: Int) -> Color { percent <= 20 ? .red : green }
+
     var body: some View {
         // As thick as the iPhone's: an eighth of the ring across.
         let line = max(diameter * 0.12, 2)
-        let color: Color = percent <= 20 ? .red : Self.green
+        let color = Self.color(for: percent)
         ZStack {
             Circle().stroke(color.opacity(0.3), lineWidth: line)
             Circle()
@@ -522,7 +562,7 @@ struct BatteryRing: View {
 }
 
 /// A state's symbol in its color, bouncing in as the iPhone's do; a timer that's done, shaking until
-/// it's stopped.
+/// it's stopped. With Reduce Motion on, it does neither.
 private struct ArrivingSymbol: View {
     let symbol: String
     let color: Color
@@ -530,14 +570,15 @@ private struct ArrivingSymbol: View {
     let side: CGFloat
     var shakes = false
     @State private var arrived = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Image(systemName: symbol)
             .font(.system(size: size, weight: .semibold))
             .foregroundStyle(color)
             .frame(width: side, height: side)
-            .symbolEffect(.bounce, value: arrived)
-            .symbolEffect(.wiggle, options: .repeat(.continuous), isActive: shakes)
+            .symbolEffect(.bounce, value: arrived && !reduceMotion)
+            .symbolEffect(.wiggle, options: .repeat(.continuous), isActive: shakes && !reduceMotion)
             .onAppear { arrived = true }
     }
 }
@@ -585,4 +626,11 @@ struct BatteryGlyph: View {
         .frame(width: width, height: height)
         .accessibilityLabel("\(level.percent) percent\(level.charging ? ", charging" : "")")
     }
+}
+
+/// Where a timer's Stop is, in the notch's points, while it shows, so the closed notch can hand it
+/// its clicks.
+struct StopFrame: PreferenceKey {
+    static let defaultValue: CGRect? = nil
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) { value = nextValue() ?? value }
 }
