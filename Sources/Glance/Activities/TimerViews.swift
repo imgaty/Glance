@@ -28,6 +28,15 @@ enum TimerLayout {
     static let snug: CGFloat = 0.06
     // Opened, and done.
     static let tall: CGFloat = 2.4
+    /// As wide as the iPhone's expanded Timer.
+    static let wide: CGFloat = 10.2
+    /// Its round corners at the bottom, the Dynamic Island's 44 points.
+    static let corner: CGFloat = 1.2
+    /// Opened, its buttons and time sit in a row below the camera, this far under it.
+    static let belowCamera: CGFloat = 0.25
+    /// The opened timer's height: the camera's, the space under it, the row, and below it as much as
+    /// its buttons are in from the end.
+    static var opened: CGFloat { 1 + belowCamera + button + buttonInset }
     static let button: CGFloat = 1.364
     static let buttonGap: CGFloat = 0.23
     static let buttonInset: CGFloat = 0.455
@@ -81,7 +90,8 @@ struct TimerRing: View {
 }
 
 /// Opened while a timer runs, as the iPhone's Timer expands: round buttons to pause or go on and to
-/// cancel on the left, its name and the time left, large, on the right, each beside the camera.
+/// cancel on the left, its name and the time left, large, on the right. Below the camera, the camera
+/// housing being much wider than the iPhone's, so it's as narrow as the iPhone's.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
     let restingHeight: CGFloat
@@ -125,18 +135,21 @@ struct ExpandedTimerView: View {
             .padding(.trailing, h * TimerLayout.timeInset)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(maxHeight: .infinity)
+        .frame(height: h * TimerLayout.button)
+        .padding(.top, h * (1 + TimerLayout.belowCamera))
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    /// Each wing: as wide as the wider side's buttons or words, and the camera between them.
+    /// As wide as the iPhone's, or as its buttons and its words need, with as much room as the
+    /// iPhone's has between them: past an hour, the time takes more.
     @MainActor
-    static func wing(for state: NotchTimer.State, restingHeight h: CGFloat) -> CGFloat {
+    static func width(for state: NotchTimer.State, restingHeight h: CGFloat) -> CGFloat {
         let left = h * (TimerLayout.buttonInset + TimerLayout.button * 2 + TimerLayout.buttonGap)
         let longest = NotchTimer.format(state.total).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
         let time = (longest as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width
         let title = ("Timer" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width
         let right = ceil(title + h * TimerLayout.titleGap + time) + 2 + h * TimerLayout.timeInset
-        return max(left, right) + h * TimerLayout.snug
+        return max(h * TimerLayout.wide, left + right + h)
     }
 }
 

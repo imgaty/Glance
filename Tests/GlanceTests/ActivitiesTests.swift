@@ -314,15 +314,19 @@ struct ActivitiesTests {
         timer.cancel()
     }
 
-    @Test("Opened while a timer runs and nothing plays, the notch is as tall as the Timer's expanded view")
+    @Test("Opened while a timer runs and nothing plays, the notch is as wide as the Timer's expanded view, its row below the camera")
     func expandedTimer() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.timer = .running(until: .now + 300, total: 300)
         model.expanded = .timer
         let open = model.metrics(for: .open)
-        #expect(open.height == (32 * TimerLayout.tall).rounded())
-        #expect(open.bodyWidth > 185 + 2 * 32 * TimerLayout.button)
+        #expect(open.height == (32 * TimerLayout.opened).rounded())
+        #expect(open.height > 32 * (1 + TimerLayout.button))
+        #expect(abs(open.bodyWidth - 32 * TimerLayout.wide) < 1)
         #expect(open.flare == NotchCorners.restingFlare)
+        // Past an hour, the time takes more room.
+        model.timer = .running(until: .now + 7_200, total: 7_200)
+        #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
     }
 
     @Test("Paused, a timer makes room for its pause symbol; a device not in 3D, for its level; a long name scrolls within the limit")

@@ -271,9 +271,8 @@ final class NotchModel: ObservableObject {
             case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
             case .open where expanded == .timer:
                 (
-                    closedSize.width + ExpandedTimerView.wing(for: timer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height) * 2
-                        + pull * 0.35,
-                    (closedSize.height * TimerLayout.tall).rounded() + pull
+                    ExpandedTimerView.width(for: timer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height) + pull * 0.35,
+                    (closedSize.height * TimerLayout.opened).rounded() + pull
                 )
             case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
@@ -606,9 +605,7 @@ struct NotchView: View {
         if let timer = model.timer {
             let h = model.closedSize.height
             ExpandedTimerView(state: timer, restingHeight: h)
-                .frame(
-                    width: model.closedSize.width + ExpandedTimerView.wing(for: timer, restingHeight: h) * 2,
-                    height: (h * TimerLayout.tall).rounded())
+                .frame(width: ExpandedTimerView.width(for: timer, restingHeight: h), height: (h * TimerLayout.opened).rounded())
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -843,7 +840,9 @@ struct NotchShape: Shape {
             radii.bottom += (rect.height / 2 - radii.bottom) * wingEnds * (1 - open)
         }
         if tall > 0 {
-            radii.bottom += (rect.height / 2 - radii.bottom) * tall
+            // Round right across at the Dynamic Island's height, never rounder than its 44 points.
+            let round = min(rect.height / 2, corners.restingHeight * TimerLayout.corner)
+            radii.bottom += (round - radii.bottom) * tall
             if !corners.island { radii.flare += (NotchCorners.restingFlare - radii.flare) * tall }
         }
         return radii

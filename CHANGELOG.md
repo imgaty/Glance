@@ -36,7 +36,8 @@
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera as the iPhone's Timer does: a ring
   emptying beside the minutes left, with a pause symbol while paused. Opened
-  while nothing plays, it shows buttons to pause and cancel it beside the time.
+  while nothing plays, it's as wide as the iPhone's expanded Timer, with
+  buttons to pause and cancel it beside the time, in a row below the camera.
   Done, it grows as tall as the iPhone's Alarm, with buttons to start it again
   or stop its chime.
 - Added a Live Activities page to Settings, to turn each one off, with a way to

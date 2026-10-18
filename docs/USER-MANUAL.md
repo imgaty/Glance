@@ -268,8 +268,8 @@ the seconds in its last minute; next to the cover while something plays, and
 with a pause symbol before the time while it's paused.
 
 Hover over or click the notch while a timer runs and nothing plays, and it opens
-to the timer: pause or resume it, or cancel it, with the round buttons beside
-the time.
+to the timer, in a row below the camera: pause or resume it, or cancel it, with
+the round buttons beside the time.
 
 When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
 shaking, and it chimes. Click **Repeat** to start the same length again, or
