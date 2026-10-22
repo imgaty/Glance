@@ -86,6 +86,23 @@ struct PlayerScriptingTests {
         #expect(PlayerScripting.options(from: "true|false|true", app: spotify).favorite == nil)
     }
 
+    @Test("Spotify's DJ is told by shuffle and repeat not being offered, for its songs and its own words")
+    func spotifyDJ() {
+        #expect(
+            PlayerScripting.options(from: "false|false|false|spotify:track:1UYj8qTWjneZJDVjUMwMub", app: spotify)
+                == PlaybackOptions(dj: true))
+        #expect(
+            PlayerScripting.options(from: "false|false|false|spotify:media:0000000000000000000000", app: spotify)
+                == PlaybackOptions(dj: true))
+        // A podcast doesn't offer them either, but it isn't the DJ.
+        #expect(
+            PlayerScripting.options(from: "false|false|false|spotify:episode:4rOoJ6Egrf8K2IrywzwOMk", app: spotify)
+                == PlaybackOptions())
+        #expect(
+            PlayerScripting.options(from: "true|false|true|spotify:track:1UYj8qTWjneZJDVjUMwMub", app: spotify)
+                == PlaybackOptions(shuffle: true, repeatMode: .off))
+    }
+
     @Test("A reply that isn't options gives none", arguments: ["", "true", "garbage", "missing value"])
     func malformedReply(reply: String) {
         #expect(PlayerScripting.options(from: reply, app: music) == PlaybackOptions())
@@ -112,6 +129,8 @@ struct PlayerScriptingTests {
         #expect(spotifyScript.contains(#"tell application "Spotify""#))
         #expect(spotifyScript.contains("shuffling"))
         #expect(spotifyScript.contains("repeating"))
+        #expect(spotifyScript.contains("shuffling enabled"))
+        #expect(spotifyScript.contains("spotify url"))
         #expect(!spotifyScript.contains("favorited"))
 
         #expect(PlayerScripting.readScript(for: other) == nil)

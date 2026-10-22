@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 15 October 2026`
+`Created: 11 October 2026` | `Last updated: 24 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -12,7 +12,9 @@ Glance's current, planned, and rejected features.
 
 Whatever is playing, in almost any app, with its cover, a progress bar to drag
 through the song, and buttons to play, pause and skip. You choose in Settings
-which apps show. See the [User Manual](USER-MANUAL.md#the-player).
+which apps show. While Spotify's DJ chooses the music, its symbol takes a
+button's place, moving as the DJ talks. See the
+[User Manual](USER-MANUAL.md#the-player).
 
 ### Tray
 
@@ -70,7 +72,8 @@ Glance checks for a new version once a day and installs it on its own. See the
 later.
 
 **Shuffle, repeat and favorites.** They work in `Music` and `Spotify`
-(favorites in `Music` only); for other apps the buttons show dimmed.
+(favorites in `Music` only); for other apps, and in `Spotify` while its DJ or a
+podcast plays, the buttons show dimmed.
 
 **Copies from other devices.** What you copy on an iPhone or iPad, through
 Universal Clipboard, isn't kept in the tray.

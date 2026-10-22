@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 16 October 2026`
+`Created: 11 October 2026` | `Last updated: 24 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -131,6 +131,11 @@ Beside the playback controls are two buttons of your choice. Choose them in
 | `Sound Output` | Chooses where the sound plays, and the app's volume |
 | `Lyrics` | Shows the song's words |
 | `None` | Leaves the place empty |
+
+While Spotify's DJ chooses the music, its symbol takes the left button's place,
+as it takes shuffle's in Spotify, and its corner moves while the DJ talks. Click
+it to switch to Spotify. Shuffle and repeat show dimmed then, because Spotify
+doesn't offer them with the DJ or a podcast.
 
 ### Sound output and volume
 

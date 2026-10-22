@@ -77,6 +77,12 @@ final class NowPlaying: ObservableObject {
 
     var hasMedia: Bool { !title.isEmpty }
 
+    /// Spotify's DJ is talking: what it says plays as a song of no length on an album called DJ.
+    var djTalking: Bool { appBundleID == PlayerScripting.spotify && album == "DJ" && duration <= 0 && hasMedia }
+
+    /// Spotify's DJ is choosing the music, or talking about it.
+    var djPlaying: Bool { options.dj || djTalking }
+
     /// The song, as the lookups made for it are kept.
     private var track: String { title + "\u{1F}" + artist }
 

@@ -33,6 +33,8 @@ struct PlaybackOptions: Equatable {
     var shuffle: Bool?
     var repeatMode: RepeatMode?
     var favorite: Bool?
+    /// Spotify's DJ is choosing the music.
+    var dj = false
 }
 
 /// Spotify's own Playback ▸ Repeat command, which steps through off, all and one like its button;
@@ -168,7 +170,18 @@ enum PlayerScripting {
     static func readScript(for app: String) -> String? {
         switch app {
         case music: #"tell application "Music" to return (shuffle enabled as text) & "|" & (song repeat as text) & "|" & (favorited of current track as text)"#
-        case spotify: #"tell application "Spotify" to return (shuffling as text) & "|" & (repeating as text)"#
+        case spotify:
+            // Shuffle and repeat aren't offered while the DJ chooses the music, its own words included
+            // (a spotify:media: address); that's how the DJ is told apart from a playlist.
+            #"""
+            tell application "Spotify"
+                set trackAddress to ""
+                try
+                    set trackAddress to spotify url of current track
+                end try
+                return (shuffling as text) & "|" & (repeating as text) & "|" & (shuffling enabled as text) & "|" & trackAddress
+            end tell
+            """#
         default: nil
         }
     }
@@ -177,6 +190,11 @@ enum PlayerScripting {
         let parts = reply.components(separatedBy: "|")
         guard parts.count >= 2 else { return PlaybackOptions() }
         if app == spotify {
+            // Not offered, as with the DJ or a podcast: shown faint, as Spotify shows them.
+            guard parts.count < 4 || parts[2] != "false" else {
+                let address = parts[3]
+                return PlaybackOptions(dj: address.hasPrefix("spotify:track:") || address.hasPrefix("spotify:media:"))
+            }
             return PlaybackOptions(shuffle: parts[0] == "true", repeatMode: parts[1] == "true" ? .all : .off)
         }
         return PlaybackOptions(

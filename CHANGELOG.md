@@ -8,6 +8,14 @@
 
 `Released: not yet`
 
+### Player
+
+- Fixed Spotify's DJ not showing in the player: while the DJ chooses the music,
+  its symbol takes the left button's place, drawn as Spotify draws it, its
+  corner moving as the DJ talks. Clicking it switches to Spotify.
+- Fixed shuffle and repeat looking available while Spotify's DJ or a podcast
+  plays, when Spotify doesn't offer them.
+
 ### Tray
 
 - Fixed the photo in the tray's demo being enlarged from a smaller picture.
