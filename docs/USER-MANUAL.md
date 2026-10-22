@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 18 October 2026`
+`Created: 11 October 2026` | `Last updated: 22 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -250,9 +250,6 @@ sliding under the notch as it folds:
 | AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's, with its level beside it for those not in 3D |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and, when it tells the Mac, its battery's level beside a ring |
 | The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
-| The internet lost for a few seconds | `No Internet` |
-| The internet back after that | Wi-Fi's or Ethernet's symbol, and `Connected` |
-| Joining an iPhone's Personal Hotspot | `Hotspot` |
 
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 
@@ -356,7 +353,6 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay |
-| `Connectivity` | Shows when the Mac goes offline, comes back, or joins a Personal Hotspot |
 | `Timer` | Starts a timer, or pauses or cancels the one running |
 
 ### Opening

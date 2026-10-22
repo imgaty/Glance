@@ -249,7 +249,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
             "player apps sources apple music spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics waveform animated art live activity announce songs closed"
         case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look"
         case .activities:
-            "live activity activities dynamic island music battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay wifi wi-fi internet offline online hotspot network timer countdown"
+            "live activity activities dynamic island music battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay timer countdown"
         case .opening: "hover click delay hold haptic feedback gestures swipe trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }

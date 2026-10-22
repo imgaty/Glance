@@ -15,7 +15,6 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
-    @AppStorage(Preferences.activityConnectivity) private var connectivity = true
     @ObservedObject private var timer = NotchTimer.shared
     @Environment(\.showPane) private var showPane
     private let hasBattery = BatteryWatch.hasBattery
@@ -46,10 +45,6 @@ struct ActivitiesPage: View {
                 Toggle(isOn: $devices) {
                     Text("Devices")
                     Text("Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay.")
-                }
-                Toggle(isOn: $connectivity) {
-                    Text("Connectivity")
-                    Text("Shows when the Mac goes offline, comes back, or joins a Personal Hotspot.")
                 }
             }
             Section {

@@ -18,7 +18,7 @@ import Testing
 @Suite("Live activities", .serialized)
 struct ActivitiesTests {
     private func alert(_ kind: NotchAlert.Kind, _ title: String = "Title") -> NotchAlert {
-        NotchAlert(kind: kind, content: .status(symbol: "wifi", tint: .blue, text: title), spoken: title)
+        NotchAlert(kind: kind, content: .status(symbol: "airplay.audio", tint: .blue, text: title), spoken: title)
     }
 
     @Test("Announcements show one at a time, in turn; the same kind again takes its place in line")
@@ -27,15 +27,15 @@ struct ActivitiesTests {
         activities.post(alert(.charging))
         #expect(activities.alert?.kind == .charging)
         activities.post(alert(.device, "AirPods"))
-        activities.post(alert(.online))
+        activities.post(alert(.output))
         activities.post(alert(.device, "Magic Mouse"))
         #expect(activities.alert?.kind == .charging)
         #expect(activities.waiting.map(\.spoken) == ["Magic Mouse", "Title"])
         // A short line: the oldest of too many goes.
-        activities.post(alert(.offline))
-        activities.post(alert(.hotspot))
+        activities.post(alert(.lowBattery))
+        activities.post(alert(.timerDone))
         #expect(activities.waiting.count == 3)
-        #expect(activities.waiting.first?.kind == .online)
+        #expect(activities.waiting.first?.kind == .output)
     }
 
     @Test("One that stays shows until it's dismissed")
@@ -77,26 +77,6 @@ struct ActivitiesTests {
         #expect(low(11, 10))
         #expect(!low(10, 9))
         #expect(!low(30, 29))
-    }
-
-    @Test("The connection: back after it was said to be lost, and onto a hotspot; a blip says nothing")
-    func network() {
-        typealias Link = NetworkWatch.Link
-        let wifi = Link(online: true, kind: .wifi, hotspot: false)
-        let wired = Link(online: true, kind: .wired, hotspot: false)
-        let hotspot = Link(online: true, kind: .wifi, hotspot: true)
-        let none = Link(online: false, kind: .other, hotspot: false)
-        #expect(NetworkWatch.change(from: none, to: wifi, saidOffline: true) == .online(.wifi))
-        #expect(NetworkWatch.change(from: none, to: wired, saidOffline: true) == .online(.wired))
-        #expect(NetworkWatch.change(from: none, to: wifi, saidOffline: false) == nil)
-        #expect(NetworkWatch.change(from: wifi, to: hotspot, saidOffline: false) == .hotspot)
-        #expect(NetworkWatch.change(from: none, to: hotspot, saidOffline: true) == .hotspot)
-        #expect(NetworkWatch.change(from: hotspot, to: hotspot, saidOffline: false) == nil)
-        #expect(NetworkWatch.change(from: wifi, to: none, saidOffline: false) == nil)
-        #expect(NetworkWatch.alert(for: .offline).content == .status(symbol: "wifi.slash", tint: .red, text: "No Internet"))
-        #expect(NetworkWatch.alert(for: .online(.wired)).content == .status(symbol: "network", tint: .blue, text: "Connected"))
-        #expect(NetworkWatch.alert(for: .online(.wired)).spoken == "Ethernet connected")
-        #expect(NetworkWatch.alert(for: .hotspot).content == .status(symbol: "personalhotspot", tint: .green, text: "Hotspot"))
     }
 
     @Test("Accessories are named by what they are; headphones' own buttons aren't announced twice")

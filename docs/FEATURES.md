@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 16 October 2026`
+`Created: 11 October 2026` | `Last updated: 22 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -43,8 +43,8 @@ the cover's colors or your Mac's accent color.
 While something plays, the closed notch shows its cover and a waveform that
 moves with the music. When a new song starts, its name slides out for a moment.
 As on the iPhone, it also shows the battery charging or running low, headphones
-and accessories connecting, sound going to AirPlay, and the internet lost and
-back, and counts down a timer started from the menu bar. See the
+and accessories connecting and sound going to AirPlay, and counts down a timer
+started from the menu bar. See the
 [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
@@ -84,7 +84,7 @@ Universal Clipboard, isn't kept in the tray.
 ## Roadmap
 
 - [x] `Animated covers`: Apple Music's animated album covers.
-- [x] `More Live Activities`: battery, devices, connectivity and a timer.
+- [x] `More Live Activities`: battery, devices and a timer.
 - [x] `Displays without a notch`: a notch or a Dynamic Island on any display.
 - [x] `Now Playing`: whatever is playing, in any app, with its controls.
 - [x] `Shortcuts`: shortcuts to open the player and the tray.
@@ -99,6 +99,12 @@ Universal Clipboard, isn't kept in the tray.
 <br>
 
 ## Rejected
+
+### Connectivity announcements
+
+The iPhone's Dynamic Island shows nothing when Wi-Fi or a Personal Hotspot
+connects or drops, so Glance doesn't either. The menu bar already shows the
+connection.
 
 ### Spotify favorites
 

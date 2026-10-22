@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 18 October 2026`
+`Created: 11 October 2026` | `Last updated: 22 October 2026`
 
 <br>
 
@@ -32,7 +32,6 @@
 - Changed the player, the tray and the lyrics to come and go with the same
   fade and blur as the notch opens, closes or turns its page, and a new song's
   cover to come in the same way as the last one goes.
-- Added the internet lost and back, and joining a Personal Hotspot.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera as the iPhone's Timer does: a ring
   emptying beside the minutes left, with a pause symbol while paused. Opened

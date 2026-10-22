@@ -9,12 +9,12 @@ import AppKit
 import SwiftUI
 
 /// A moment the Mac announces beside the camera, drawn as the iPhone's Dynamic Island draws its
-/// own: plugged in, low on battery, AirPods or a keyboard connecting, the sound going to AirPlay, the
-/// internet lost or back, a timer done. It takes the closed notch's sides over for a few seconds,
-/// then whatever was there comes back.
+/// own: plugged in, low on battery, AirPods or a keyboard connecting, the sound going to AirPlay, a
+/// timer done. It takes the closed notch's sides over for a few seconds, then whatever was there
+/// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, output, offline, online, hotspot, timerDone
+        case charging, lowBattery, device, output, timerDone
     }
 
     /// What shows on either side of the camera.
@@ -97,11 +97,10 @@ final class Activities: ObservableObject {
             [weak self] _ in
             MainActor.assumeIsolated { self?.wokeAt = .now }
         }
-        let battery = BatteryWatch(), devices = DeviceWatch(), network = NetworkWatch()
+        let battery = BatteryWatch(), devices = DeviceWatch()
         battery.start()
         devices.start()
-        network.start()
-        watches = [battery, devices, network]
+        watches = [battery, devices]
     }
 
     /// Just woken, things reconnecting are expected, not announced.

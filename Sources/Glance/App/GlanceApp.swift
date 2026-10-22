@@ -180,7 +180,6 @@ enum Preferences {
             activityCharging: true,
             activityLowBattery: true,
             activityDevices: true,
-            activityConnectivity: true,
             swipeToSwitch: true,
         ])
     }
@@ -262,11 +261,10 @@ enum Preferences {
     /// Apps whose copies are never kept, comma separated (see TrayApps).
     static let trayIgnoredApps = "trayIgnoredApps"
     /// What the Mac announces beside the camera (see Activities): plugged in, low on battery, a
-    /// device connecting or the sound going to AirPlay, and the internet lost and back.
+    /// device connecting or the sound going to AirPlay.
     static let activityCharging = "activityCharging"
     static let activityLowBattery = "activityLowBattery"
     static let activityDevices = "activityDevices"
-    static let activityConnectivity = "activityConnectivity"
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"
