@@ -15,6 +15,10 @@
   corner moving as the DJ talks. Clicking it switches to Spotify.
 - Fixed shuffle and repeat looking available while Spotify's DJ or a podcast
   plays, when Spotify doesn't offer them.
+- Fixed the waveform not keeping the song's time: its color rises to the top of
+  its bars on each beat, and its bars fall back at the song's pace.
+- Fixed the cover's colors behind the player standing still through the song:
+  they pulse with the beat, as in Apple Music.
 
 ### Tray
 

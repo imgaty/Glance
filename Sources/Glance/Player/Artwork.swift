@@ -168,7 +168,8 @@ struct ArtworkLight: View {
 
 /// Three copies of an already blurred artwork, large, middling and small, each turning and drifting
 /// at its own pace, so the colors keep slowly moving through one another. The smaller two fade out
-/// toward their edges, so no edge ever shows.
+/// toward their edges, so no edge ever shows. As in Apple Music, the colors pulse with the beat:
+/// they swell and brighten as each one lands, and settle back before the next.
 struct ArtworkSwirl: View {
     let image: NSImage
     let active: Bool
@@ -180,6 +181,7 @@ struct ArtworkSwirl: View {
             let side = max(proxy.size.width, proxy.size.height)
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
+                let pulse = active && !reduceMotion ? AudioLevels.shared.beat?.pulse(at: context.date) ?? 0 : 0
                 ZStack {
                     layer(side * 1.5, turn: t / 24, drift: .zero, soft: false)
                     layer(
@@ -189,6 +191,8 @@ struct ArtworkSwirl: View {
                         side * 0.65, turn: t / 13 + 0.6,
                         drift: CGSize(width: sin(t / 2.4) * side * 0.24, height: cos(t / 2.7) * side * 0.16))
                 }
+                .scaleEffect(1 + 0.06 * pulse)
+                .brightness(0.07 * pulse)
                 .frame(width: proxy.size.width, height: proxy.size.height)
             }
         }

@@ -38,7 +38,7 @@ choice, and the keyboard works it until it closes. See the
 ### Layouts and backgrounds
 
 Two layouts and four backgrounds for the player, on Liquid Glass or a blur, in
-the cover's colors or your Mac's accent color.
+the cover's colors or your Mac's accent color, pulsing with the beat.
 
 ### Live Activities
 

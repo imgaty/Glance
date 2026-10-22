@@ -111,6 +111,10 @@ the controls. Drag the progress bar to move through the song. With
 **Show app icon on artwork** on, the playing app's icon sits on the cover's
 corner; click it to switch to that app.
 
+With the `Audio from apps` permission, the player keeps the song's time: the
+cover's colors behind it pulse with the beat, the waveform's color rises up its
+bars on each beat, and its bars fall back at the song's pace.
+
 <img src="../assets/screenshots/player.png"
      width="450"
      alt="The open notch: a cover beside the song's name and artist, a progress
