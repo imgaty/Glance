@@ -38,7 +38,6 @@ enum TimerLayout {
     static let title: CGFloat = 0.464
     static let time: CGFloat = 1.277
     static let titleGap: CGFloat = 0.228
-    static let timeInset: CGFloat = 0.9
     // Done, as the Alarm: its symbol, and its length small above its name, lower than the middle.
     static let iconInset: CGFloat = 0.7
     static let icon: CGFloat = 1.16
@@ -85,45 +84,45 @@ struct TimerRing: View {
 }
 
 /// Opened while a timer runs, as the iPhone's Timer expands, as tall: round buttons to pause or go on
-/// and to cancel against the camera's left side, the time left, large, against its right, and its
-/// name under the camera, as the player's title sits under it. macOS's own timer only Clock can
-/// pause or cancel: in their place, a button to open it.
+/// and to cancel left of the camera, the time left, large, right of it, its name under the camera,
+/// as the player's title sits under it. In from the notch's ends as far as the player is, and as
+/// far from the camera as the player's cover; the notch only as wide as that needs, for the time as
+/// it reads now. macOS's own timer only Clock can pause or cancel: in their place, a button to open
+/// it.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
     let restingHeight: CGFloat
     /// The camera housing's width, which the row goes either side of; none on an island.
     let camera: CGFloat
+    /// Its own width (see `width(for:restingHeight:camera:system:at:)`), which changes as the time
+    /// loses a digit.
+    let width: CGFloat
     var system = false
 
     var body: some View {
         let h = restingHeight
-        let size = Self.sizes(for: state, restingHeight: h, system: system)
-        let width = Self.width(for: state, restingHeight: h, camera: camera, system: system)
         Group {
             if camera > 0 {
-                // Right up against the camera: the buttons on its left, the time on its right, the
-                // time's name under it.
+                // The buttons left of the camera, the time right of it, the time's name under it.
                 let side = max((width - camera) / 2, 0)
                 HStack(spacing: 0) {
                     buttons(h)
-                        .padding(.trailing, h * TimerLayout.snug)
-                        .frame(width: side, alignment: .trailing)
+                        .padding(.leading, PlayerLayout.padding)
+                        .frame(width: side, alignment: .leading)
                     Color.clear.frame(width: camera)
                     time(h)
-                        .offset(x: -(size.title + h * TimerLayout.titleGap))
-                        .padding(.leading, h * TimerLayout.snug)
-                        .frame(width: side, alignment: .leading)
+                        .padding(.trailing, PlayerLayout.padding)
+                        .frame(width: side, alignment: .trailing)
                 }
             } else {
-                // As the iPhone's: the buttons in from the left end, the time in from the right.
+                // As the iPhone's: the buttons at the left end, the time at the right.
                 ZStack {
                     buttons(h)
-                        .padding(.leading, h * TimerLayout.buttonInset)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     time(h)
-                        .padding(.trailing, h * TimerLayout.timeInset)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
+                .padding(.horizontal, PlayerLayout.padding)
             }
         }
         // In the middle of its height, as the iPhone's is.
@@ -181,29 +180,23 @@ struct ExpandedTimerView: View {
         .fixedSize()
     }
 
-    /// How wide its parts are: the buttons, the time's name, and the time, as long as it gets.
+    /// Either side of the camera, as wide as the wider of the buttons and the time needs, with the
+    /// player's room at the ends and beside the camera; on an island, as wide as the iPhone's, or as
+    /// they need. For the time as it reads then: it narrows as it loses a digit.
     @MainActor
-    private static func sizes(for state: NotchTimer.State, restingHeight h: CGFloat, system: Bool) -> (buttons: CGFloat, title: CGFloat, time: CGFloat) {
+    static func width(
+        for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat, system: Bool = false, at date: Date = .now
+    ) -> CGFloat {
         let buttons = system ? h * TimerLayout.button : h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
-        let longest = NotchTimer.format(state.total).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-        let time = (longest as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width
-        let title = ("Timer" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width
-        return (buttons, ceil(title), ceil(time) + 2)
-    }
-
-    /// Either side of the camera, right up against it, as wide as the wider of the buttons and the
-    /// time needs, the time's name under the camera; on an island, as wide as the iPhone's, with as
-    /// much room between them as it has. Past an hour, the time takes more.
-    @MainActor
-    static func width(for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat, system: Bool = false) -> CGFloat {
-        let size = sizes(for: state, restingHeight: h, system: system)
-        let left = h * TimerLayout.buttonInset + size.buttons
+        // Its digits all as wide as each other.
+        let shown = NotchTimer.format(state.left(at: date)).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
+        let time = ceil((shown as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
+        let padding = PlayerLayout.padding
         guard camera > 0 else {
-            return max(h * TimerLayout.wide, left + size.title + h * TimerLayout.titleGap + size.time + h * TimerLayout.timeInset + h)
+            let title = ceil(("Timer" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width)
+            return max(h * TimerLayout.wide, padding * 2 + buttons + h + title + h * TimerLayout.titleGap + time)
         }
-        // The time as far in from its end as the buttons are from theirs.
-        let right = size.time + h * TimerLayout.buttonInset
-        return camera + 2 * (max(left, right) + h * TimerLayout.snug)
+        return camera + 2 * (padding + max(buttons, time) + PlayerLayout.besideCamera)
     }
 }
 

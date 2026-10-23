@@ -511,14 +511,29 @@ final class NotchController {
         }
         // Opened to a timer that has ended or been cancelled, the notch closes, for that to show.
         if model.state == .open, model.expanded != nil, model.expandedTimer == nil { close(holdUntilExit: true) }
-        // Into its last minute the timer for the notch counts in seconds, which take a little more room.
+        refitAsTimersCount()
+    }
+
+    /// Refits the notch where a running timer's time changes length: under an hour, under ten
+    /// minutes, which lose a digit, and into its last minute, which counts in seconds beside the
+    /// camera, taking a little more room.
+    private func refitAsTimersCount() {
         timerWingTask?.cancel()
-        if let timer = model.firstTimer, case .running = timer, timer.left() > 60 {
-            timerWingTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(timer.left() - 59.5))
-                guard let self, !Task.isCancelled else { return }
-                withAnimation(IslandMotion.open) { self.fitTimerWing() }
+        let waits = [model.timer, model.clockTimer].compactMap { timer -> TimeInterval? in
+            guard let timer, case .running = timer else { return nil }
+            let left = timer.left()
+            return [3_599.0, 599, 59.5].filter { left > $0 }.map { left - $0 + 0.05 }.min()
+        }
+        guard let wait = waits.min() else { return }
+        timerWingTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(wait))
+            guard let self, !Task.isCancelled else { return }
+            withAnimation(IslandMotion.open) {
+                self.fitTimerWing()
+                // Opened to a timer, the notch is as wide as its time is now.
+                self.model.objectWillChange.send()
             }
+            self.refitAsTimersCount()
         }
     }
 

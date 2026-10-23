@@ -29,8 +29,9 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
 
     /// Around everything, on every side.
     static let padding: CGFloat = 18
-    /// Kept between the camera housing and anything below it.
+    /// Kept between the camera housing and anything below it, and anything beside it.
     static let cameraGap: CGFloat = 4
+    static let besideCamera: CGFloat = 8
     static let titleSize: CGFloat = 14
     static let timeSize: CGFloat = 10
     /// Apple's gray for the artist and the times: solid, so the background never tints it.
@@ -68,7 +69,7 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     /// artwork, up in its corner, stays clear of the housing.
     func size(closed: CGSize) -> CGSize {
         let p = Self.padding
-        let besideCamera = closed.width + 2 * (p + artwork + 8)
+        let besideCamera = closed.width + 2 * (p + artwork + Self.besideCamera)
         let (width, height): (CGFloat, CGFloat) =
             switch self {
             case .top:

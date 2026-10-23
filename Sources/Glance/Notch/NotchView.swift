@@ -682,10 +682,9 @@ struct NotchView: View {
         if let timer = model.expandedTimer {
             let h = model.closedSize.height
             let system = model.expanded == .clockTimer
-            ExpandedTimerView(state: timer, restingHeight: h, camera: model.camera, system: system)
-                .frame(
-                    width: ExpandedTimerView.width(for: timer, restingHeight: h, camera: model.camera, system: system),
-                    height: (h * TimerLayout.tall).rounded())
+            let width = ExpandedTimerView.width(for: timer, restingHeight: h, camera: model.camera, system: system)
+            ExpandedTimerView(state: timer, restingHeight: h, camera: model.camera, width: width, system: system)
+                .frame(width: width, height: (h * TimerLayout.tall).rounded())
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }

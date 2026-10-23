@@ -272,9 +272,8 @@ again after it.
 
 Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or
-cancel it, with the round buttons against the camera's left side. The time is
-against its right side, and its name under the camera. Bubbles open only with
-a click.
+cancel it, with the round buttons left of the camera. The time is right of it,
+and its name under the camera. Bubbles open only with a click.
 
 A timer started with macOS's own Timer, from the Clock app, Control Center or
 Siri, shows the same way, paused ones too, after Glance's own. Glance can't
