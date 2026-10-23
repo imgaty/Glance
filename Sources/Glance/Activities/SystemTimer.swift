@@ -19,8 +19,16 @@ final class SystemTimer: ObservableObject {
     static let shared = SystemTimer()
 
     @Published private(set) var state: NotchTimer.State?
+    /// Whether Glance may press Clock's buttons, which macOS allows only with Accessibility.
+    @Published private(set) var canControl = AXIsProcessTrusted()
 
     private var poll: Timer?
+    /// What a press makes of the timer, shown at once, until macOS's own says so, or for a few
+    /// seconds, if Clock never does.
+    private var expected: (state: NotchTimer.State?, until: Date)?
+    /// Clock, opened hidden by Glance, kept open a while for the next press, and quit after.
+    private var openedClock = false
+    private var quitClock: Task<Void, Never>?
     /// The one showing's id, which Clock knows it by.
     private var shownID: String?
     /// When to look for the menu bar's own timer again, to take it out.
@@ -50,9 +58,18 @@ final class SystemTimer: ObservableObject {
             let kept = (CFPreferencesCopyAppValue("MTTimers" as CFString, Self.domain) as? [String: Any])?["MTTimers"] as? [[String: Any]] ?? []
             current = Self.current(in: kept)
         }
-        let next = current?.state
+        var next = current?.state
         shownID = current?.id
+        if let expected {
+            if Date.now < expected.until, !Self.alike(next, expected.state) {
+                next = expected.state
+            } else {
+                self.expected = nil
+            }
+        }
         if next != state { state = next }
+        let trusted = AXIsProcessTrusted()
+        if trusted != canControl { canControl = trusted }
         if next != nil, defaults.bool(forKey: Preferences.clockTimerHidesMenuBar), Date.now >= nextHide {
             nextHide = .now + 3
             Self.hideMenuBarTimer()
@@ -89,11 +106,44 @@ final class SystemTimer: ObservableObject {
     }
 
     /// Pauses or resumes the timer showing, or cancels it, as its own buttons in Clock do: macOS lets
-    /// no other app do it. Clock is opened, hidden, if it isn't already, and shown for a moment,
-    /// without coming forward, as its buttons answer only then; then hidden again, and quit if Glance
-    /// opened it. Its window comes and goes behind every other.
-    func toggle() { control(.toggle) }
-    func cancel() { control(.cancel) }
+    /// no other app do it. It shows paused, running or gone at once, as Clock will have it. Clock is
+    /// opened, hidden, if it isn't already, and shown for a moment, without coming forward, as its
+    /// buttons answer only then; then hidden again. Its window comes and goes behind every other. If
+    /// Glance opened it, it's kept open half a minute, so the next press is as quick, then quit.
+    /// Without Accessibility, macOS asks for it, in its own words, with a way to its settings.
+    func toggle() {
+        guard let state, allowed() else { return }
+        switch state {
+        case .running(let until, let total): expect(.paused(left: max(until.timeIntervalSinceNow, 0), total: total))
+        case .paused(let left, let total): expect(.running(until: .now + left, total: total))
+        }
+        control(.toggle)
+    }
+
+    func cancel() {
+        guard state != nil, allowed() else { return }
+        expect(nil)
+        control(.cancel)
+    }
+
+    private func allowed() -> Bool {
+        let allowed = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary)
+        if allowed != canControl { canControl = allowed }
+        return allowed
+    }
+
+    private func expect(_ next: NotchTimer.State?) {
+        expected = (next, .now + 4)
+        state = next
+    }
+
+    /// Both running, both paused, or both gone.
+    private static func alike(_ a: NotchTimer.State?, _ b: NotchTimer.State?) -> Bool {
+        switch (a, b) {
+        case (nil, nil), (.running?, .running?), (.paused?, .paused?): true
+        default: false
+        }
+    }
 
     private enum Control {
         case toggle, cancel
@@ -103,57 +153,71 @@ final class SystemTimer: ObservableObject {
     private static let clockID = "com.apple.clock"
 
     private func control(_ control: Control) {
-        guard AXIsProcessTrusted(), let id = shownID else { return }
+        guard let id = shownID else { return }
+        quitClock?.cancel()
         Task { @MainActor in
-            let opened = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).isEmpty
-            if opened {
+            if NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).isEmpty {
                 let config = NSWorkspace.OpenConfiguration()
                 config.activates = false
                 config.hides = true
                 config.addsToRecentItems = false
                 _ = try? await NSWorkspace.shared.openApplication(at: Self.clock, configuration: config)
+                openedClock = true
             }
-            guard let clock = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).first else { return }
-            let app = AXUIElementCreateApplication(clock.processIdentifier)
-            AXUIElementSetMessagingTimeout(app, 0.5)
-            // Its window, once it's open.
-            var window: AXUIElement?
-            for _ in 0..<30 {
-                window = (Self.value(app, kAXWindowsAttribute) as? [AXUIElement])?.first
-                if window != nil { break }
-                try? await Task.sleep(for: .milliseconds(100))
+            if let clock = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).first {
+                await Self.press(control, on: id, in: clock)
             }
-            guard let window else { return }
-            let hidden = clock.isHidden
-            if hidden {
-                AXUIElementSetAttributeValue(app, kAXHiddenAttribute as CFString, kCFBooleanFalse)
-                try? await Task.sleep(for: .milliseconds(150))
-            }
-            if let row = await Self.timerRow(id, in: window) {
-                switch control {
-                case .toggle:
-                    // The button on its row: Pause, or Resume.
-                    let button = (Self.value(row, kAXChildrenAttribute) as? [AXUIElement] ?? []).first {
-                        Self.value($0, kAXRoleAttribute) as? String == kAXButtonRole
-                    }
-                    if let button { AXUIElementPerformAction(button, kAXPressAction as CFString) }
-                case .cancel:
-                    // Its row's own action, which takes the timer away.
-                    var actions: CFArray?
-                    AXUIElementCopyActionNames(row, &actions)
-                    if let remove = (actions as? [String])?.first(where: { $0.hasPrefix("Name:") }) {
-                        AXUIElementPerformAction(row, remove as CFString)
-                    }
-                }
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-            if hidden { AXUIElementSetAttributeValue(app, kAXHiddenAttribute as CFString, kCFBooleanTrue) }
             read()
-            if opened {
-                try? await Task.sleep(for: .milliseconds(500))
-                clock.terminate()
+            guard openedClock else { return }
+            quitClock?.cancel()
+            quitClock = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { return }
+                openedClock = false
+                // Unless it has been brought forward since, to be used.
+                let clock = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).first
+                if clock?.isHidden == true { clock?.terminate() }
             }
         }
+    }
+
+    /// Presses the timer's button in Clock, or its row's action to take it away, with Clock shown
+    /// for the moment it takes.
+    private static func press(_ control: Control, on id: String, in clock: NSRunningApplication) async {
+        let app = AXUIElementCreateApplication(clock.processIdentifier)
+        AXUIElementSetMessagingTimeout(app, 0.5)
+        // Its window, once it's open.
+        var window: AXUIElement?
+        for _ in 0..<30 {
+            window = (value(app, kAXWindowsAttribute) as? [AXUIElement])?.first
+            if window != nil { break }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        guard let window else { return }
+        let hidden = clock.isHidden
+        if hidden {
+            AXUIElementSetAttributeValue(app, kAXHiddenAttribute as CFString, kCFBooleanFalse)
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        if let row = await timerRow(id, in: window) {
+            switch control {
+            case .toggle:
+                // The button on its row: Pause, or Resume.
+                let button = (value(row, kAXChildrenAttribute) as? [AXUIElement] ?? []).first {
+                    value($0, kAXRoleAttribute) as? String == kAXButtonRole
+                }
+                if let button { AXUIElementPerformAction(button, kAXPressAction as CFString) }
+            case .cancel:
+                // Its row's own action, which takes the timer away.
+                var actions: CFArray?
+                AXUIElementCopyActionNames(row, &actions)
+                if let remove = (actions as? [String])?.first(where: { $0.hasPrefix("Name:") }) {
+                    AXUIElementPerformAction(row, remove as CFString)
+                }
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(250))
+        if hidden { AXUIElementSetAttributeValue(app, kAXHiddenAttribute as CFString, kCFBooleanTrue) }
     }
 
     /// The timer's row in Clock's list of timers, on its Timers page, which it's turned to if it's

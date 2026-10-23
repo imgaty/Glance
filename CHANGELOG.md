@@ -41,7 +41,7 @@
   far in from the notch's ends as the player is. Done, it grows as tall as the
   iPhone's Alarm, with buttons to start it again or stop its chime, which the
   menu bar's timer and the notch's right-click menu offer too. VoiceOver reads
-  it as its name and the time left in words.
+  it as its name and the time left in words, and opens it.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and
@@ -53,11 +53,12 @@
   Center or Siri, read from what macOS keeps of them: one counts down in the
   notch or a bubble as Glance's own does, paused ones too. While it shows,
   macOS's own is taken out of the menu bar, with `Accessibility` allowed.
-  Opened, its buttons pause and cancel it as Clock's own do, with Clock opened
-  hidden for a moment, and so do Glance's menu in the menu bar and the notch's
-  right-click menu. `Clock timers` and `Hide in menu bar` in
-  **Settings > Live Activities** turn each off, beside a way to Menu Bar
-  settings to bring macOS's own back.
+  Opened, its buttons pause and cancel it as Clock's own do, at once, with Clock
+  opened hidden and quit half a minute after the last press, and so do Glance's
+  menu in the menu bar and the notch's right-click menu. Without
+  `Accessibility`, its buttons are dimmed, and pressing one asks for it.
+  `Clock timers` and `Hide in menu bar` in **Settings > Live Activities** turn
+  each off, beside a way to Menu Bar settings to bring macOS's own back.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

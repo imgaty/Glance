@@ -258,8 +258,10 @@ final class NotchModel: ObservableObject {
     /// The bubble the pointer is on, which swells a little, and the one pressed, which squeezes.
     @Published var bubbleHovered: Side?
     @Published var bubblePressed: Side?
-    /// Opens a bubble, as a click on it does, for VoiceOver (set by the notch's controller).
+    /// Opens a bubble, or the notch's own activity, as a click on it does, for VoiceOver (set by the
+    /// notch's controller).
     var openBubble: (Side) -> Void = { _ in }
+    var openNotch: () -> Void = {}
 
     /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
     @Published var island: Bool {
@@ -515,7 +517,8 @@ struct NotchView: View {
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 timer: model.activity || model.switching ? nil : model.notchTimer,
-                hoveredButton: model.hoveredButton
+                timerName: model.activities.first == .clockTimer ? "Clock timer" : "Timer",
+                hoveredButton: model.hoveredButton, open: { model.openNotch() }
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
             .allowsHitTesting(false)

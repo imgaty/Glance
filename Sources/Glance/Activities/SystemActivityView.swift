@@ -19,8 +19,12 @@ struct SystemActivityView: View {
     let wing: CGFloat
     let alert: NotchAlert?
     let timer: NotchTimer.State?
+    /// Its name, as VoiceOver says it.
+    var timerName = "Timer"
     /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
     var hoveredButton: AlertButton? = nil
+    /// Opens the notch to the timer, as VoiceOver's press does.
+    var open: () -> Void = {}
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
     /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
     /// start, so it never leaves as well as fading.
@@ -93,7 +97,9 @@ struct SystemActivityView: View {
                         .fixedSize()
                         // In words, rather than the pause symbol's name and the digits.
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(NotchTimer.spoken(timer, at: context.date))
+                        .accessibilityLabel(NotchTimer.spoken(timer, name: timerName, at: context.date))
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
                     }
                     .padding(.trailing, restingHeight * TimerLayout.textInset)
                     .frame(maxWidth: .infinity, alignment: .trailing)

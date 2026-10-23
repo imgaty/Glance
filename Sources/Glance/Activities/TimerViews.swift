@@ -87,7 +87,8 @@ struct TimerRing: View {
 /// and to cancel left of the camera, the time left, large, right of it, its name under the camera,
 /// as the player's title sits under it. In from the notch's ends as far as the player is, and as
 /// far from the camera as the player's cover; the notch only as wide as that needs, for the time as
-/// it reads now. macOS's own timer is paused and cancelled through Clock.
+/// it reads now. macOS's own timer is paused and cancelled through Clock; without Accessibility,
+/// its buttons are dimmed, and a press asks for it.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
     let restingHeight: CGFloat
@@ -97,6 +98,7 @@ struct ExpandedTimerView: View {
     /// loses a digit.
     let width: CGFloat
     var system = false
+    @ObservedObject private var clock = SystemTimer.shared
 
     var body: some View {
         let h = restingHeight
@@ -131,7 +133,8 @@ struct ExpandedTimerView: View {
 
     /// Pause or go on, and cancel: Glance's own timer, or macOS's, through Clock (see `SystemTimer`).
     private func buttons(_ h: CGFloat) -> some View {
-        let timer = NotchTimer.shared, clock = SystemTimer.shared
+        let timer = NotchTimer.shared
+        let locked = system && !clock.canControl
         return HStack(spacing: h * TimerLayout.buttonGap) {
             IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
                 if system {
@@ -154,6 +157,8 @@ struct ExpandedTimerView: View {
                 CrossGlyph(height: h)
             }
         }
+        .opacity(locked ? 0.45 : 1)
+        .accessibilityHint(locked ? "Needs Accessibility" : "")
     }
 
     /// Its name, small, and the time left, large, on one line.

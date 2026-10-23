@@ -243,6 +243,13 @@ final class NotchController {
             self.keyboardHold = true
             self.takeKeys()
         }
+        model.openNotch = { [weak self] in
+            guard let self, !self.tucked else { return }
+            self.model.bubbleHovered = nil
+            self.open()
+            self.keyboardHold = true
+            self.takeKeys()
+        }
         eventView.onMouseUp = { [weak self] in self?.release() }
         eventView.onScroll = { [weak self] event in self?.scrolled(event) }
         eventView.onMouseMoved = { [weak self] in self?.pointerMoved(to: NSEvent.mouseLocation) }

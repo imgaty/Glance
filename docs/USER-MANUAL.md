@@ -276,15 +276,18 @@ cancel it, with the round buttons left of the camera. The time is right of it,
 and its name under the camera. Bubbles open only with a click.
 
 VoiceOver reads the timer as its name and the time left in words, and whether
-it's paused. It reads a bubble as a button, which opens its activity, and the
-done timer's **Repeat** and **✕** as Repeat and Stop.
+it's paused. It reads the timer in the notch and each bubble as a button, which
+opens its activity, and the done timer's **Repeat** and **✕** as Repeat and
+Stop.
 
 A timer started with macOS's own Timer, from the Clock app, Control Center or
 Siri, shows the same way, paused ones too, after Glance's own. Its buttons pause
-and cancel it as Clock's own buttons do: Glance opens Clock hidden for a moment,
-behind every other window, and quits it again if it wasn't open. Glance's menu
-in the menu bar and the notch's right-click menu pause and cancel it too. While
-it shows, Glance takes macOS's own timer out of the menu bar, with
+and cancel it as Clock's own buttons do, and it shows paused, running or gone at
+once: Glance opens Clock hidden, shows it for a moment behind every other
+window, and, if it wasn't open, quits it half a minute after the last press.
+Without `Accessibility`, its buttons are dimmed, and pressing one asks for it.
+Glance's menu in the menu bar and the notch's right-click menu pause and cancel
+it too. While it shows, Glance takes macOS's own timer out of the menu bar, with
 `Accessibility` allowed (see [Permissions](#permissions)); macOS keeps that
 choice. To have it back in the menu bar, turn off **Hide in menu bar** in
 **Settings > Live Activities**, then click **Menu Bar Settings…** there and

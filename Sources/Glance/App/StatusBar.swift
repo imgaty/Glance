@@ -594,10 +594,16 @@ private struct StatusTimer: View {
                         .font(.system(size: 13, weight: .semibold))
                     Spacer(minLength: 8)
                     Self.time(state)
-                    StatusRoundButton(symbol: state.isRunning ? "pause.fill" : "play.fill", label: state.isRunning ? "Pause" : "Resume") {
-                        clock.toggle()
+                    // Without Accessibility, dimmed; a press asks for it.
+                    Group {
+                        StatusRoundButton(symbol: state.isRunning ? "pause.fill" : "play.fill", label: state.isRunning ? "Pause" : "Resume") {
+                            clock.toggle()
+                        }
+                        StatusRoundButton(symbol: "xmark", label: "Cancel") { clock.cancel() }
                     }
-                    StatusRoundButton(symbol: "xmark", label: "Cancel") { clock.cancel() }
+                    .opacity(clock.canControl ? 1 : 0.45)
+                    .help(clock.canControl ? "" : "Allow Glance in Accessibility to pause and cancel Clock timers")
+                    .accessibilityHint(clock.canControl ? "" : "Needs Accessibility")
                 }
             }
         }
