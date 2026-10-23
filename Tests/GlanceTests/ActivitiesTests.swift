@@ -402,6 +402,34 @@ struct ActivitiesTests {
         #expect(SystemTimer.current(in: [pausedEarlier, stopped, paused], at: now)?.state == .paused(left: 559, total: 600))
     }
 
+    @Test("A Clock timer goes by the label it was given, never Clock's placeholder, and a long one is cut short")
+    func clockTimerName() {
+        func running(_ title: String?) -> [String: Any] {
+            var timer: [String: Any] = ["MTTimerState": 3, "MTTimerDuration": 300.0, "MTTimerFireTime": ["$MTTimerDate": ["MTTimerTimeDate": Date.now + 100]]]
+            if let title { timer["MTTimerTitle"] = title }
+            return ["$MTTimer": timer]
+        }
+        #expect(SystemTimer.current(in: [running("Pasta")])?.title == "Pasta")
+        #expect(SystemTimer.current(in: [running("CURRENT_TIMER")])?.title == nil)
+        #expect(SystemTimer.current(in: [running(" ")])?.title == nil)
+        #expect(SystemTimer.current(in: [running(nil)])?.title == nil)
+        // Shown as its label, or Timer; spoken as its label, or told apart from Glance's own.
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        #expect(model.name(of: .clockTimer) == "Timer")
+        #expect(model.spokenName(of: .clockTimer) == "Clock timer")
+        model.clockTimerName = "Pasta"
+        #expect(model.name(of: .clockTimer) == "Pasta")
+        #expect(model.spokenName(of: .clockTimer) == "Pasta")
+        #expect(model.name(of: .timer) == "Timer")
+        // Beside the camera it runs under the camera, which the width doesn't change for; on an
+        // island, it widens the notch only so far.
+        let state = NotchTimer.State.paused(left: 300, total: 300)
+        #expect(ExpandedTimerView.width(for: state, name: "Pasta", restingHeight: 32, camera: 185) == ExpandedTimerView.width(for: state, restingHeight: 32, camera: 185))
+        let long = String(repeating: "Long label ", count: 10)
+        let plain = 32 * TimerLayout.wide
+        #expect(ExpandedTimerView.width(for: state, name: long, restingHeight: 32, camera: 0) <= plain + 32 * TimerLayout.titleLimit)
+    }
+
     @Test("The bubble buds off the notch's end joined to it, thins away, and rests apart")
     func bubbleNeck() {
         let rect = CGRect(x: 0, y: 0, width: 32 * (2 + IslandBubble.gap), height: 32)

@@ -11,7 +11,8 @@ import ApplicationServices
 /// A timer started with macOS's own Timer, from the Clock app, Control Center or Siri, so it counts
 /// down beside the camera as Glance's own does. macOS shares its timers with no other app, but keeps
 /// them in its settings: each one's length, and when it ends, or what's left of it while paused.
-/// They're read from there every second, unless Clock timers is off in Settings. While one shows, the
+/// They're read from there every second while one shows, every three otherwise, unless Clock timers
+/// is off in Settings. While one shows, the
 /// menu bar's own is taken out, through Accessibility, so it isn't shown twice, unless Hide in menu
 /// bar is off; and it's paused, resumed or cancelled with Clock's own buttons for it (see `toggle()`).
 @MainActor
@@ -19,10 +20,13 @@ final class SystemTimer: ObservableObject {
     static let shared = SystemTimer()
 
     @Published private(set) var state: NotchTimer.State?
+    /// Its label, as named in Clock; none if it wasn't given one.
+    @Published private(set) var title: String?
     /// Whether Glance may press Clock's buttons, which macOS allows only with Accessibility.
     @Published private(set) var canControl = AXIsProcessTrusted()
 
     private var poll: Timer?
+    private var lastRead = Date.distantPast
     /// What a press makes of the timer, shown at once, until macOS's own says so, or for a few
     /// seconds, if Clock never does.
     private var expected: (state: NotchTimer.State?, until: Date)?
@@ -41,8 +45,12 @@ final class SystemTimer: ObservableObject {
 
     func start() {
         guard poll == nil else { return }
+        // Every second while one shows; every three otherwise, which is soon enough to notice one start.
         let poll = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.read() }
+            MainActor.assumeIsolated {
+                guard let self, self.state != nil || Date.now.timeIntervalSince(self.lastRead) > 2.9 else { return }
+                self.read()
+            }
         }
         poll.tolerance = 0.2
         RunLoop.main.add(poll, forMode: .common)
@@ -51,8 +59,9 @@ final class SystemTimer: ObservableObject {
     }
 
     private func read() {
+        lastRead = .now
         let defaults = UserDefaults.standard
-        var current: (state: NotchTimer.State, id: String?)?
+        var current: Found?
         if defaults.bool(forKey: Preferences.activityClockTimers) {
             CFPreferencesAppSynchronize(Self.domain)
             let kept = (CFPreferencesCopyAppValue("MTTimers" as CFString, Self.domain) as? [String: Any])?["MTTimers"] as? [[String: Any]] ?? []
@@ -60,6 +69,7 @@ final class SystemTimer: ObservableObject {
         }
         var next = current?.state
         shownID = current?.id
+        if current?.title != title { title = current?.title }
         if let expected {
             if Date.now < expected.until, !Self.alike(next, expected.state) {
                 next = expected.state
@@ -76,32 +86,41 @@ final class SystemTimer: ObservableObject {
         }
     }
 
+    /// A timer macOS keeps: how it stands, the id Clock knows it by, and its label.
+    typealias Found = (state: NotchTimer.State, id: String?, title: String?)
+
     /// The timer to show of those macOS keeps: the running one ending first; otherwise the one
-    /// paused last. One that has ended waits to be dismissed, ringing, which macOS shows itself.
-    static func current(in kept: [[String: Any]], at now: Date = .now) -> (state: NotchTimer.State, id: String?)? {
-        var running: (until: Date, total: TimeInterval, id: String?)?
-        var paused: (left: TimeInterval, total: TimeInterval, changed: Date, id: String?)?
+    /// paused last. One that has ended waits to be dismissed, ringing, which macOS shows itself. Its
+    /// label is the one given it in Clock; Clock's placeholder for an unnamed one isn't.
+    static func current(in kept: [[String: Any]], at now: Date = .now) -> Found? {
+        var running: (until: Date, total: TimeInterval, id: String?, title: String?)?
+        var paused: (left: TimeInterval, total: TimeInterval, changed: Date, id: String?, title: String?)?
         for entry in kept {
             guard let timer = entry["$MTTimer"] as? [String: Any], let total = timer["MTTimerDuration"] as? TimeInterval else { continue }
             let fire = timer["MTTimerFireTime"] as? [String: Any]
             let id = timer["MTTimerID"] as? String
+            let title = (timer["MTTimerTitle"] as? String)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .flatMap { $0.isEmpty || $0 == "CURRENT_TIMER" ? nil : $0 }
             switch timer["MTTimerState"] as? Int {
             // Running: when it ends.
             case 3:
                 guard let until = (fire?["$MTTimerDate"] as? [String: Any])?["MTTimerTimeDate"] as? Date, until > now else { continue }
-                if running.map({ until < $0.until }) ?? true { running = (until, total, id) }
+                if running.map({ until < $0.until }) ?? true { running = (until, total, id, title) }
             // Paused: what's left.
             case 2:
                 guard let left = (fire?["$MTTimerTimeInterval"] as? [String: Any])?["MTTimerTimeInterval"] as? TimeInterval, left > 0 else {
                     continue
                 }
                 let changed = timer["MTTimerLastModifiedDate"] as? Date ?? .distantPast
-                if paused.map({ changed > $0.changed }) ?? true { paused = (left, total, changed, id) }
+                if paused.map({ changed > $0.changed }) ?? true { paused = (left, total, changed, id, title) }
             default: continue
             }
         }
-        if let running { return (.running(until: running.until, total: max(running.total, running.until.timeIntervalSince(now))), running.id) }
-        if let paused { return (.paused(left: paused.left, total: max(paused.total, paused.left)), paused.id) }
+        if let running {
+            return (.running(until: running.until, total: max(running.total, running.until.timeIntervalSince(now))), running.id, running.title)
+        }
+        if let paused { return (.paused(left: paused.left, total: max(paused.total, paused.left)), paused.id, paused.title) }
         return nil
     }
 

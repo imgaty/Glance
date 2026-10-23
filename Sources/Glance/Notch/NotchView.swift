@@ -139,6 +139,8 @@ final class NotchModel: ObservableObject {
     @Published var timerWing: CGFloat = 0
     /// macOS's own timer, started from Clock (see `SystemTimer`).
     @Published var clockTimer: NotchTimer.State?
+    /// Its label, as named in Clock.
+    @Published var clockTimerName: String?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -253,6 +255,14 @@ final class NotchModel: ObservableObject {
     /// The timer opened to, and the room the camera takes in the middle of its row: none on an
     /// island, which has no camera.
     var expandedTimer: NotchTimer.State? { expanded.flatMap(timer(of:)) }
+    /// A timer's name as it shows, Timer unless Clock's was given a label, and as VoiceOver says it,
+    /// telling Clock's apart.
+    func name(of activity: Activity) -> String {
+        activity == .clockTimer ? clockTimerName ?? "Timer" : "Timer"
+    }
+    func spokenName(of activity: Activity) -> String {
+        activity == .clockTimer ? clockTimerName ?? "Clock timer" : "Timer"
+    }
     var camera: CGFloat { island ? 0 : closedSize.width }
 
     /// The bubble the pointer is on, which swells a little, and the one pressed, which squeezes.
@@ -337,7 +347,9 @@ final class NotchModel: ObservableObject {
             case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
             case .open where expanded != nil:
                 (
-                    ExpandedTimerView.width(for: expandedTimer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height, camera: camera)
+                    ExpandedTimerView.width(
+                        for: expandedTimer ?? .paused(left: 0, total: 0), name: expanded.map(name(of:)) ?? "Timer",
+                        restingHeight: closedSize.height, camera: camera)
                         + pull * 0.35,
                     (closedSize.height * TimerLayout.tall).rounded() + pull
                 )
@@ -517,7 +529,7 @@ struct NotchView: View {
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 timer: model.activity || model.switching ? nil : model.notchTimer,
-                timerName: model.activities.first == .clockTimer ? "Clock timer" : "Timer",
+                timerName: model.activities.first.map(model.spokenName(of:)) ?? "Timer",
                 hoveredButton: model.hoveredButton, open: { model.openNotch() }
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
@@ -675,7 +687,7 @@ struct NotchView: View {
         let activity = model.bubble(side)
         return IslandBubble(
             side: side, shown: activity != nil, timer: activity.flatMap(model.timer(of:)),
-            name: activity == .clockTimer ? "Clock timer" : "Timer", open: { model.openBubble(side) },
+            name: activity.map(model.spokenName(of:)) ?? "Timer", open: { model.openBubble(side) },
             restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
             hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
     }
@@ -686,8 +698,9 @@ struct NotchView: View {
         if let timer = model.expandedTimer {
             let h = model.closedSize.height
             let system = model.expanded == .clockTimer
-            let width = ExpandedTimerView.width(for: timer, restingHeight: h, camera: model.camera)
-            ExpandedTimerView(state: timer, restingHeight: h, camera: model.camera, width: width, system: system)
+            let name = model.expanded.map(model.name(of:)) ?? "Timer"
+            let width = ExpandedTimerView.width(for: timer, name: name, restingHeight: h, camera: model.camera)
+            ExpandedTimerView(state: timer, name: name, restingHeight: h, camera: model.camera, width: width, system: system)
                 .frame(width: width, height: (h * TimerLayout.tall).rounded())
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)

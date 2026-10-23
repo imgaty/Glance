@@ -38,6 +38,8 @@ enum TimerLayout {
     static let title: CGFloat = 0.464
     static let time: CGFloat = 1.277
     static let titleGap: CGFloat = 0.228
+    /// On an island, how long a label runs before it's cut short.
+    static let titleLimit: CGFloat = 4
     // Done, as the Alarm: its symbol, and its length small above its name, lower than the middle.
     static let iconInset: CGFloat = 0.7
     static let icon: CGFloat = 1.16
@@ -91,6 +93,8 @@ struct TimerRing: View {
 /// its buttons are dimmed, and a press asks for it.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
+    /// Its name beside the time: Timer, or the label Clock's was given.
+    var name = "Timer"
     let restingHeight: CGFloat
     /// The camera housing's width, which the row goes either side of; none on an island.
     let camera: CGFloat
@@ -163,9 +167,17 @@ struct ExpandedTimerView: View {
 
     /// Its name, small, and the time left, large, on one line.
     private func time(_ h: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
-            Text("Timer")
+        // A long label is cut short where it would run past the camera; on an island, at its limit.
+        let room =
+            camera > 0
+            ? (width - camera) / 2 - PlayerLayout.padding + camera - h * TimerLayout.titleGap - Self.timeWidth(state, h)
+            : h * TimerLayout.titleLimit
+        return HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
+            Text(name)
                 .font(.system(size: h * TimerLayout.title, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(width: max(min(Self.titleWidth(name, h), room), 0), alignment: .trailing)
             TimelineView(.periodic(from: .now, by: 0.5)) { context in
                 Text(NotchTimer.format(state.left(at: context.date)))
                     .font(.system(size: h * TimerLayout.time).monospacedDigit())
@@ -181,17 +193,29 @@ struct ExpandedTimerView: View {
     /// player's room at the ends and beside the camera; on an island, as wide as the iPhone's, or as
     /// they need. For the time as it reads then: it narrows as it loses a digit.
     @MainActor
-    static func width(for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
+    static func width(
+        for state: NotchTimer.State, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now
+    ) -> CGFloat {
         let buttons = h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
-        // Its digits all as wide as each other.
-        let shown = NotchTimer.format(state.left(at: date)).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-        let time = ceil((shown as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
+        let time = timeWidth(state, h, at: date)
         let padding = PlayerLayout.padding
         guard camera > 0 else {
-            let title = ceil(("Timer" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width)
+            let title = min(titleWidth(name, h), h * TimerLayout.titleLimit)
             return max(h * TimerLayout.wide, padding * 2 + buttons + h + title + h * TimerLayout.titleGap + time)
         }
         return camera + 2 * (padding + max(buttons, time) + PlayerLayout.besideCamera)
+    }
+
+    /// The time as it reads then, its digits all as wide as each other.
+    @MainActor
+    private static func timeWidth(_ state: NotchTimer.State, _ h: CGFloat, at date: Date = .now) -> CGFloat {
+        let shown = NotchTimer.format(state.left(at: date)).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
+        return ceil((shown as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
+    }
+
+    @MainActor
+    private static func titleWidth(_ name: String, _ h: CGFloat) -> CGFloat {
+        ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width) + 1
     }
 }
 

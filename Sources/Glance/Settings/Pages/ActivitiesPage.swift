@@ -46,7 +46,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $devices) {
                     Text("Devices")
-                    Text("Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay.")
+                    Text("Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay.")
                 }
             }
             Section {

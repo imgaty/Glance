@@ -281,18 +281,18 @@ opens its activity, and the done timer's **Repeat** and **✕** as Repeat and
 Stop.
 
 A timer started with macOS's own Timer, from the Clock app, Control Center or
-Siri, shows the same way, paused ones too, after Glance's own. Its buttons pause
-and cancel it as Clock's own buttons do, and it shows paused, running or gone at
-once: Glance opens Clock hidden, shows it for a moment behind every other
-window, and, if it wasn't open, quits it half a minute after the last press.
-Without `Accessibility`, its buttons are dimmed, and pressing one asks for it.
-Glance's menu in the menu bar and the notch's right-click menu pause and cancel
-it too. While it shows, Glance takes macOS's own timer out of the menu bar, with
-`Accessibility` allowed (see [Permissions](#permissions)); macOS keeps that
-choice. To have it back in the menu bar, turn off **Hide in menu bar** in
-**Settings > Live Activities**, then click **Menu Bar Settings…** there and
-choose `Show When Active` for Timer. Turn off **Clock timers** to leave macOS's
-timers out of the notch.
+Siri, shows the same way, paused ones too, after Glance's own, by the label it
+was given in Clock, if any. Its buttons pause and cancel it as Clock's own
+buttons do, and it shows paused, running or gone at once: Glance opens Clock
+hidden, shows it for a moment behind every other window, and, if it wasn't open,
+quits it half a minute after the last press. Without `Accessibility`, its
+buttons are dimmed, and pressing one asks for it. Glance's menu in the menu bar
+and the notch's right-click menu pause and cancel it too. While it shows, Glance
+takes macOS's own timer out of the menu bar, with `Accessibility` allowed (see
+[Permissions](#permissions)); macOS keeps that choice. To have it back in the
+menu bar, turn off **Hide in menu bar** in **Settings > Live Activities**, then
+click **Menu Bar Settings…** there and choose `Show When Active` for Timer. Turn
+off **Clock timers** to leave macOS's timers out of the notch.
 
 When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
 shaking, and it chimes. Click **Repeat** to start the same length again, or
@@ -379,7 +379,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Music` | **Music Settings** goes to the cover and waveform, and new songs, in **Settings > Music** |
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
-| `Devices` | Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay |
+| `Devices` | Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay |
 | `Timer` | Starts a timer, pauses or cancels the one running, or repeats or stops it once it's done |
 | `Clock timers` | Shows timers started in the Clock app, in Control Center or with Siri |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed |

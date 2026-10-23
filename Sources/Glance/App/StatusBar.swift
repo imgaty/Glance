@@ -590,8 +590,9 @@ private struct StatusTimer: View {
             }
             if let state = clock.state {
                 HStack(spacing: Self.spacing) {
-                    Text("Clock Timer")
+                    Text(clock.title ?? "Clock Timer")
                         .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
                     Spacer(minLength: 8)
                     Self.time(state)
                     // Without Accessibility, dimmed; a press asks for it.

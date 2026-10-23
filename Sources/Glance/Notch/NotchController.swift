@@ -101,6 +101,7 @@ final class NotchController {
     /// What the Mac announces, and the timer, followed into the closed notch.
     private var alertWatch: AnyCancellable?
     private var timerWatch: AnyCancellable?
+    private var clockNameWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
     /// A trackpad gesture's direction, settled by its first movement.
@@ -308,6 +309,9 @@ final class NotchController {
             .sink { [weak self] own, clock in
                 MainActor.assumeIsolated { self?.show(own: own, clock: clock) }
             }
+        clockNameWatch = SystemTimer.shared.$title.removeDuplicates().sink { [weak self] title in
+            MainActor.assumeIsolated { self?.model.clockTimerName = title }
+        }
 
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in

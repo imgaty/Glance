@@ -51,14 +51,15 @@
   Motion on, bubbles fade in and out where they rest.
 - Added timers started with macOS's own Timer, from the Clock app, Control
   Center or Siri, read from what macOS keeps of them: one counts down in the
-  notch or a bubble as Glance's own does, paused ones too. While it shows,
-  macOS's own is taken out of the menu bar, with `Accessibility` allowed.
-  Opened, its buttons pause and cancel it as Clock's own do, at once, with Clock
-  opened hidden and quit half a minute after the last press, and so do Glance's
-  menu in the menu bar and the notch's right-click menu. Without
-  `Accessibility`, its buttons are dimmed, and pressing one asks for it.
-  `Clock timers` and `Hide in menu bar` in **Settings > Live Activities** turn
-  each off, beside a way to Menu Bar settings to bring macOS's own back.
+  notch or a bubble as Glance's own does, paused ones too, by the label it was
+  given in Clock. While it shows, macOS's own is taken out of the menu bar, with
+  `Accessibility` allowed. Opened, its buttons pause and cancel it as Clock's
+  own do, at once, with Clock opened hidden and quit half a minute after the
+  last press, and so do Glance's menu in the menu bar and the notch's
+  right-click menu. Without `Accessibility`, its buttons are dimmed, and
+  pressing one asks for it. `Clock timers` and `Hide in menu bar` in
+  **Settings > Live Activities** turn each off, beside a way to Menu Bar
+  settings to bring macOS's own back.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't
