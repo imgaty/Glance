@@ -9,11 +9,10 @@ import AppKit
 import ApplicationServices
 
 /// A timer started with macOS's own Timer, from the Clock app, Control Center or Siri, so it counts
-/// down beside the camera as Glance's own does. macOS shares its timers with no other app, but shows
-/// the one running in the menu bar: what's left is read from there, through Accessibility, which
-/// Glance already has for the trackpad's swipes, and whether it's counting from whether that changes;
-/// how long it is, from what macOS keeps of the timer as it starts. Without Accessibility, or with
-/// the timer taken out of the menu bar, it doesn't show.
+/// down beside the camera as Glance's own does. macOS shares its timers with no other app, but keeps
+/// them in its settings: each one's length, and when it ends, or what's left of it while paused.
+/// They're read from there every second. While one shows, the menu bar's own is taken out, through
+/// Accessibility, so it isn't shown twice.
 @MainActor
 final class SystemTimer: ObservableObject {
     static let shared = SystemTimer()
@@ -21,137 +20,85 @@ final class SystemTimer: ObservableObject {
     @Published private(set) var state: NotchTimer.State?
 
     private var poll: Timer?
-    /// The menu bar's timer, once found, and when to look for it again while there's none.
-    private var item: AXUIElement?
-    private var nextSearch = Date.distantPast
-    /// What it last read, and when that changed: still for a while, it's paused.
-    private var lastLeft: TimeInterval?
-    private var lastChange = Date.distantPast
-    /// How long this one is, once known, and when macOS has it end.
-    private var total: TimeInterval?
-    private var fire: Date?
+    /// When to look for the menu bar's own timer again, to take it out.
+    private var nextHide = Date.distantPast
 
-    /// The menu bar's own name for its timer.
-    static let menuExtra = "com.apple.menuextra.timer"
     /// Where macOS keeps its timers.
     private static let domain = "com.apple.mobiletimerd" as CFString
+    /// The menu bar's own name for its timer.
+    static let menuExtra = "com.apple.menuextra.timer"
 
     func start() {
         guard poll == nil else { return }
+        let poll = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.read() }
+        }
+        poll.tolerance = 0.2
+        RunLoop.main.add(poll, forMode: .common)
+        self.poll = poll
         read()
     }
 
-    /// While there's a timer, a few times a second, so it changes with the menu bar's; a look at one
-    /// item costs little. Otherwise every two seconds, for one to start.
-    private func schedule(_ interval: TimeInterval) {
-        guard poll?.timeInterval != interval else { return }
-        poll?.invalidate()
-        let poll = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.read() }
-        }
-        poll.tolerance = interval / 5
-        RunLoop.main.add(poll, forMode: .common)
-        self.poll = poll
-    }
-
     private func read() {
-        defer { schedule(item == nil ? 2 : 0.25) }
-        guard AXIsProcessTrusted() else { return end() }
-        if item == nil { item = Self.findItem() }
-        guard let item else { return end() }
-        var value: AnyObject?
-        guard AXUIElementCopyAttributeValue(item, kAXValueAttribute as CFString, &value) == .success,
-            let text = value as? String
-        else {
-            // Gone from the menu bar: done, or cancelled.
-            self.item = nil
-            return end()
+        CFPreferencesAppSynchronize(Self.domain)
+        let kept = (CFPreferencesCopyAppValue("MTTimers" as CFString, Self.domain) as? [String: Any])?["MTTimers"] as? [[String: Any]] ?? []
+        let next = Self.current(in: kept)
+        if next != state { state = next }
+        if next != nil, Date.now >= nextHide {
+            nextHide = .now + 3
+            Self.hideMenuBarTimer()
         }
-        guard let left = Self.seconds(text), left > 0 else { return end() }
-        let now = Date.now
-        if left != lastLeft {
-            // A new one, or it started again: longer than it was.
-            if lastLeft.map({ left > $0 + 1 }) ?? true { (total, fire) = Self.length(endingIn: left) }
-            lastLeft = left
-            lastChange = now
-        }
-        let total = max(total ?? left, left)
-        // Counting while it changes each second; still for longer than that, paused.
-        let counting = now.timeIntervalSince(lastChange) < 1.3
-        let next: NotchTimer.State
-        if counting {
-            // When macOS has it end, while that holds; otherwise as the menu bar shows it, in whole
-            // seconds from its last change, give or take a look's interval. Kept unless that moves,
-            // so nothing redraws for nothing.
-            let until = fire.flatMap { abs($0.timeIntervalSince(lastChange + left)) < 2 ? $0 : nil } ?? lastChange + left
-            if case .running(let current, let currentTotal) = state, abs(current.timeIntervalSince(until)) < 0.6, currentTotal == total {
-                return
-            }
-            next = .running(until: until, total: total)
-        } else {
-            next = .paused(left: left, total: total)
-        }
-        if state != next { state = next }
     }
 
-    private func end() {
-        lastLeft = nil
-        total = nil
-        fire = nil
-        if state != nil { state = nil }
-    }
-
-    /// The menu bar's timer, among macOS's own items in it.
-    private static func findItem() -> AXUIElement? {
-        guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return nil }
-        let app = AXUIElementCreateApplication(agent.processIdentifier)
-        // Never kept waiting by the menu bar.
-        AXUIElementSetMessagingTimeout(app, 0.1)
-        func children(_ element: AXUIElement) -> [AXUIElement] {
-            var value: AnyObject?
-            guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value) == .success else { return [] }
-            return value as? [AXUIElement] ?? []
-        }
-        var bar: AnyObject?
-        guard AXUIElementCopyAttributeValue(app, kAXExtrasMenuBarAttribute as CFString, &bar) == .success, let bar else { return nil }
-        for item in children(bar as! AXUIElement).flatMap({ [$0] + children($0) }) {
-            var identifier: AnyObject?
-            if AXUIElementCopyAttributeValue(item, kAXIdentifierAttribute as CFString, &identifier) == .success,
-                identifier as? String == menuExtra
-            {
-                AXUIElementSetMessagingTimeout(item, 0.1)
-                return item
+    /// The timer to show of those macOS keeps: the running one ending first; otherwise the one
+    /// paused last. One that has ended waits to be dismissed, ringing, which macOS shows itself.
+    static func current(in kept: [[String: Any]], at now: Date = .now) -> NotchTimer.State? {
+        var running: (until: Date, total: TimeInterval)?
+        var paused: (left: TimeInterval, total: TimeInterval, changed: Date)?
+        for entry in kept {
+            guard let timer = entry["$MTTimer"] as? [String: Any], let total = timer["MTTimerDuration"] as? TimeInterval else { continue }
+            let fire = timer["MTTimerFireTime"] as? [String: Any]
+            switch timer["MTTimerState"] as? Int {
+            // Running: when it ends.
+            case 3:
+                guard let until = (fire?["$MTTimerDate"] as? [String: Any])?["MTTimerTimeDate"] as? Date, until > now else { continue }
+                if running.map({ until < $0.until }) ?? true { running = (until, total) }
+            // Paused: what's left.
+            case 2:
+                guard let left = (fire?["$MTTimerTimeInterval"] as? [String: Any])?["MTTimerTimeInterval"] as? TimeInterval, left > 0 else {
+                    continue
+                }
+                let changed = timer["MTTimerLastModifiedDate"] as? Date ?? .distantPast
+                if paused.map({ changed > $0.changed }) ?? true { paused = (left, total, changed) }
+            default: continue
             }
         }
+        if let running { return .running(until: running.until, total: max(running.total, running.until.timeIntervalSince(now))) }
+        if let paused { return .paused(left: paused.left, total: max(paused.total, paused.left)) }
         return nil
     }
 
-    /// "5:25" or "1:05:25", as the menu bar shows what's left.
-    static func seconds(_ text: String) -> TimeInterval? {
-        let parts = text.trimmingCharacters(in: .whitespaces).split(separator: ":")
-        guard (2...3).contains(parts.count) else { return nil }
-        let numbers = parts.compactMap { Int($0) }
-        guard numbers.count == parts.count else { return nil }
-        return TimeInterval(numbers.reduce(0) { $0 * 60 + $1 })
-    }
-
-    /// How long the timer just started is, and when it ends, from what macOS keeps of it: the
-    /// running one ending about when this one does. Otherwise what's left now, so its ring starts
-    /// full.
-    static func length(endingIn left: TimeInterval, timers: [[String: Any]]? = nil) -> (TimeInterval, Date?) {
-        let timers = timers ?? {
-            CFPreferencesAppSynchronize(domain)
-            return (CFPreferencesCopyAppValue("MTTimers" as CFString, domain) as? [String: Any])?["MTTimers"] as? [[String: Any]] ?? []
-        }()
-        for entry in timers {
-            // Running (3), with the moment it ends and its length.
-            guard let timer = entry["$MTTimer"] as? [String: Any], timer["MTTimerState"] as? Int == 3,
-                let duration = timer["MTTimerDuration"] as? TimeInterval,
-                let fire = ((timer["MTTimerFireTime"] as? [String: Any])?["$MTTimerDate"] as? [String: Any])?["MTTimerTimeDate"] as? Date,
-                abs(fire.timeIntervalSinceNow - left) < 3, duration >= left
-            else { continue }
-            return (duration, fire)
+    /// Takes the menu bar's own timer out, as its menu's Remove from Menu Bar does: the notch shows
+    /// it. macOS keeps that choice; the timer comes back to the menu bar from its settings.
+    private static func hideMenuBarTimer() {
+        guard AXIsProcessTrusted(),
+            let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first
+        else { return }
+        let app = AXUIElementCreateApplication(agent.processIdentifier)
+        // Never kept waiting by the menu bar.
+        AXUIElementSetMessagingTimeout(app, 0.1)
+        func value(_ element: AXUIElement, _ name: String) -> AnyObject? {
+            var value: AnyObject?
+            return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
         }
-        return (left, nil)
+        guard let bar = value(app, kAXExtrasMenuBarAttribute) else { return }
+        let groups = value(bar as! AXUIElement, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        let items = groups.flatMap { [$0] + (value($0, kAXChildrenAttribute) as? [AXUIElement] ?? []) }
+        guard let item = items.first(where: { value($0, kAXIdentifierAttribute) as? String == menuExtra }) else { return }
+        var actions: CFArray?
+        AXUIElementCopyActionNames(item, &actions)
+        // Its own action, named in the system's language, beside Press and Show Menu.
+        guard let remove = (actions as? [String])?.first(where: { $0.hasPrefix("Name:") }) else { return }
+        AXUIElementPerformAction(item, remove as CFString)
     }
 }

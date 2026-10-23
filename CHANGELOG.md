@@ -35,18 +35,20 @@
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera as the iPhone's Timer does: a ring
   emptying beside the minutes left, with a pause symbol while paused. Opened,
-  it's as wide as the iPhone's expanded Timer, with buttons to pause and cancel
-  it beside the time, in a row below the camera. Done, it grows as tall as the
-  iPhone's Alarm, with buttons to start it again or stop its chime.
-- Added a second activity in a bubble of its own beside the notch, as the
-  Dynamic Island shows two: while something plays and a timer runs, the music
-  keeps the notch and the timer's ring goes in a round bubble as tall as the
-  notch, which buds off its end and runs back into it. Hovering over or
-  clicking the bubble opens the timer.
-- Added a timer started with macOS's own Timer, from the Clock app, Control
-  Center or Siri, counting down in the notch as Glance's own does, while it
-  shows in the menu bar and Glance has `Accessibility`. Opened, it has a button
-  that opens Clock, where it's paused or cancelled.
+  it's as tall as the iPhone's expanded Timer, with buttons to pause and cancel
+  it on one side of the camera and the time on the other. Done, it grows as
+  tall as the iPhone's Alarm, with buttons to start it again or stop its chime.
+- Added the activities after the first in bubbles of their own beside the
+  notch, as the Dynamic Island shows them: music keeps the notch, the next
+  activity goes in a round bubble as tall as the notch off its right end, and
+  the one after off its left. Each buds off the notch's end and runs back into
+  it, and into it while a new song's name shows. Clicking a bubble opens its
+  own activity.
+- Added timers started with macOS's own Timer, from the Clock app, Control
+  Center or Siri, read from what macOS keeps of them: one counts down in the
+  notch or a bubble as Glance's own does, paused ones too. While it shows,
+  macOS's own is taken out of the menu bar, with `Accessibility` allowed.
+  Opened, it has a button that opens Clock, where it's paused or cancelled.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

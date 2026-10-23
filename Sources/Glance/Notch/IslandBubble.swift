@@ -8,15 +8,17 @@
 import AppKit
 import SwiftUI
 
-/// A second activity in a bubble of its own beside the notch, as the Dynamic Island shows one
-/// beside another: a timer, while music plays in the notch. Measured from the iPhone, by the
-/// island's height: a circle as wide as the island is tall, level with it, 0.175 of that off its
-/// right end, the timer's ring in it as beside the camera. It buds off the notch's end as it comes,
+/// An activity in a bubble of its own beside the notch, as the Dynamic Island shows one beside
+/// another: the second off the notch's right end, the third off its left. Measured from the iPhone,
+/// by the island's height: a circle as wide as the island is tall, level with it, 0.175 of that off
+/// its end, a timer's ring in it as beside the camera. It buds off the notch's end as it comes,
 /// joined to it for a moment as two drops are, and runs back into it as it goes, or as the notch
 /// opens.
 struct IslandBubble: View {
-    /// What it shows; nil while it's in the notch.
-    let bubble: NotchModel.Bubble?
+    let side: NotchModel.Side
+    /// Out of the notch; in it, it's hidden in its end.
+    let shown: Bool
+    /// The timer it shows.
     let timer: NotchTimer.State?
     let restingHeight: CGFloat
     /// How far the notch's top corners flare out past its body.
@@ -28,10 +30,9 @@ struct IslandBubble: View {
     /// A full-screen app covers the display: a thin line in its activity's color outlines it, as
     /// it outlines the notch.
     let fullScreen: Bool
-    /// What it showed, kept on as it runs back into the notch, so it fades as it goes rather than
-    /// vanishing, and the timer it showed.
-    @State private var kept: NotchModel.Bubble?
-    @State private var keptTimer: NotchTimer.State?
+    /// The timer it showed, kept on as it runs back into the notch, so it fades as it goes rather
+    /// than vanishing.
+    @State private var kept: NotchTimer.State?
     /// Counted, so what's kept goes only if nothing has come since.
     @State private var changes = 0
 
@@ -40,18 +41,20 @@ struct IslandBubble: View {
 
     var body: some View {
         let h = restingHeight
-        let out: CGFloat = bubble == nil ? 0 : 1
+        let out: CGFloat = shown ? 1 : 0
         let line = h * KeyLine.width
-        ZStack(alignment: .leading) {
+        let trailing = side == .trailing
+        // Away from the notch: right off its right end, left off its left.
+        let away: CGFloat = trailing ? 1 : -1
+        ZStack(alignment: trailing ? .leading : .trailing) {
             BubbleNeck(out: out).fill(.black)
+                .scaleEffect(x: away)
             ZStack {
                 Circle().fill(.black)
                 ZStack {
-                    if kept == .timer, let keptTimer { TimerRing(state: keptTimer, height: h) }
+                    if let kept { TimerRing(state: kept, height: h) }
                 }
-                .id(kept)
-                .transition(IslandMotion.fade)
-                .islandFade(bubble != nil)
+                .islandFade(shown)
             }
             .frame(width: h, height: h)
             // Outside it, as around the notch, without making it any larger.
@@ -59,19 +62,19 @@ struct IslandBubble: View {
                 Circle()
                     .strokeBorder(.orange.opacity(0.18), lineWidth: line)
                     .frame(width: h + line * 2, height: h + line * 2)
-                    .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && bubble != nil ? 1 : 0) }
+                    .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && shown ? 1 : 0) }
             }
             .scaleEffect(pressed ? 0.94 : hovered ? 1.06 : 1)
-            .offset(x: h * (1 + Self.gap) * out)
+            .offset(x: away * h * (1 + Self.gap) * out)
         }
-        // From inside the notch's right end, where it comes out of, to where it rests.
-        .frame(width: h * (2 + Self.gap), height: h, alignment: .leading)
-        .offset(x: h * (1 + Self.gap) - flare)
+        // From inside the notch's end, where it comes out of, to where it rests.
+        .frame(width: h * (2 + Self.gap), height: h, alignment: trailing ? .leading : .trailing)
+        .offset(x: away * (h * (1 + Self.gap) - flare))
         // Gone at once as the notch opens; back once it has all but closed, as its black is.
         .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .onChange(of: bubble, initial: true) { _, new in
+        .onChange(of: timer, initial: true) { _, new in
             changes += 1
             if let new { return kept = new }
             let change = changes
@@ -80,9 +83,6 @@ struct IslandBubble: View {
                 if changes == change { kept = nil }
             }
         }
-        .onChange(of: timer, initial: true) { _, new in
-            if let new { keptTimer = new }
-        }
     }
 }
 
@@ -90,7 +90,7 @@ struct IslandBubble: View {
 /// running together or apart: between two circles as tall as the notch, one in the notch's end and
 /// the bubble, curves that pinch in as they part, until it breaks a little before the bubble rests.
 /// Drawn as metaballs are, with the curves drawn in to the line between the circles' middles as
-/// they part, so it thins away rather than snapping.
+/// they part, so it thins away rather than snapping. Drawn for the right end; mirrored for the left.
 struct BubbleNeck: Shape {
     /// 0 with the bubble in the notch's end, 1 where it rests.
     var out: CGFloat

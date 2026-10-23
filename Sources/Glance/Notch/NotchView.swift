@@ -134,11 +134,11 @@ final class NotchModel: ObservableObject {
     /// Between what the wings show and what's announced, the notch folds to rest first and opens
     /// again from there, as the Dynamic Island switches between activities.
     @Published var switching = false
-    /// A timer counting down beside the camera, and each wing's width for it; macOS's own, started
-    /// from Clock, rather than Glance's (see `SystemTimer`).
+    /// A timer counting down beside the camera, and each wing's width for the one in the notch.
     @Published var timer: NotchTimer.State?
     @Published var timerWing: CGFloat = 0
-    @Published var systemTimer = false
+    /// macOS's own timer, started from Clock (see `SystemTimer`).
+    @Published var clockTimer: NotchTimer.State?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -193,36 +193,71 @@ final class NotchModel: ObservableObject {
     /// A full-screen app covers the display: around the notch it's all black.
     @Published var fullScreen = false
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
-    /// player: a timer, while nothing plays.
-    @Published var expanded: ExpandedActivity?
+    /// player: one of the timers.
+    @Published var expanded: Activity?
 
-    enum ExpandedActivity: Equatable {
-        case timer
+    /// What can show at once, in the order they take the notch: music, Glance's timer, macOS's.
+    enum Activity: Equatable {
+        case music, timer, clockTimer
     }
 
-    /// A second activity in a bubble of its own beside the notch, as the Dynamic Island shows one
-    /// (see `IslandBubble`): a timer while music plays, which keeps the notch. None while the notch
-    /// is open or something else is announced.
-    var bubble: Bubble? {
-        guard state != .open, alert == nil, !switching, timer != nil, activity else { return nil }
-        return .timer
+    /// Those showing now, in that order.
+    var activities: [Activity] {
+        var shown: [Activity] = []
+        if activity { shown.append(.music) }
+        if timer != nil { shown.append(.timer) }
+        if clockTimer != nil { shown.append(.clockTimer) }
+        return shown
     }
 
-    enum Bubble: Equatable {
-        case timer
+    /// An activity's timer, if it's one.
+    func timer(of activity: Activity) -> NotchTimer.State? {
+        switch activity {
+        case .music: nil
+        case .timer: timer
+        case .clockTimer: clockTimer
+        }
     }
 
-    /// Whether opening from the notch, or from the bubble beside it, opens to the timer, as the
-    /// Dynamic Island expands what was touched: the bubble, while the timer is in it, or the notch,
-    /// while the timer has it, with nothing playing.
-    func opensTimer(fromBubble: Bool) -> Bool {
-        if fromBubble, let bubble { return bubble == .timer }
-        return timer != nil && !activity
+    /// The timer in the notch, when one comes first; the first timer, which has the notch once nothing
+    /// plays.
+    var notchTimer: NotchTimer.State? { activities.first.flatMap(timer(of:)) }
+    var firstTimer: NotchTimer.State? { timer ?? clockTimer }
+
+    /// The activities after the first, each in a bubble of its own beside the notch, as the Dynamic
+    /// Island shows them (see `IslandBubble`): the second off its right end, the third off its left.
+    /// None while the notch is open, something else is announced, or a new song's name shows: they
+    /// run back into it while it does.
+    var bubbles: [Activity] {
+        guard state != .open, alert == nil, !switching, !(activity && pop) else { return [] }
+        return Array(activities.dropFirst().prefix(2))
     }
 
-    /// The pointer is on the bubble, which swells a little, or presses it, which squeezes it.
-    @Published var bubbleHovered = false
-    @Published var bubblePressed = false
+    /// Off the notch's right end, or its left.
+    enum Side: Equatable {
+        case trailing, leading
+    }
+
+    func bubble(_ side: Side) -> Activity? {
+        let bubbles = bubbles
+        return side == .trailing ? bubbles.first : bubbles.dropFirst().first
+    }
+
+    /// What opening shows, as the Dynamic Island expands what was clicked: a bubble's own activity,
+    /// or the notch's. Nil for music, which opens to the player.
+    func expansion(fromBubble side: Side?) -> Activity? {
+        let activity = side.flatMap(bubble) ?? activities.first
+        return activity == .music ? nil : activity
+    }
+
+    /// The timer opened to, and the room the camera takes in the middle of its row: none on an
+    /// island, which has no camera.
+    var expandedTimer: NotchTimer.State? { expanded.flatMap(timer(of:)) }
+    var camera: CGFloat { island ? 0 : closedSize.width }
+
+    /// The bubble the pointer is on, which swells a little, and the one pressed, which squeezes.
+    @Published var bubbleHovered: Side?
+    @Published var bubblePressed: Side?
 
     /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
     @Published var island: Bool {
@@ -266,8 +301,8 @@ final class NotchModel: ObservableObject {
         if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
-        // Beside music, a timer is in a bubble of its own (see `bubble`).
-        if timer != nil, !activity { return max(timerWing, resting) }
+        // A timer with the notch; behind music, it's in a bubble of its own (see `bubbles`).
+        if notchTimer != nil { return max(timerWing, resting) }
         return activity ? resting : 0
     }
 
@@ -296,10 +331,11 @@ final class NotchModel: ObservableObject {
                     restingHeight + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
-            case .open where expanded == .timer:
+            case .open where expanded != nil:
                 (
-                    ExpandedTimerView.width(for: timer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height) + pull * 0.35,
-                    (closedSize.height * TimerLayout.opened).rounded() + pull
+                    ExpandedTimerView.width(for: expandedTimer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height, camera: camera)
+                        + pull * 0.35,
+                    (closedSize.height * TimerLayout.tall).rounded() + pull
                 )
             case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
@@ -476,7 +512,7 @@ struct NotchView: View {
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
-                timer: model.activity || model.switching ? nil : model.timer,
+                timer: model.activity || model.switching ? nil : model.notchTimer,
                 hoveredButton: model.hoveredButton
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
@@ -492,7 +528,7 @@ struct NotchView: View {
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
-            expandedTimer(shown: expandedShown && model.expanded == .timer)
+            expandedTimer(shown: expandedShown)
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -564,13 +600,10 @@ struct NotchView: View {
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
         .overlay { keyLine(shape) }
-        // A second activity, in a bubble of its own off the notch's right end. Behind the notch, so
-        // in its end, all of it is hidden there, under what the notch shows.
-        .background(alignment: .topTrailing) {
-            IslandBubble(
-                bubble: model.bubble, timer: model.timer, restingHeight: closed.height, flare: m.flare, hidden: isOpen,
-                hovered: model.bubbleHovered, pressed: model.bubblePressed, fullScreen: model.fullScreen)
-        }
+        // The other activities, each in a bubble of its own off one of the notch's ends. Behind the
+        // notch, so in its end, all of it is hidden there, under what the notch shows.
+        .background(alignment: .topTrailing) { bubble(.trailing, m) }
+        .background(alignment: .topLeading) { bubble(.leading, m) }
         .background {
             ZStack {
                 if thumbnail {
@@ -633,13 +666,22 @@ struct NotchView: View {
     private var artworkShown: Bool { model.activity && !musicAway }
     private var waveformShown: Bool { model.activity && !model.pop && !musicAway }
 
-    /// Opened while a timer runs and nothing plays: the timer's own view, laid out at its open size,
-    /// as the player is, so the growing shape reveals it.
+    private func bubble(_ side: NotchModel.Side, _ m: NotchMetrics) -> some View {
+        let activity = model.bubble(side)
+        return IslandBubble(
+            side: side, shown: activity != nil, timer: activity.flatMap(model.timer(of:)), restingHeight: model.closedSize.height,
+            flare: m.flare, hidden: model.state == .open, hovered: model.bubbleHovered == side,
+            pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
+    }
+
+    /// Opened to a timer: its own view, laid out at its open size, as the player is, so the growing
+    /// shape reveals it.
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
-        if let timer = model.timer {
+        if let timer = model.expandedTimer {
             let h = model.closedSize.height
-            ExpandedTimerView(state: timer, restingHeight: h, system: model.systemTimer)
-                .frame(width: ExpandedTimerView.width(for: timer, restingHeight: h), height: (h * TimerLayout.opened).rounded())
+            ExpandedTimerView(state: timer, restingHeight: h, system: model.expanded == .clockTimer)
+                .frame(
+                    width: ExpandedTimerView.width(for: timer, restingHeight: h, camera: model.camera), height: (h * TimerLayout.tall).rounded())
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -662,7 +704,7 @@ struct NotchView: View {
         if model.switching { return nil }
         if let alert = model.alert { return alert.content.tint }
         if model.activity { return nowPlaying.accent(from: accentSource) }
-        if model.timer != nil { return .orange }
+        if model.notchTimer != nil { return .orange }
         return nil
     }
 

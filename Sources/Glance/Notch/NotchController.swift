@@ -285,13 +285,12 @@ final class NotchController {
         alertWatch = Activities.shared.$alert.removeDuplicates().sink { [weak self] alert in
             MainActor.assumeIsolated { self?.show(alert) }
         }
-        // Glance's own timer, or else macOS's (see `SystemTimer`).
+        // Glance's own timer, and macOS's (see `SystemTimer`).
         SystemTimer.shared.start()
         timerWatch = NotchTimer.shared.$state.combineLatest(SystemTimer.shared.$state)
-            .map { own, system in ShownTimer(state: own ?? system, system: own == nil && system != nil) }
-            .removeDuplicates()
-            .sink { [weak self] shown in
-                MainActor.assumeIsolated { self?.show(shown.state, system: shown.system) }
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak self] own, clock in
+                MainActor.assumeIsolated { self?.show(own: own, clock: clock) }
             }
 
         // The live activity and the song announcements follow their settings as they change.
@@ -466,7 +465,7 @@ final class NotchController {
     private func show(_ alert: NotchAlert?) {
         switchTask?.cancel()
         let fold = IslandMotion.fold, open = IslandMotion.open
-        let wingsShowing = model.activity || model.timer != nil
+        let wingsShowing = model.activity || model.timer != nil || model.clockTimer != nil
         guard let alert else {
             withAnimation(fold) {
                 model.alert = nil
@@ -503,26 +502,31 @@ final class NotchController {
 
     /// A timer started, paused or ended: its wings come, or go. Opened to it, ended or cancelled,
     /// the notch closes, for what it's done to show.
-    private func show(_ timer: NotchTimer.State?, system: Bool) {
-        if timer == nil, model.expanded == .timer, model.state == .open { close(holdUntilExit: true) }
-        // Into its last minute it counts in seconds, which take a little more room.
+    private func show(own: NotchTimer.State?, clock: NotchTimer.State?) {
+        let ending = (own == nil && model.timer != nil) || (clock == nil && model.clockTimer != nil)
+        withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
+            model.timer = own
+            model.clockTimer = clock
+            fitTimerWing()
+        }
+        // Opened to a timer that has ended or been cancelled, the notch closes, for that to show.
+        if model.state == .open, model.expanded != nil, model.expandedTimer == nil { close(holdUntilExit: true) }
+        // Into its last minute the timer for the notch counts in seconds, which take a little more room.
         timerWingTask?.cancel()
-        if let timer, case .running = timer, timer.left() > 60 {
+        if let timer = model.firstTimer, case .running = timer, timer.left() > 60 {
             timerWingTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(timer.left() - 59.5))
-                guard let self, !Task.isCancelled, let now = self.model.timer else { return }
-                withAnimation(IslandMotion.open) {
-                    self.model.timerWing = SystemActivityView.wing(for: now, restingHeight: self.model.closedSize.height, island: self.model.island)
-                }
+                guard let self, !Task.isCancelled else { return }
+                withAnimation(IslandMotion.open) { self.fitTimerWing() }
             }
         }
-        withAnimation(timer == nil ? IslandMotion.fold : IslandMotion.open) {
-            if let timer {
-                model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
-            }
-            model.timer = timer
-            model.systemTimer = system
-        }
+    }
+
+    /// The wings as wide as the time for the notch needs: the first timer's, in the notch once nothing
+    /// plays.
+    private func fitTimerWing() {
+        guard let timer = model.firstTimer else { return }
+        model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
     }
 
     /// A new song: the closed notch's wings widen for a few seconds to show its title and artist.
@@ -638,12 +642,12 @@ final class NotchController {
         if model.hoveredButton != button { model.hoveredButton = button }
         switch model.state {
         case .closed, .peek:
-            let onBubble = button == nil && bubbleZone?.contains(p) == true
+            let onBubble = button == nil ? bubble(at: p) : nil
             if onBubble != model.bubbleHovered { hoverBubble(onBubble, at: p) }
             if button != nil {
                 // On a done timer's button the notch stays as it is, so a click there is the button's.
                 openTask?.cancel()
-            } else if onBubble {
+            } else if onBubble != nil {
                 // The bubble's own: the notch beside it stays as it is.
             } else if interactiveZone.contains(p) {
                 if model.state == .closed, !holdUntilExit { peek() }
@@ -671,19 +675,17 @@ final class NotchController {
         Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
-    /// The pointer onto the bubble beside the notch, or off it: it swells a little, as the notch
-    /// does, and opens to what it shows as the notch opens, resting on it or with a click.
-    private func hoverBubble(_ on: Bool, at p: CGPoint) {
-        if on, model.state == .peek { settle(at: p) }
+    /// The pointer onto a bubble beside the notch, or off it: it swells a little, as the notch does.
+    /// Only a click opens it, to what it shows.
+    private func hoverBubble(_ side: NotchModel.Side?, at p: CGPoint) {
+        if side != nil, model.state == .peek { settle(at: p) }
         openTask?.cancel()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
-        guard on else {
-            if model.state == .closed { stopPolling() }
-            return
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = side }
+        if side != nil {
+            startPolling()
+        } else if model.state == .closed {
+            stopPolling()
         }
-        startPolling()
-        let opening = Opening.current
-        if opening.onHover, !holdUntilExit, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
     }
 
     /// The button of a timer that's done, in the closed notch, at a point on the screen.
@@ -708,11 +710,12 @@ final class NotchController {
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
         guard pressBeganClosed else { return }
-        if model.bubbleHovered {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
-        } else {
-            model.press(true)
+        if let side = model.bubbleHovered {
+            // A bubble opens with a plain click, as it's let go.
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = side }
+            return
         }
+        model.press(true)
         let opening = Opening.current
         // With a hold delay, the notch opens while the button is still down.
         if opening.onClick, opening.clickDelay > 0 {
@@ -732,18 +735,17 @@ final class NotchController {
             return
         }
         guard pressBeganClosed else { return }
-        let onBubble = model.bubblePressed
-        if onBubble {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
-        } else {
-            model.press(false)
+        if let side = model.bubblePressed {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = nil }
+            if bubble(at: NSEvent.mouseLocation) == side { open() }
+            return
         }
+        model.press(false)
         let opening = Opening.current
-        let mouse = NSEvent.mouseLocation
         if opening.clickDelay > 0 {
             // Let go before a hold delay ran out: no open.
             if model.state != .open { openTask?.cancel() }
-        } else if opening.onClick, onBubble ? bubbleZone?.contains(mouse) == true : interactiveZone.contains(mouse) {
+        } else if opening.onClick, interactiveZone.contains(NSEvent.mouseLocation) {
             open()
         }
     }
@@ -784,16 +786,16 @@ final class NotchController {
         closeTask?.cancel()
         closeTask = nil
         popTask?.cancel()
-        // Closed, nothing of either page shows: the page is simply set. Hovered or clicked where the
-        // timer shows, it opens to the timer, as the Dynamic Island expands it: the notch, while it
-        // has the timer, or the bubble beside it, while the notch has a new song's name.
-        let timerThere = model.opensTimer(fromBubble: model.bubbleHovered)
+        // Closed, nothing of either page shows: the page is simply set. It opens to what was clicked,
+        // as the Dynamic Island expands it: a bubble's own activity, or the notch's; a timer to its
+        // own view, music to the player.
+        let expansion = model.expansion(fromBubble: model.bubbleHovered)
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) {
-            model.bubbleHovered = false
-            model.bubblePressed = false
-            model.expanded = page == .player && !forDrop && !keyboardHold && timerThere ? .timer : nil
+            model.bubbleHovered = nil
+            model.bubblePressed = nil
+            model.expanded = page == .player && !forDrop && !keyboardHold ? expansion : nil
             model.page = page
             model.pageNudge = 0
             if !forDrop {
@@ -1390,14 +1392,16 @@ final class NotchController {
         return CGRect(x: centerX - m.totalWidth / 2, y: topY - model.gap - m.height, width: m.totalWidth, height: m.height)
     }
 
-    /// Where the pointer counts as "on" the notch, or the bubble beside it. Reaches slightly past
+    /// Where the pointer counts as "on" the notch, or the bubbles beside it. Reaches slightly past
     /// the top edge.
     private var interactiveZone: CGRect {
         // Up to the top edge, over an island's gap too, so pushing the pointer to the top finds it.
         var resting = CGRect(
             x: restingRect.minX - 4, y: restingRect.minY - 4,
             width: restingRect.width + 8, height: restingRect.height + model.gap + 6)
-        if let bubbleZone { resting = resting.union(bubbleZone) }
+        for side in [NotchModel.Side.trailing, .leading] {
+            if let zone = bubbleZone(side) { resting = resting.union(zone) }
+        }
         switch model.state {
         case .closed: return resting
         case .peek: return resting.union(rect(for: .peek))
@@ -1407,13 +1411,19 @@ final class NotchController {
         }
     }
 
-    /// Where the bubble beside the notch is, while there's one (see `IslandBubble`), with the same
+    /// Where a bubble beside the notch is, while there's one (see `IslandBubble`), with the same
     /// margin as the notch's, up to the top edge.
-    private var bubbleZone: CGRect? {
-        guard model.bubble != nil else { return nil }
+    private func bubbleZone(_ side: NotchModel.Side) -> CGRect? {
+        guard model.bubble(side) != nil else { return nil }
         let h = model.closedSize.height
-        let left = centerX + model.metrics(for: .closed).bodyWidth / 2 + h * IslandBubble.gap
+        let off = model.metrics(for: .closed).bodyWidth / 2 + h * IslandBubble.gap
+        let left = side == .trailing ? centerX + off : centerX - off - h
         return CGRect(x: left - 4, y: topY - model.gap - h - 4, width: h + 8, height: h + model.gap + 6)
+    }
+
+    /// The bubble at a point on the screen, if any.
+    private func bubble(at p: CGPoint) -> NotchModel.Side? {
+        [NotchModel.Side.trailing, .leading].first { bubbleZone($0)?.contains(p) == true }
     }
 
     /// A little forgiving margin before an open notch decides the pointer has left.
@@ -1580,10 +1590,4 @@ final class NotchEventView: NSView {
 /// Lets the first click on a control act right away, though the notch's window is never key.
 final class NotchHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-}
-
-/// The timer the notch shows, and whether it's macOS's own.
-private struct ShownTimer: Equatable {
-    let state: NotchTimer.State?
-    let system: Bool
 }

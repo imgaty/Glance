@@ -265,18 +265,23 @@ the seconds in its last minute, with a pause symbol before the time while it's
 paused.
 
 While something plays, the music keeps the notch and the timer moves out of it
-into a round bubble of its own beside it, showing its ring, as the iPhone shows
-two activities at once.
+into a round bubble of its own off the notch's right end, showing its ring, as
+the iPhone shows several activities at once. A third goes off the left end.
+While a new song's name shows, the bubbles run back into the notch, and come out
+again after it.
 
-Hover over or click the notch while a timer runs and nothing plays, or the
-bubble beside it while something does, and it opens to the timer, in a row
-below the camera: pause or resume it, or cancel it, with the round buttons
-beside the time.
+Hover over or click the notch while a timer has it, or click the timer's bubble,
+and it opens to the timer, as tall as the iPhone's: pause or resume it, or
+cancel it, with the round buttons on one side of the camera, the time on the
+other. Bubbles open only with a click.
 
 A timer started with macOS's own Timer, from the Clock app, Control Center or
-Siri, shows the same way, while it shows in the menu bar. Glance reads it from
-there, so it needs `Accessibility` (see [Permissions](#permissions)). Glance
-can't pause or cancel it: opened, it has a button that opens Clock instead.
+Siri, shows the same way, paused ones too, after Glance's own. Glance can't
+pause or cancel it: opened, it has a button that opens Clock instead. While it
+shows, Glance takes macOS's own timer out of the menu bar, with `Accessibility`
+allowed (see [Permissions](#permissions)); macOS keeps that choice. To have it
+back in the menu bar, choose `Show When Active` for Timer in
+**System Settings > Menu Bar**.
 
 When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
 shaking, and it chimes. Click **Repeat** to start the same length again, or
@@ -401,7 +406,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; and showing a timer started with macOS's own Timer |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; and taking macOS's own timer out of the menu bar while the notch shows it |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>
