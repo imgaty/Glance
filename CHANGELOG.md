@@ -34,7 +34,8 @@
   cover to come in the same way as the last one goes.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera as the iPhone's Timer does: a ring
-  emptying beside the minutes left, with a pause symbol while paused. Opened,
+  emptying beside the time left, in minutes from ten minutes up and in minutes
+  and seconds under ten, with a pause symbol while paused. Opened,
   it's as tall as the iPhone's expanded Timer, with buttons to pause and cancel
   it left of the camera, the time right of it and its name under the camera, as
   far in from the notch's ends as the player is. Done, it grows as tall as the
@@ -49,7 +50,8 @@
   Center or Siri, read from what macOS keeps of them: one counts down in the
   notch or a bubble as Glance's own does, paused ones too. While it shows,
   macOS's own is taken out of the menu bar, with `Accessibility` allowed.
-  Opened, it has a button that opens Clock, where it's paused or cancelled.
+  Opened, its buttons pause and cancel it as Clock's own do, with Clock opened
+  hidden for a moment.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

@@ -83,7 +83,7 @@ struct SystemActivityView: View {
                                     .frame(width: Self.pauseWidth(size))
                             }
                             Text(NotchTimer.condensed(timer.left(at: context.date)))
-                                .font(.system(size: size, weight: .semibold))
+                                .font(.system(size: size, weight: .semibold).monospacedDigit())
                                 // The digits roll down as they change, as the Timer's own do.
                                 .contentTransition(.numericText(countsDown: true))
                                 .animation(.snappy, value: NotchTimer.condensed(timer.left(at: context.date)))
@@ -285,13 +285,12 @@ struct SystemActivityView: View {
     /// with the pause symbol too.
     static func wing(for timer: NotchTimer.State, restingHeight h: CGFloat, island: Bool, at date: Date = .now) -> CGFloat {
         let size = LiveActivityView.textSize(for: h)
-        let minutes = Int(timer.left(at: date) / 60)
-        let shown =
-            minutes >= 1
-            ? [Int](1...minutes).map { NotchTimer.condensed(TimeInterval($0 * 60)) }
-            : (1...59).map { NotchTimer.condensed(TimeInterval($0)) }
+        let whole = Int(timer.left(at: date).rounded(.up))
+        // Every time it shows while it counts in minutes; in minutes and seconds, under ten minutes,
+        // its digits as wide as each other.
+        let shown = whole >= 600 ? (10...max(whole / 60, 10)).map { NotchTimer.condensed(TimeInterval($0 * 60)) } : ["0:00"]
         // As wide as the time is, with nothing to spare: it never scrolls.
-        let font = NSFont.systemFont(ofSize: size, weight: .semibold)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
         let longest = shown.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
         let paused = timer.isRunning ? 0 : pauseWidth(size) + pauseGap
         let right = h * TimerLayout.textInset + paused + longest + h * TimerLayout.snug

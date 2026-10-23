@@ -267,13 +267,15 @@ struct ActivitiesTests {
         #expect(hours > minutes)
     }
 
-    @Test("Beside the camera, a timer counts down in whole minutes, then seconds, as the Dynamic Island's does")
+    @Test("Beside the camera, a timer counts down in whole minutes from ten minutes, then in minutes and seconds")
     func condensedTime() {
         #expect(NotchTimer.condensed(14 * 60 + 3) == "14m")
         #expect(NotchTimer.condensed(14 * 60 + 59) == "14m")
-        #expect(NotchTimer.condensed(60) == "1m")
-        #expect(NotchTimer.condensed(59.2) == "59s")
-        #expect(NotchTimer.condensed(1) == "1s")
+        #expect(NotchTimer.condensed(600) == "10m")
+        // Under ten minutes, in minutes and seconds.
+        #expect(NotchTimer.condensed(599) == "9:59")
+        #expect(NotchTimer.condensed(4 * 60 + 49) == "4:49")
+        #expect(NotchTimer.condensed(1) == "0:01")
         #expect(NotchTimer.condensed(3600) == "1h")
         #expect(NotchTimer.condensed(3900) == "1h 5m")
     }
@@ -396,8 +398,8 @@ struct ActivitiesTests {
         let ended = timer(3, 300, until: now - 5)
         #expect(SystemTimer.current(in: [], at: now) == nil)
         #expect(SystemTimer.current(in: [stopped, ended], at: now) == nil)
-        #expect(SystemTimer.current(in: [stopped, runningLonger, running, paused], at: now) == .running(until: now + 120, total: 300))
-        #expect(SystemTimer.current(in: [pausedEarlier, stopped, paused], at: now) == .paused(left: 559, total: 600))
+        #expect(SystemTimer.current(in: [stopped, runningLonger, running, paused], at: now)?.state == .running(until: now + 120, total: 300))
+        #expect(SystemTimer.current(in: [pausedEarlier, stopped, paused], at: now)?.state == .paused(left: 559, total: 600))
     }
 
     @Test("The bubble buds off the notch's end joined to it, thins away, and rests apart")

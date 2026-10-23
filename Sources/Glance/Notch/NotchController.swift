@@ -514,15 +514,14 @@ final class NotchController {
         refitAsTimersCount()
     }
 
-    /// Refits the notch where a running timer's time changes length: under an hour, under ten
-    /// minutes, which lose a digit, and into its last minute, which counts in seconds beside the
-    /// camera, taking a little more room.
+    /// Refits the notch where a running timer's time changes length: under an hour, and under ten
+    /// minutes, where it loses a digit opened and counts in minutes and seconds beside the camera.
     private func refitAsTimersCount() {
         timerWingTask?.cancel()
         let waits = [model.timer, model.clockTimer].compactMap { timer -> TimeInterval? in
             guard let timer, case .running = timer else { return nil }
             let left = timer.left()
-            return [3_599.0, 599, 59.5].filter { left > $0 }.map { left - $0 + 0.05 }.min()
+            return [3_599.0, 599].filter { left > $0 }.map { left - $0 + 0.05 }.min()
         }
         guard let wait = waits.min() else { return }
         timerWingTask = Task { [weak self] in

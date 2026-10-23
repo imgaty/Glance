@@ -134,11 +134,12 @@ final class NotchTimer: ObservableObject {
         return hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
     }
 
-    /// As the Dynamic Island counts down beside the camera, whole minutes gone by: 14m, then 59s
-    /// in the last minute, and 1h 5m past an hour.
+    /// As the Dynamic Island counts down beside the camera: under ten minutes, its minutes and
+    /// seconds, 4:49; from ten minutes, whole minutes gone by, 14m; past an hour, 1h 5m.
     static func condensed(_ seconds: TimeInterval) -> String {
-        if seconds < 60 { return "\(min(Int(seconds.rounded(.up)), 59))s" }
-        let minutes = Int(seconds / 60)
+        let whole = Int(seconds.rounded(.up))
+        if whole < 600 { return format(seconds) }
+        let minutes = whole / 60
         guard minutes >= 60 else { return "\(minutes)m" }
         return minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(minutes % 60)m"
     }

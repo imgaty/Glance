@@ -333,9 +333,7 @@ final class NotchModel: ObservableObject {
             case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
             case .open where expanded != nil:
                 (
-                    ExpandedTimerView.width(
-                        for: expandedTimer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height, camera: camera,
-                        system: expanded == .clockTimer)
+                    ExpandedTimerView.width(for: expandedTimer ?? .paused(left: 0, total: 0), restingHeight: closedSize.height, camera: camera)
                         + pull * 0.35,
                     (closedSize.height * TimerLayout.tall).rounded() + pull
                 )
@@ -682,7 +680,7 @@ struct NotchView: View {
         if let timer = model.expandedTimer {
             let h = model.closedSize.height
             let system = model.expanded == .clockTimer
-            let width = ExpandedTimerView.width(for: timer, restingHeight: h, camera: model.camera, system: system)
+            let width = ExpandedTimerView.width(for: timer, restingHeight: h, camera: model.camera)
             ExpandedTimerView(state: timer, restingHeight: h, camera: model.camera, width: width, system: system)
                 .frame(width: width, height: (h * TimerLayout.tall).rounded())
                 .modifier(PageFade(hidden: !shown))

@@ -260,9 +260,9 @@ announced. Turn each of these off in **Settings > Live Activities**.
 
 Start a timer from Glance's menu in the menu bar, from the notch's right-click
 menu, or from **Settings > Live Activities**. It counts down beside the
-camera as the iPhone's Timer does, a ring emptying beside the minutes left, then
-the seconds in its last minute, with a pause symbol before the time while it's
-paused.
+camera as the iPhone's Timer does, a ring emptying beside the time left: in
+minutes from ten minutes up, then in minutes and seconds, with a pause symbol
+before the time while it's paused.
 
 While something plays, the music keeps the notch and the timer moves out of it
 into a round bubble of its own off the notch's right end, showing its ring, as
@@ -276,8 +276,9 @@ cancel it, with the round buttons left of the camera. The time is right of it,
 and its name under the camera. Bubbles open only with a click.
 
 A timer started with macOS's own Timer, from the Clock app, Control Center or
-Siri, shows the same way, paused ones too, after Glance's own. Glance can't
-pause or cancel it: opened, it has a button that opens Clock instead. While it
+Siri, shows the same way, paused ones too, after Glance's own. Its buttons pause
+and cancel it as Clock's own buttons do: Glance opens Clock hidden for a moment,
+behind every other window, and quits it again if it wasn't open. While it
 shows, Glance takes macOS's own timer out of the menu bar, with `Accessibility`
 allowed (see [Permissions](#permissions)); macOS keeps that choice. To have it
 back in the menu bar, choose `Show When Active` for Timer in

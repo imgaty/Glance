@@ -87,8 +87,7 @@ struct TimerRing: View {
 /// and to cancel left of the camera, the time left, large, right of it, its name under the camera,
 /// as the player's title sits under it. In from the notch's ends as far as the player is, and as
 /// far from the camera as the player's cover; the notch only as wide as that needs, for the time as
-/// it reads now. macOS's own timer only Clock can pause or cancel: in their place, a button to open
-/// it.
+/// it reads now. macOS's own timer is paused and cancelled through Clock.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
     let restingHeight: CGFloat
@@ -130,36 +129,29 @@ struct ExpandedTimerView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Glance's own timer's: pause or go on, and cancel. macOS's own only Clock can pause or cancel:
-    /// a button to open it.
+    /// Pause or go on, and cancel: Glance's own timer, or macOS's, through Clock (see `SystemTimer`).
     private func buttons(_ h: CGFloat) -> some View {
-        let timer = NotchTimer.shared
+        let timer = NotchTimer.shared, clock = SystemTimer.shared
         return HStack(spacing: h * TimerLayout.buttonGap) {
-            if system {
-                IslandCircleButton(height: h, tint: .orange, label: "Open Clock") {
-                    NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
-                } glyph: {
-                    Image(systemName: "clock.fill")
+            IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
+                if system {
+                    clock.toggle()
+                } else {
+                    state.isRunning ? timer.pause() : timer.resume()
+                }
+            } glyph: {
+                if state.isRunning {
+                    PauseGlyph(height: h)
+                } else {
+                    Image(systemName: "play.fill")
                         .font(.system(size: h * 0.62, weight: .bold))
                         .foregroundStyle(.orange)
                 }
-            } else {
-                IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
-                    state.isRunning ? timer.pause() : timer.resume()
-                } glyph: {
-                    if state.isRunning {
-                        PauseGlyph(height: h)
-                    } else {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: h * 0.62, weight: .bold))
-                            .foregroundStyle(.orange)
-                    }
-                }
-                IslandCircleButton(height: h, tint: .white, label: "Cancel") {
-                    timer.cancel()
-                } glyph: {
-                    CrossGlyph(height: h)
-                }
+            }
+            IslandCircleButton(height: h, tint: .white, label: "Cancel") {
+                system ? clock.cancel() : timer.cancel()
+            } glyph: {
+                CrossGlyph(height: h)
             }
         }
     }
@@ -184,10 +176,8 @@ struct ExpandedTimerView: View {
     /// player's room at the ends and beside the camera; on an island, as wide as the iPhone's, or as
     /// they need. For the time as it reads then: it narrows as it loses a digit.
     @MainActor
-    static func width(
-        for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat, system: Bool = false, at date: Date = .now
-    ) -> CGFloat {
-        let buttons = system ? h * TimerLayout.button : h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
+    static func width(for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
+        let buttons = h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
         // Its digits all as wide as each other.
         let shown = NotchTimer.format(state.left(at: date)).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
         let time = ceil((shown as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
