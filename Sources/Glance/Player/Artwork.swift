@@ -10,7 +10,8 @@ import SwiftUI
 
 /// The one artwork that flies between the closed notch and the open player, its corners rounding
 /// from the closed notch's to the player's as it grows. The playing app's icon sits on its corner
-/// in the player.
+/// in the player. Clicked, the cover or the icon goes where it plays from: its tab in the browser,
+/// the playlist it plays from.
 struct HeroArtwork: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var motion = MotionArtworkStore.shared
@@ -80,7 +81,21 @@ struct HeroArtwork: View {
                 }
             }
             .overlay {
-                // The playing app, on the artwork's corner. Click it to switch to the app. One size
+                // The open cover goes where it plays from (see `PlayingSource`).
+                let clickable = isOpen && nowPlaying.hasMedia
+                Button {
+                    nowPlaying.openSource()
+                } label: {
+                    Color.clear.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .notchControl(enabled: clickable)
+                .allowsHitTesting(clickable)
+                .accessibilityLabel("Show Where It's Playing")
+                .accessibilityHidden(!clickable)
+            }
+            .overlay {
+                // The playing app, on the artwork's corner. Click it to go there, as the cover. One size
                 // always, whatever the layout or the cover's size as it flies; its corner just past the
                 // cover's, which it moves with. An icon's tile fills four fifths of its image.
                 if let icon = nowPlaying.appIcon {
@@ -88,7 +103,7 @@ struct HeroArtwork: View {
                         let tile = Self.badgeTile, past = Self.badgePast
                         let mark = tile / 0.8
                         Button {
-                            nowPlaying.openApp()
+                            nowPlaying.openSource()
                         } label: {
                             Image(nsImage: icon)
                                 .resizable()

@@ -207,6 +207,12 @@ final class NowPlaying: ObservableObject {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
+    /// Where it plays from: its tab, its playlist, or else the app (see `PlayingSource`).
+    func openSource() {
+        guard let appBundleID, !isDemo else { return }
+        PlayingSource.open(app: appBundleID, title: title)
+    }
+
     // MARK: The welcome tour's song
 
     /// A song for the welcome tour's pictures, always playing, round and round its first verse: the

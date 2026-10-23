@@ -12,8 +12,9 @@ Glance's current, planned, and rejected features.
 
 Whatever is playing, in almost any app, with its cover, a progress bar to drag
 through the song, and buttons to play, pause and skip. You choose in Settings
-which apps show. While Spotify's DJ chooses the music, its symbol takes a
-button's place, moving as the DJ talks. See the
+which apps show. Click the cover to go where it plays from: its browser tab, or
+the playlist it plays from in Spotify or Music. While Spotify's DJ chooses the
+music, its symbol takes a button's place, moving as the DJ talks. See the
 [User Manual](USER-MANUAL.md#the-player).
 
 ### Tray

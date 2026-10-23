@@ -19,6 +19,9 @@
   its bars on each beat, and its bars fall back at the song's pace.
 - Fixed the cover's colors behind the player standing still through the song:
   they pulse with the beat, as in Apple Music.
+- Fixed clicking the cover, or the app's icon on it, not going where the music
+  plays from: it opens the browser tab playing it, the playlist or album Spotify
+  plays it from, or the song in the playlist Music plays it from.
 
 ### Tray
 

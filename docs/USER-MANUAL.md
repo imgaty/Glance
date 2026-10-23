@@ -109,7 +109,13 @@ shortcuts, change them in **Settings > Opening**.
 The open notch shows the cover, the song's name and artist, a progress bar, and
 the controls. Drag the progress bar to move through the song. With
 **Show app icon on artwork** on, the playing app's icon sits on the cover's
-corner; click it to switch to that app.
+corner.
+
+Click the cover, or the app's icon, to go where the music plays from: the tab
+playing it in Safari, Chrome, Brave, Edge or Vivaldi, the playlist or album
+Spotify plays it from, or the song in the playlist Music plays it from. Other
+browsers switch to the tab with `Accessibility` allowed, in the windows on the
+current desktop. Otherwise, it switches to the app.
 
 With the `Audio from apps` permission, the player keeps the song's time: the
 cover's colors behind it pulse with the beat, the waveform's color rises up its
@@ -340,9 +346,10 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | Permission | Why |
 | --- | --- |
 | `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
-| `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
-| `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; and three-finger swipes on the notch |
+| `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
+| `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
+| `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; and switching to the tab that's playing in other browsers |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>
