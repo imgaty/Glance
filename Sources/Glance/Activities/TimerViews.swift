@@ -164,11 +164,11 @@ struct StopwatchReading: View {
         }
     }
 
-    /// Measured from the iPhone's: the hundredths about two fifths the seconds' size, their tops a
-    /// little below the seconds', just apart from them.
-    static let small: CGFloat = 0.42
-    static let raised: CGFloat = 0.3
-    static let gap: CGFloat = 0.12
+    /// Measured from the iPhone's: the hundredths a little under half the seconds' size, their tops
+    /// a little below the seconds', just apart from them.
+    static let small: CGFloat = 0.47
+    static let raised: CGFloat = 0.32
+    static let gap: CGFloat = 0.06
 
     /// As wide as it reads with its widest digits.
     @MainActor
