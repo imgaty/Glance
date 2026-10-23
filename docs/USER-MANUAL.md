@@ -292,9 +292,9 @@ buttons.
 
 When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
 beside macOS's own alert and chime. Click **Repeat** to start the same length
-again in Clock, or **✕** to stop saying it; both leave the notch closed.
-Opening the notch stops saying it too. If Clock has been set to another length
-since, **Repeat** opens Clock on its timers.
+again, or **✕** to stop it; both answer macOS's alert too, which stops its
+chime, and leave the notch closed. Opening the notch stops it too. Stopped or
+repeated in macOS's alert, it goes from the notch as well.
 
 While a timer shows, Glance takes macOS's own timer out of the menu bar, with
 `Accessibility` allowed; macOS keeps that choice. To have it back in the menu
@@ -432,7 +432,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; and taking macOS's own timer out of the menu bar while the notch shows it |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch, and answering its alert when a timer rings; and taking macOS's own timer out of the menu bar while the notch shows it |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>

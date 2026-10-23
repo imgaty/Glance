@@ -40,8 +40,9 @@
   cancel it left of the camera, the time right of it and its name under the
   camera, as far in from the notch's ends as the player is. When it rings, the
   notch says so as the iPhone's Timer does, its name beside buttons to start it
-  again in Clock or stop saying it. VoiceOver reads it as its name and the time
-  left in words, and opens it.
+  again or stop it, which answer macOS's own alert and stop its chime; answered
+  in macOS's alert, it goes from the notch too. VoiceOver reads it as its name
+  and the time left in words, and opens it.
 - Added Clock's stopwatch, counting up beside the camera as the iPhone's does:
   its symbol with a hand going round once a minute, its hundredths small after
   the seconds. Opened, it shows its time alone, to the hundredth, with buttons

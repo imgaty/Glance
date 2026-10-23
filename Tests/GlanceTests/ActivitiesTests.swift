@@ -173,6 +173,11 @@ struct ActivitiesTests {
         #expect(last?.date == now - 2)
         #expect(last?.length == 90)
         #expect(last?.title == "Pasta")
+        #expect(last?.dismissed == false)
+        // Stopped or repeated in macOS's own alert, macOS notes when.
+        var answered = rung(now - 5, 60, "")
+        answered["$MTTimer"] = (answered["$MTTimer"] as! [String: Any]).merging(["MTTimerDismissedDate": now - 2]) { $1 }
+        #expect(ClockActivity.lastRung(in: [answered])?.dismissed == true)
         // Started again from Clock's picker, which reads the length last started.
         #expect(ClockActivity.seconds("00:05:00") == 300)
         #expect(ClockActivity.seconds("01:02:03") == 3723)

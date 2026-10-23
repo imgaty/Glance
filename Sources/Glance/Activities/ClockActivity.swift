@@ -13,7 +13,9 @@ import ApplicationServices
 /// keeps them in its settings: each timer's length, and when it ends, what's left of it while paused,
 /// or when it rang; and when the stopwatch started, and what was on it. They're read from there every
 /// second while one shows, every three otherwise, unless they're turned off in Settings. A timer
-/// that rings says so, as the iPhone's Timer does when it's done.
+/// that rings says so, as the iPhone's Timer does when it's done, beside macOS's own alert, which
+/// chimes: stopping or repeating it in the notch stops or repeats macOS's alert, and the other way
+/// round.
 ///
 /// While a timer shows, the menu bar's own is taken out, through Accessibility, so it isn't shown
 /// twice, unless Hide in menu bar is off. They're paused, resumed, cancelled, started again, lapped
@@ -26,8 +28,8 @@ final class ClockActivity: ObservableObject {
     /// Its label, as named in Clock; none if it wasn't given one.
     @Published private(set) var timerTitle: String?
     @Published private(set) var stopwatch: Stopwatch?
-    /// The timer that rang last, while it says so, to start it again.
-    @Published private(set) var rang: (length: TimeInterval, title: String?)?
+    /// The timer that rang last, while it says so, to start it again, and when it rang.
+    @Published private(set) var rang: (length: TimeInterval, title: String?, date: Date)?
     /// Whether Glance may press Clock's buttons, which macOS allows only with Accessibility.
     @Published private(set) var canControl = AXIsProcessTrusted()
 
@@ -156,12 +158,14 @@ final class ClockActivity: ObservableObject {
 
     /// The timer that rang last of those macOS keeps, and when: the moment it ends, macOS stops it
     /// and notes when it rang.
-    static func lastRung(in kept: [[String: Any]]) -> (date: Date, length: TimeInterval, title: String?)? {
-        kept.compactMap { entry -> (date: Date, length: TimeInterval, title: String?)? in
+    static func lastRung(in kept: [[String: Any]]) -> (date: Date, length: TimeInterval, title: String?, dismissed: Bool)? {
+        kept.compactMap { entry -> (date: Date, length: TimeInterval, title: String?, dismissed: Bool)? in
             guard let timer = entry["$MTTimer"] as? [String: Any], let fired = timer["MTTimerFiredDate"] as? Date,
                 let length = timer["MTTimerDuration"] as? TimeInterval
             else { return nil }
-            return (fired, length, title(of: timer))
+            // Once its alert is stopped or closed, macOS notes when.
+            let dismissed = (timer["MTTimerDismissedDate"] as? Date).map { $0 >= fired } ?? false
+            return (fired, length, title(of: timer), dismissed)
         }
         .max { $0.date < $1.date }
     }
@@ -171,8 +175,14 @@ final class ClockActivity: ObservableObject {
     private func noticeRing(in timers: [[String: Any]]) {
         guard let rung = Self.lastRung(in: timers) else { return }
         defer { lastRing = rung.date }
-        guard let lastRing, rung.date > lastRing, Date.now.timeIntervalSince(rung.date) < 30 else { return }
-        rang = (rung.length, rung.title)
+        // Stopped or repeated in macOS's own alert: no longer said here either.
+        if let rang, rung.date == rang.date, rung.dismissed {
+            self.rang = nil
+            activities.dismiss(.timerDone)
+            return
+        }
+        guard let lastRing, rung.date > lastRing, Date.now.timeIntervalSince(rung.date) < 30, !rung.dismissed else { return }
+        rang = (rung.length, rung.title, rung.date)
         let name = rung.title ?? "Timer"
         activities.post(
             NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: "\(name) done", stays: true))
@@ -198,21 +208,54 @@ final class ClockActivity: ObservableObject {
         control(.cancelTimer)
     }
 
-    /// The timer that rang, started again, as the Timer's Repeat does: the length Clock is set to
-    /// starts again, with its label, if it's that one's; otherwise Clock comes forward on its timers.
+    /// The timer that rang, started again, as the Timer's Repeat does: with macOS's own alert's
+    /// Repeat, which stops its chime too; once that's gone, the length Clock is set to starts again,
+    /// with its label, if it's that one's; otherwise Clock comes forward on its timers.
     func repeatTimer() {
         guard let rang else { return }
-        dismissRing()
+        self.rang = nil
+        activities.dismiss(.timerDone)
         guard allowed() else { return }
         expect(timer: .running(until: .now + rang.length, total: rang.length))
+        if Self.answerAlert(.again, title: rang.title) { return }
         control(.repeatTimer(length: rang.length, title: rang.title))
     }
 
-    /// The timer that rang, no longer said; macOS stops its own chime by itself.
+    /// The timer that rang, no longer said, and macOS's own alert for it stopped, with its chime.
     func dismissRing() {
-        guard rang != nil else { return }
-        rang = nil
+        guard let rang else { return }
+        self.rang = nil
         activities.dismiss(.timerDone)
+        if AXIsProcessTrusted() { _ = Self.answerAlert(.stop, title: rang.title) }
+    }
+
+    /// Clock's alert for a timer that has rung, in Notification Center, answered as its own buttons
+    /// do: Repeat, or Stop, which stops its chime. Named in the system's language; in another than
+    /// English, found by their place, between Show Details and Close. Whether it was there.
+    private static func answerAlert(_ button: AlertButton, title: String?) -> Bool {
+        guard let center = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.notificationcenterui").first else {
+            return false
+        }
+        let app = AXUIElementCreateApplication(center.processIdentifier)
+        AXUIElementSetMessagingTimeout(app, 0.5)
+        let clock = FileManager.default.displayName(atPath: Self.clock.path)
+        let alerts = (value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).flatMap {
+            findAll(in: $0) { value($0, kAXSubroleAttribute) as? String == "AXNotificationCenterAlert" }
+        }
+        .filter { (value($0, kAXDescriptionAttribute) as? String)?.hasPrefix(clock + ",") == true }
+        // The one for this timer, by its label, when it has one.
+        let alert = alerts.first { alert in
+            title.map { title in (value(alert, kAXDescriptionAttribute) as? String)?.hasSuffix(title) == true } ?? true
+        } ?? alerts.first
+        guard let alert else { return false }
+        var names: CFArray?
+        AXUIElementCopyActionNames(alert, &names)
+        let named = (names as? [String] ?? []).filter { $0.hasPrefix("Name:") }
+        let english = button == .again ? "Name:Repeat" : "Name:Stop"
+        var action = named.first { $0.hasPrefix(english) }
+        if action == nil, named.count == 4 { action = button == .again ? named[1] : named[2] }
+        guard let action else { return false }
+        return AXUIElementPerformAction(alert, action as CFString) == .success
     }
 
     /// Starts or stops the stopwatch, as its Start and Stop button does.
