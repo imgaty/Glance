@@ -245,11 +245,12 @@ struct ActivitiesTests {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         let resting = model.closedSize.height
         #expect(model.wing == 0)
-        model.activity = true
-        #expect(model.wing == resting)
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = SystemActivityView.wing(for: model.timer!, restingHeight: resting, island: false)
         #expect(model.wing == model.timerWing)
+        // With music, the timer goes in a bubble, and the notch has music's wings.
+        model.activity = true
+        #expect(model.wing == resting)
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
@@ -329,20 +330,21 @@ struct ActivitiesTests {
         for wing in [early, late] { #expect(wing >= resting * TimerLayout.wing && wing <= resting * 1.3) }
     }
 
-    @Test("With music and a timer, the timer has the notch and the music a bubble of its own; a new song swaps them")
+    @Test("With music and a timer, music keeps the notch and the timer goes in a bubble of its own")
     func bubble() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.activity = true
         #expect(model.bubble == nil)
         #expect(!model.opensTimer(fromBubble: false))
         model.timer = .running(until: .now + 300, total: 300)
-        #expect(model.bubble == .music)
-        #expect(model.opensTimer(fromBubble: false))
-        #expect(!model.opensTimer(fromBubble: true))
+        model.timerWing = 60
+        #expect(model.bubble == .timer)
+        #expect(model.opensTimer(fromBubble: true))
+        #expect(!model.opensTimer(fromBubble: false))
+        // The notch keeps music's wings, and a new song's name, with the timer beside it.
+        #expect(model.wing == 32)
         model.pop = true
         #expect(model.bubble == .timer)
-        #expect(!model.opensTimer(fromBubble: false))
-        #expect(model.opensTimer(fromBubble: true))
         model.pop = false
         // Something announced, or the notch open: it's back in the notch.
         model.alert = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
@@ -350,11 +352,31 @@ struct ActivitiesTests {
         model.alert = nil
         model.state = .open
         #expect(model.bubble == nil)
-        // A timer alone opens to the timer.
+        // A timer alone has the notch, and opens to the timer.
         model.state = .closed
         model.activity = false
         #expect(model.bubble == nil)
+        #expect(model.wing == 60)
         #expect(model.opensTimer(fromBubble: false))
+    }
+
+    @Test("macOS's own timer is read as the menu bar shows it, with its length from what macOS keeps of it")
+    func systemTimer() {
+        #expect(SystemTimer.seconds("5:25") == 325)
+        #expect(SystemTimer.seconds("1:05:25") == 3_925)
+        #expect(SystemTimer.seconds("0:59") == 59)
+        #expect(SystemTimer.seconds("Timer") == nil)
+        let kept: [[String: Any]] = [
+            ["$MTTimer": ["MTTimerState": 1, "MTTimerDuration": 900.0]],
+            ["$MTTimer": ["MTTimerState": 3, "MTTimerDuration": 600.0, "MTTimerFireTime": ["$MTTimerDate": ["MTTimerTimeDate": Date.now + 300]]]],
+        ]
+        let (total, fire) = SystemTimer.length(endingIn: 300, timers: kept)
+        #expect(total == 600)
+        #expect(fire != nil)
+        // Not the one macOS kept: its ring starts full from what's left.
+        let (other, none) = SystemTimer.length(endingIn: 120, timers: kept)
+        #expect(other == 120)
+        #expect(none == nil)
     }
 
     @Test("The bubble buds off the notch's end joined to it, thins away, and rests apart")

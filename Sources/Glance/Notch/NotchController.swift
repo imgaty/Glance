@@ -285,9 +285,14 @@ final class NotchController {
         alertWatch = Activities.shared.$alert.removeDuplicates().sink { [weak self] alert in
             MainActor.assumeIsolated { self?.show(alert) }
         }
-        timerWatch = NotchTimer.shared.$state.removeDuplicates().sink { [weak self] state in
-            MainActor.assumeIsolated { self?.show(state) }
-        }
+        // Glance's own timer, or else macOS's (see `SystemTimer`).
+        SystemTimer.shared.start()
+        timerWatch = NotchTimer.shared.$state.combineLatest(SystemTimer.shared.$state)
+            .map { own, system in ShownTimer(state: own ?? system, system: own == nil && system != nil) }
+            .removeDuplicates()
+            .sink { [weak self] shown in
+                MainActor.assumeIsolated { self?.show(shown.state, system: shown.system) }
+            }
 
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in
@@ -498,7 +503,7 @@ final class NotchController {
 
     /// A timer started, paused or ended: its wings come, or go. Opened to it, ended or cancelled,
     /// the notch closes, for what it's done to show.
-    private func show(_ timer: NotchTimer.State?) {
+    private func show(_ timer: NotchTimer.State?, system: Bool) {
         if timer == nil, model.expanded == .timer, model.state == .open { close(holdUntilExit: true) }
         // Into its last minute it counts in seconds, which take a little more room.
         timerWingTask?.cancel()
@@ -516,6 +521,7 @@ final class NotchController {
                 model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
             }
             model.timer = timer
+            model.systemTimer = system
         }
     }
 
@@ -1574,4 +1580,10 @@ final class NotchEventView: NSView {
 /// Lets the first click on a control act right away, though the notch's window is never key.
 final class NotchHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+/// The timer the notch shows, and whether it's macOS's own.
+private struct ShownTimer: Equatable {
+    let state: NotchTimer.State?
+    let system: Bool
 }

@@ -39,10 +39,14 @@
   it beside the time, in a row below the camera. Done, it grows as tall as the
   iPhone's Alarm, with buttons to start it again or stop its chime.
 - Added a second activity in a bubble of its own beside the notch, as the
-  Dynamic Island shows two: while a timer runs and something plays, the timer
-  keeps the notch and the music's cover goes in a round bubble as tall as the
+  Dynamic Island shows two: while something plays and a timer runs, the music
+  keeps the notch and the timer's ring goes in a round bubble as tall as the
   notch, which buds off its end and runs back into it. Hovering over or
-  clicking each opens its own. While a new song's name shows, the two swap.
+  clicking the bubble opens the timer.
+- Added a timer started with macOS's own Timer, from the Clock app, Control
+  Center or Siri, counting down in the notch as Glance's own does, while it
+  shows in the menu bar and Glance has `Accessibility`. Opened, it has a button
+  that opens Clock, where it's paused or cancelled.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

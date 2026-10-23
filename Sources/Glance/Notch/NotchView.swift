@@ -134,9 +134,11 @@ final class NotchModel: ObservableObject {
     /// Between what the wings show and what's announced, the notch folds to rest first and opens
     /// again from there, as the Dynamic Island switches between activities.
     @Published var switching = false
-    /// A timer counting down beside the camera, and each wing's width for it.
+    /// A timer counting down beside the camera, and each wing's width for it; macOS's own, started
+    /// from Clock, rather than Glance's (see `SystemTimer`).
     @Published var timer: NotchTimer.State?
     @Published var timerWing: CGFloat = 0
+    @Published var systemTimer = false
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -199,23 +201,23 @@ final class NotchModel: ObservableObject {
     }
 
     /// A second activity in a bubble of its own beside the notch, as the Dynamic Island shows one
-    /// (see `IslandBubble`): music while a timer has the notch, or the timer while a new song is
-    /// announced there. None while the notch is open or something else is announced.
+    /// (see `IslandBubble`): a timer while music plays, which keeps the notch. None while the notch
+    /// is open or something else is announced.
     var bubble: Bubble? {
         guard state != .open, alert == nil, !switching, timer != nil, activity else { return nil }
-        return pop ? .timer : .music
+        return .timer
     }
 
     enum Bubble: Equatable {
-        case music, timer
+        case timer
     }
 
     /// Whether opening from the notch, or from the bubble beside it, opens to the timer, as the
-    /// Dynamic Island expands what was touched: the notch, while it has the timer, or the timer
-    /// alone with nothing playing; the bubble, while the timer is in it.
+    /// Dynamic Island expands what was touched: the bubble, while the timer is in it, or the notch,
+    /// while the timer has it, with nothing playing.
     func opensTimer(fromBubble: Bool) -> Bool {
         if fromBubble, let bubble { return bubble == .timer }
-        return timer != nil && (bubble == .music || !activity)
+        return timer != nil && !activity
     }
 
     /// The pointer is on the bubble, which swells a little, or presses it, which squeezes it.
@@ -264,7 +266,8 @@ final class NotchModel: ObservableObject {
         if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
-        if timer != nil { return max(timerWing, resting) }
+        // Beside music, a timer is in a bubble of its own (see `bubble`).
+        if timer != nil, !activity { return max(timerWing, resting) }
         return activity ? resting : 0
     }
 
@@ -473,7 +476,7 @@ struct NotchView: View {
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
-                timer: model.activity && model.pop || model.switching ? nil : model.timer,
+                timer: model.activity || model.switching ? nil : model.timer,
                 hoveredButton: model.hoveredButton
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
@@ -561,8 +564,9 @@ struct NotchView: View {
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
         .overlay { keyLine(shape) }
-        // A second activity, in a bubble of its own off the notch's right end.
-        .overlay(alignment: .topTrailing) {
+        // A second activity, in a bubble of its own off the notch's right end. Behind the notch, so
+        // in its end, all of it is hidden there, under what the notch shows.
+        .background(alignment: .topTrailing) {
             IslandBubble(
                 bubble: model.bubble, timer: model.timer, restingHeight: closed.height, flare: m.flare, hidden: isOpen,
                 hovered: model.bubbleHovered, pressed: model.bubblePressed, fullScreen: model.fullScreen)
@@ -623,18 +627,18 @@ struct NotchView: View {
 
     /// The music's wings make way for what's announced, blurring away as the notch folds.
     private var musicAway: Bool { model.alert != nil || model.switching }
-    /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist or
-    /// a timer takes its place; none of it while the music is in the bubble beside the timer.
-    private var liveShown: Bool { model.activity && !musicAway && model.state != .open && model.bubble != .music }
-    private var artworkShown: Bool { model.activity && !musicAway && model.bubble != .music }
-    private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.timer == nil }
+    /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist
+    /// takes its place. A timer beside it goes in a bubble of its own.
+    private var liveShown: Bool { model.activity && !musicAway && model.state != .open }
+    private var artworkShown: Bool { model.activity && !musicAway }
+    private var waveformShown: Bool { model.activity && !model.pop && !musicAway }
 
     /// Opened while a timer runs and nothing plays: the timer's own view, laid out at its open size,
     /// as the player is, so the growing shape reveals it.
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
         if let timer = model.timer {
             let h = model.closedSize.height
-            ExpandedTimerView(state: timer, restingHeight: h)
+            ExpandedTimerView(state: timer, restingHeight: h, system: model.systemTimer)
                 .frame(width: ExpandedTimerView.width(for: timer, restingHeight: h), height: (h * TimerLayout.opened).rounded())
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
@@ -653,12 +657,12 @@ struct NotchView: View {
             .allowsHitTesting(false)
     }
 
-    /// The color of what shows: what's announced, a timer, or the music's.
+    /// The color of what shows: what's announced, the music's, or a timer's.
     private var keyTint: Color? {
         if model.switching { return nil }
         if let alert = model.alert { return alert.content.tint }
-        if model.timer != nil, !(model.activity && model.pop) { return .orange }
         if model.activity { return nowPlaying.accent(from: accentSource) }
+        if model.timer != nil { return .orange }
         return nil
     }
 

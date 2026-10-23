@@ -44,9 +44,9 @@ While something plays, the closed notch shows its cover and a waveform that
 moves with the music. When a new song starts, its name slides out for a moment.
 As on the iPhone, it also shows the battery charging or running low, headphones
 and accessories connecting and sound going to AirPlay, and counts down a timer
-started from the menu bar. With a timer and music at once, the music goes in a
-bubble of its own beside the notch, as on the iPhone. See the
-[User Manual](USER-MANUAL.md#live-activities).
+started from the menu bar or with macOS's own Timer. With a timer and music at
+once, the timer goes in a bubble of its own beside the notch, as on the iPhone.
+See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
 

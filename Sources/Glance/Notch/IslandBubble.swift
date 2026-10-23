@@ -9,14 +9,12 @@ import AppKit
 import SwiftUI
 
 /// A second activity in a bubble of its own beside the notch, as the Dynamic Island shows one
-/// beside another: music while a timer has the notch, or the timer while a new song is announced
-/// there. Measured from the iPhone, by the island's height: a circle as wide as the island is tall,
-/// level with it, 0.175 of that off its right end, with an app's own picture 0.76 of it across. It
-/// buds off the notch's end as it comes, joined to it for a moment as two drops are, and runs back
-/// into it as it goes, or as the notch opens.
+/// beside another: a timer, while music plays in the notch. Measured from the iPhone, by the
+/// island's height: a circle as wide as the island is tall, level with it, 0.175 of that off its
+/// right end, the timer's ring in it as beside the camera. It buds off the notch's end as it comes,
+/// joined to it for a moment as two drops are, and runs back into it as it goes, or as the notch
+/// opens.
 struct IslandBubble: View {
-    @EnvironmentObject private var nowPlaying: NowPlaying
-    @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
     /// What it shows; nil while it's in the notch.
     let bubble: NotchModel.Bubble?
     let timer: NotchTimer.State?
@@ -39,8 +37,6 @@ struct IslandBubble: View {
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
-    /// An app's own picture in it, by its height.
-    static let content: CGFloat = 0.76
 
     var body: some View {
         let h = restingHeight
@@ -51,11 +47,7 @@ struct IslandBubble: View {
             ZStack {
                 Circle().fill(.black)
                 ZStack {
-                    switch kept {
-                    case .music: cover(side: h * Self.content)
-                    case .timer: if let keptTimer { TimerRing(state: keptTimer, height: h) }
-                    case nil: EmptyView()
-                    }
+                    if kept == .timer, let keptTimer { TimerRing(state: keptTimer, height: h) }
                 }
                 .id(kept)
                 .transition(IslandMotion.fade)
@@ -65,7 +57,7 @@ struct IslandBubble: View {
             // Outside it, as around the notch, without making it any larger.
             .overlay {
                 Circle()
-                    .strokeBorder((kept == .timer ? .orange : nowPlaying.accent(from: accentSource)).opacity(0.18), lineWidth: line)
+                    .strokeBorder(.orange.opacity(0.18), lineWidth: line)
                     .frame(width: h + line * 2, height: h + line * 2)
                     .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && bubble != nil ? 1 : 0) }
             }
@@ -91,23 +83,6 @@ struct IslandBubble: View {
         .onChange(of: timer, initial: true) { _, new in
             if let new { keptTimer = new }
         }
-    }
-
-    /// The cover, round, as the iPhone shows an app's own picture in a bubble.
-    private func cover(side: CGFloat) -> some View {
-        ZStack {
-            if let artwork = nowPlaying.artwork {
-                Image(nsImage: artwork).resizable().aspectRatio(contentMode: .fill)
-                    .id(ObjectIdentifier(artwork))
-                    .transition(IslandMotion.fade)
-            } else {
-                Image(systemName: "music.note")
-                    .font(.system(size: side * 0.42, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
-        }
-        .frame(width: side, height: side)
-        .clipShape(Circle())
     }
 }
 

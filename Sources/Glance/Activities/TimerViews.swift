@@ -91,31 +91,28 @@ struct TimerRing: View {
 
 /// Opened while a timer runs, as the iPhone's Timer expands: round buttons to pause or go on and to
 /// cancel on the left, its name and the time left, large, on the right. Below the camera, the camera
-/// housing being much wider than the iPhone's, so it's as narrow as the iPhone's.
+/// housing being much wider than the iPhone's, so it's as narrow as the iPhone's. macOS's own timer
+/// only Clock can pause or cancel: in their place, a button to open it.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
     let restingHeight: CGFloat
+    var system = false
 
     var body: some View {
         let h = restingHeight
         let timer = NotchTimer.shared
         ZStack {
             HStack(spacing: h * TimerLayout.buttonGap) {
-                IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
-                    state.isRunning ? timer.pause() : timer.resume()
-                } glyph: {
-                    if state.isRunning {
-                        PauseGlyph(height: h)
-                    } else {
-                        Image(systemName: "play.fill")
+                if system {
+                    IslandCircleButton(height: h, tint: .orange, label: "Open Clock") {
+                        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
+                    } glyph: {
+                        Image(systemName: "clock.fill")
                             .font(.system(size: h * 0.62, weight: .bold))
                             .foregroundStyle(.orange)
                     }
-                }
-                IslandCircleButton(height: h, tint: .white, label: "Cancel") {
-                    timer.cancel()
-                } glyph: {
-                    CrossGlyph(height: h)
+                } else {
+                    controls(h, timer)
                 }
             }
             .padding(.leading, h * TimerLayout.buttonInset)
@@ -138,6 +135,26 @@ struct ExpandedTimerView: View {
         .frame(height: h * TimerLayout.button)
         .padding(.top, h * (1 + TimerLayout.belowCamera))
         .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Glance's own timer's: pause or go on, and cancel.
+    @ViewBuilder private func controls(_ h: CGFloat, _ timer: NotchTimer) -> some View {
+        IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
+            state.isRunning ? timer.pause() : timer.resume()
+        } glyph: {
+            if state.isRunning {
+                PauseGlyph(height: h)
+            } else {
+                Image(systemName: "play.fill")
+                    .font(.system(size: h * 0.62, weight: .bold))
+                    .foregroundStyle(.orange)
+            }
+        }
+        IslandCircleButton(height: h, tint: .white, label: "Cancel") {
+            timer.cancel()
+        } glyph: {
+            CrossGlyph(height: h)
+        }
     }
 
     /// As wide as the iPhone's, or as its buttons and its words need, with as much room as the
