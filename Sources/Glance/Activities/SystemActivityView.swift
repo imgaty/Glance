@@ -11,16 +11,14 @@ import SwiftUI
 /// What the Mac announces, and a running timer, in the closed notch's wings, as the iPhone's
 /// Dynamic Island draws its own, the two sides read as one: a device's symbol turning in beside its
 /// battery's ring; the Mac's battery as a word beside its level; a state's symbol in its color beside
-/// a word. A timer counts down on the right, its symbol on the left, or the cover there while music
-/// plays. With Reduce Motion on, nothing turns or shakes.
+/// a word. A timer counts down on the right, its ring on the left; music playing beside it goes in a
+/// bubble of its own (see `IslandBubble`). With Reduce Motion on, nothing turns or shakes.
 struct SystemActivityView: View {
     let restingHeight: CGFloat
     let island: Bool
     let wing: CGFloat
     let alert: NotchAlert?
     let timer: NotchTimer.State?
-    /// Music is playing: its cover keeps the left wing beside a timer.
-    let music: Bool
     /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
     var hoveredButton: AlertButton? = nil
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
@@ -75,8 +73,6 @@ struct SystemActivityView: View {
                 ZStack {
                     TimerRing(state: timer, height: restingHeight)
                         .padding(.leading, restingHeight * TimerLayout.ringInset)
-                        // While music plays, its cover is there instead.
-                        .opacity(music ? 0 : 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
                         HStack(spacing: Self.pauseGap) {

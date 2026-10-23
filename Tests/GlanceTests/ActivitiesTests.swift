@@ -328,4 +328,44 @@ struct ActivitiesTests {
         let late = SystemActivityView.wing(for: .running(until: .now + 600, total: 600), restingHeight: resting, island: false, at: .now + 550)
         for wing in [early, late] { #expect(wing >= resting * TimerLayout.wing && wing <= resting * 1.3) }
     }
+
+    @Test("With music and a timer, the timer has the notch and the music a bubble of its own; a new song swaps them")
+    func bubble() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.activity = true
+        #expect(model.bubble == nil)
+        #expect(!model.opensTimer(fromBubble: false))
+        model.timer = .running(until: .now + 300, total: 300)
+        #expect(model.bubble == .music)
+        #expect(model.opensTimer(fromBubble: false))
+        #expect(!model.opensTimer(fromBubble: true))
+        model.pop = true
+        #expect(model.bubble == .timer)
+        #expect(!model.opensTimer(fromBubble: false))
+        #expect(model.opensTimer(fromBubble: true))
+        model.pop = false
+        // Something announced, or the notch open: it's back in the notch.
+        model.alert = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
+        #expect(model.bubble == nil)
+        model.alert = nil
+        model.state = .open
+        #expect(model.bubble == nil)
+        // A timer alone opens to the timer.
+        model.state = .closed
+        model.activity = false
+        #expect(model.bubble == nil)
+        #expect(model.opensTimer(fromBubble: false))
+    }
+
+    @Test("The bubble buds off the notch's end joined to it, thins away, and rests apart")
+    func bubbleNeck() {
+        let rect = CGRect(x: 0, y: 0, width: 32 * (2 + IslandBubble.gap), height: 32)
+        #expect(BubbleNeck(out: 0).path(in: rect).isEmpty)
+        #expect(!BubbleNeck(out: 0.6).path(in: rect).isEmpty)
+        #expect(BubbleNeck(out: 1).path(in: rect).isEmpty)
+        // Just before it breaks, the bridge is thinner than as the two first part.
+        let late = BubbleNeck(out: 0.95).path(in: rect).boundingRect
+        let early = BubbleNeck(out: 0.88).path(in: rect).boundingRect
+        #expect(late.height < early.height)
+    }
 }

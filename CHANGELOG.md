@@ -34,11 +34,15 @@
   cover to come in the same way as the last one goes.
 - Added a timer, started from the menu bar, the notch's right-click menu or
   Settings, counting down beside the camera as the iPhone's Timer does: a ring
-  emptying beside the minutes left, with a pause symbol while paused. Opened
-  while nothing plays, it's as wide as the iPhone's expanded Timer, with
-  buttons to pause and cancel it beside the time, in a row below the camera.
-  Done, it grows as tall as the iPhone's Alarm, with buttons to start it again
-  or stop its chime.
+  emptying beside the minutes left, with a pause symbol while paused. Opened,
+  it's as wide as the iPhone's expanded Timer, with buttons to pause and cancel
+  it beside the time, in a row below the camera. Done, it grows as tall as the
+  iPhone's Alarm, with buttons to start it again or stop its chime.
+- Added a second activity in a bubble of its own beside the notch, as the
+  Dynamic Island shows two: while a timer runs and something plays, the timer
+  keeps the notch and the music's cover goes in a round bubble as tall as the
+  notch, which buds off its end and runs back into it. Hovering over or
+  clicking each opens its own. While a new song's name shows, the two swap.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

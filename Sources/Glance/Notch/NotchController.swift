@@ -632,9 +632,13 @@ final class NotchController {
         if model.hoveredButton != button { model.hoveredButton = button }
         switch model.state {
         case .closed, .peek:
+            let onBubble = button == nil && bubbleZone?.contains(p) == true
+            if onBubble != model.bubbleHovered { hoverBubble(onBubble, at: p) }
             if button != nil {
                 // On a done timer's button the notch stays as it is, so a click there is the button's.
                 openTask?.cancel()
+            } else if onBubble {
+                // The bubble's own: the notch beside it stays as it is.
             } else if interactiveZone.contains(p) {
                 if model.state == .closed, !holdUntilExit { peek() }
             } else {
@@ -661,6 +665,21 @@ final class NotchController {
         Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
+    /// The pointer onto the bubble beside the notch, or off it: it swells a little, as the notch
+    /// does, and opens to what it shows as the notch opens, resting on it or with a click.
+    private func hoverBubble(_ on: Bool, at p: CGPoint) {
+        if on, model.state == .peek { settle(at: p) }
+        openTask?.cancel()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
+        guard on else {
+            if model.state == .closed { stopPolling() }
+            return
+        }
+        startPolling()
+        let opening = Opening.current
+        if opening.onHover, !holdUntilExit, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
+    }
+
     /// The button of a timer that's done, in the closed notch, at a point on the screen.
     private func alertButton(at p: CGPoint) -> AlertButton? {
         guard NotchTimer.shared.ringing, model.state != .open, let view = panel.contentView else { return nil }
@@ -683,7 +702,11 @@ final class NotchController {
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
         guard pressBeganClosed else { return }
-        model.press(true)
+        if model.bubbleHovered {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
+        } else {
+            model.press(true)
+        }
         let opening = Opening.current
         // With a hold delay, the notch opens while the button is still down.
         if opening.onClick, opening.clickDelay > 0 {
@@ -703,12 +726,18 @@ final class NotchController {
             return
         }
         guard pressBeganClosed else { return }
-        model.press(false)
+        let onBubble = model.bubblePressed
+        if onBubble {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
+        } else {
+            model.press(false)
+        }
         let opening = Opening.current
+        let mouse = NSEvent.mouseLocation
         if opening.clickDelay > 0 {
             // Let go before a hold delay ran out: no open.
             if model.state != .open { openTask?.cancel() }
-        } else if opening.onClick, interactiveZone.contains(NSEvent.mouseLocation) {
+        } else if opening.onClick, onBubble ? bubbleZone?.contains(mouse) == true : interactiveZone.contains(mouse) {
             open()
         }
     }
@@ -749,12 +778,16 @@ final class NotchController {
         closeTask?.cancel()
         closeTask = nil
         popTask?.cancel()
-        // Closed, nothing of either page shows: the page is simply set. Hovered or clicked while a
-        // timer runs and nothing plays, it opens to the timer, as the Dynamic Island expands it.
+        // Closed, nothing of either page shows: the page is simply set. Hovered or clicked where the
+        // timer shows, it opens to the timer, as the Dynamic Island expands it: the notch, while it
+        // has the timer, or the bubble beside it, while the notch has a new song's name.
+        let timerThere = model.opensTimer(fromBubble: model.bubbleHovered)
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) {
-            model.expanded = page == .player && !forDrop && !keyboardHold && model.timer != nil && !model.activity ? .timer : nil
+            model.bubbleHovered = false
+            model.bubblePressed = false
+            model.expanded = page == .player && !forDrop && !keyboardHold && timerThere ? .timer : nil
             model.page = page
             model.pageNudge = 0
             if !forDrop {
@@ -1351,12 +1384,14 @@ final class NotchController {
         return CGRect(x: centerX - m.totalWidth / 2, y: topY - model.gap - m.height, width: m.totalWidth, height: m.height)
     }
 
-    /// Where the pointer counts as "on" the notch. Reaches slightly past the top edge.
+    /// Where the pointer counts as "on" the notch, or the bubble beside it. Reaches slightly past
+    /// the top edge.
     private var interactiveZone: CGRect {
         // Up to the top edge, over an island's gap too, so pushing the pointer to the top finds it.
-        let resting = CGRect(
+        var resting = CGRect(
             x: restingRect.minX - 4, y: restingRect.minY - 4,
             width: restingRect.width + 8, height: restingRect.height + model.gap + 6)
+        if let bubbleZone { resting = resting.union(bubbleZone) }
         switch model.state {
         case .closed: return resting
         case .peek: return resting.union(rect(for: .peek))
@@ -1364,6 +1399,15 @@ final class NotchController {
             let open = rect(for: .open)
             return CGRect(x: open.minX, y: open.minY, width: open.width, height: open.height + 2)
         }
+    }
+
+    /// Where the bubble beside the notch is, while there's one (see `IslandBubble`), with the same
+    /// margin as the notch's, up to the top edge.
+    private var bubbleZone: CGRect? {
+        guard model.bubble != nil else { return nil }
+        let h = model.closedSize.height
+        let left = centerX + model.metrics(for: .closed).bodyWidth / 2 + h * IslandBubble.gap
+        return CGRect(x: left - 4, y: topY - model.gap - h - 4, width: h + 8, height: h + model.gap + 6)
     }
 
     /// A little forgiving margin before an open notch decides the pointer has left.

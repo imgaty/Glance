@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 22 October 2026`
+`Created: 11 October 2026` | `Last updated: 23 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -261,12 +261,18 @@ announced. Turn each of these off in **Settings > Live Activities**.
 Start a timer from Glance's menu in the menu bar, from the notch's right-click
 menu, or from **Settings > Live Activities**. It counts down beside the
 camera as the iPhone's Timer does, a ring emptying beside the minutes left, then
-the seconds in its last minute; next to the cover while something plays, and
-with a pause symbol before the time while it's paused.
+the seconds in its last minute, with a pause symbol before the time while it's
+paused.
 
-Hover over or click the notch while a timer runs and nothing plays, and it opens
-to the timer, in a row below the camera: pause or resume it, or cancel it, with
-the round buttons beside the time.
+While something plays, the music moves out of the notch into a round bubble of
+its own beside it, showing the cover, as the iPhone shows two activities at
+once. While a new song's name shows, the two swap: the name in the notch, the
+timer's ring in the bubble.
+
+Hover over or click the notch while a timer runs, and it opens to the timer, in
+a row below the camera: pause or resume it, or cancel it, with the round buttons
+beside the time. Hover over or click the bubble to open what's in it: the player
+or the timer.
 
 When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
 shaking, and it chimes. Click **Repeat** to start the same length again, or

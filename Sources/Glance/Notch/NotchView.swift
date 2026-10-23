@@ -198,6 +198,30 @@ final class NotchModel: ObservableObject {
         case timer
     }
 
+    /// A second activity in a bubble of its own beside the notch, as the Dynamic Island shows one
+    /// (see `IslandBubble`): music while a timer has the notch, or the timer while a new song is
+    /// announced there. None while the notch is open or something else is announced.
+    var bubble: Bubble? {
+        guard state != .open, alert == nil, !switching, timer != nil, activity else { return nil }
+        return pop ? .timer : .music
+    }
+
+    enum Bubble: Equatable {
+        case music, timer
+    }
+
+    /// Whether opening from the notch, or from the bubble beside it, opens to the timer, as the
+    /// Dynamic Island expands what was touched: the notch, while it has the timer, or the timer
+    /// alone with nothing playing; the bubble, while the timer is in it.
+    func opensTimer(fromBubble: Bool) -> Bool {
+        if fromBubble, let bubble { return bubble == .timer }
+        return timer != nil && (bubble == .music || !activity)
+    }
+
+    /// The pointer is on the bubble, which swells a little, or presses it, which squeezes it.
+    @Published var bubbleHovered = false
+    @Published var bubblePressed = false
+
     /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
     @Published var island: Bool {
         didSet { corners.island = island }
@@ -449,7 +473,7 @@ struct NotchView: View {
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
-                timer: model.activity && model.pop || model.switching ? nil : model.timer, music: model.activity,
+                timer: model.activity && model.pop || model.switching ? nil : model.timer,
                 hoveredButton: model.hoveredButton
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
@@ -537,6 +561,12 @@ struct NotchView: View {
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
         .overlay { keyLine(shape) }
+        // A second activity, in a bubble of its own off the notch's right end.
+        .overlay(alignment: .topTrailing) {
+            IslandBubble(
+                bubble: model.bubble, timer: model.timer, restingHeight: closed.height, flare: m.flare, hidden: isOpen,
+                hovered: model.bubbleHovered, pressed: model.bubblePressed, fullScreen: model.fullScreen)
+        }
         .background {
             ZStack {
                 if thumbnail {
@@ -594,9 +624,9 @@ struct NotchView: View {
     /// The music's wings make way for what's announced, blurring away as the notch folds.
     private var musicAway: Bool { model.alert != nil || model.switching }
     /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist or
-    /// a timer takes its place.
-    private var liveShown: Bool { model.activity && !musicAway && model.state != .open }
-    private var artworkShown: Bool { model.activity && !musicAway }
+    /// a timer takes its place; none of it while the music is in the bubble beside the timer.
+    private var liveShown: Bool { model.activity && !musicAway && model.state != .open && model.bubble != .music }
+    private var artworkShown: Bool { model.activity && !musicAway && model.bubble != .music }
     private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.timer == nil }
 
     /// Opened while a timer runs and nothing plays: the timer's own view, laid out at its open size,
