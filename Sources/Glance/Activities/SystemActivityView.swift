@@ -41,7 +41,8 @@ struct SystemActivityView: View {
                     .islandFade(self.alert != nil)
                     .id(alert.id)
                     .transition(IslandMotion.fade)
-                    .accessibilityElement(children: .ignore)
+                    // Its buttons inside, which VoiceOver can press.
+                    .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size, leaving: self.alert == nil)
@@ -90,6 +91,9 @@ struct SystemActivityView: View {
                         }
                         .foregroundStyle(.orange)
                         .fixedSize()
+                        // In words, rather than the pause symbol's name and the digits.
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(NotchTimer.spoken(timer, at: context.date))
                     }
                     .padding(.trailing, restingHeight * TimerLayout.textInset)
                     .frame(maxWidth: .infinity, alignment: .trailing)

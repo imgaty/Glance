@@ -268,12 +268,16 @@ While something plays, the music keeps the notch and the timer moves out of it
 into a round bubble of its own off the notch's right end, showing its ring, as
 the iPhone shows several activities at once. A third goes off the left end.
 While a new song's name shows, the bubbles run back into the notch, and come out
-again after it.
+again after it. With Reduce Motion on, they fade in and out where they rest.
 
 Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or
 cancel it, with the round buttons left of the camera. The time is right of it,
 and its name under the camera. Bubbles open only with a click.
+
+VoiceOver reads the timer as its name and the time left in words, and whether
+it's paused. It reads a bubble as a button, which opens its activity, and the
+done timer's **Repeat** and **✕** as Repeat and Stop.
 
 A timer started with macOS's own Timer, from the Clock app, Control Center or
 Siri, shows the same way, paused ones too, after Glance's own. Its buttons pause
@@ -288,7 +292,7 @@ When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
 shaking, and it chimes. Click **Repeat** to start the same length again, or
 **✕** to stop it; both leave the notch closed. Opening the notch, or stopping
 it from the menu, stops it too. Pause, resume and cancel it from the same
-menus.
+menus, and repeat or stop it there once it's done.
 
 <br>
 
@@ -299,7 +303,7 @@ Glance's icon in the menu bar opens a menu:
 | Item | Operation |
 | --- | --- |
 | `Glance` switch | Turns the notch off on every display, until it's turned back on |
-| `Timer` | Starts a timer of 1 to 60 minutes; while one runs, pauses or cancels it |
+| `Timer` | Starts a timer of 1 to 60 minutes; while one runs, pauses or cancels it; once it's done, repeats or stops it |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |

@@ -258,6 +258,8 @@ final class NotchModel: ObservableObject {
     /// The bubble the pointer is on, which swells a little, and the one pressed, which squeezes.
     @Published var bubbleHovered: Side?
     @Published var bubblePressed: Side?
+    /// Opens a bubble, as a click on it does, for VoiceOver (set by the notch's controller).
+    var openBubble: (Side) -> Void = { _ in }
 
     /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
     @Published var island: Bool {
@@ -669,9 +671,10 @@ struct NotchView: View {
     private func bubble(_ side: NotchModel.Side, _ m: NotchMetrics) -> some View {
         let activity = model.bubble(side)
         return IslandBubble(
-            side: side, shown: activity != nil, timer: activity.flatMap(model.timer(of:)), restingHeight: model.closedSize.height,
-            flare: m.flare, hidden: model.state == .open, hovered: model.bubbleHovered == side,
-            pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
+            side: side, shown: activity != nil, timer: activity.flatMap(model.timer(of:)),
+            name: activity == .clockTimer ? "Clock timer" : "Timer", open: { model.openBubble(side) },
+            restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
+            hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
     }
 
     /// Opened to a timer: its own view, laid out at its open size, as the player is, so the growing

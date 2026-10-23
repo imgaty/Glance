@@ -13,13 +13,17 @@ import SwiftUI
 /// by the island's height: a circle as wide as the island is tall, level with it, 0.175 of that off
 /// its end, a timer's ring in it as beside the camera. It buds off the notch's end as it comes,
 /// joined to it for a moment as two drops are, and runs back into it as it goes, or as the notch
-/// opens.
+/// opens; with Reduce Motion on, it fades in and out where it rests. VoiceOver names it, and opens
+/// it as a click does.
 struct IslandBubble: View {
     let side: NotchModel.Side
     /// Out of the notch; in it, it's hidden in its end.
     let shown: Bool
-    /// The timer it shows.
+    /// The timer it shows, and its name, as VoiceOver says it.
     let timer: NotchTimer.State?
+    let name: String
+    /// Opens it, as a click on it does.
+    let open: () -> Void
     let restingHeight: CGFloat
     /// How far the notch's top corners flare out past its body.
     let flare: CGFloat
@@ -30,6 +34,7 @@ struct IslandBubble: View {
     /// A full-screen app covers the display: a thin line in its activity's color outlines it, as
     /// it outlines the notch.
     let fullScreen: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The timer it showed, kept on as it runs back into the notch, so it fades as it goes rather
     /// than vanishing.
     @State private var kept: NotchTimer.State?
@@ -41,14 +46,17 @@ struct IslandBubble: View {
 
     var body: some View {
         let h = restingHeight
-        let out: CGFloat = shown ? 1 : 0
+        // With Reduce Motion on, it stays where it rests, and only fades.
+        let out: CGFloat = shown || reduceMotion ? 1 : 0
         let line = h * KeyLine.width
         let trailing = side == .trailing
         // Away from the notch: right off its right end, left off its left.
         let away: CGFloat = trailing ? 1 : -1
         ZStack(alignment: trailing ? .leading : .trailing) {
-            BubbleNeck(out: out).fill(.black)
-                .scaleEffect(x: away)
+            if !reduceMotion {
+                BubbleNeck(out: out).fill(.black)
+                    .scaleEffect(x: away)
+            }
             ZStack {
                 Circle().fill(.black)
                 ZStack {
@@ -64,7 +72,20 @@ struct IslandBubble: View {
                     .frame(width: h + line * 2, height: h + line * 2)
                     .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && shown ? 1 : 0) }
             }
-            .scaleEffect(pressed ? 0.94 : hovered ? 1.06 : 1)
+            // What it shows, in words, and a click's opening.
+            .overlay {
+                if shown, !hidden, let timer {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Color.clear
+                            .accessibilityElement()
+                            .accessibilityLabel(NotchTimer.spoken(timer, name: name, at: context.date))
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityAction(.default, open)
+                    }
+                }
+            }
+            .scaleEffect(reduceMotion ? 1 : pressed ? 0.94 : hovered ? 1.06 : 1)
+            .animation(.easeInOut(duration: 0.25)) { $0.opacity(reduceMotion && !shown ? 0 : 1) }
             .offset(x: away * h * (1 + Self.gap) * out)
         }
         // From inside the notch's end, where it comes out of, to where it rests.
@@ -73,7 +94,6 @@ struct IslandBubble: View {
         // Gone at once as the notch opens; back once it has all but closed, as its black is.
         .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
         .allowsHitTesting(false)
-        .accessibilityHidden(true)
         .onChange(of: timer, initial: true) { _, new in
             changes += 1
             if let new { return kept = new }

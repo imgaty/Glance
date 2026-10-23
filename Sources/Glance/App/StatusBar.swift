@@ -103,6 +103,7 @@ final class StatusBarController: NSObject {
     }
     @objc private func cancelTimer() { NotchTimer.shared.cancel() }
     @objc private func stopTimer() { NotchTimer.shared.stop() }
+    @objc private func repeatTimer() { NotchTimer.shared.repeatLast() }
     @objc private func rebuildFromMenu() { rebuild() }
     @objc private func settingsFromMenu() { onOpenSettings?() }
 
@@ -191,7 +192,7 @@ final class StatusBarController: NSObject {
 
 extension StatusBarController: NSMenuDelegate {
     /// The notch's right-click menu starts with the timer: lengths to start one, or, while one runs,
-    /// Pause and Cancel, or, once it's done, Stop. Made afresh each time it opens.
+    /// Pause and Cancel, or, once it's done, Repeat and Stop. Made afresh each time it opens.
     func menuNeedsUpdate(_ menu: NSMenu) {
         for item in menu.items where item.tag == Self.timerItem { menu.removeItem(item) }
         let timer = NotchTimer.shared
@@ -205,6 +206,7 @@ extension StatusBarController: NSMenuDelegate {
             add(state.isRunning ? "Pause Timer" : "Resume Timer", #selector(pauseOrResumeTimer))
             add("Cancel Timer", #selector(cancelTimer))
         } else if timer.ringing {
+            add("Repeat Timer", #selector(repeatTimer))
             add("Stop Timer", #selector(stopTimer))
         } else {
             let lengths = NSMenu()
@@ -578,6 +580,7 @@ private struct StatusTimer: View {
                     StatusRoundButton(symbol: "xmark", label: "Cancel") { timer.cancel() }
                 } else if timer.ringing {
                     Text("Done").font(.system(size: 13, weight: .medium))
+                    StatusRoundButton(symbol: "arrow.counterclockwise", label: "Repeat") { timer.repeatLast() }
                     StatusRoundButton(symbol: "stop.fill", label: "Stop") { timer.stop() }
                 } else {
                     Text("minutes").font(.system(size: 11)).foregroundStyle(.secondary)

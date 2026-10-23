@@ -234,6 +234,15 @@ final class NotchController {
         panel.contentView = eventView
 
         eventView.onMouseDown = { [weak self] in self?.press() }
+        // Opened without the pointer, as VoiceOver opens a bubble: it stays open with the keyboard, as
+        // when opened with a shortcut, until Escape, or the pointer has been on it and gone.
+        model.openBubble = { [weak self] side in
+            guard let self, self.model.bubble(side) != nil, !self.tucked else { return }
+            self.model.bubbleHovered = side
+            self.open()
+            self.keyboardHold = true
+            self.takeKeys()
+        }
         eventView.onMouseUp = { [weak self] in self?.release() }
         eventView.onScroll = { [weak self] event in self?.scrolled(event) }
         eventView.onMouseMoved = { [weak self] in self?.pointerMoved(to: NSEvent.mouseLocation) }

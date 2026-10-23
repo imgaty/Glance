@@ -144,6 +144,16 @@ final class NotchTimer: ObservableObject {
         return minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(minutes % 60)m"
     }
 
+    /// As VoiceOver says it: its name, what's left in words, and that it's paused: "Timer, 4 minutes,
+    /// 57 seconds left, paused".
+    static func spoken(_ state: State, name: String = "Timer", at date: Date = .now) -> String {
+        let words = DateComponentsFormatter()
+        words.unitsStyle = .full
+        words.allowedUnits = [.hour, .minute, .second]
+        let left = words.string(from: state.left(at: date).rounded(.up)) ?? format(state.left(at: date))
+        return "\(name), \(left) left" + (state.isRunning ? "" : ", paused")
+    }
+
     /// A preset's name in the menu: 1 Minute, 5 Minutes, 1 Hour.
     static func name(minutes: Int) -> String {
         minutes % 60 == 0 ? (minutes == 60 ? "1 Hour" : "\(minutes / 60) Hours") : (minutes == 1 ? "1 Minute" : "\(minutes) Minutes")

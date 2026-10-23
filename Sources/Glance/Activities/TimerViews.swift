@@ -205,6 +205,7 @@ struct TimerDoneView: View {
             HStack(spacing: h * TimerLayout.iconGap) {
                 // Solid, its hand cut out, as the Alarm's clock is.
                 ArrivingSymbol(symbol: "timer.circle.fill", color: .orange, size: h * TimerLayout.icon * 0.9, side: h * TimerLayout.icon, shakes: true)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(Self.name(length))
                         .font(.system(size: h * TimerLayout.small, weight: .semibold))
@@ -225,10 +226,12 @@ struct TimerDoneView: View {
                         .foregroundStyle(.orange)
                 }
                 .reportsFrame(.again)
+                .spokenButton("Repeat") { NotchTimer.shared.repeatLast() }
                 IslandCircle(height: h, tint: .white, highlighted: hovered == .stop) {
                     CrossGlyph(height: h)
                 }
                 .reportsFrame(.stop)
+                .spokenButton("Stop") { NotchTimer.shared.stop() }
             }
             .padding(.trailing, h * TimerLayout.buttonInset)
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -268,6 +271,15 @@ struct AlertButtonFrames: PreferenceKey {
 }
 
 extension View {
+    /// A drawn button, which the closed notch presses by where it is, as a button VoiceOver can name
+    /// and press.
+    fileprivate func spokenButton(_ label: String, action: @escaping () -> Void) -> some View {
+        accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, action)
+    }
+
     fileprivate func reportsFrame(_ button: AlertButton) -> some View {
         background {
             GeometryReader { proxy in

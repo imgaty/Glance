@@ -39,13 +39,16 @@
   it's as tall as the iPhone's expanded Timer, with buttons to pause and cancel
   it left of the camera, the time right of it and its name under the camera, as
   far in from the notch's ends as the player is. Done, it grows as tall as the
-  iPhone's Alarm, with buttons to start it again or stop its chime.
+  iPhone's Alarm, with buttons to start it again or stop its chime, which the
+  menu bar's timer and the notch's right-click menu offer too. VoiceOver reads
+  it as its name and the time left in words.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and
   the one after off its left. Each buds off the notch's end and runs back into
   it, and into it while a new song's name shows. Clicking a bubble opens its
-  own activity.
+  own activity. VoiceOver reads each as a button that opens it. With Reduce
+  Motion on, bubbles fade in and out where they rest.
 - Added timers started with macOS's own Timer, from the Clock app, Control
   Center or Siri, read from what macOS keeps of them: one counts down in the
   notch or a bubble as Glance's own does, paused ones too. While it shows,
