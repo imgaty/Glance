@@ -41,7 +41,7 @@ struct ActivitiesTests {
     @Test("One that stays shows until it's dismissed")
     func staying() {
         let activities = Activities()
-        activities.post(NotchAlert(kind: .timerDone, content: .timerDone(length: 300), spoken: "Timer done", stays: true))
+        activities.post(NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true))
         activities.dismiss(.charging)
         #expect(activities.alert?.kind == .timerDone)
         activities.dismiss(.timerDone)
@@ -132,33 +132,46 @@ struct ActivitiesTests {
         #expect(DeviceWatch.symbol(product: 0x0001) == nil)
     }
 
-    @Test("A timer counts down, pauses, resumes and cancels; done, it says so until it's stopped")
-    func timer() {
-        let activities = Activities()
-        let timer = NotchTimer(activities: activities, sound: nil)
-        timer.start(seconds: 300)
-        #expect(timer.state?.isRunning == true)
-        #expect(abs((timer.state?.left() ?? 0) - 300) < 1)
-        timer.pause()
-        #expect(timer.state?.isRunning == false)
-        #expect(abs((timer.state?.left() ?? 0) - 300) < 1)
-        timer.resume()
-        #expect(timer.state?.isRunning == true)
-        timer.cancel()
-        #expect(timer.state == nil)
-        timer.start(seconds: 60)
-        timer.done()
-        #expect(timer.state == nil)
-        #expect(timer.ringing)
-        #expect(activities.alert?.kind == .timerDone)
-        // Opening the notch stops only a timer that's done.
-        timer.start(seconds: 60)
-        timer.stop(ifDone: true)
-        #expect(timer.state != nil)
-        timer.done()
-        timer.stop(ifDone: true)
-        #expect(!timer.ringing)
-        #expect(activities.alert == nil)
+    @Test("Clock's stopwatch is read from what macOS keeps: running from when it started less what was on it, stopped, or reset")
+    func stopwatch() {
+        func watch(_ state: Int, start: Date? = nil, laps: TimeInterval = 0, lap: TimeInterval = 0) -> [String: Any] {
+            var watch: [String: Any] = ["MTStopwatchState": state, "MTStopwatchPreviousLapsTotalInterval": laps, "MTStopwatchOffset": lap]
+            if let start { watch["MTStopwatchStartDate"] = start }
+            return ["$MTStopwatch": watch]
+        }
+        let now = Date.now
+        #expect(Stopwatch.current(in: []) == nil)
+        #expect(Stopwatch.current(in: [watch(0)]) == nil)
+        // Running, after a lap of 4.5 seconds and 3 more seconds before it was last stopped.
+        let running = Stopwatch.current(in: [watch(2, start: now - 2, laps: 4.5, lap: 3)])
+        #expect(running?.isRunning == true)
+        #expect(abs((running?.elapsed(at: now) ?? 0) - 9.5) < 0.001)
+        let stopped = Stopwatch.current(in: [watch(1, laps: 4.5, lap: 3)])
+        #expect(stopped == .stopped(elapsed: 7.5))
+        // As Clock shows it: to the second beside the camera, to the hundredth opened.
+        #expect(Stopwatch.format(7.41) == "0:07")
+        #expect(Stopwatch.format(727.41) == "12:07")
+        #expect(Stopwatch.format(3727.41) == "1:02:07")
+        #expect(Stopwatch.format(7.416, hundredths: true) == "0:07" + (Locale.current.decimalSeparator ?? ".") + "41")
+    }
+
+    @Test("A Clock timer that rings is told by when macOS notes it rang, the last one's length and label")
+    func timerRings() {
+        let now = Date.now
+        func rung(_ fired: Date?, _ length: TimeInterval, _ title: String) -> [String: Any] {
+            var timer: [String: Any] = ["MTTimerState": 1, "MTTimerDuration": length, "MTTimerTitle": title]
+            if let fired { timer["MTTimerFiredDate"] = fired }
+            return ["$MTTimer": timer]
+        }
+        #expect(ClockActivity.lastRung(in: [rung(nil, 300, "")]) == nil)
+        let last = ClockActivity.lastRung(in: [rung(now - 600, 300, ""), rung(now - 2, 90, "Pasta"), rung(nil, 60, "")])
+        #expect(last?.date == now - 2)
+        #expect(last?.length == 90)
+        #expect(last?.title == "Pasta")
+        // Started again from Clock's picker, which reads the length last started.
+        #expect(ClockActivity.seconds("00:05:00") == 300)
+        #expect(ClockActivity.seconds("01:02:03") == 3723)
+        #expect(ClockActivity.seconds("5 minutes") == nil)
     }
 
     @Test("A device arrives as AirPods do on the iPhone: the device and its ring by the notch's height")
@@ -235,9 +248,10 @@ struct ActivitiesTests {
         #expect(NotchTimer.format(299.2) == "5:00")
         #expect(NotchTimer.format(3725) == "1:02:05")
         #expect(NotchTimer.format(0) == "0:00")
-        #expect(NotchTimer.name(minutes: 1) == "1 Minute")
-        #expect(NotchTimer.name(minutes: 15) == "15 Minutes")
-        #expect(NotchTimer.name(minutes: 60) == "1 Hour")
+        // A rung timer's length, as its preset is named, in words that start with its number.
+        #expect(NotchTimer.length(300).hasPrefix("5 "))
+        #expect(NotchTimer.length(3600).hasPrefix("1 "))
+        #expect(NotchTimer.length(300) == NotchTimer.length(300).capitalized)
     }
 
     @Test("The wings widen for an announcement over a song's, and for a timer, as far as their words need")
@@ -246,7 +260,7 @@ struct ActivitiesTests {
         let resting = model.closedSize.height
         #expect(model.wing == 0)
         model.timer = .running(until: .now + 300, total: 300)
-        model.timerWing = SystemActivityView.wing(for: model.timer!, restingHeight: resting, island: false)
+        model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: resting, island: false)
         #expect(model.wing == model.timerWing)
         // With music, the timer goes in a bubble, and the notch has music's wings.
         model.activity = true
@@ -262,9 +276,13 @@ struct ActivitiesTests {
         #expect(model.wing == model.alertWing)
         #expect(model.alertWing > resting && model.alertWing <= SystemActivityView.maxWing)
         // An hour or more takes more room than minutes.
-        let minutes = SystemActivityView.wing(for: .running(until: .now + 300, total: 300), restingHeight: resting, island: false)
-        let hours = SystemActivityView.wing(for: .running(until: .now + 3_700, total: 3_700), restingHeight: resting, island: false)
+        let minutes = SystemActivityView.wing(for: .timer(.running(until: .now + 300, total: 300)), restingHeight: resting, island: false)
+        let hours = SystemActivityView.wing(for: .timer(.running(until: .now + 3_700, total: 3_700)), restingHeight: resting, island: false)
         #expect(hours > minutes)
+        // The stopwatch gains a digit at an hour.
+        let short = SystemActivityView.wing(for: .stopwatch(.running(since: .now - 30)), restingHeight: resting, island: false)
+        let long = SystemActivityView.wing(for: .stopwatch(.running(since: .now - 3_700)), restingHeight: resting, island: false)
+        #expect(long > short)
     }
 
     @Test("Beside the camera, a timer counts down in whole minutes from ten minutes, then in minutes and seconds")
@@ -280,21 +298,18 @@ struct ActivitiesTests {
         #expect(NotchTimer.condensed(3900) == "1h 5m")
     }
 
-    @Test("A done timer is as tall as the Alarm, the closed notch with it; repeating it starts the same length again")
+    @Test("A done timer is as tall as the Alarm, the closed notch with it; a long label is cut short")
     func doneTimer() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         #expect(model.restingHeight == 32)
-        model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300), spoken: "Timer done", stays: true)
+        model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
         #expect(model.restingTall)
         #expect(model.restingHeight == (32 * TimerLayout.tall).rounded())
         #expect(model.metrics(for: .closed).height == model.restingHeight)
-        let timer = NotchTimer(activities: Activities(), sound: nil)
-        timer.start(seconds: 300)
-        timer.done()
-        #expect(timer.ringing && timer.state == nil)
-        timer.repeatLast()
-        #expect(!timer.ringing && timer.state?.total == 300)
-        timer.cancel()
+        let plain = TimerDoneView.wing(length: 300, restingHeight: 32)
+        let long = TimerDoneView.wing(length: 300, name: String(repeating: "Long label ", count: 10), restingHeight: 32)
+        #expect(long >= plain)
+        #expect(long <= 32 * (TimerLayout.iconInset + TimerLayout.icon + TimerLayout.iconGap + TimerLayout.titleLimit + TimerLayout.snug) + 1)
     }
 
     @Test("Opened to a timer, the notch is as tall as the Timer's expanded view, with the player's room at its ends and beside the camera")
@@ -311,6 +326,12 @@ struct ActivitiesTests {
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
+        // Opened to the stopwatch, the same, its time to the hundredth.
+        model.timer = nil
+        model.stopwatch = .running(since: .now - 7)
+        model.expanded = .stopwatch
+        #expect(model.metrics(for: .open).height == open.height)
+        #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
         // On an island, which has no camera, as wide as the iPhone's.
         let island = NotchModel(closedSize: CGSize(width: 126, height: 32), layout: .top, hasCamera: false, island: true)
         island.timer = .running(until: .now + 300, total: 300)
@@ -321,9 +342,11 @@ struct ActivitiesTests {
     @Test("Paused, a timer makes room for its pause symbol; a device not in 3D, for its level; a long name scrolls within the limit")
     func roomForWhatShows() {
         let resting: CGFloat = 32
-        let running = SystemActivityView.wing(for: .running(until: .now + 300, total: 300), restingHeight: resting, island: false)
-        let paused = SystemActivityView.wing(for: .paused(left: 300, total: 300), restingHeight: resting, island: false)
+        let running = SystemActivityView.wing(for: .timer(.running(until: .now + 300, total: 300)), restingHeight: resting, island: false)
+        let paused = SystemActivityView.wing(for: .timer(.paused(left: 300, total: 300)), restingHeight: resting, island: false)
         #expect(paused > running)
+        let stopped = SystemActivityView.wing(for: .stopwatch(.stopped(elapsed: 7)), restingHeight: resting, island: false)
+        #expect(stopped > SystemActivityView.wing(for: .stopwatch(.running(since: .now - 7)), restingHeight: resting, island: false))
         let layout = DeviceLayout(height: resting)
         let keyboard = NotchAlert(
             kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "Magic Keyboard connected, 15 percent")
@@ -333,8 +356,8 @@ struct ActivitiesTests {
         #expect(SystemActivityView.maxWing <= 120)
         // Counting minutes, and in its last minute seconds, a timer's wings stay about as narrow as the
         // iPhone's, a little wider only where the camera housing stops what they show going under it.
-        let early = SystemActivityView.wing(for: .running(until: .now + 600, total: 600), restingHeight: resting, island: false)
-        let late = SystemActivityView.wing(for: .running(until: .now + 600, total: 600), restingHeight: resting, island: false, at: .now + 550)
+        let early = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false)
+        let late = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false, at: .now + 550)
         for wing in [early, late] { #expect(wing >= resting * TimerLayout.wing && wing <= resting * 1.3) }
     }
 
@@ -351,14 +374,14 @@ struct ActivitiesTests {
         #expect(model.bubble(.trailing) == .timer)
         #expect(model.bubble(.leading) == nil)
         #expect(model.wing == 32)
-        #expect(model.notchTimer == nil)
-        // macOS's own timer goes off its left end.
-        model.clockTimer = .paused(left: 120, total: 300)
-        #expect(model.bubbles == [.timer, .clockTimer])
-        #expect(model.bubble(.leading) == .clockTimer)
+        #expect(model.notchClock == nil)
+        // The stopwatch goes off its left end.
+        model.stopwatch = .stopped(elapsed: 12)
+        #expect(model.bubbles == [.timer, .stopwatch])
+        #expect(model.bubble(.leading) == .stopwatch)
         // Each opens to its own; the notch, to the player.
         #expect(model.expansion(fromBubble: .trailing) == .timer)
-        #expect(model.expansion(fromBubble: .leading) == .clockTimer)
+        #expect(model.expansion(fromBubble: .leading) == .stopwatch)
         #expect(model.expansion(fromBubble: nil) == nil)
         // While a new song's name shows, something else is announced, or the notch is open, they run
         // back into it.
@@ -370,14 +393,14 @@ struct ActivitiesTests {
         model.alert = nil
         model.state = .open
         #expect(model.bubbles.isEmpty)
-        // Nothing playing, the first timer has the notch, and the next a bubble.
+        // Nothing playing, the timer has the notch, and the stopwatch a bubble.
         model.state = .closed
         model.activity = false
-        #expect(model.notchTimer == model.timer)
+        #expect(model.notchClock == .timer(model.timer!))
         #expect(model.wing == 60)
-        #expect(model.bubbles == [.clockTimer])
+        #expect(model.bubbles == [.stopwatch])
         #expect(model.expansion(fromBubble: nil) == .timer)
-        #expect(model.expansion(fromBubble: .trailing) == .clockTimer)
+        #expect(model.expansion(fromBubble: .trailing) == .stopwatch)
     }
 
     @Test("macOS's own timer is read from what macOS keeps: the running one ending first, else the one paused last")
@@ -396,10 +419,10 @@ struct ActivitiesTests {
         let running = timer(3, 300, until: now + 120)
         let runningLonger = timer(3, 600, until: now + 500)
         let ended = timer(3, 300, until: now - 5)
-        #expect(SystemTimer.current(in: [], at: now) == nil)
-        #expect(SystemTimer.current(in: [stopped, ended], at: now) == nil)
-        #expect(SystemTimer.current(in: [stopped, runningLonger, running, paused], at: now)?.state == .running(until: now + 120, total: 300))
-        #expect(SystemTimer.current(in: [pausedEarlier, stopped, paused], at: now)?.state == .paused(left: 559, total: 600))
+        #expect(ClockActivity.timer(in: [], at: now) == nil)
+        #expect(ClockActivity.timer(in: [stopped, ended], at: now) == nil)
+        #expect(ClockActivity.timer(in: [stopped, runningLonger, running, paused], at: now)?.state == .running(until: now + 120, total: 300))
+        #expect(ClockActivity.timer(in: [pausedEarlier, stopped, paused], at: now)?.state == .paused(left: 559, total: 600))
     }
 
     @Test("A Clock timer goes by the label it was given, never Clock's placeholder, and a long one is cut short")
@@ -409,21 +432,19 @@ struct ActivitiesTests {
             if let title { timer["MTTimerTitle"] = title }
             return ["$MTTimer": timer]
         }
-        #expect(SystemTimer.current(in: [running("Pasta")])?.title == "Pasta")
-        #expect(SystemTimer.current(in: [running("CURRENT_TIMER")])?.title == nil)
-        #expect(SystemTimer.current(in: [running(" ")])?.title == nil)
-        #expect(SystemTimer.current(in: [running(nil)])?.title == nil)
-        // Shown as its label, or Timer; spoken as its label, or told apart from Glance's own.
+        #expect(ClockActivity.timer(in: [running("Pasta")])?.title == "Pasta")
+        #expect(ClockActivity.timer(in: [running("CURRENT_TIMER")])?.title == nil)
+        #expect(ClockActivity.timer(in: [running(" ")])?.title == nil)
+        #expect(ClockActivity.timer(in: [running(nil)])?.title == nil)
+        // Shown and spoken as its label, or Timer; the stopwatch as Stopwatch.
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
-        #expect(model.name(of: .clockTimer) == "Timer")
-        #expect(model.spokenName(of: .clockTimer) == "Clock timer")
-        model.clockTimerName = "Pasta"
-        #expect(model.name(of: .clockTimer) == "Pasta")
-        #expect(model.spokenName(of: .clockTimer) == "Pasta")
         #expect(model.name(of: .timer) == "Timer")
+        model.timerName = "Pasta"
+        #expect(model.name(of: .timer) == "Pasta")
+        #expect(model.name(of: .stopwatch) == "Stopwatch")
         // Beside the camera it runs under the camera, which the width doesn't change for; on an
         // island, it widens the notch only so far.
-        let state = NotchTimer.State.paused(left: 300, total: 300)
+        let state = ClockShown.timer(.paused(left: 300, total: 300))
         #expect(ExpandedTimerView.width(for: state, name: "Pasta", restingHeight: 32, camera: 185) == ExpandedTimerView.width(for: state, restingHeight: 32, camera: 185))
         let long = String(repeating: "Long label ", count: 10)
         let plain = 32 * TimerLayout.wide

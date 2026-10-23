@@ -134,13 +134,13 @@ final class NotchModel: ObservableObject {
     /// Between what the wings show and what's announced, the notch folds to rest first and opens
     /// again from there, as the Dynamic Island switches between activities.
     @Published var switching = false
-    /// A timer counting down beside the camera, and each wing's width for the one in the notch.
+    /// Clock's timer counting down beside the camera, and its stopwatch counting up (see
+    /// `ClockActivity`); and each wing's width for the one in the notch.
     @Published var timer: NotchTimer.State?
+    @Published var stopwatch: Stopwatch?
     @Published var timerWing: CGFloat = 0
-    /// macOS's own timer, started from Clock (see `SystemTimer`).
-    @Published var clockTimer: NotchTimer.State?
-    /// Its label, as named in Clock.
-    @Published var clockTimerName: String?
+    /// The timer's label, as named in Clock.
+    @Published var timerName: String?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -195,12 +195,12 @@ final class NotchModel: ObservableObject {
     /// A full-screen app covers the display: around the notch it's all black.
     @Published var fullScreen = false
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
-    /// player: one of the timers.
+    /// player: the timer or the stopwatch.
     @Published var expanded: Activity?
 
-    /// What can show at once, in the order they take the notch: music, Glance's timer, macOS's.
+    /// What can show at once, in the order they take the notch: music, Clock's timer, its stopwatch.
     enum Activity: Equatable {
-        case music, timer, clockTimer
+        case music, timer, stopwatch
     }
 
     /// Those showing now, in that order.
@@ -208,23 +208,23 @@ final class NotchModel: ObservableObject {
         var shown: [Activity] = []
         if activity { shown.append(.music) }
         if timer != nil { shown.append(.timer) }
-        if clockTimer != nil { shown.append(.clockTimer) }
+        if stopwatch != nil { shown.append(.stopwatch) }
         return shown
     }
 
-    /// An activity's timer, if it's one.
-    func timer(of activity: Activity) -> NotchTimer.State? {
+    /// An activity's timer or stopwatch, if it's one.
+    func clock(of activity: Activity) -> ClockShown? {
         switch activity {
         case .music: nil
-        case .timer: timer
-        case .clockTimer: clockTimer
+        case .timer: timer.map(ClockShown.timer)
+        case .stopwatch: stopwatch.map(ClockShown.stopwatch)
         }
     }
 
-    /// The timer in the notch, when one comes first; the first timer, which has the notch once nothing
-    /// plays.
-    var notchTimer: NotchTimer.State? { activities.first.flatMap(timer(of:)) }
-    var firstTimer: NotchTimer.State? { timer ?? clockTimer }
+    /// The timer or stopwatch in the notch, when one comes first; the first of them, which has the
+    /// notch once nothing plays.
+    var notchClock: ClockShown? { activities.first.flatMap(clock(of:)) }
+    var firstClock: ClockShown? { timer.map(ClockShown.timer) ?? stopwatch.map(ClockShown.stopwatch) }
 
     /// The activities after the first, each in a bubble of its own beside the notch, as the Dynamic
     /// Island shows them (see `IslandBubble`): the second off its right end, the third off its left.
@@ -252,16 +252,17 @@ final class NotchModel: ObservableObject {
         return activity == .music ? nil : activity
     }
 
-    /// The timer opened to, and the room the camera takes in the middle of its row: none on an
-    /// island, which has no camera.
-    var expandedTimer: NotchTimer.State? { expanded.flatMap(timer(of:)) }
-    /// A timer's name as it shows, Timer unless Clock's was given a label, and as VoiceOver says it,
-    /// telling Clock's apart.
+    /// The timer or stopwatch opened to, and the room the camera takes in the middle of its row:
+    /// none on an island, which has no camera.
+    var expandedClock: ClockShown? { expanded.flatMap(clock(of:)) }
+    /// Its name as it shows and as VoiceOver says it: Timer, unless it was given a label in Clock,
+    /// or Stopwatch.
     func name(of activity: Activity) -> String {
-        activity == .clockTimer ? clockTimerName ?? "Timer" : "Timer"
-    }
-    func spokenName(of activity: Activity) -> String {
-        activity == .clockTimer ? clockTimerName ?? "Clock timer" : "Timer"
+        switch activity {
+        case .music: "Music"
+        case .timer: timerName ?? "Timer"
+        case .stopwatch: "Stopwatch"
+        }
     }
     var camera: CGFloat { island ? 0 : closedSize.width }
 
@@ -315,8 +316,9 @@ final class NotchModel: ObservableObject {
         if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
-        // A timer with the notch; behind music, it's in a bubble of its own (see `bubbles`).
-        if notchTimer != nil { return max(timerWing, resting) }
+        // A timer or the stopwatch with the notch; behind music, in a bubble of its own (see
+        // `bubbles`).
+        if notchClock != nil { return max(timerWing, resting) }
         return activity ? resting : 0
     }
 
@@ -348,7 +350,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded != nil:
                 (
                     ExpandedTimerView.width(
-                        for: expandedTimer ?? .paused(left: 0, total: 0), name: expanded.map(name(of:)) ?? "Timer",
+                        for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? "Timer",
                         restingHeight: closedSize.height, camera: camera)
                         + pull * 0.35,
                     (closedSize.height * TimerLayout.tall).rounded() + pull
@@ -528,8 +530,8 @@ struct NotchView: View {
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
-                timer: model.activity || model.switching ? nil : model.notchTimer,
-                timerName: model.activities.first.map(model.spokenName(of:)) ?? "Timer",
+                clock: model.activity || model.switching ? nil : model.notchClock,
+                timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
                 hoveredButton: model.hoveredButton, open: { model.openNotch() }
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
@@ -686,21 +688,20 @@ struct NotchView: View {
     private func bubble(_ side: NotchModel.Side, _ m: NotchMetrics) -> some View {
         let activity = model.bubble(side)
         return IslandBubble(
-            side: side, shown: activity != nil, timer: activity.flatMap(model.timer(of:)),
-            name: activity.map(model.spokenName(of:)) ?? "Timer", open: { model.openBubble(side) },
+            side: side, shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
+            name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble(side) },
             restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
             hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
     }
 
-    /// Opened to a timer: its own view, laid out at its open size, as the player is, so the growing
-    /// shape reveals it.
+    /// Opened to the timer or the stopwatch: its own view, laid out at its open size, as the player
+    /// is, so the growing shape reveals it.
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
-        if let timer = model.expandedTimer {
+        if let clock = model.expandedClock {
             let h = model.closedSize.height
-            let system = model.expanded == .clockTimer
             let name = model.expanded.map(model.name(of:)) ?? "Timer"
-            let width = ExpandedTimerView.width(for: timer, name: name, restingHeight: h, camera: model.camera)
-            ExpandedTimerView(state: timer, name: name, restingHeight: h, camera: model.camera, width: width, system: system)
+            let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
+            ExpandedTimerView(shown: clock, name: name, restingHeight: h, camera: model.camera, width: width)
                 .frame(width: width, height: (h * TimerLayout.tall).rounded())
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
@@ -724,7 +725,7 @@ struct NotchView: View {
         if model.switching { return nil }
         if let alert = model.alert { return alert.content.tint }
         if model.activity { return nowPlaying.accent(from: accentSource) }
-        if model.notchTimer != nil { return .orange }
+        if model.notchClock != nil { return .orange }
         return nil
     }
 

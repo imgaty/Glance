@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 23 October 2026`
+`Created: 11 October 2026` | `Last updated: 24 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -256,49 +256,58 @@ Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 What's connected when Glance starts, or reconnects as the Mac wakes, isn't
 announced. Turn each of these off in **Settings > Live Activities**.
 
-### Timer
+### Timer and stopwatch
 
-Start a timer from Glance's menu in the menu bar, from the notch's right-click
-menu, or from **Settings > Live Activities**. It counts down beside the
-camera as the iPhone's Timer does, a ring emptying beside the time left: in
-minutes from ten minutes up, then in minutes and seconds, with a pause symbol
-before the time while it's paused.
+The timer and the stopwatch are Clock's: start them in the Clock app, in Control
+Center or with Siri, and the notch shows them. **Open Clock** in
+**Settings > Live Activities** opens Clock.
+
+A timer counts down beside the camera as the iPhone's Timer does, a ring
+emptying beside the time left: in minutes from ten minutes up, then in minutes
+and seconds, with a pause symbol before the time while it's paused. It goes by
+the label it was given in Clock, if any. The stopwatch counts up beside its
+symbol, with the pause symbol while it's stopped.
 
 While something plays, the music keeps the notch and the timer moves out of it
 into a round bubble of its own off the notch's right end, showing its ring, as
-the iPhone shows several activities at once. A third goes off the left end.
-While a new song's name shows, the bubbles run back into the notch, and come out
-again after it. With Reduce Motion on, they fade in and out where they rest.
+the iPhone shows several activities at once. The stopwatch goes off the left
+end, or the right if there's no timer. While a new song's name shows, the
+bubbles run back into the notch, and come out again after it. With Reduce Motion
+on, they fade in and out where they rest.
 
 Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or
 cancel it, with the round buttons left of the camera. The time is right of it,
-and its name under the camera. Bubbles open only with a click.
+and its name under the camera. Opened, the stopwatch counts to the hundredth,
+with buttons to start or stop it, and to lap or reset it. Bubbles open only
+with a click.
+
+Its buttons work as Clock's own do, and what they do shows at once: Glance opens
+Clock hidden, shows it for a moment behind every other window, and, if it wasn't
+open, quits it half a minute after the last press. Without `Accessibility`,
+they're dimmed, and pressing one asks for it (see [Permissions](#permissions)).
+Glance's menu in the menu bar and the notch's right-click menu have the same
+buttons.
+
+When a timer rings, the notch grows as tall as the iPhone's Alarm, its symbol
+shaking, beside macOS's own alert and chime. Click **Repeat** to start the same
+length again in Clock, or **✕** to stop saying it; both leave the notch closed.
+Opening the notch stops saying it too. If Clock has been set to another length
+since, **Repeat** opens Clock on its timers.
+
+While a timer shows, Glance takes macOS's own timer out of the menu bar, with
+`Accessibility` allowed; macOS keeps that choice. To have it back in the menu
+bar, turn off **Hide in menu bar** in **Settings > Live Activities**, then click
+**Menu Bar Settings…** there and choose `Show When Active` for Timer. Turn off
+**Timers** or **Stopwatch** there to leave them out of the notch.
 
 VoiceOver reads the timer as its name and the time left in words, and whether
-it's paused. It reads the timer in the notch and each bubble as a button, which
-opens its activity, and the done timer's **Repeat** and **✕** as Repeat and
-Stop.
+it's paused, and the stopwatch as its time. It reads each, in the notch or a
+bubble, as a button, which opens it, and the rung timer's **Repeat** and **✕**
+as Repeat and Stop.
 
-A timer started with macOS's own Timer, from the Clock app, Control Center or
-Siri, shows the same way, paused ones too, after Glance's own, by the label it
-was given in Clock, if any. Its buttons pause and cancel it as Clock's own
-buttons do, and it shows paused, running or gone at once: Glance opens Clock
-hidden, shows it for a moment behind every other window, and, if it wasn't open,
-quits it half a minute after the last press. Without `Accessibility`, its
-buttons are dimmed, and pressing one asks for it. Glance's menu in the menu bar
-and the notch's right-click menu pause and cancel it too. While it shows, Glance
-takes macOS's own timer out of the menu bar, with `Accessibility` allowed (see
-[Permissions](#permissions)); macOS keeps that choice. To have it back in the
-menu bar, turn off **Hide in menu bar** in **Settings > Live Activities**, then
-click **Menu Bar Settings…** there and choose `Show When Active` for Timer. Turn
-off **Clock timers** to leave macOS's timers out of the notch.
-
-When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
-shaking, and it chimes. Click **Repeat** to start the same length again, or
-**✕** to stop it; both leave the notch closed. Opening the notch, or stopping
-it from the menu, stops it too. Pause, resume and cancel it from the same
-menus, and repeat or stop it there once it's done.
+Glance doesn't show Clock's alarms: macOS keeps them where other apps can't
+read them.
 
 <br>
 
@@ -309,8 +318,8 @@ Glance's icon in the menu bar opens a menu:
 | Item | Operation |
 | --- | --- |
 | `Glance` switch | Turns the notch off on every display, until it's turned back on |
-| `Timer` | Starts a timer of 1 to 60 minutes; while one runs, pauses or cancels it; once it's done, repeats or stops it |
-| `Clock Timer` | While macOS's own timer shows, pauses, resumes or cancels it |
+| `Timer` | While Clock's timer shows, pauses, resumes or cancels it; once it has rung, repeats it or stops saying it |
+| `Stopwatch` | While Clock's stopwatch shows, starts or stops it, and laps or resets it |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
@@ -380,8 +389,9 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay |
-| `Timer` | Starts a timer, pauses or cancels the one running, or repeats or stops it once it's done |
-| `Clock timers` | Shows timers started in the Clock app, in Control Center or with Siri |
+| `Clock` | **Open Clock** opens the Clock app, where timers and the stopwatch start |
+| `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
+| `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed |
 | `Menu bar timer` | **Menu Bar Settings…** opens **System Settings > Menu Bar**, to bring macOS's own timer back |
 
@@ -421,7 +431,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; and taking macOS's own timer out of the menu bar while the notch shows it |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; and taking macOS's own timer out of the menu bar while the notch shows it |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>

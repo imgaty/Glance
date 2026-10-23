@@ -8,40 +8,42 @@
 import AppKit
 import SwiftUI
 
-/// What the Mac announces, and a running timer, in the closed notch's wings, as the iPhone's
-/// Dynamic Island draws its own, the two sides read as one: a device's symbol turning in beside its
-/// battery's ring; the Mac's battery as a word beside its level; a state's symbol in its color beside
-/// a word. A timer counts down on the right, its ring on the left; music playing beside it goes in a
-/// bubble of its own (see `IslandBubble`). With Reduce Motion on, nothing turns or shakes.
+/// What the Mac announces, and Clock's timer or stopwatch, in the closed notch's wings, as the
+/// iPhone's Dynamic Island draws its own, the two sides read as one: a device's symbol turning in
+/// beside its battery's ring; the Mac's battery as a word beside its level; a state's symbol in its
+/// color beside a word. A timer counts down on the right, its ring on the left; the stopwatch counts
+/// up beside its symbol; music playing beside them goes in a bubble of its own (see `IslandBubble`).
+/// With Reduce Motion on, nothing turns or shakes.
 struct SystemActivityView: View {
     let restingHeight: CGFloat
     let island: Bool
     let wing: CGFloat
     let alert: NotchAlert?
-    let timer: NotchTimer.State?
-    /// Its name, as VoiceOver says it.
+    /// Clock's timer or stopwatch, when it has the notch.
+    let clock: ClockShown?
+    /// The timer's name, as VoiceOver says it.
     var timerName = "Timer"
     /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
     var hoveredButton: AlertButton? = nil
-    /// Opens the notch to the timer, as VoiceOver's press does.
+    /// Opens the notch to the timer or stopwatch, as VoiceOver's press does.
     var open: () -> Void = {}
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
     /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
     /// start, so it never leaves as well as fading.
     @State private var leaving: NotchAlert?
-    @State private var leavingTimer: NotchTimer.State?
+    @State private var leavingClock: ClockShown?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (alert: 0, timer: 0)
+    @State private var changes = (alert: 0, clock: 0)
 
     var body: some View {
         let side = Self.side(restingHeight, island)
         let size = LiveActivityView.textSize(for: restingHeight)
         let shownAlert = alert ?? leaving
-        let shownTimer = shownAlert == nil ? timer ?? leavingTimer : nil
+        let shownClock = shownAlert == nil ? clock ?? leavingClock : nil
         let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight, island: island)
         ZStack {
-            if let alert = shownAlert, case .timerDone(let length) = alert.content {
-                TimerDoneView(length: length, restingHeight: restingHeight, hovered: hoveredButton)
+            if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
+                TimerDoneView(length: length, name: name, restingHeight: restingHeight, hovered: hoveredButton)
                     .islandFade(self.alert != nil)
                     .id(alert.id)
                     .transition(IslandMotion.fade)
@@ -72,39 +74,45 @@ struct SystemActivityView: View {
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(alert.spoken)
-            } else if let timer = shownTimer {
+            } else if let shown = shownClock {
                 // As the iPhone's Timer beside the camera: a ring emptying as the time runs out on the
-                // left, the minutes left on the right.
+                // left, the minutes left on the right; the stopwatch's symbol, and its time.
                 ZStack {
-                    TimerRing(state: timer, height: restingHeight)
-                        .padding(.leading, restingHeight * TimerLayout.ringInset)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Group {
+                        switch shown {
+                        case .timer(let timer): TimerRing(state: timer, height: restingHeight)
+                        case .stopwatch: StopwatchMark(height: restingHeight)
+                        }
+                    }
+                    .padding(.leading, restingHeight * TimerLayout.ringInset)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        let reading = Self.reading(shown, at: context.date)
                         HStack(spacing: Self.pauseGap) {
-                            // Paused, it says so with a symbol before the time, which waits.
-                            if !timer.isRunning {
+                            // Paused or stopped, it says so with a symbol before the time, which waits.
+                            if !shown.isRunning {
                                 Image(systemName: "pause.fill")
                                     .font(.system(size: size - 1, weight: .semibold))
                                     .frame(width: Self.pauseWidth(size))
                             }
-                            Text(NotchTimer.condensed(timer.left(at: context.date)))
+                            Text(reading)
                                 .font(.system(size: size, weight: .semibold).monospacedDigit())
-                                // The digits roll down as they change, as the Timer's own do.
-                                .contentTransition(.numericText(countsDown: true))
-                                .animation(.snappy, value: NotchTimer.condensed(timer.left(at: context.date)))
+                                // The digits roll as they change, as the Timer's own do.
+                                .contentTransition(.numericText(countsDown: shown.countsDown))
+                                .animation(.snappy, value: reading)
                         }
                         .foregroundStyle(.orange)
                         .fixedSize()
                         // In words, rather than the pause symbol's name and the digits.
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(NotchTimer.spoken(timer, name: timerName, at: context.date))
+                        .accessibilityLabel(Self.spoken(shown, name: timerName, at: context.date))
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
                     }
                     .padding(.trailing, restingHeight * TimerLayout.textInset)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .islandFade(self.timer != nil)
+                .islandFade(self.clock != nil)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
             }
@@ -119,14 +127,30 @@ struct SystemActivityView: View {
                 if changes.alert == change { leaving = nil }
             }
         }
-        .onChange(of: timer, initial: true) { _, new in
-            changes.timer += 1
-            if let new { leavingTimer = new; return }
-            let change = changes.timer
+        .onChange(of: clock, initial: true) { _, new in
+            changes.clock += 1
+            if let new { leavingClock = new; return }
+            let change = changes.clock
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
-                if changes.timer == change { leavingTimer = nil }
+                if changes.clock == change { leavingClock = nil }
             }
+        }
+    }
+
+    /// The time beside the camera: the timer's left, condensed as the iPhone's; the stopwatch's, to
+    /// the second.
+    static func reading(_ shown: ClockShown, at date: Date = .now) -> String {
+        switch shown {
+        case .timer(let timer): NotchTimer.condensed(timer.left(at: date))
+        case .stopwatch(let watch): Stopwatch.format(watch.elapsed(at: date))
+        }
+    }
+
+    static func spoken(_ shown: ClockShown, name: String, at date: Date = .now) -> String {
+        switch shown {
+        case .timer(let timer): NotchTimer.spoken(timer, name: name, at: date)
+        case .stopwatch(let watch): Stopwatch.spoken(watch, at: date)
         }
     }
 
@@ -256,7 +280,7 @@ struct SystemActivityView: View {
             return min(max(device, end, layout.wing), maxWing)
         }
         // As tall as the Alarm, as wide as its words or its buttons.
-        if case .timerDone(let length) = alert.content { return TimerDoneView.wing(length: length, restingHeight: restingHeight) }
+        if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight, island: island)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
@@ -292,17 +316,23 @@ struct SystemActivityView: View {
 
     /// As far as the iPhone's Timer reaches past the island, or as its ring and its time need: the
     /// widest the time gets while it counts in minutes, or, in its last minute, in seconds; paused,
-    /// with the pause symbol too.
-    static func wing(for timer: NotchTimer.State, restingHeight h: CGFloat, island: Bool, at date: Date = .now) -> CGFloat {
+    /// with the pause symbol too. The stopwatch's, as wide as its time is until it gains an hour.
+    static func wing(for clock: ClockShown, restingHeight h: CGFloat, island: Bool, at date: Date = .now) -> CGFloat {
         let size = LiveActivityView.textSize(for: h)
-        let whole = Int(timer.left(at: date).rounded(.up))
-        // Every time it shows while it counts in minutes; in minutes and seconds, under ten minutes,
-        // its digits as wide as each other.
-        let shown = whole >= 600 ? (10...max(whole / 60, 10)).map { NotchTimer.condensed(TimeInterval($0 * 60)) } : ["0:00"]
+        let shown: [String]
+        switch clock {
+        case .timer(let timer):
+            let whole = Int(timer.left(at: date).rounded(.up))
+            // Every time it shows while it counts in minutes; in minutes and seconds, under ten
+            // minutes, its digits as wide as each other.
+            shown = whole >= 600 ? (10...max(whole / 60, 10)).map { NotchTimer.condensed(TimeInterval($0 * 60)) } : ["0:00"]
+        case .stopwatch(let watch):
+            shown = [watch.elapsed(at: date) >= 3600 ? "0:00:00" : "00:00"]
+        }
         // As wide as the time is, with nothing to spare: it never scrolls.
         let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
         let longest = shown.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
-        let paused = timer.isRunning ? 0 : pauseWidth(size) + pauseGap
+        let paused = clock.isRunning ? 0 : pauseWidth(size) + pauseGap
         let right = h * TimerLayout.textInset + paused + longest + h * TimerLayout.snug
         let left = h * (TimerLayout.ringInset + TimerLayout.ring + TimerLayout.snug)
         return max(right, left, h * TimerLayout.wing)

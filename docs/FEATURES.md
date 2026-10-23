@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 23 October 2026`
+`Created: 11 October 2026` | `Last updated: 24 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -43,10 +43,10 @@ the cover's colors or your Mac's accent color.
 While something plays, the closed notch shows its cover and a waveform that
 moves with the music. When a new song starts, its name slides out for a moment.
 As on the iPhone, it also shows the battery charging or running low, headphones
-and accessories connecting and sound going to AirPlay, and counts down a timer
-started from the menu bar or with macOS's own Timer. With several at once, the
-first keeps the notch and the others go in bubbles of their own beside it, as
-on the iPhone.
+and accessories connecting and sound going to AirPlay, and counts Clock's timer
+down and its stopwatch up, with their buttons. With several at once, the first
+keeps the notch and the others go in bubbles of their own beside it, as on the
+iPhone.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
@@ -81,12 +81,15 @@ later.
 **Copies from other devices.** What you copy on an iPhone or iPad, through
 Universal Clipboard, isn't kept in the tray.
 
+**Clock's alarms.** They don't show in the notch: macOS keeps them where other
+apps can't read them. Clock's timer and stopwatch do.
+
 <br>
 
 ## Roadmap
 
 - [x] `Animated covers`: Apple Music's animated album covers.
-- [x] `More Live Activities`: battery, devices and a timer.
+- [x] `More Live Activities`: battery, devices, Clock's timer and stopwatch.
 - [x] `Displays without a notch`: a notch or a Dynamic Island on any display.
 - [x] `Now Playing`: whatever is playing, in any app, with its controls.
 - [x] `Shortcuts`: shortcuts to open the player and the tray.

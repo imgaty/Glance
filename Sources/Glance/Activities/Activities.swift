@@ -28,9 +28,9 @@ struct NotchAlert: Identifiable, Equatable {
         /// A state, as Silent Mode and a Focus are shown: a symbol in its color on the left, a word
         /// or a name on the right.
         case status(symbol: String, tint: Color, text: String)
-        /// A timer that's done, as the Alarm goes off: its symbol shaking, its length, and buttons to
-        /// start it again or stop it.
-        case timerDone(length: TimeInterval)
+        /// A timer that's done, as the Alarm goes off: its symbol shaking, its length and its name, and
+        /// buttons to start it again or stop it.
+        case timerDone(length: TimeInterval, name: String)
 
         var tint: Color {
             switch self {

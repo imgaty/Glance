@@ -5,17 +5,11 @@
 //  Created by Gaty on 16/10/2026.
 //
 
-import AppKit
-import SwiftUI
+import Foundation
 
-/// A timer, started from Glance in the menu bar, counting down beside the camera as the iPhone's
-/// does in the Dynamic Island. Done, it says so there and chimes until it's stopped or started
-/// again from there, the notch is opened, or it's stopped from the menu; after a minute it stops
-/// chiming by itself.
-@MainActor
-final class NotchTimer: ObservableObject {
-    static let shared = NotchTimer()
-
+/// A timer, as macOS's own counts down beside the camera as the iPhone's does in the Dynamic Island
+/// (see `ClockActivity`): how it stands, and how its time is written and said.
+enum NotchTimer {
     /// Counting down to a moment, or paused with some left.
     enum State: Equatable {
         case running(until: Date, total: TimeInterval)
@@ -32,98 +26,6 @@ final class NotchTimer: ObservableObject {
             case .running(let until, _): max(until.timeIntervalSince(date), 0)
             case .paused(let left, _): left
             }
-        }
-    }
-
-    @Published private(set) var state: State?
-    /// Done, and still saying so.
-    @Published private(set) var ringing = false
-    /// How long the last one was set for, to start it again once it's done.
-    private(set) var lastLength: TimeInterval?
-    /// The choices in the menu, in minutes, as Clock's own timers start.
-    static let presets = [1, 3, 5, 10, 15, 30, 60]
-
-    private let activities: Activities
-    /// The system sound it chimes with when it's done; none, silent.
-    private let sound: String?
-    private var finish: Task<Void, Never>?
-    private var chime: Task<Void, Never>?
-
-    init(activities: Activities? = nil, sound: String? = "Glass") {
-        self.activities = activities ?? .shared
-        self.sound = sound
-    }
-
-    func start(seconds: TimeInterval) {
-        stop()
-        lastLength = seconds
-        state = .running(until: .now + seconds, total: seconds)
-        schedule()
-    }
-
-    func pause() {
-        guard case .running = state, let state else { return }
-        finish?.cancel()
-        self.state = .paused(left: state.left(), total: state.total)
-    }
-
-    func resume() {
-        guard case .paused(let left, let total) = state else { return }
-        state = .running(until: .now + left, total: total)
-        schedule()
-    }
-
-    /// Stopped before it's done.
-    func cancel() {
-        finish?.cancel()
-        state = nil
-    }
-
-    /// Done, the same length again, as the Timer's Repeat does.
-    func repeatLast() {
-        guard let lastLength else { return stop() }
-        start(seconds: lastLength)
-    }
-
-    /// Done and chiming, it stops; or, asked to stop only once it's done, a timer still going goes on.
-    func stop(ifDone: Bool = false) {
-        guard !ifDone || ringing else { return }
-        cancel()
-        guard ringing else { return }
-        ringing = false
-        chime?.cancel()
-        activities.dismiss(.timerDone)
-    }
-
-    private func schedule() {
-        finish?.cancel()
-        guard let state else { return }
-        let left = state.left()
-        finish = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(left))
-            guard !Task.isCancelled else { return }
-            self?.done()
-        }
-    }
-
-    /// The time's up: said beside the camera, and heard, every couple of seconds, for a minute.
-    func done() {
-        finish?.cancel()
-        let length = state?.total ?? lastLength ?? 0
-        state = nil
-        ringing = true
-        activities.post(NotchAlert(kind: .timerDone, content: .timerDone(length: length), spoken: "Timer done", stays: true))
-        chime?.cancel()
-        guard let sound else { return }
-        chime = Task { [weak self] in
-            let start = Date.now
-            while !Task.isCancelled, Date.now.timeIntervalSince(start) < 60 {
-                NSSound(named: sound)?.play()
-                try? await Task.sleep(for: .seconds(2))
-            }
-            guard !Task.isCancelled else { return }
-            // Unheard for a minute, it rests, still saying it's done until it's seen.
-            self?.chime = nil
         }
     }
 
@@ -147,15 +49,75 @@ final class NotchTimer: ObservableObject {
     /// As VoiceOver says it: its name, what's left in words, and that it's paused: "Timer, 4 minutes,
     /// 57 seconds left, paused".
     static func spoken(_ state: State, name: String = "Timer", at date: Date = .now) -> String {
-        let words = DateComponentsFormatter()
-        words.unitsStyle = .full
-        words.allowedUnits = [.hour, .minute, .second]
-        let left = words.string(from: state.left(at: date).rounded(.up)) ?? format(state.left(at: date))
+        let left = words(state.left(at: date).rounded(.up)) ?? format(state.left(at: date))
         return "\(name), \(left) left" + (state.isRunning ? "" : ", paused")
     }
 
-    /// A preset's name in the menu: 1 Minute, 5 Minutes, 1 Hour.
-    static func name(minutes: Int) -> String {
-        minutes % 60 == 0 ? (minutes == 60 ? "1 Hour" : "\(minutes / 60) Hours") : (minutes == 1 ? "1 Minute" : "\(minutes) Minutes")
+    /// A length in words: "4 minutes, 57 seconds".
+    static func words(_ seconds: TimeInterval) -> String? {
+        let words = DateComponentsFormatter()
+        words.unitsStyle = .full
+        words.allowedUnits = [.hour, .minute, .second]
+        return words.string(from: seconds)
+    }
+
+    /// A timer's length, as its preset is named: 5 Minutes, 1 Hour, 1 Minute, 30 Seconds.
+    static func length(_ seconds: TimeInterval) -> String {
+        (words(seconds.rounded()) ?? format(seconds)).capitalized
+    }
+}
+
+/// Clock's stopwatch, as macOS keeps it: running, from a moment, or stopped with time on it. Reset,
+/// it isn't shown.
+enum Stopwatch: Equatable {
+    case running(since: Date)
+    case stopped(elapsed: TimeInterval)
+
+    var isRunning: Bool {
+        if case .running = self { return true }
+        return false
+    }
+
+    func elapsed(at date: Date = .now) -> TimeInterval {
+        switch self {
+        case .running(let since): max(date.timeIntervalSince(since), 0)
+        case .stopped(let elapsed): elapsed
+        }
+    }
+
+    /// From what macOS keeps of it: running, from when it last started less what was on it then,
+    /// its laps' and the lap it was on; stopped, with that much on it.
+    static func current(in kept: [[String: Any]]) -> Stopwatch? {
+        for entry in kept {
+            guard let watch = entry["$MTStopwatch"] as? [String: Any] else { continue }
+            let laps = watch["MTStopwatchPreviousLapsTotalInterval"] as? TimeInterval ?? 0
+            let lap = watch["MTStopwatchOffset"] as? TimeInterval ?? 0
+            switch watch["MTStopwatchState"] as? Int {
+            case 2:
+                guard let start = watch["MTStopwatchStartDate"] as? Date else { continue }
+                return .running(since: start - laps - lap)
+            case 1:
+                guard laps + lap > 0 else { continue }
+                return .stopped(elapsed: laps + lap)
+            default: continue
+            }
+        }
+        return nil
+    }
+
+    /// As Clock shows it: 0:07, 12:07, 1:02:07; opened, to the hundredth, 0:07.41.
+    static func format(_ seconds: TimeInterval, hundredths: Bool = false) -> String {
+        let whole = Int(seconds)
+        let hours = whole / 3600, minutes = whole / 60 % 60, rest = whole % 60
+        let shown = hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
+        guard hundredths else { return shown }
+        let hundredth = min(Int((seconds - Double(whole)) * 100), 99)
+        return shown + (Locale.current.decimalSeparator ?? ".") + String(format: "%02d", hundredth)
+    }
+
+    /// As VoiceOver says it: "Stopwatch, 1 minute, 7 seconds, stopped".
+    static func spoken(_ watch: Stopwatch, at date: Date = .now) -> String {
+        let time = NotchTimer.words(watch.elapsed(at: date).rounded(.down)) ?? format(watch.elapsed(at: date))
+        return "Stopwatch, \(time)" + (watch.isRunning ? "" : ", stopped")
     }
 }

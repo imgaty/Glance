@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 22 October 2026`
+`Created: 11 October 2026` | `Last updated: 24 October 2026`
 
 <br>
 
@@ -32,16 +32,19 @@
 - Changed the player, the tray and the lyrics to come and go with the same
   fade and blur as the notch opens, closes or turns its page, and a new song's
   cover to come in the same way as the last one goes.
-- Added a timer, started from the menu bar, the notch's right-click menu or
-  Settings, counting down beside the camera as the iPhone's Timer does: a ring
-  emptying beside the time left, in minutes from ten minutes up and in minutes
-  and seconds under ten, with a pause symbol while paused. Opened,
-  it's as tall as the iPhone's expanded Timer, with buttons to pause and cancel
-  it left of the camera, the time right of it and its name under the camera, as
-  far in from the notch's ends as the player is. Done, it grows as tall as the
-  iPhone's Alarm, with buttons to start it again or stop its chime, which the
-  menu bar's timer and the notch's right-click menu offer too. VoiceOver reads
-  it as its name and the time left in words, and opens it.
+- Added Clock's timer, from the Clock app, Control Center or Siri, counting
+  down beside the camera as the iPhone's Timer does: a ring emptying beside the
+  time left, in minutes from ten minutes up and in minutes and seconds under
+  ten, with a pause symbol while paused, by the label it was given in Clock.
+  Opened, it's as tall as the iPhone's expanded Timer, with buttons to pause and
+  cancel it left of the camera, the time right of it and its name under the
+  camera, as far in from the notch's ends as the player is. When it rings, the
+  notch grows as tall as the iPhone's Alarm, with buttons to start it again in
+  Clock or stop saying it. VoiceOver reads it as its name and the time left in
+  words, and opens it.
+- Added Clock's stopwatch, counting up beside the camera beside its symbol.
+  Opened, it counts to the hundredth, with buttons to start or stop it and to
+  lap or reset it.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and
@@ -49,17 +52,14 @@
   it, and into it while a new song's name shows. Clicking a bubble opens its
   own activity. VoiceOver reads each as a button that opens it. With Reduce
   Motion on, bubbles fade in and out where they rest.
-- Added timers started with macOS's own Timer, from the Clock app, Control
-  Center or Siri, read from what macOS keeps of them: one counts down in the
-  notch or a bubble as Glance's own does, paused ones too, by the label it was
-  given in Clock. While it shows, macOS's own is taken out of the menu bar, with
-  `Accessibility` allowed. Opened, its buttons pause and cancel it as Clock's
-  own do, at once, with Clock opened hidden and quit half a minute after the
-  last press, and so do Glance's menu in the menu bar and the notch's
-  right-click menu. Without `Accessibility`, its buttons are dimmed, and
-  pressing one asks for it. `Clock timers` and `Hide in menu bar` in
-  **Settings > Live Activities** turn each off, beside a way to Menu Bar
-  settings to bring macOS's own back.
+- Added Clock's buttons for its timer and stopwatch to the notch, Glance's menu
+  in the menu bar and the notch's right-click menu, which work as Clock's own
+  do, at once, with Clock opened hidden and quit half a minute after the last
+  press. Without `Accessibility`, they're dimmed, and pressing one asks for it.
+  While a timer shows, macOS's own is taken out of the menu bar. `Timers`,
+  `Stopwatch` and `Hide in menu bar` in **Settings > Live Activities** turn
+  each off, beside **Open Clock** and a way to Menu Bar settings to bring
+  macOS's own timer back.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

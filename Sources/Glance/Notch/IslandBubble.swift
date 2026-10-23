@@ -11,16 +11,16 @@ import SwiftUI
 /// An activity in a bubble of its own beside the notch, as the Dynamic Island shows one beside
 /// another: the second off the notch's right end, the third off its left. Measured from the iPhone,
 /// by the island's height: a circle as wide as the island is tall, level with it, 0.175 of that off
-/// its end, a timer's ring in it as beside the camera. It buds off the notch's end as it comes,
-/// joined to it for a moment as two drops are, and runs back into it as it goes, or as the notch
-/// opens; with Reduce Motion on, it fades in and out where it rests. VoiceOver names it, and opens
-/// it as a click does.
+/// its end, a timer's ring or the stopwatch's symbol in it as beside the camera. It buds off the
+/// notch's end as it comes, joined to it for a moment as two drops are, and runs back into it as it
+/// goes, or as the notch opens; with Reduce Motion on, it fades in and out where it rests. VoiceOver
+/// names it, and opens it as a click does.
 struct IslandBubble: View {
     let side: NotchModel.Side
     /// Out of the notch; in it, it's hidden in its end.
     let shown: Bool
-    /// The timer it shows, and its name, as VoiceOver says it.
-    let timer: NotchTimer.State?
+    /// The timer or stopwatch it shows, and the timer's name, as VoiceOver says it.
+    let clock: ClockShown?
     let name: String
     /// Opens it, as a click on it does.
     let open: () -> Void
@@ -35,9 +35,9 @@ struct IslandBubble: View {
     /// it outlines the notch.
     let fullScreen: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The timer it showed, kept on as it runs back into the notch, so it fades as it goes rather
-    /// than vanishing.
-    @State private var kept: NotchTimer.State?
+    /// What it showed, kept on as it runs back into the notch, so it fades as it goes rather than
+    /// vanishing.
+    @State private var kept: ClockShown?
     /// Counted, so what's kept goes only if nothing has come since.
     @State private var changes = 0
 
@@ -60,7 +60,11 @@ struct IslandBubble: View {
             ZStack {
                 Circle().fill(.black)
                 ZStack {
-                    if let kept { TimerRing(state: kept, height: h) }
+                    switch kept {
+                    case .timer(let timer): TimerRing(state: timer, height: h)
+                    case .stopwatch: StopwatchMark(height: h)
+                    case nil: EmptyView()
+                    }
                 }
                 .islandFade(shown)
             }
@@ -74,11 +78,11 @@ struct IslandBubble: View {
             }
             // What it shows, in words, and a click's opening.
             .overlay {
-                if shown, !hidden, let timer {
+                if shown, !hidden, let clock {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         Color.clear
                             .accessibilityElement()
-                            .accessibilityLabel(NotchTimer.spoken(timer, name: name, at: context.date))
+                            .accessibilityLabel(SystemActivityView.spoken(clock, name: name, at: context.date))
                             .accessibilityAddTraits(.isButton)
                             .accessibilityAction(.default, open)
                     }
@@ -94,7 +98,7 @@ struct IslandBubble: View {
         // Gone at once as the notch opens; back once it has all but closed, as its black is.
         .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
         .allowsHitTesting(false)
-        .onChange(of: timer, initial: true) { _, new in
+        .onChange(of: clock, initial: true) { _, new in
             changes += 1
             if let new { return kept = new }
             let change = changes

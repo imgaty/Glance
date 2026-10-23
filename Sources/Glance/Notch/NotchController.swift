@@ -302,15 +302,15 @@ final class NotchController {
         alertWatch = Activities.shared.$alert.removeDuplicates().sink { [weak self] alert in
             MainActor.assumeIsolated { self?.show(alert) }
         }
-        // Glance's own timer, and macOS's (see `SystemTimer`).
-        SystemTimer.shared.start()
-        timerWatch = NotchTimer.shared.$state.combineLatest(SystemTimer.shared.$state)
+        // Clock's timer and stopwatch (see `ClockActivity`).
+        ClockActivity.shared.start()
+        timerWatch = ClockActivity.shared.$timer.combineLatest(ClockActivity.shared.$stopwatch)
             .removeDuplicates { $0 == $1 }
-            .sink { [weak self] own, clock in
-                MainActor.assumeIsolated { self?.show(own: own, clock: clock) }
+            .sink { [weak self] timer, stopwatch in
+                MainActor.assumeIsolated { self?.show(timer: timer, stopwatch: stopwatch) }
             }
-        clockNameWatch = SystemTimer.shared.$title.removeDuplicates().sink { [weak self] title in
-            MainActor.assumeIsolated { self?.model.clockTimerName = title }
+        clockNameWatch = ClockActivity.shared.$timerTitle.removeDuplicates().sink { [weak self] title in
+            MainActor.assumeIsolated { self?.model.timerName = title }
         }
 
         // The live activity and the song announcements follow their settings as they change.
@@ -485,7 +485,7 @@ final class NotchController {
     private func show(_ alert: NotchAlert?) {
         switchTask?.cancel()
         let fold = IslandMotion.fold, open = IslandMotion.open
-        let wingsShowing = model.activity || model.timer != nil || model.clockTimer != nil
+        let wingsShowing = model.activity || model.timer != nil || model.stopwatch != nil
         guard let alert else {
             withAnimation(fold) {
                 model.alert = nil
@@ -520,28 +520,33 @@ final class NotchController {
     /// Island's does.
     private static let switchPause = 0.18
 
-    /// A timer started, paused or ended: its wings come, or go. Opened to it, ended or cancelled,
-    /// the notch closes, for what it's done to show.
-    private func show(own: NotchTimer.State?, clock: NotchTimer.State?) {
-        let ending = (own == nil && model.timer != nil) || (clock == nil && model.clockTimer != nil)
+    /// The timer or the stopwatch started, paused or ended: its wings come, or go. Opened to it,
+    /// ended, cancelled or reset, the notch closes, for what it's done to show.
+    private func show(timer: NotchTimer.State?, stopwatch: Stopwatch?) {
+        let ending = (timer == nil && model.timer != nil) || (stopwatch == nil && model.stopwatch != nil)
         withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
-            model.timer = own
-            model.clockTimer = clock
+            model.timer = timer
+            model.stopwatch = stopwatch
             fitTimerWing()
         }
-        // Opened to a timer that has ended or been cancelled, the notch closes, for that to show.
-        if model.state == .open, model.expanded != nil, model.expandedTimer == nil { close(holdUntilExit: true) }
+        // Opened to one that has ended, been cancelled or reset, the notch closes, for that to show.
+        if model.state == .open, model.expanded != nil, model.expandedClock == nil { close(holdUntilExit: true) }
         refitAsTimersCount()
     }
 
     /// Refits the notch where a running timer's time changes length: under an hour, and under ten
-    /// minutes, where it loses a digit opened and counts in minutes and seconds beside the camera.
+    /// minutes, where it loses a digit opened and counts in minutes and seconds beside the camera;
+    /// and where the stopwatch's gains one, at ten minutes and an hour.
     private func refitAsTimersCount() {
         timerWingTask?.cancel()
-        let waits = [model.timer, model.clockTimer].compactMap { timer -> TimeInterval? in
-            guard let timer, case .running = timer else { return nil }
+        var waits: [TimeInterval] = []
+        if let timer = model.timer, case .running = timer {
             let left = timer.left()
-            return [3_599.0, 599].filter { left > $0 }.map { left - $0 + 0.05 }.min()
+            waits += [3_599.0, 599].filter { left > $0 }.map { left - $0 + 0.05 }
+        }
+        if let stopwatch = model.stopwatch, stopwatch.isRunning {
+            let elapsed = stopwatch.elapsed()
+            waits += [600.0, 3_600].filter { elapsed < $0 }.map { $0 - elapsed + 0.05 }
         }
         guard let wait = waits.min() else { return }
         timerWingTask = Task { [weak self] in
@@ -556,11 +561,11 @@ final class NotchController {
         }
     }
 
-    /// The wings as wide as the time for the notch needs: the first timer's, in the notch once nothing
+    /// The wings as wide as the time for the notch needs: the first one's, in the notch once nothing
     /// plays.
     private func fitTimerWing() {
-        guard let timer = model.firstTimer else { return }
-        model.timerWing = SystemActivityView.wing(for: timer, restingHeight: model.closedSize.height, island: model.island)
+        guard let clock = model.firstClock else { return }
+        model.timerWing = SystemActivityView.wing(for: clock, restingHeight: model.closedSize.height, island: model.island)
     }
 
     /// A new song: the closed notch's wings widen for a few seconds to show its title and artist.
@@ -724,7 +729,7 @@ final class NotchController {
 
     /// The button of a timer that's done, in the closed notch, at a point on the screen.
     private func alertButton(at p: CGPoint) -> AlertButton? {
-        guard NotchTimer.shared.ringing, model.state != .open, let view = panel.contentView else { return nil }
+        guard model.alert?.kind == .timerDone, model.state != .open, let view = panel.contentView else { return nil }
         let local = view.convert(panel.convertPoint(fromScreen: p), from: nil)
         let inNotch = CGPoint(x: local.x, y: local.y - Layout.pastTop)
         return model.alertButtons.first { $0.value.contains(inNotch) }?.key
@@ -762,8 +767,8 @@ final class NotchController {
             pressedButton = nil
             guard alertButton(at: NSEvent.mouseLocation) == button else { return }
             switch button {
-            case .again: NotchTimer.shared.repeatLast()
-            case .stop: NotchTimer.shared.stop()
+            case .again: ClockActivity.shared.repeatTimer()
+            case .stop: ClockActivity.shared.dismissRing()
             }
             model.hoveredButton = nil
             return
@@ -814,8 +819,8 @@ final class NotchController {
     /// drop.
     private func open(on page: NotchPage = .player, forDrop: Bool = false) {
         guard model.state != .open else { return }
-        // A timer that's done has been seen: it stops chiming.
-        NotchTimer.shared.stop(ifDone: true)
+        // A timer that's done has been seen: it's no longer said.
+        ClockActivity.shared.dismissRing()
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil

@@ -85,24 +85,65 @@ struct TimerRing: View {
     }
 }
 
-/// Opened while a timer runs, as the iPhone's Timer expands, as tall: round buttons to pause or go on
-/// and to cancel left of the camera, the time left, large, right of it, its name under the camera,
-/// as the player's title sits under it. In from the notch's ends as far as the player is, and as
-/// far from the camera as the player's cover; the notch only as wide as that needs, for the time as
-/// it reads now. macOS's own timer is paused and cancelled through Clock; without Accessibility,
-/// its buttons are dimmed, and a press asks for it.
+/// What the notch opens to beside the camera: Clock's timer, or its stopwatch.
+enum ClockShown: Equatable {
+    case timer(NotchTimer.State)
+    case stopwatch(Stopwatch)
+
+    var isRunning: Bool {
+        switch self {
+        case .timer(let state): state.isRunning
+        case .stopwatch(let watch): watch.isRunning
+        }
+    }
+
+    /// A timer's digits roll down as they change; the stopwatch's, up.
+    var countsDown: Bool {
+        if case .timer = self { return true }
+        return false
+    }
+
+    /// The time as it reads at a moment: what's left of the timer; what's on the stopwatch, to the
+    /// hundredth.
+    func reading(at date: Date = .now) -> String {
+        switch self {
+        case .timer(let state): NotchTimer.format(state.left(at: date))
+        case .stopwatch(let watch): Stopwatch.format(watch.elapsed(at: date), hundredths: true)
+        }
+    }
+}
+
+/// The stopwatch beside the camera, where a timer's ring sits: its symbol, in the Timer's orange.
+struct StopwatchMark: View {
+    let height: CGFloat
+
+    var body: some View {
+        Image(systemName: "stopwatch")
+            .font(.system(size: height * TimerLayout.ring * 0.95, weight: .medium))
+            .foregroundStyle(.orange)
+            .frame(width: height * TimerLayout.ring, height: height * TimerLayout.ring)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Opened to a timer, as the iPhone's Timer expands, as tall: round buttons to pause or go on and to
+/// cancel left of the camera, the time left, large, right of it, its name under the camera, as the
+/// player's title sits under it. Opened to the stopwatch, the same, its buttons to start or stop it
+/// and to lap or reset it, its time to the hundredth. In from the notch's ends as far as the player
+/// is, and as far from the camera as the player's cover; the notch only as wide as that needs, for
+/// the time as it reads now. They're Clock's, pressed through Clock (see `ClockActivity`); without
+/// Accessibility, the buttons are dimmed, and a press asks for it.
 struct ExpandedTimerView: View {
-    let state: NotchTimer.State
-    /// Its name beside the time: Timer, or the label Clock's was given.
+    let shown: ClockShown
+    /// Its name beside the time: Timer, the label Clock's timer was given, or Stopwatch.
     var name = "Timer"
     let restingHeight: CGFloat
     /// The camera housing's width, which the row goes either side of; none on an island.
     let camera: CGFloat
-    /// Its own width (see `width(for:restingHeight:camera:system:at:)`), which changes as the time
-    /// loses a digit.
+    /// Its own width (see `width(for:name:restingHeight:camera:at:)`), which changes as the time
+    /// loses or gains a digit.
     let width: CGFloat
-    var system = false
-    @ObservedObject private var clock = SystemTimer.shared
+    @ObservedObject private var clock = ClockActivity.shared
 
     var body: some View {
         let h = restingHeight
@@ -135,19 +176,15 @@ struct ExpandedTimerView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Pause or go on, and cancel: Glance's own timer, or macOS's, through Clock (see `SystemTimer`).
+    /// Pause or go on, and cancel; or start or stop, and lap or reset.
     private func buttons(_ h: CGFloat) -> some View {
-        let timer = NotchTimer.shared
-        let locked = system && !clock.canControl
+        let running = shown.isRunning
+        let stopwatch = { if case .stopwatch = shown { return true } else { return false } }()
         return HStack(spacing: h * TimerLayout.buttonGap) {
-            IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
-                if system {
-                    clock.toggle()
-                } else {
-                    state.isRunning ? timer.pause() : timer.resume()
-                }
+            IslandCircleButton(height: h, tint: .orange, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume")) {
+                stopwatch ? clock.startStopStopwatch() : clock.toggleTimer()
             } glyph: {
-                if state.isRunning {
+                if running {
                     PauseGlyph(height: h)
                 } else {
                     Image(systemName: "play.fill")
@@ -155,34 +192,49 @@ struct ExpandedTimerView: View {
                         .foregroundStyle(.orange)
                 }
             }
-            IslandCircleButton(height: h, tint: .white, label: "Cancel") {
-                system ? clock.cancel() : timer.cancel()
+            IslandCircleButton(height: h, tint: .white, label: stopwatch ? (running ? "Lap" : "Reset") : "Cancel") {
+                stopwatch ? clock.lapResetStopwatch() : clock.cancelTimer()
             } glyph: {
-                CrossGlyph(height: h)
+                if stopwatch {
+                    Image(systemName: running ? "flag.fill" : "arrow.counterclockwise")
+                        .font(.system(size: h * 0.5, weight: .bold))
+                        .foregroundStyle(.white)
+                } else {
+                    CrossGlyph(height: h)
+                }
             }
         }
-        .opacity(locked ? 0.45 : 1)
-        .accessibilityHint(locked ? "Needs Accessibility" : "")
+        .opacity(clock.canControl ? 1 : 0.45)
+        .accessibilityHint(clock.canControl ? "" : "Needs Accessibility")
     }
 
-    /// Its name, small, and the time left, large, on one line.
+    /// Its name, small, and the time, large, on one line.
     private func time(_ h: CGFloat) -> some View {
         // A long label is cut short where it would run past the camera; on an island, at its limit.
         let room =
             camera > 0
-            ? (width - camera) / 2 - PlayerLayout.padding + camera - h * TimerLayout.titleGap - Self.timeWidth(state, h)
+            ? (width - camera) / 2 - PlayerLayout.padding + camera - h * TimerLayout.titleGap - Self.timeWidth(shown, h)
             : h * TimerLayout.titleLimit
+        let ticking: Bool = { if case .stopwatch(let watch) = shown { return watch.isRunning } else { return false } }()
         return HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
             Text(name)
                 .font(.system(size: h * TimerLayout.title, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: max(min(Self.titleWidth(name, h), room), 0), alignment: .trailing)
-            TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                Text(NotchTimer.format(state.left(at: context.date)))
-                    .font(.system(size: h * TimerLayout.time).monospacedDigit())
-                    .contentTransition(.numericText(countsDown: true))
-                    .animation(.snappy, value: NotchTimer.format(state.left(at: context.date)))
+            if case .stopwatch = shown {
+                // To the hundredth, as Clock's own counts, while it runs.
+                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !ticking)) { context in
+                    Text(shown.reading(at: context.date))
+                        .font(.system(size: h * TimerLayout.time).monospacedDigit())
+                }
+            } else {
+                TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                    Text(shown.reading(at: context.date))
+                        .font(.system(size: h * TimerLayout.time).monospacedDigit())
+                        .contentTransition(.numericText(countsDown: true))
+                        .animation(.snappy, value: shown.reading(at: context.date))
+                }
             }
         }
         .foregroundStyle(.orange)
@@ -191,13 +243,11 @@ struct ExpandedTimerView: View {
 
     /// Either side of the camera, as wide as the wider of the buttons and the time needs, with the
     /// player's room at the ends and beside the camera; on an island, as wide as the iPhone's, or as
-    /// they need. For the time as it reads then: it narrows as it loses a digit.
+    /// they need. For the time as it reads then: it narrows or widens as it loses or gains a digit.
     @MainActor
-    static func width(
-        for state: NotchTimer.State, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now
-    ) -> CGFloat {
+    static func width(for shown: ClockShown, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
         let buttons = h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
-        let time = timeWidth(state, h, at: date)
+        let time = timeWidth(shown, h, at: date)
         let padding = PlayerLayout.padding
         guard camera > 0 else {
             let title = min(titleWidth(name, h), h * TimerLayout.titleLimit)
@@ -208,9 +258,9 @@ struct ExpandedTimerView: View {
 
     /// The time as it reads then, its digits all as wide as each other.
     @MainActor
-    private static func timeWidth(_ state: NotchTimer.State, _ h: CGFloat, at date: Date = .now) -> CGFloat {
-        let shown = NotchTimer.format(state.left(at: date)).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-        return ceil((shown as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
+    private static func timeWidth(_ shown: ClockShown, _ h: CGFloat, at date: Date = .now) -> CGFloat {
+        let reading = shown.reading(at: date).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
+        return ceil((reading as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
     }
 
     @MainActor
@@ -224,6 +274,8 @@ struct ExpandedTimerView: View {
 /// stop it. The closed notch hands them its clicks by where they are (see `AlertButtonFrames`).
 struct TimerDoneView: View {
     let length: TimeInterval
+    /// Timer, or the label it was given in Clock.
+    var name = "Timer"
     let restingHeight: CGFloat
     /// Which button the pointer is on.
     let hovered: AlertButton?
@@ -236,14 +288,18 @@ struct TimerDoneView: View {
                 ArrivingSymbol(symbol: "timer.circle.fill", color: .orange, size: h * TimerLayout.icon * 0.9, side: h * TimerLayout.icon, shakes: true)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(Self.name(length))
+                    Text(NotchTimer.length(length))
                         .font(.system(size: h * TimerLayout.small, weight: .semibold))
                         .foregroundStyle(.orange.opacity(0.47))
-                    Text("Timer")
+                    Text(name)
                         .font(.system(size: h * TimerLayout.name, weight: .bold))
                         .foregroundStyle(.orange)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
-                .fixedSize()
+                // A long label is cut short, as the wings are only so wide.
+                .frame(maxWidth: h * TimerLayout.titleLimit, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
                 .offset(y: h * TimerLayout.wordsLower)
             }
             .padding(.leading, h * TimerLayout.iconInset)
@@ -255,12 +311,12 @@ struct TimerDoneView: View {
                         .foregroundStyle(.orange)
                 }
                 .reportsFrame(.again)
-                .spokenButton("Repeat") { NotchTimer.shared.repeatLast() }
+                .spokenButton("Repeat") { ClockActivity.shared.repeatTimer() }
                 IslandCircle(height: h, tint: .white, highlighted: hovered == .stop) {
                     CrossGlyph(height: h)
                 }
                 .reportsFrame(.stop)
-                .spokenButton("Stop") { NotchTimer.shared.stop() }
+                .spokenButton("Stop") { ClockActivity.shared.dismissRing() }
             }
             .padding(.trailing, h * TimerLayout.buttonInset)
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -268,18 +324,15 @@ struct TimerDoneView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Its length, as its preset is named: 5 Minutes, 1 Hour.
-    static func name(_ length: TimeInterval) -> String {
-        NotchTimer.name(minutes: max(Int((length / 60).rounded()), 1))
-    }
-
     /// Each wing: as wide as the wider side, the symbol and the words or the buttons, and the camera
-    /// between them.
-    static func wing(length: TimeInterval, restingHeight h: CGFloat) -> CGFloat {
+    /// between them. A long label is cut short at the island's limit.
+    static func wing(length: TimeInterval, name: String = "Timer", restingHeight h: CGFloat) -> CGFloat {
         func width(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
             ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
         }
-        let words = max(width(name(length), h * TimerLayout.small, .semibold), width("Timer", h * TimerLayout.name, .bold))
+        let words = min(
+            max(width(NotchTimer.length(length), h * TimerLayout.small, .semibold), width(name, h * TimerLayout.name, .bold)),
+            h * TimerLayout.titleLimit)
         let left = h * (TimerLayout.iconInset + TimerLayout.icon + TimerLayout.iconGap) + words
         let right = h * (TimerLayout.buttonInset + TimerLayout.button * 2 + TimerLayout.buttonGap)
         return max(left, right) + h * TimerLayout.snug

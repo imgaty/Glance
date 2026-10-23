@@ -9,15 +9,15 @@ import AppKit
 import SwiftUI
 
 /// What the Mac announces beside the camera, each turned on or off, as the iPhone's Dynamic Island
-/// shows them; and the timer, with macOS's own. The battery's choices show only on a Mac with one.
+/// shows them; and Clock's timer and stopwatch. The battery's choices show only on a Mac with one.
 /// Music's own, with the rest of Music, are a click away.
 struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
-    @AppStorage(Preferences.activityClockTimers) private var clockTimers = true
+    @AppStorage(Preferences.activityClockTimers) private var timers = true
+    @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
     @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = true
-    @ObservedObject private var timer = NotchTimer.shared
     @Environment(\.showPane) private var showPane
     private let hasBattery = BatteryWatch.hasBattery
 
@@ -51,37 +51,26 @@ struct ActivitiesPage: View {
             }
             Section {
                 CenteredRow {
-                    Text("Timer")
-                    Text("Counts down beside the camera. You can also start one from Glance in the menu bar.")
+                    Text("Clock")
+                    Text("Timers and the stopwatch are Clock's, started there, in Control Center or with Siri.")
                 } trailing: {
-                    if let state = timer.state {
-                        HStack {
-                            Button(state.isRunning ? "Pause" : "Resume") { state.isRunning ? timer.pause() : timer.resume() }
-                            Button("Cancel") { timer.cancel() }
-                        }
-                    } else if timer.ringing {
-                        HStack {
-                            Button("Repeat") { timer.repeatLast() }
-                            Button("Stop") { timer.stop() }
-                        }
-                    } else {
-                        Menu("Start Timer") {
-                            ForEach(NotchTimer.presets, id: \.self) { minutes in
-                                Button(NotchTimer.name(minutes: minutes)) { timer.start(seconds: TimeInterval(minutes * 60)) }
-                            }
-                        }
-                        .fixedSize()
+                    Button("Open Clock") {
+                        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
                     }
                 }
-                Toggle(isOn: $clockTimers) {
-                    Text("Clock timers")
-                    Text("Shows timers started in the Clock app, in Control Center or with Siri.")
+                Toggle(isOn: $timers) {
+                    Text("Timers")
+                    Text("Counts down beside the camera, and says when it's done.")
+                }
+                Toggle(isOn: $stopwatch) {
+                    Text("Stopwatch")
+                    Text("Counts up beside the camera.")
                 }
                 Toggle(isOn: $hidesMenuBar) {
                     Text("Hide in menu bar")
                     Text("Takes macOS's timer out of the menu bar while the notch shows it. Needs Accessibility.")
                 }
-                .disabled(!clockTimers)
+                .disabled(!timers)
                 CenteredRow {
                     Text("Menu bar timer")
                     Text("Once taken out, macOS's timer comes back with Show When Active for Timer in Menu Bar settings.")
