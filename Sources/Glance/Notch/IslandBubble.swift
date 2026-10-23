@@ -62,7 +62,7 @@ struct IslandBubble: View {
                 ZStack {
                     switch kept {
                     case .timer(let timer): TimerRing(state: timer, height: h)
-                    case .stopwatch: StopwatchMark(height: h)
+                    case .stopwatch(let watch): StopwatchMark(watch: watch, height: h)
                     case nil: EmptyView()
                     }
                 }

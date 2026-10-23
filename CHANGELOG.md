@@ -39,12 +39,13 @@
   Opened, it's as tall as the iPhone's expanded Timer, with buttons to pause and
   cancel it left of the camera, the time right of it and its name under the
   camera, as far in from the notch's ends as the player is. When it rings, the
-  notch grows as tall as the iPhone's Alarm, with buttons to start it again in
-  Clock or stop saying it. VoiceOver reads it as its name and the time left in
-  words, and opens it.
-- Added Clock's stopwatch, counting up beside the camera beside its symbol.
-  Opened, it counts to the hundredth, with buttons to start or stop it and to
-  lap or reset it.
+  notch says so as the iPhone's Timer does, its name beside buttons to start it
+  again in Clock or stop saying it. VoiceOver reads it as its name and the time
+  left in words, and opens it.
+- Added Clock's stopwatch, counting up beside the camera as the iPhone's does:
+  its symbol with a hand going round once a minute, its hundredths small after
+  the seconds. Opened, it shows its time alone, to the hundredth, with buttons
+  to stop it and lap, or to start it again and reset it.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and

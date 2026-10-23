@@ -81,12 +81,12 @@ struct SystemActivityView: View {
                     Group {
                         switch shown {
                         case .timer(let timer): TimerRing(state: timer, height: restingHeight)
-                        case .stopwatch: StopwatchMark(height: restingHeight)
+                        case .stopwatch(let watch): StopwatchMark(watch: watch, height: restingHeight)
                         }
                     }
                     .padding(.leading, restingHeight * TimerLayout.ringInset)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                    TimelineView(.periodic(from: .now, by: shown.countsDown ? 0.5 : 1)) { context in
                         let reading = Self.reading(shown, at: context.date)
                         HStack(spacing: Self.pauseGap) {
                             // Paused or stopped, it says so with a symbol before the time, which waits.
@@ -95,11 +95,16 @@ struct SystemActivityView: View {
                                     .font(.system(size: size - 1, weight: .semibold))
                                     .frame(width: Self.pauseWidth(size))
                             }
-                            Text(reading)
-                                .font(.system(size: size, weight: .semibold).monospacedDigit())
-                                // The digits roll as they change, as the Timer's own do.
-                                .contentTransition(.numericText(countsDown: shown.countsDown))
-                                .animation(.snappy, value: reading)
+                            switch shown {
+                            case .timer:
+                                Text(reading)
+                                    .font(.system(size: size, weight: .semibold).monospacedDigit())
+                                    // The digits roll down as they change, as the Timer's own do.
+                                    .contentTransition(.numericText(countsDown: true))
+                                    .animation(.snappy, value: reading)
+                            case .stopwatch(let watch):
+                                StopwatchReading(watch: watch, size: size)
+                            }
                         }
                         .foregroundStyle(.orange)
                         .fixedSize()
@@ -327,7 +332,12 @@ struct SystemActivityView: View {
             // minutes, its digits as wide as each other.
             shown = whole >= 600 ? (10...max(whole / 60, 10)).map { NotchTimer.condensed(TimeInterval($0 * 60)) } : ["0:00"]
         case .stopwatch(let watch):
-            shown = [watch.elapsed(at: date) >= 3600 ? "0:00:00" : "00:00"]
+            // As wide as it reads until it gains an hour, its hundredths small after it.
+            let time = StopwatchReading.width(max(watch.elapsed(at: date), 600), size: size)
+            let paused = watch.isRunning ? 0 : pauseWidth(size) + pauseGap
+            let right = h * TimerLayout.textInset + paused + time + h * TimerLayout.snug
+            let left = h * (TimerLayout.ringInset + TimerLayout.ring + TimerLayout.snug)
+            return max(right, left, h * TimerLayout.wing)
         }
         // As wide as the time is, with nothing to spare: it never scrolls.
         let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)

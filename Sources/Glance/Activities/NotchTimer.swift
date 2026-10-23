@@ -115,6 +115,11 @@ enum Stopwatch: Equatable {
         return shown + (Locale.current.decimalSeparator ?? ".") + String(format: "%02d", hundredth)
     }
 
+    /// The hundredths of a second, as they're shown small after the seconds.
+    static func hundredths(_ seconds: TimeInterval) -> String {
+        String(format: "%02d", min(Int((seconds - floor(seconds)) * 100), 99))
+    }
+
     /// As VoiceOver says it: "Stopwatch, 1 minute, 7 seconds, stopped".
     static func spoken(_ watch: Stopwatch, at date: Date = .now) -> String {
         let time = NotchTimer.words(watch.elapsed(at: date).rounded(.down)) ?? format(watch.elapsed(at: date))

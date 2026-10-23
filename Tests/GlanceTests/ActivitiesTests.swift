@@ -153,6 +153,11 @@ struct ActivitiesTests {
         #expect(Stopwatch.format(727.41) == "12:07")
         #expect(Stopwatch.format(3727.41) == "1:02:07")
         #expect(Stopwatch.format(7.416, hundredths: true) == "0:07" + (Locale.current.decimalSeparator ?? ".") + "41")
+        // Beside the camera, its hundredths small after the seconds, as wide as its widest reading.
+        #expect(Stopwatch.hundredths(7.416) == "41")
+        #expect(Stopwatch.hundredths(7.999) == "99")
+        #expect(StopwatchReading.width(7, size: 14) > 0)
+        #expect(StopwatchReading.width(3_700, size: 14) > StopwatchReading.width(7, size: 14))
     }
 
     @Test("A Clock timer that rings is told by when macOS notes it rang, the last one's length and label")
@@ -309,7 +314,7 @@ struct ActivitiesTests {
         let plain = TimerDoneView.wing(length: 300, restingHeight: 32)
         let long = TimerDoneView.wing(length: 300, name: String(repeating: "Long label ", count: 10), restingHeight: 32)
         #expect(long >= plain)
-        #expect(long <= 32 * (TimerLayout.iconInset + TimerLayout.icon + TimerLayout.iconGap + TimerLayout.titleLimit + TimerLayout.snug) + 1)
+        #expect(long <= 32 * (TimerLayout.doneInset + TimerLayout.titleLimit + TimerLayout.snug) + 2)
     }
 
     @Test("Opened to a timer, the notch is as tall as the Timer's expanded view, with the player's room at its ends and beside the camera")

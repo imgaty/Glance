@@ -10,9 +10,9 @@ import SwiftUI
 
 /// The Timer as the iPhone draws it in the Dynamic Island, measured from it, by the island's
 /// height: beside the camera, a ring emptying as the time runs out, and the minutes left; opened,
-/// round buttons to pause and to cancel it beside its name and the time left, large; done, as the
-/// Alarm goes off, its symbol and its length beside buttons to start it again and to stop it. The
-/// opened and the done ones are as tall as the iPhone's, more than twice the notch.
+/// round buttons to pause and to cancel it beside its name and the time left, large; done, its name
+/// beside buttons to start it again and to stop it. The opened and the done ones are as tall as the
+/// iPhone's, more than twice the notch.
 enum TimerLayout {
     // Beside the camera.
     static let ring: CGFloat = 0.573
@@ -38,15 +38,13 @@ enum TimerLayout {
     static let title: CGFloat = 0.464
     static let time: CGFloat = 1.277
     static let titleGap: CGFloat = 0.228
+    /// The stopwatch's time opened, as the iPhone's: smaller than the timer's, for its hundredths.
+    static let stopwatchTime: CGFloat = 0.92
     /// On an island, how long a label runs before it's cut short.
     static let titleLimit: CGFloat = 4
-    // Done, as the Alarm: its symbol, and its length small above its name, lower than the middle.
-    static let iconInset: CGFloat = 0.7
-    static let icon: CGFloat = 1.16
-    static let iconGap: CGFloat = 0.44
-    static let small: CGFloat = 0.4
-    static let name: CGFloat = 0.46
-    static let wordsLower: CGFloat = 0.27
+    // Done, as the iPhone's Timer: its name, large, in from the end.
+    static let doneName: CGFloat = 0.71
+    static let doneInset: CGFloat = 0.9
     // Inside the round buttons.
     static let pauseBar = CGSize(width: 0.19, height: 0.6)
     static let pauseGap: CGFloat = 0.09
@@ -113,23 +111,80 @@ enum ClockShown: Equatable {
     }
 }
 
-/// The stopwatch beside the camera, where a timer's ring sits: its symbol, in the Timer's orange.
+/// The stopwatch beside the camera, where a timer's ring sits, as the iPhone draws it: a ring the
+/// timer's size, its crown on top and its button beside it, and a hand going round once a minute.
 struct StopwatchMark: View {
+    let watch: Stopwatch
     let height: CGFloat
 
     var body: some View {
-        Image(systemName: "stopwatch")
-            .font(.system(size: height * TimerLayout.ring * 0.95, weight: .medium))
-            .foregroundStyle(.orange)
-            .frame(width: height * TimerLayout.ring, height: height * TimerLayout.ring)
-            .accessibilityHidden(true)
+        let line = height * TimerLayout.ringLine
+        let side = height * TimerLayout.ring
+        // The crown and its button stand out past the ring by as much as the ring is thick.
+        let stem = height * TimerLayout.ringLine * 2
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !watch.isRunning)) { context in
+            let second = watch.elapsed(at: context.date).truncatingRemainder(dividingBy: 60)
+            ZStack {
+                Circle().stroke(.orange, lineWidth: line).padding(line / 2)
+                ForEach([0.0, 45], id: \.self) { degrees in
+                    Capsule()
+                        .fill(.orange)
+                        .frame(width: line, height: stem)
+                        .offset(y: -(side + stem) / 2 + line / 2)
+                        .rotationEffect(.degrees(degrees))
+                }
+                Capsule()
+                    .fill(.orange)
+                    .frame(width: line, height: height * (TimerLayout.handTo - TimerLayout.handFrom))
+                    .offset(y: -height * (TimerLayout.handFrom + TimerLayout.handTo) / 2)
+                    .rotationEffect(.degrees(second / 60 * 360))
+            }
+            .frame(width: side, height: side)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// The stopwatch's time as the iPhone shows it beside the camera: to the second, its hundredths
+/// small and raised after it, 0:09⁷¹.
+struct StopwatchReading: View {
+    let watch: Stopwatch
+    let size: CGFloat
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !watch.isRunning)) { context in
+            let elapsed = watch.elapsed(at: context.date)
+            HStack(alignment: .firstTextBaseline, spacing: size * StopwatchReading.gap) {
+                Text(Stopwatch.format(elapsed))
+                    .font(.system(size: size, weight: .semibold).monospacedDigit())
+                Text(Stopwatch.hundredths(elapsed))
+                    .font(.system(size: size * StopwatchReading.small, weight: .semibold).monospacedDigit())
+                    .baselineOffset(size * StopwatchReading.raised)
+            }
+        }
+    }
+
+    /// Measured from the iPhone's: the hundredths about two fifths the seconds' size, their tops a
+    /// little below the seconds', just apart from them.
+    static let small: CGFloat = 0.42
+    static let raised: CGFloat = 0.3
+    static let gap: CGFloat = 0.12
+
+    /// As wide as it reads with its widest digits.
+    @MainActor
+    static func width(_ elapsed: TimeInterval, size: CGFloat) -> CGFloat {
+        let shown = Stopwatch.format(elapsed).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
+        func measure(_ text: String, _ size: CGFloat) -> CGFloat {
+            ceil((text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)]).width)
+        }
+        return measure(shown, size) + size * gap + measure("00", size * small) + 2
     }
 }
 
 /// Opened to a timer, as the iPhone's Timer expands, as tall: round buttons to pause or go on and to
 /// cancel left of the camera, the time left, large, right of it, its name under the camera, as the
-/// player's title sits under it. Opened to the stopwatch, the same, its buttons to start or stop it
-/// and to lap or reset it, its time to the hundredth. In from the notch's ends as far as the player
+/// player's title sits under it. Opened to the stopwatch, as the iPhone's: its buttons to stop it and
+/// to lap, or, stopped, to start it and to reset it, and its time alone, to the hundredth. In from the notch's ends as far as the player
 /// is, and as far from the camera as the player's cover; the notch only as wide as that needs, for
 /// the time as it reads now. They're Clock's, pressed through Clock (see `ClockActivity`); without
 /// Accessibility, the buttons are dimmed, and a press asks for it.
@@ -195,9 +250,10 @@ struct ExpandedTimerView: View {
             IslandCircleButton(height: h, tint: .white, label: stopwatch ? (running ? "Lap" : "Reset") : "Cancel") {
                 stopwatch ? clock.lapResetStopwatch() : clock.cancelTimer()
             } glyph: {
-                if stopwatch {
-                    Image(systemName: running ? "flag.fill" : "arrow.counterclockwise")
-                        .font(.system(size: h * 0.5, weight: .bold))
+                // A lap starts the next one: round again.
+                if stopwatch, running {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: h * 0.58, weight: .semibold))
                         .foregroundStyle(.white)
                 } else {
                     CrossGlyph(height: h)
@@ -217,21 +273,21 @@ struct ExpandedTimerView: View {
             : h * TimerLayout.titleLimit
         let ticking: Bool = { if case .stopwatch(let watch) = shown { return watch.isRunning } else { return false } }()
         return HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
-            Text(name)
-                .font(.system(size: h * TimerLayout.title, weight: .semibold))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(width: max(min(Self.titleWidth(name, h), room), 0), alignment: .trailing)
             if case .stopwatch = shown {
-                // To the hundredth, as Clock's own counts, while it runs.
+                // Alone, to the hundredth, as Clock's own counts, while it runs.
                 TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !ticking)) { context in
                     Text(shown.reading(at: context.date))
-                        .font(.system(size: h * TimerLayout.time).monospacedDigit())
+                        .font(Self.timeFont(shown, h))
                 }
             } else {
+                Text(name)
+                    .font(.system(size: h * TimerLayout.title, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: max(min(Self.titleWidth(name, h), room), 0), alignment: .trailing)
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     Text(shown.reading(at: context.date))
-                        .font(.system(size: h * TimerLayout.time).monospacedDigit())
+                        .font(Self.timeFont(shown, h))
                         .contentTransition(.numericText(countsDown: true))
                         .animation(.snappy, value: shown.reading(at: context.date))
                 }
@@ -250,17 +306,28 @@ struct ExpandedTimerView: View {
         let time = timeWidth(shown, h, at: date)
         let padding = PlayerLayout.padding
         guard camera > 0 else {
-            let title = min(titleWidth(name, h), h * TimerLayout.titleLimit)
-            return max(h * TimerLayout.wide, padding * 2 + buttons + h + title + h * TimerLayout.titleGap + time)
+            let title: CGFloat = { if case .stopwatch = shown { return 0 } else { return min(titleWidth(name, h), h * TimerLayout.titleLimit) + h * TimerLayout.titleGap } }()
+            return max(h * TimerLayout.wide, padding * 2 + buttons + h + title + time)
         }
         return camera + 2 * (padding + max(buttons, time) + PlayerLayout.besideCamera)
+    }
+
+    /// The timer's time large, as the iPhone's Timer; the stopwatch's a little smaller, medium, as
+    /// its stopwatch.
+    private static func timeFont(_ shown: ClockShown, _ h: CGFloat) -> Font {
+        if case .stopwatch = shown { return .system(size: h * TimerLayout.stopwatchTime, weight: .medium).monospacedDigit() }
+        return .system(size: h * TimerLayout.time).monospacedDigit()
     }
 
     /// The time as it reads then, its digits all as wide as each other.
     @MainActor
     private static func timeWidth(_ shown: ClockShown, _ h: CGFloat, at date: Date = .now) -> CGFloat {
         let reading = shown.reading(at: date).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-        return ceil((reading as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width) + 2
+        let font: NSFont = {
+            if case .stopwatch = shown { return .monospacedDigitSystemFont(ofSize: h * TimerLayout.stopwatchTime, weight: .medium) }
+            return .monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)
+        }()
+        return ceil((reading as NSString).size(withAttributes: [.font: font]).width) + 2
     }
 
     @MainActor
@@ -269,9 +336,9 @@ struct ExpandedTimerView: View {
     }
 }
 
-/// A timer that's done, as the iPhone's Alarm goes off in the Dynamic Island, taller than the notch:
-/// its symbol shaking, its length small above its name, and round buttons to start it again and to
-/// stop it. The closed notch hands them its clicks by where they are (see `AlertButtonFrames`).
+/// A timer that's done, as the iPhone's Timer says so in the Dynamic Island, taller than the notch:
+/// its name, large, and round buttons to start it again and to stop it. The closed notch hands
+/// them its clicks by where they are (see `AlertButtonFrames`).
 struct TimerDoneView: View {
     let length: TimeInterval
     /// Timer, or the label it was given in Clock.
@@ -283,31 +350,21 @@ struct TimerDoneView: View {
     var body: some View {
         let h = restingHeight
         ZStack {
-            HStack(spacing: h * TimerLayout.iconGap) {
-                // Solid, its hand cut out, as the Alarm's clock is.
-                ArrivingSymbol(symbol: "timer.circle.fill", color: .orange, size: h * TimerLayout.icon * 0.9, side: h * TimerLayout.icon, shakes: true)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(NotchTimer.length(length))
-                        .font(.system(size: h * TimerLayout.small, weight: .semibold))
-                        .foregroundStyle(.orange.opacity(0.47))
-                    Text(name)
-                        .font(.system(size: h * TimerLayout.name, weight: .bold))
-                        .foregroundStyle(.orange)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+            Text(name)
+                .font(.system(size: h * TimerLayout.doneName, weight: .semibold))
+                .foregroundStyle(.orange)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 // A long label is cut short, as the wings are only so wide.
                 .frame(maxWidth: h * TimerLayout.titleLimit, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-                .offset(y: h * TimerLayout.wordsLower)
-            }
-            .padding(.leading, h * TimerLayout.iconInset)
-            .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, h * TimerLayout.doneInset)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(true)
             HStack(spacing: h * TimerLayout.buttonGap) {
                 IslandCircle(height: h, tint: .orange, highlighted: hovered == .again) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: h * 0.56, weight: .bold))
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: h * 0.58, weight: .semibold))
                         .foregroundStyle(.orange)
                 }
                 .reportsFrame(.again)
@@ -324,16 +381,13 @@ struct TimerDoneView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Each wing: as wide as the wider side, the symbol and the words or the buttons, and the camera
-    /// between them. A long label is cut short at the island's limit.
+    /// Each wing: as wide as the wider side, the name or the buttons, and the camera between them.
+    /// A long label is cut short at the island's limit.
     static func wing(length: TimeInterval, name: String = "Timer", restingHeight h: CGFloat) -> CGFloat {
-        func width(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
-            ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
-        }
         let words = min(
-            max(width(NotchTimer.length(length), h * TimerLayout.small, .semibold), width(name, h * TimerLayout.name, .bold)),
+            ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.doneName, weight: .semibold)]).width) + 2,
             h * TimerLayout.titleLimit)
-        let left = h * (TimerLayout.iconInset + TimerLayout.icon + TimerLayout.iconGap) + words
+        let left = h * TimerLayout.doneInset + words
         let right = h * (TimerLayout.buttonInset + TimerLayout.button * 2 + TimerLayout.buttonGap)
         return max(left, right) + h * TimerLayout.snug
     }

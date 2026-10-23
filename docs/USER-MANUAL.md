@@ -266,7 +266,8 @@ A timer counts down beside the camera as the iPhone's Timer does, a ring
 emptying beside the time left: in minutes from ten minutes up, then in minutes
 and seconds, with a pause symbol before the time while it's paused. It goes by
 the label it was given in Clock, if any. The stopwatch counts up beside its
-symbol, with the pause symbol while it's stopped.
+symbol, whose hand goes round once a minute, its hundredths small after the
+seconds, with the pause symbol while it's stopped.
 
 While something plays, the music keeps the notch and the timer moves out of it
 into a round bubble of its own off the notch's right end, showing its ring, as
@@ -278,9 +279,9 @@ on, they fade in and out where they rest.
 Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or
 cancel it, with the round buttons left of the camera. The time is right of it,
-and its name under the camera. Opened, the stopwatch counts to the hundredth,
-with buttons to start or stop it, and to lap or reset it. Bubbles open only
-with a click.
+and its name under the camera. Opened, the stopwatch shows its time alone, to
+the hundredth: stop it or start a new lap with its buttons, or, once it's
+stopped, start it again or reset it. Bubbles open only with a click.
 
 Its buttons work as Clock's own do, and what they do shows at once: Glance opens
 Clock hidden, shows it for a moment behind every other window, and, if it wasn't
@@ -289,9 +290,9 @@ they're dimmed, and pressing one asks for it (see [Permissions](#permissions)).
 Glance's menu in the menu bar and the notch's right-click menu have the same
 buttons.
 
-When a timer rings, the notch grows as tall as the iPhone's Alarm, its symbol
-shaking, beside macOS's own alert and chime. Click **Repeat** to start the same
-length again in Clock, or **✕** to stop saying it; both leave the notch closed.
+When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
+beside macOS's own alert and chime. Click **Repeat** to start the same length
+again in Clock, or **✕** to stop saying it; both leave the notch closed.
 Opening the notch stops saying it too. If Clock has been set to another length
 since, **Repeat** opens Clock on its timers.
 
