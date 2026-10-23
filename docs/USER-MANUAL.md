@@ -111,6 +111,7 @@ the controls. Drag the progress bar to move through the song. With
 **Show app icon on artwork** on, the playing app's icon sits on the cover's
 corner.
 
+The cover lifts and lights under the pointer, and presses in as it's clicked.
 Click the cover, or the app's icon, to go where the music plays from: the tab
 playing it in Safari, Chrome, Brave, Edge or Vivaldi, the playlist or album
 Spotify plays it from, or the song in the playlist Music plays it from. Other

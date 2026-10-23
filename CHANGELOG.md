@@ -22,6 +22,8 @@
 - Fixed clicking the cover, or the app's icon on it, not going where the music
   plays from: it opens the browser tab playing it, the playlist or album Spotify
   plays it from, or the song in the playlist Music plays it from.
+- Fixed the cover giving no sign it can be clicked: it lifts and lights under
+  the pointer, and presses in as it's clicked.
 
 ### Tray
 
