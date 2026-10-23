@@ -54,7 +54,10 @@
   notch or a bubble as Glance's own does, paused ones too. While it shows,
   macOS's own is taken out of the menu bar, with `Accessibility` allowed.
   Opened, its buttons pause and cancel it as Clock's own do, with Clock opened
-  hidden for a moment.
+  hidden for a moment, and so do Glance's menu in the menu bar and the notch's
+  right-click menu. `Clock timers` and `Hide in menu bar` in
+  **Settings > Live Activities** turn each off, beside a way to Menu Bar
+  settings to bring macOS's own back.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

@@ -104,6 +104,8 @@ final class StatusBarController: NSObject {
     @objc private func cancelTimer() { NotchTimer.shared.cancel() }
     @objc private func stopTimer() { NotchTimer.shared.stop() }
     @objc private func repeatTimer() { NotchTimer.shared.repeatLast() }
+    @objc private func pauseOrResumeClockTimer() { SystemTimer.shared.toggle() }
+    @objc private func cancelClockTimer() { SystemTimer.shared.cancel() }
     @objc private func rebuildFromMenu() { rebuild() }
     @objc private func settingsFromMenu() { onOpenSettings?() }
 
@@ -192,7 +194,8 @@ final class StatusBarController: NSObject {
 
 extension StatusBarController: NSMenuDelegate {
     /// The notch's right-click menu starts with the timer: lengths to start one, or, while one runs,
-    /// Pause and Cancel, or, once it's done, Repeat and Stop. Made afresh each time it opens.
+    /// Pause and Cancel, or, once it's done, Repeat and Stop; then macOS's own timer, while one
+    /// shows, to pause and cancel through Clock. Made afresh each time it opens.
     func menuNeedsUpdate(_ menu: NSMenu) {
         for item in menu.items where item.tag == Self.timerItem { menu.removeItem(item) }
         let timer = NotchTimer.shared
@@ -218,6 +221,10 @@ extension StatusBarController: NSMenuDelegate {
             let start = NSMenuItem(title: "Start Timer", action: nil, keyEquivalent: "")
             start.submenu = lengths
             items.append(start)
+        }
+        if let clock = SystemTimer.shared.state {
+            add(clock.isRunning ? "Pause Clock Timer" : "Resume Clock Timer", #selector(pauseOrResumeClockTimer))
+            add("Cancel Clock Timer", #selector(cancelClockTimer))
         }
         items.append(.separator())
         for (index, item) in items.enumerated() {
@@ -543,10 +550,12 @@ private final class MenuPanel: NSPanel {
 
 /// The timer, as Control Center lays out a module: its name, and a row of lengths to start one with,
 /// in minutes; while one runs, the time left beside its name, with buttons to pause it and cancel
-/// it; done, a button to stop its chime. Starting one closes the menu, so the notch's countdown
-/// shows.
+/// it; done, buttons to start it again or stop its chime. Starting one closes the menu, so the
+/// notch's countdown shows. Below it, macOS's own timer while one shows, with the same buttons.
 private struct StatusTimer: View {
     @ObservedObject var timer: NotchTimer
+    /// macOS's own timer, below Glance's while one shows, paused and cancelled through Clock.
+    @ObservedObject var clock = SystemTimer.shared
     let start: (Int) -> Void
     static let lengths = [1, 5, 10, 15, 30, 60]
     /// Between the buttons, as far apart as their bezels need.
@@ -559,21 +568,7 @@ private struct StatusTimer: View {
                     .font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 8)
                 if let state = timer.state {
-                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                        // Paused, it says so with a symbol before the time, which waits. In the label's
-                        // own color, which the glass keeps readable whatever is behind it; an orange
-                        // can't be.
-                        HStack(spacing: 4) {
-                            if !state.isRunning {
-                                Image(systemName: "pause.fill")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .accessibilityLabel("Paused")
-                            }
-                            Text(NotchTimer.format(state.left(at: context.date)))
-                                .font(.system(size: 13, weight: .medium).monospacedDigit())
-                        }
-                        .foregroundStyle(.primary)
-                    }
+                    Self.time(state)
                     StatusRoundButton(symbol: state.isRunning ? "pause.fill" : "play.fill", label: state.isRunning ? "Pause" : "Resume") {
                         state.isRunning ? timer.pause() : timer.resume()
                     }
@@ -593,9 +588,38 @@ private struct StatusTimer: View {
                     }
                 }
             }
+            if let state = clock.state {
+                HStack(spacing: Self.spacing) {
+                    Text("Clock Timer")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer(minLength: 8)
+                    Self.time(state)
+                    StatusRoundButton(symbol: state.isRunning ? "pause.fill" : "play.fill", label: state.isRunning ? "Pause" : "Resume") {
+                        clock.toggle()
+                    }
+                    StatusRoundButton(symbol: "xmark", label: "Cancel") { clock.cancel() }
+                }
+            }
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 6)
+    }
+
+    /// The time left, ticking. Paused, it says so with a symbol before the time, which waits. In the
+    /// label's own color, which the glass keeps readable whatever is behind it; an orange can't be.
+    private static func time(_ state: NotchTimer.State) -> some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { context in
+            HStack(spacing: 4) {
+                if !state.isRunning {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .accessibilityLabel("Paused")
+                }
+                Text(NotchTimer.format(state.left(at: context.date)))
+                    .font(.system(size: 13, weight: .medium).monospacedDigit())
+            }
+            .foregroundStyle(.primary)
+        }
     }
 }
 

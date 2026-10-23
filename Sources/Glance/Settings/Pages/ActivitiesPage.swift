@@ -9,12 +9,14 @@ import AppKit
 import SwiftUI
 
 /// What the Mac announces beside the camera, each turned on or off, as the iPhone's Dynamic Island
-/// shows them; and the timer. The battery's choices show only on a Mac with one. Music's own, with
-/// the rest of Music, are a click away.
+/// shows them; and the timer, with macOS's own. The battery's choices show only on a Mac with one.
+/// Music's own, with the rest of Music, are a click away.
 struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
+    @AppStorage(Preferences.activityClockTimers) private var clockTimers = true
+    @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = true
     @ObservedObject private var timer = NotchTimer.shared
     @Environment(\.showPane) private var showPane
     private let hasBattery = BatteryWatch.hasBattery
@@ -58,7 +60,10 @@ struct ActivitiesPage: View {
                             Button("Cancel") { timer.cancel() }
                         }
                     } else if timer.ringing {
-                        Button("Stop") { timer.stop() }
+                        HStack {
+                            Button("Repeat") { timer.repeatLast() }
+                            Button("Stop") { timer.stop() }
+                        }
                     } else {
                         Menu("Start Timer") {
                             ForEach(NotchTimer.presets, id: \.self) { minutes in
@@ -66,6 +71,23 @@ struct ActivitiesPage: View {
                             }
                         }
                         .fixedSize()
+                    }
+                }
+                Toggle(isOn: $clockTimers) {
+                    Text("Clock timers")
+                    Text("Shows timers started in the Clock app, in Control Center or with Siri.")
+                }
+                Toggle(isOn: $hidesMenuBar) {
+                    Text("Hide in menu bar")
+                    Text("Takes macOS's timer out of the menu bar while the notch shows it. Needs Accessibility.")
+                }
+                .disabled(!clockTimers)
+                CenteredRow {
+                    Text("Menu bar timer")
+                    Text("Once taken out, macOS's timer comes back with Show When Active for Timer in Menu Bar settings.")
+                } trailing: {
+                    Button("Menu Bar Settings…") {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
                     }
                 }
             }

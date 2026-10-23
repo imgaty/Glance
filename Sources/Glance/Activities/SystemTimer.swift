@@ -11,9 +11,9 @@ import ApplicationServices
 /// A timer started with macOS's own Timer, from the Clock app, Control Center or Siri, so it counts
 /// down beside the camera as Glance's own does. macOS shares its timers with no other app, but keeps
 /// them in its settings: each one's length, and when it ends, or what's left of it while paused.
-/// They're read from there every second. While one shows, the menu bar's own is taken out, through
-/// Accessibility, so it isn't shown twice; and it's paused, resumed or cancelled with Clock's own
-/// buttons for it (see `toggle()`).
+/// They're read from there every second, unless Clock timers is off in Settings. While one shows, the
+/// menu bar's own is taken out, through Accessibility, so it isn't shown twice, unless Hide in menu
+/// bar is off; and it's paused, resumed or cancelled with Clock's own buttons for it (see `toggle()`).
 @MainActor
 final class SystemTimer: ObservableObject {
     static let shared = SystemTimer()
@@ -43,13 +43,17 @@ final class SystemTimer: ObservableObject {
     }
 
     private func read() {
-        CFPreferencesAppSynchronize(Self.domain)
-        let kept = (CFPreferencesCopyAppValue("MTTimers" as CFString, Self.domain) as? [String: Any])?["MTTimers"] as? [[String: Any]] ?? []
-        let current = Self.current(in: kept)
+        let defaults = UserDefaults.standard
+        var current: (state: NotchTimer.State, id: String?)?
+        if defaults.bool(forKey: Preferences.activityClockTimers) {
+            CFPreferencesAppSynchronize(Self.domain)
+            let kept = (CFPreferencesCopyAppValue("MTTimers" as CFString, Self.domain) as? [String: Any])?["MTTimers"] as? [[String: Any]] ?? []
+            current = Self.current(in: kept)
+        }
         let next = current?.state
         shownID = current?.id
         if next != state { state = next }
-        if next != nil, Date.now >= nextHide {
+        if next != nil, defaults.bool(forKey: Preferences.clockTimerHidesMenuBar), Date.now >= nextHide {
             nextHide = .now + 3
             Self.hideMenuBarTimer()
         }

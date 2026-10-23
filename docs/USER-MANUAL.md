@@ -282,11 +282,14 @@ done timer's **Repeat** and **✕** as Repeat and Stop.
 A timer started with macOS's own Timer, from the Clock app, Control Center or
 Siri, shows the same way, paused ones too, after Glance's own. Its buttons pause
 and cancel it as Clock's own buttons do: Glance opens Clock hidden for a moment,
-behind every other window, and quits it again if it wasn't open. While it
-shows, Glance takes macOS's own timer out of the menu bar, with `Accessibility`
-allowed (see [Permissions](#permissions)); macOS keeps that choice. To have it
-back in the menu bar, choose `Show When Active` for Timer in
-**System Settings > Menu Bar**.
+behind every other window, and quits it again if it wasn't open. Glance's menu
+in the menu bar and the notch's right-click menu pause and cancel it too. While
+it shows, Glance takes macOS's own timer out of the menu bar, with
+`Accessibility` allowed (see [Permissions](#permissions)); macOS keeps that
+choice. To have it back in the menu bar, turn off **Hide in menu bar** in
+**Settings > Live Activities**, then click **Menu Bar Settings…** there and
+choose `Show When Active` for Timer. Turn off **Clock timers** to leave macOS's
+timers out of the notch.
 
 When it's done, the notch grows as tall as the iPhone's Alarm, its symbol
 shaking, and it chimes. Click **Repeat** to start the same length again, or
@@ -304,6 +307,7 @@ Glance's icon in the menu bar opens a menu:
 | --- | --- |
 | `Glance` switch | Turns the notch off on every display, until it's turned back on |
 | `Timer` | Starts a timer of 1 to 60 minutes; while one runs, pauses or cancels it; once it's done, repeats or stops it |
+| `Clock Timer` | While macOS's own timer shows, pauses, resumes or cancels it |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
@@ -373,7 +377,10 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice and trackpads as they connect, and sound going to AirPlay |
-| `Timer` | Starts a timer, or pauses or cancels the one running |
+| `Timer` | Starts a timer, pauses or cancels the one running, or repeats or stops it once it's done |
+| `Clock timers` | Shows timers started in the Clock app, in Control Center or with Siri |
+| `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed |
+| `Menu bar timer` | **Menu Bar Settings…** opens **System Settings > Menu Bar**, to bring macOS's own timer back |
 
 ### Opening
 

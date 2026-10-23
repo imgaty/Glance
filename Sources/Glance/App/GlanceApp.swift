@@ -180,6 +180,8 @@ enum Preferences {
             activityCharging: true,
             activityLowBattery: true,
             activityDevices: true,
+            activityClockTimers: true,
+            clockTimerHidesMenuBar: true,
             swipeToSwitch: true,
         ])
     }
@@ -265,6 +267,10 @@ enum Preferences {
     static let activityCharging = "activityCharging"
     static let activityLowBattery = "activityLowBattery"
     static let activityDevices = "activityDevices"
+    /// Timers started with macOS's own Timer show too (see SystemTimer), and while one does, the
+    /// menu bar's own is taken out.
+    static let activityClockTimers = "activityClockTimers"
+    static let clockTimerHidesMenuBar = "clockTimerHidesMenuBar"
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"
