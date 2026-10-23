@@ -12,6 +12,11 @@
 
 - Fixed the photo in the tray's demo being enlarged from a smaller picture.
 
+### Settings
+
+- Fixed toggles and the `Layout` choice lagging on the Settings pages with the
+  notch's preview.
+
 <br>
 
 ## Release 0.2.0

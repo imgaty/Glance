@@ -103,6 +103,8 @@ final class NotchController {
     private var swipe: CGFloat = 0
     /// Whether the current click began on a closed notch, so letting go opens rather than closes it.
     private var pressBeganClosed = false
+    /// A new layout chosen while the notch is closed, taken once things have settled.
+    private var relayoutTask: Task<Void, Never>?
     /// A menu opened from inside the open notch, like the sound output's, is up: the pointer is on
     /// the menu, outside the notch, but the notch stays open under it until it's gone.
     private var menuHold = false
@@ -422,10 +424,21 @@ final class NotchController {
         }
     }
 
-    /// Switches to the layout chosen in Settings, in place: the notch reshapes and the player's
-    /// pieces move to their new places.
+    /// Switches to the layout chosen in Settings, in place: open, the notch reshapes and the
+    /// player's pieces move to their new places. Closed, nothing of the new layout shows: it's taken
+    /// once the click that chose it has settled, rather than adding to the moment that click takes,
+    /// or as the notch opens, if that's sooner.
     func relayout() {
+        relayoutTask?.cancel()
         guard PlayerLayout.current != model.layout else { return }
+        guard model.state == .open else {
+            relayoutTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(0.6))
+                guard let self, !Task.isCancelled else { return }
+                self.model.use(PlayerLayout.current)
+            }
+            return
+        }
         withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.use(PlayerLayout.current) }
     }
 
@@ -635,6 +648,10 @@ final class NotchController {
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) {
+            if model.layout != PlayerLayout.current {
+                relayoutTask?.cancel()
+                model.use(PlayerLayout.current)
+            }
             model.page = page
             model.pageNudge = 0
             if !forDrop {
