@@ -32,8 +32,6 @@ enum TimerLayout {
     static let wide: CGFloat = 10.2
     /// Its round corners at the bottom, the Dynamic Island's 44 points.
     static let corner: CGFloat = 1.2
-    /// Opened, its buttons and time sit either side of the camera, at least this far from it.
-    static let besideCamera: CGFloat = 0.3
     static let button: CGFloat = 1.364
     static let buttonGap: CGFloat = 0.23
     static let buttonInset: CGFloat = 0.455
@@ -87,85 +85,125 @@ struct TimerRing: View {
 }
 
 /// Opened while a timer runs, as the iPhone's Timer expands, as tall: round buttons to pause or go on
-/// and to cancel on the left, its name and the time left, large, on the right, in one row either
-/// side of the camera, as the player's cover sits up beside it. macOS's own timer only Clock can
+/// and to cancel against the camera's left side, the time left, large, against its right, and its
+/// name under the camera, as the player's title sits under it. macOS's own timer only Clock can
 /// pause or cancel: in their place, a button to open it.
 struct ExpandedTimerView: View {
     let state: NotchTimer.State
     let restingHeight: CGFloat
+    /// The camera housing's width, which the row goes either side of; none on an island.
+    let camera: CGFloat
     var system = false
 
     var body: some View {
         let h = restingHeight
-        let timer = NotchTimer.shared
-        ZStack {
-            HStack(spacing: h * TimerLayout.buttonGap) {
-                if system {
-                    IslandCircleButton(height: h, tint: .orange, label: "Open Clock") {
-                        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
-                    } glyph: {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: h * 0.62, weight: .bold))
-                            .foregroundStyle(.orange)
-                    }
-                } else {
-                    controls(h, timer)
+        let size = Self.sizes(for: state, restingHeight: h, system: system)
+        let width = Self.width(for: state, restingHeight: h, camera: camera, system: system)
+        Group {
+            if camera > 0 {
+                // Right up against the camera: the buttons on its left, the time on its right, the
+                // time's name under it.
+                let side = max((width - camera) / 2, 0)
+                HStack(spacing: 0) {
+                    buttons(h)
+                        .padding(.trailing, h * TimerLayout.snug)
+                        .frame(width: side, alignment: .trailing)
+                    Color.clear.frame(width: camera)
+                    time(h)
+                        .offset(x: -(size.title + h * TimerLayout.titleGap))
+                        .padding(.leading, h * TimerLayout.snug)
+                        .frame(width: side, alignment: .leading)
+                }
+            } else {
+                // As the iPhone's: the buttons in from the left end, the time in from the right.
+                ZStack {
+                    buttons(h)
+                        .padding(.leading, h * TimerLayout.buttonInset)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    time(h)
+                        .padding(.trailing, h * TimerLayout.timeInset)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .padding(.leading, h * TimerLayout.buttonInset)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
-                Text("Timer")
-                    .font(.system(size: h * TimerLayout.title, weight: .semibold))
-                TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                    Text(NotchTimer.format(state.left(at: context.date)))
-                        .font(.system(size: h * TimerLayout.time).monospacedDigit())
-                        .contentTransition(.numericText(countsDown: true))
-                        .animation(.snappy, value: NotchTimer.format(state.left(at: context.date)))
-                }
-            }
-            .foregroundStyle(.orange)
-            .fixedSize()
-            .padding(.trailing, h * TimerLayout.timeInset)
-            .frame(maxWidth: .infinity, alignment: .trailing)
         }
         // In the middle of its height, as the iPhone's is.
         .frame(height: h * TimerLayout.button)
         .frame(maxHeight: .infinity)
     }
 
-    /// Glance's own timer's: pause or go on, and cancel.
-    @ViewBuilder private func controls(_ h: CGFloat, _ timer: NotchTimer) -> some View {
-        IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
-            state.isRunning ? timer.pause() : timer.resume()
-        } glyph: {
-            if state.isRunning {
-                PauseGlyph(height: h)
+    /// Glance's own timer's: pause or go on, and cancel. macOS's own only Clock can pause or cancel:
+    /// a button to open it.
+    private func buttons(_ h: CGFloat) -> some View {
+        let timer = NotchTimer.shared
+        return HStack(spacing: h * TimerLayout.buttonGap) {
+            if system {
+                IslandCircleButton(height: h, tint: .orange, label: "Open Clock") {
+                    NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
+                } glyph: {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: h * 0.62, weight: .bold))
+                        .foregroundStyle(.orange)
+                }
             } else {
-                Image(systemName: "play.fill")
-                    .font(.system(size: h * 0.62, weight: .bold))
-                    .foregroundStyle(.orange)
+                IslandCircleButton(height: h, tint: .orange, label: state.isRunning ? "Pause" : "Resume") {
+                    state.isRunning ? timer.pause() : timer.resume()
+                } glyph: {
+                    if state.isRunning {
+                        PauseGlyph(height: h)
+                    } else {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: h * 0.62, weight: .bold))
+                            .foregroundStyle(.orange)
+                    }
+                }
+                IslandCircleButton(height: h, tint: .white, label: "Cancel") {
+                    timer.cancel()
+                } glyph: {
+                    CrossGlyph(height: h)
+                }
             }
-        }
-        IslandCircleButton(height: h, tint: .white, label: "Cancel") {
-            timer.cancel()
-        } glyph: {
-            CrossGlyph(height: h)
         }
     }
 
-    /// Either side of the camera, as wide as the wider of its buttons and its words needs, the camera
-    /// in the middle; on an island, as wide as the iPhone's, with as much room between them as it
-    /// has. Past an hour, the time takes more.
+    /// Its name, small, and the time left, large, on one line.
+    private func time(_ h: CGFloat) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
+            Text("Timer")
+                .font(.system(size: h * TimerLayout.title, weight: .semibold))
+            TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                Text(NotchTimer.format(state.left(at: context.date)))
+                    .font(.system(size: h * TimerLayout.time).monospacedDigit())
+                    .contentTransition(.numericText(countsDown: true))
+                    .animation(.snappy, value: NotchTimer.format(state.left(at: context.date)))
+            }
+        }
+        .foregroundStyle(.orange)
+        .fixedSize()
+    }
+
+    /// How wide its parts are: the buttons, the time's name, and the time, as long as it gets.
     @MainActor
-    static func width(for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
-        let left = h * (TimerLayout.buttonInset + TimerLayout.button * 2 + TimerLayout.buttonGap)
+    private static func sizes(for state: NotchTimer.State, restingHeight h: CGFloat, system: Bool) -> (buttons: CGFloat, title: CGFloat, time: CGFloat) {
+        let buttons = system ? h * TimerLayout.button : h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
         let longest = NotchTimer.format(state.total).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
         let time = (longest as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)]).width
         let title = ("Timer" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width
-        let right = ceil(title + h * TimerLayout.titleGap + time) + 2 + h * TimerLayout.timeInset
-        guard camera > 0 else { return max(h * TimerLayout.wide, left + right + h) }
-        return camera + 2 * (max(left, right) + h * TimerLayout.besideCamera)
+        return (buttons, ceil(title), ceil(time) + 2)
+    }
+
+    /// Either side of the camera, right up against it, as wide as the wider of the buttons and the
+    /// time needs, the time's name under the camera; on an island, as wide as the iPhone's, with as
+    /// much room between them as it has. Past an hour, the time takes more.
+    @MainActor
+    static func width(for state: NotchTimer.State, restingHeight h: CGFloat, camera: CGFloat, system: Bool = false) -> CGFloat {
+        let size = sizes(for: state, restingHeight: h, system: system)
+        let left = h * TimerLayout.buttonInset + size.buttons
+        guard camera > 0 else {
+            return max(h * TimerLayout.wide, left + size.title + h * TimerLayout.titleGap + size.time + h * TimerLayout.timeInset + h)
+        }
+        // The time as far in from its end as the buttons are from theirs.
+        let right = size.time + h * TimerLayout.buttonInset
+        return camera + 2 * (max(left, right) + h * TimerLayout.snug)
     }
 }
 

@@ -36,8 +36,9 @@
   Settings, counting down beside the camera as the iPhone's Timer does: a ring
   emptying beside the minutes left, with a pause symbol while paused. Opened,
   it's as tall as the iPhone's expanded Timer, with buttons to pause and cancel
-  it on one side of the camera and the time on the other. Done, it grows as
-  tall as the iPhone's Alarm, with buttons to start it again or stop its chime.
+  it against the camera's left side, the time against its right and its name
+  under the camera. Done, it grows as tall as the iPhone's Alarm, with buttons
+  to start it again or stop its chime.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and
