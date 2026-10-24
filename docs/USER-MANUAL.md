@@ -82,7 +82,8 @@ three fingers on the open notch, or hold Shift and scroll, and back to return.
 Three fingers anywhere else still move between desktops.
 
 Pulled down with two fingers, the open notch stretches, and the player, the
-tray or the lyrics stretch with it, then settle back as you let go.
+tray or the lyrics move down with it, keeping their shape, then settle back as
+you let go.
 
 Opened with a shortcut, the notch stays open until you press it again, click
 elsewhere, or move the pointer onto the notch and away. It takes the keyboard

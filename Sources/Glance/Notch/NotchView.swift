@@ -216,12 +216,11 @@ final class NotchModel: ObservableObject {
 
     var metrics: NotchMetrics { metrics(for: state) }
 
-    /// Pulled down, how far the open notch has grown past its own size, across and down, for what
-    /// it shows to stretch with it; 1 otherwise.
-    var pullStretch: CGSize {
-        guard state == .open, stretch > 0 else { return CGSize(width: 1, height: 1) }
-        let pulled = metrics(for: .open), rest = metrics(for: .open, pull: 0)
-        return CGSize(width: pulled.bodyWidth / max(rest.bodyWidth, 1), height: pulled.height / max(rest.height, 1))
+    /// Pulled down, how far what the open notch shows moves down with it: half as far as the notch
+    /// has grown, so it stays in the middle of it, its shape as it is.
+    var pullShift: CGFloat {
+        guard state == .open, stretch > 0 else { return 0 }
+        return (metrics(for: .open).height - metrics(for: .open, pull: 0).height) / 2
     }
 
     func metrics(for state: NotchState, pull: CGFloat? = nil) -> NotchMetrics {
@@ -401,8 +400,8 @@ struct NotchView: View {
                 .frame(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
                 .animation(.easeOut(duration: 0.2)) { $0.opacity(model.activity && !isOpen ? 1 : 0) }
-            // Pulled down, the lyrics, the player and the tray stretch with the notch, as rubber
-            // does, the cover and the waveform with them, and settle back with it.
+            // Pulled down, the lyrics, the player and the tray move down with the notch, the cover
+            // and the waveform with them, keeping their shape, and settle back with it.
             ZStack(alignment: .top) {
                 // Laid out at their open sizes so they never reflow; the growing shape reveals
                 // them. With the lyrics, the notch widens both ways: the player takes the left, the
@@ -468,7 +467,7 @@ struct NotchView: View {
                 .allowsHitTesting(places == nil && !trayShown)
             }
             .frame(width: m.totalWidth, height: m.height, alignment: .top)
-            .scaleEffect(x: model.pullStretch.width, y: model.pullStretch.height, anchor: .top)
+            .offset(y: model.pullShift)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
