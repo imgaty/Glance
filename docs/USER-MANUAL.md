@@ -255,7 +255,6 @@ sliding under the notch as it folds:
 | A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | `Low Battery`, and its level, in red |
 | AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring. One that doesn't tell the Mac its battery isn't announced |
-| The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
 
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 With `Accessibility` allowed, macOS's own Low Battery notification is taken away
@@ -323,6 +322,19 @@ as Repeat and Stop.
 
 Glance doesn't show Clock's alarms: macOS keeps them where other apps can't
 read them.
+
+### AirPlay
+
+While the sound plays on an AirPlay speaker or TV, the notch shows it as the
+iPhone shows Screen Mirroring: AirPlay's symbol in blue at its left end, and
+what it plays on at its right, a TV, a HomePod or a speaker. It stays for as
+long as the sound plays there. Behind music or a timer, it goes in a bubble of
+its own, showing AirPlay's symbol.
+
+Hover over or click the notch while AirPlay has it, or click its bubble, and it
+opens to AirPlay, with the speaker's name. Click **Stop AirPlay** to send the
+sound back to where it played before, or to the Mac's own speakers. Turn it off
+with `Devices` in **Settings > Live Activities**.
 
 <br>
 

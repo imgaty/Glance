@@ -104,6 +104,7 @@ final class NotchController {
     private var alertWatch: AnyCancellable?
     private var timerWatch: AnyCancellable?
     private var clockNameWatch: AnyCancellable?
+    private var airPlayWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
     /// A trackpad gesture's direction, settled by its first movement.
@@ -314,6 +315,10 @@ final class NotchController {
         clockNameWatch = ClockActivity.shared.$timerTitle.removeDuplicates().sink { [weak self] title in
             MainActor.assumeIsolated { self?.model.timerName = title }
         }
+        // The sound going to AirPlay (see `AirPlayWatch`).
+        airPlayWatch = AirPlayWatch.shared.$route.removeDuplicates().sink { [weak self] route in
+            MainActor.assumeIsolated { self?.show(airplay: route) }
+        }
 
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in
@@ -487,7 +492,7 @@ final class NotchController {
     private func show(_ alert: NotchAlert?) {
         switchTask?.cancel()
         let fold = IslandMotion.fold, open = IslandMotion.open
-        let wingsShowing = model.activity || model.timer != nil || model.stopwatch != nil
+        let wingsShowing = !model.activities.isEmpty
         guard let alert else {
             withAnimation(fold) {
                 model.alert = nil
@@ -534,8 +539,15 @@ final class NotchController {
             fitTimerWing()
         }
         // Opened to one that has ended, been cancelled or reset, the notch closes, for that to show.
-        if model.state == .open, model.expanded != nil, model.expandedClock == nil { close(holdUntilExit: true) }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         refitAsTimersCount()
+    }
+
+    /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it
+    /// leaves, the notch closes.
+    private func show(airplay route: AirPlayRoute?) {
+        withAnimation(route == nil ? IslandMotion.fold : IslandMotion.open) { model.airplay = route }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
     /// Refits the notch whenever what it shows of a timer or the stopwatch gains or loses a digit,

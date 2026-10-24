@@ -27,15 +27,15 @@ struct ActivitiesTests {
         activities.post(alert(.charging))
         #expect(activities.alert?.kind == .charging)
         activities.post(alert(.device, "AirPods"))
-        activities.post(alert(.output))
+        activities.post(alert(.timerDone))
         activities.post(alert(.device, "Magic Mouse"))
         #expect(activities.alert?.kind == .charging)
         #expect(activities.waiting.map(\.spoken) == ["Magic Mouse", "Title"])
         // A short line: the oldest of too many goes.
         activities.post(alert(.lowBattery))
-        activities.post(alert(.timerDone))
+        activities.post(alert(.charging))
         #expect(activities.waiting.count == 3)
-        #expect(activities.waiting.first?.kind == .output)
+        #expect(activities.waiting.first?.kind == .timerDone)
     }
 
     @Test("One that stays shows until it's dismissed")
@@ -91,8 +91,11 @@ struct ActivitiesTests {
         #expect(mouse.content == .device(symbol: "magicmouse", pictures: [], battery: 15))
         #expect(mouse.spoken == "Magic Mouse connected, 15 percent")
         #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", pictures: [], battery: nil))
-        let airPlay = DeviceWatch.alert(name: "Living Room", symbol: "airplay.audio", kind: .output)
-        #expect(airPlay.content == .status(symbol: "airplay.audio", tint: .blue, text: "Living Room"))
+        // AirPlay's device, by its name, as Control Center draws it.
+        #expect(AirPlayRoute.symbol(for: "Living Room Apple TV") == "appletv.fill")
+        #expect(AirPlayRoute.symbol(for: "Samsung TV") == "tv")
+        #expect(AirPlayRoute.symbol(for: "Kitchen HomePod") == "homepod.fill")
+        #expect(AirPlayRoute.symbol(for: "Bedroom") == "hifispeaker.fill")
         #expect(DeviceWatch.shortName("Hilário\u{2019}s AirPods Pro") == "AirPods Pro")
         #expect(DeviceWatch.shortName("Sam's Magic Keyboard") == "Magic Keyboard")
         #expect(DeviceWatch.shortName("MX Master 3S") == "MX Master 3S")
@@ -413,7 +416,8 @@ struct ActivitiesTests {
         // Its battery as a ring alone, with no level in numbers beside it.
         #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) >= layout.ring + layout.trailing)
         #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) < layout.ring + layout.trailing + 15)
-        let speaker = DeviceWatch.alert(name: "The Living Room Speaker Upstairs, By the Window", symbol: "airplayaudio", kind: .output)
+        let long = "The Living Room Speaker Upstairs, By the Window"
+        let speaker = NotchAlert(kind: .charging, content: .status(symbol: "airplay.audio", tint: .blue, text: long), spoken: long)
         #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false) == SystemActivityView.maxWing)
         #expect(SystemActivityView.maxWing <= 120)
         // A timer's wings as wide as its time needs as it reads now, from the end, and no wider.
@@ -476,6 +480,27 @@ struct ActivitiesTests {
         #expect(model.bubbles == [.stopwatch])
         #expect(model.expansion(fromBubble: nil) == .timer)
         #expect(model.expansion(fromBubble: .trailing) == .stopwatch)
+    }
+
+    @Test("AirPlay comes after the rest: the notch's once nothing else shows, its symbols in the cover's wings")
+    func airPlay() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        let route = AirPlayRoute(name: "Living Room", symbol: "appletv.fill")
+        model.airplay = route
+        #expect(model.activities == [.airplay])
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32, island: false))
+        #expect(model.expansion(fromBubble: nil) == .airplay)
+        // Behind music, in a bubble that opens to it.
+        model.activity = true
+        #expect(model.bubbles == [.airplay])
+        #expect(model.expansion(fromBubble: .trailing) == .airplay)
+        // Opened to it, it's gone once the sound leaves AirPlay.
+        model.expanded = .airplay
+        #expect(!model.expandedGone)
+        model.airplay = nil
+        #expect(model.expandedGone)
+        #expect(ExpandedAirPlayView.width(for: route, restingHeight: 32) == 32 * AirPlayLayout.wide)
+        #expect(AirPlayLayout.height(32) > TimerLayout.tallHeight(32))
     }
 
     @Test("macOS's own timer is read from what macOS keeps: the running one ending first, else the one paused last")
