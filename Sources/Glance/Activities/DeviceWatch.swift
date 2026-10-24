@@ -13,15 +13,14 @@ import UniformTypeIdentifiers
 
 /// Devices connecting, as the iPhone's Dynamic Island shows AirPods connecting, their symbol
 /// turning in beside their battery: headphones and speakers over Bluetooth, as Core Audio sees them
-/// arrive, by their model and battery as System Information reports them; keyboards, mice,
-/// trackpads and game controllers over Bluetooth, as the Mac's list of devices sees them; and the
-/// sound going to an AirPlay speaker or TV. None of it needs a permission. What's connected as
-/// Glance starts, or reconnects as the Mac wakes, isn't announced.
+/// arrive, by their model and battery as System Information reports them; and keyboards, mice,
+/// trackpads and game controllers over Bluetooth, as the Mac's list of devices sees them. None of
+/// it needs a permission. What's connected as Glance starts, or reconnects as the Mac wakes, isn't
+/// announced. The sound going to AirPlay is an activity of its own (see `AirPlayWatch`).
 @MainActor
 final class DeviceWatch {
     /// Sound devices there are, by ID.
     private var outputs: Set<AudioDeviceID> = []
-    private var defaultOutput: AudioDeviceID = 0
     /// What was announced lately, by name: one device often arrives more than one way.
     private var recent: [String: Date] = [:]
     private var port: IONotificationPortRef?
@@ -29,14 +28,9 @@ final class DeviceWatch {
 
     func start() {
         outputs = Set(AudioOutput.outputs().map(\.id))
-        defaultOutput = AudioOutput.defaultOutput
-        for selector in [kAudioHardwarePropertyDevices, kAudioHardwarePropertyDefaultOutputDevice] {
-            var address = AudioProperty.address(selector)
-            AudioObjectAddPropertyListenerBlock(AudioProperty.system, &address, .main) { [weak self] _, _ in
-                MainActor.assumeIsolated {
-                    selector == kAudioHardwarePropertyDevices ? self?.devicesChanged() : self?.outputChanged()
-                }
-            }
+        var address = AudioProperty.address(kAudioHardwarePropertyDevices)
+        AudioObjectAddPropertyListenerBlock(AudioProperty.system, &address, .main) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.devicesChanged() }
         }
         watchAccessories()
     }
@@ -63,16 +57,6 @@ final class DeviceWatch {
                 self?.announce(device.name, symbol: symbol, model: model, pictures: pictures, battery: info?.battery)
             }
         }
-    }
-
-    /// To AirPlay: the speaker or TV the sound now plays on.
-    private func outputChanged() {
-        let id = AudioOutput.defaultOutput
-        guard id != defaultOutput else { return }
-        defaultOutput = id
-        guard let device = AudioOutput.outputs().first(where: { $0.id == id }), device.transport == kAudioDeviceTransportTypeAirPlay
-        else { return }
-        announce(device.name, symbol: "airplay.audio", kind: .output)
     }
 
     static func isBluetooth(_ transport: UInt32) -> Bool {
@@ -233,20 +217,16 @@ final class DeviceWatch {
 
     // MARK: Announcing
 
-    private func announce(
-        _ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil,
-        kind: NotchAlert.Kind = .device
-    ) {
+    private func announce(_ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) {
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
         guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
             return
         }
         // A device is announced with its battery, as AirPods are; one that doesn't tell it, not at all.
-        guard kind != .device || battery != nil else { return }
+        guard battery != nil else { return }
         recent[name] = now
-        Activities.shared.post(
-            Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery, kind: kind))
+        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery))
     }
 
     /// Without its owner's name, as the iPhone names AirPods: Hilário's AirPods Pro as AirPods Pro.
@@ -257,20 +237,11 @@ final class DeviceWatch {
         return name
     }
 
-    /// A device: its symbol and battery, as AirPods are shown. The sound going to AirPlay: AirPlay's
-    /// symbol, in the blue Control Center lights it with, and where it plays.
-    static func alert(
-        name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil,
-        kind: NotchAlert.Kind = .device
-    )
-        -> NotchAlert
-    {
-        guard kind == .device else {
-            return NotchAlert(kind: kind, content: .status(symbol: symbol, tint: .blue, text: name), spoken: "Playing on \(name)")
-        }
+    /// A device: its symbol and battery, as AirPods are shown.
+    static func alert(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) -> NotchAlert {
         let level = battery.map { ", \($0) percent" } ?? ""
         return NotchAlert(
-            kind: kind, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
+            kind: .device, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
             spoken: "\(name) connected\(level)")
     }
 }

@@ -46,10 +46,10 @@ the cover's colors or your Mac's accent color, pulsing with the beat.
 While something plays, the closed notch shows its cover and a waveform that
 moves with the music. When a new song starts, its name slides out for a moment.
 As on the iPhone, it also shows the battery charging or running low, headphones
-and accessories connecting and sound going to AirPlay, and counts Clock's timer
-down and its stopwatch up, with their buttons. With several at once, the first
-keeps the notch and the others go in bubbles of their own beside it, as on the
-iPhone.
+and accessories connecting, and sound playing over AirPlay, with a button to
+stop it. It counts Clock's timer down and its stopwatch up, with their buttons.
+With several at once, the first keeps the notch and the others go in bubbles of
+their own beside it, as on the iPhone.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics

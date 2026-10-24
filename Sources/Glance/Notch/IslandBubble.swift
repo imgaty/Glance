@@ -11,7 +11,7 @@ import SwiftUI
 /// An activity in a bubble of its own beside the notch, as the Dynamic Island shows one beside
 /// another: the second off the notch's right end, the third off its left. Measured from the iPhone,
 /// by the island's height: a circle as wide as the island is tall, level with it, 0.175 of that off
-/// its end, a timer's ring or the stopwatch's symbol in it as beside the camera. It buds off the
+/// its end, a timer's ring, the stopwatch's symbol or AirPlay's in it as beside the camera. It buds off the
 /// notch's end as it comes, joined to it for a moment as two drops are, and runs back into it as it
 /// goes, or as the notch opens; with Reduce Motion on, it fades in and out where it rests. VoiceOver
 /// names it, and opens it as a click does.
@@ -21,6 +21,8 @@ struct IslandBubble: View {
     let shown: Bool
     /// The timer or stopwatch it shows, and the timer's name, as VoiceOver says it.
     let clock: ClockShown?
+    /// Or AirPlay, by its symbol alone, in its blue.
+    var route: AirPlayRoute? = nil
     let name: String
     /// Opens it, as a click on it does.
     let open: () -> Void
@@ -38,8 +40,9 @@ struct IslandBubble: View {
     /// What it showed, kept on as it runs back into the notch, so it fades as it goes rather than
     /// vanishing.
     @State private var kept: ClockShown?
+    @State private var keptRoute: AirPlayRoute?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = 0
+    @State private var changes = (clock: 0, route: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -63,7 +66,12 @@ struct IslandBubble: View {
                     switch kept {
                     case .timer(let timer): TimerRing(state: timer, height: h)
                     case .stopwatch(let watch): StopwatchMark(watch: watch, height: h)
-                    case nil: EmptyView()
+                    case nil:
+                        if keptRoute != nil {
+                            Image(systemName: "airplay.audio")
+                                .font(.system(size: h * 0.5, weight: .semibold))
+                                .foregroundStyle(AirPlayLayout.tint)
+                        }
                     }
                 }
                 .islandFade(shown)
@@ -72,7 +80,7 @@ struct IslandBubble: View {
             // Outside it, as around the notch, without making it any larger.
             .overlay {
                 Circle()
-                    .strokeBorder(.orange.opacity(0.18), lineWidth: line)
+                    .strokeBorder((kept == nil && keptRoute != nil ? AirPlayLayout.tint : .orange).opacity(0.18), lineWidth: line)
                     .frame(width: h + line * 2, height: h + line * 2)
                     .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && shown ? 1 : 0) }
             }
@@ -86,6 +94,12 @@ struct IslandBubble: View {
                             .accessibilityAddTraits(.isButton)
                             .accessibilityAction(.default, open)
                     }
+                } else if shown, !hidden, let route {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel("AirPlay, playing on \(route.name)")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
                 }
             }
             .scaleEffect(reduceMotion ? 1 : pressed ? 0.94 : hovered ? 1.06 : 1)
@@ -99,12 +113,21 @@ struct IslandBubble: View {
         .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
-            changes += 1
+            changes.clock += 1
             if let new { return kept = new }
-            let change = changes
+            let change = changes.clock
             Task { @MainActor in
                 try? await Task.sleep(for: SystemActivityView.folding)
-                if changes == change { kept = nil }
+                if changes.clock == change { kept = nil }
+            }
+        }
+        .onChange(of: route, initial: true) { _, new in
+            changes.route += 1
+            if let new { return keptRoute = new }
+            let change = changes.route
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.route == change { keptRoute = nil }
             }
         }
     }

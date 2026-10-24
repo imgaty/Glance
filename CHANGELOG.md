@@ -19,7 +19,6 @@
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
   battery as a ring. A device that doesn't tell its battery isn't announced.
-  And sound going to AirPlay.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the
@@ -56,6 +55,10 @@
   its symbol with a hand going round once a minute, its hundredths small after
   the seconds. Opened, it shows its time alone, to the hundredth, with buttons
   to stop it and start it over from 0:00, or to start it again and reset it.
+- Added sound going to AirPlay as the iPhone shows Screen Mirroring, for as
+  long as it plays there: AirPlay's symbol in blue at the notch's left end, and
+  the speaker or TV at its right. Opened, it shows the speaker's name, with
+  **Stop AirPlay** to send the sound back to where it played before.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and

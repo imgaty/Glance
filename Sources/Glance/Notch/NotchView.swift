@@ -135,6 +135,8 @@ final class NotchModel: ObservableObject {
     @Published var timerWing: CGFloat = 0
     /// The timer's label, as named in Clock.
     @Published var timerName: String?
+    /// The speaker or TV the sound plays on over AirPlay (see `AirPlayWatch`).
+    @Published var airplay: AirPlayRoute?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -189,12 +191,13 @@ final class NotchModel: ObservableObject {
     /// A full-screen app covers the display: around the notch it's all black.
     @Published var fullScreen = false
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
-    /// player: the timer or the stopwatch.
+    /// player: the timer, the stopwatch, or AirPlay.
     @Published var expanded: Activity?
 
-    /// What can show at once, in the order they take the notch: music, Clock's timer, its stopwatch.
+    /// What can show at once, in the order they take the notch: music, Clock's timer, its stopwatch,
+    /// AirPlay.
     enum Activity: Equatable {
-        case music, timer, stopwatch
+        case music, timer, stopwatch, airplay
     }
 
     /// Those showing now, in that order.
@@ -203,13 +206,14 @@ final class NotchModel: ObservableObject {
         if activity { shown.append(.music) }
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
+        if airplay != nil { shown.append(.airplay) }
         return shown
     }
 
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
         switch activity {
-        case .music: nil
+        case .music, .airplay: nil
         case .timer: timer.map(ClockShown.timer)
         case .stopwatch: stopwatch.map(ClockShown.stopwatch)
         }
@@ -249,6 +253,15 @@ final class NotchModel: ObservableObject {
     /// The timer or stopwatch opened to, and the room the camera takes in the middle of its row:
     /// none on an island, which has no camera.
     var expandedClock: ClockShown? { expanded.flatMap(clock(of:)) }
+    /// What the notch was opened to has gone: the timer ended, the stopwatch was reset, or the sound
+    /// left AirPlay.
+    var expandedGone: Bool {
+        switch expanded {
+        case .timer, .stopwatch: expandedClock == nil
+        case .airplay: airplay == nil
+        case .music, nil: false
+        }
+    }
     /// Its name as it shows and as VoiceOver says it: Timer, unless it was given a label in Clock,
     /// or Stopwatch.
     func name(of activity: Activity) -> String {
@@ -256,6 +269,7 @@ final class NotchModel: ObservableObject {
         case .music: "Music"
         case .timer: timerName ?? "Timer"
         case .stopwatch: "Stopwatch"
+        case .airplay: "AirPlay"
         }
     }
     var camera: CGFloat { island ? 0 : closedSize.width }
@@ -311,9 +325,9 @@ final class NotchModel: ObservableObject {
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
         // A timer or the stopwatch with the notch; behind music, in a bubble of its own (see
-        // `bubbles`).
+        // `bubbles`). AirPlay's symbols take the cover's squares.
         if notchClock != nil { return max(timerWing, resting) }
-        return activity ? resting : 0
+        return activities.isEmpty ? 0 : resting
     }
 
     /// The closed notch's width, with the activity's wings while music plays, a timer runs, or
@@ -348,6 +362,12 @@ final class NotchModel: ObservableObject {
                     restingHeight + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
+            case .open where expanded == .airplay:
+                (
+                    ExpandedAirPlayView.width(for: airplay ?? AirPlayRoute(name: "", symbol: ""), restingHeight: closedSize.height)
+                        + pull * 0.35,
+                    AirPlayLayout.height(closedSize.height) + pull
+                )
             case .open where expanded != nil:
                 (
                     ExpandedTimerView.width(
@@ -540,6 +560,7 @@ struct NotchView: View {
             SystemActivityView(
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 clock: model.activity || model.switching ? nil : model.notchClock,
+                route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
                 hoveredButton: model.hoveredButton, open: { model.openNotch() }
             )
@@ -557,6 +578,7 @@ struct NotchView: View {
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
             expandedTimer(shown: expandedShown)
+            expandedAirPlay(shown: expandedShown)
             // Pulled down, the lyrics, the player and the tray move down with the notch, the cover
             // and the waveform with them, keeping their shape, and settle back with it.
             ZStack(alignment: .top) {
@@ -702,6 +724,7 @@ struct NotchView: View {
         let activity = model.bubble(side)
         return IslandBubble(
             side: side, shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
+            route: activity == .airplay ? model.airplay : nil,
             name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble(side) },
             restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
             hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
@@ -716,6 +739,17 @@ struct NotchView: View {
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
             ExpandedTimerView(shown: clock, name: name, restingHeight: h, camera: model.camera, width: width)
                 .frame(width: width, height: TimerLayout.tallHeight(h))
+                .modifier(PageFade(hidden: !shown))
+                .allowsHitTesting(places == nil && shown)
+        }
+    }
+
+    /// Opened to AirPlay: its own view, laid out at its open size, so the growing shape reveals it.
+    @ViewBuilder private func expandedAirPlay(shown: Bool) -> some View {
+        if model.expanded == .airplay, let route = model.airplay {
+            let h = model.closedSize.height
+            let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
+            ExpandedAirPlayView(route: route, restingHeight: h, width: width)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -739,6 +773,7 @@ struct NotchView: View {
         if let alert = model.alert { return alert.content.tint }
         if model.activity { return nowPlaying.accent(from: accentSource) }
         if model.notchClock != nil { return .orange }
+        if model.activities.first == .airplay { return AirPlayLayout.tint }
         return nil
     }
 
