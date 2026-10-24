@@ -67,6 +67,11 @@
   long as it plays there: AirPlay's symbol in blue at the notch's left end, and
   the speaker or TV at its right. Opened, it shows the speaker's name, with
   **Stop AirPlay** to send the sound back to where it played before.
+- Added swiping up with two fingers on the closed notch to swipe its live
+  activity away, as on the iPhone, until it changes: music until the next song
+  or until it plays again, a timer until it's started, paused or ended, AirDrop
+  until the next file, AirPlay until the next speaker. An announcement folds
+  away, and a timer that's ringing stops.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and

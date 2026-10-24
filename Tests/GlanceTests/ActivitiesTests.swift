@@ -525,6 +525,22 @@ struct ActivitiesTests {
         #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
     }
 
+    @Test("One swiped away leaves the notch to the next, and its bubble with it")
+    func swipedAway() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.timer = .running(until: .now + 300, total: 300)
+        model.stopwatch = .stopped(elapsed: 12)
+        model.airplay = AirPlayRoute(name: "Living Room", symbol: "hifispeaker.fill")
+        #expect(model.activities == [.timer, .stopwatch, .airplay])
+        model.dismissed.insert(.timer)
+        #expect(model.activities == [.stopwatch, .airplay])
+        #expect(model.notchClock == .stopwatch(.stopped(elapsed: 12)))
+        #expect(model.bubbles == [.airplay])
+        model.dismissed = [.timer, .stopwatch, .airplay]
+        #expect(model.activities.isEmpty)
+        #expect(model.wing == 0)
+    }
+
     @Test("AirPlay comes after the rest: the notch's once nothing else shows, its symbols in the cover's wings")
     func airPlay() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)

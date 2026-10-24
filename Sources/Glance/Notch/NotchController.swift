@@ -92,6 +92,8 @@ final class NotchController {
     private var holdUntilExit = false
     private var pull: CGFloat = 0
     private var pullFired = false
+    /// Music's wings were swiped away, until the next song or until it plays again.
+    private var musicDismissed = false
     private var playingWatch: AnyCancellable?
     private var activityTask: Task<Void, Never>?
     private var titleWatch: AnyCancellable?
@@ -327,10 +329,22 @@ final class NotchController {
 
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in
-            MainActor.assumeIsolated { self?.showActivity(playing) }
+            MainActor.assumeIsolated {
+                // Playing again, what was swiped away comes back.
+                if playing { self?.musicDismissed = false }
+                self?.showActivity(playing)
+            }
         }
         titleWatch = nowPlaying.$title.removeDuplicates().sink { [weak self] _ in
-            MainActor.assumeIsolated { self?.announceTrack() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                // A new song brings back what was swiped away.
+                if self.musicDismissed {
+                    self.musicDismissed = false
+                    self.showActivity(self.nowPlaying.isPlaying, immediately: true)
+                }
+                self.announceTrack()
+            }
         }
         songWatch = nowPlaying.$isSong.removeDuplicates().sink { [weak self] isSong in
             MainActor.assumeIsolated {
@@ -468,7 +482,7 @@ final class NotchController {
     /// it folds away, as on the iPhone, so skipping between tracks doesn't make it blink.
     private func showActivity(_ playing: Bool, immediately: Bool = false) {
         activityTask?.cancel()
-        let shown = playing && UserDefaults.standard.bool(forKey: Preferences.liveActivity)
+        let shown = playing && UserDefaults.standard.bool(forKey: Preferences.liveActivity) && !musicDismissed
         activityTask = Task { [weak self] in
             guard !Task.isCancelled else { return }
             // A pause folds it away after a moment; turning it off in Settings, at once.
@@ -540,6 +554,9 @@ final class NotchController {
     private func show(timer: NotchTimer.State?, stopwatch: Stopwatch?) {
         let ending = (timer == nil && model.timer != nil) || (stopwatch == nil && model.stopwatch != nil)
         withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
+            // Started, paused or ended, one swiped away comes back.
+            if timer != model.timer { model.dismissed.remove(.timer) }
+            if stopwatch != model.stopwatch { model.dismissed.remove(.stopwatch) }
             model.timer = timer
             model.stopwatch = stopwatch
             fitTimerWing()
@@ -557,14 +574,20 @@ final class NotchController {
             model.airdrop = transfer
             return
         }
-        withAnimation(transfer == nil ? IslandMotion.fold : IslandMotion.open) { model.airdrop = transfer }
+        withAnimation(transfer == nil ? IslandMotion.fold : IslandMotion.open) {
+            if transfer?.id != model.airdrop?.id { model.dismissed.remove(.airdrop) }
+            model.airdrop = transfer
+        }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
     /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it
     /// leaves, the notch closes.
     private func show(airplay route: AirPlayRoute?) {
-        withAnimation(route == nil ? IslandMotion.fold : IslandMotion.open) { model.airplay = route }
+        withAnimation(route == nil ? IslandMotion.fold : IslandMotion.open) {
+            if route != model.airplay { model.dismissed.remove(.airplay) }
+            model.airplay = route
+        }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
@@ -1319,7 +1342,7 @@ final class NotchController {
             // A wheel mouse: each click is a decisive flick.
             guard opens else { return }
             if down > 0, model.state != .open { open() }
-            if down < 0, model.state == .open { close(holdUntilExit: true) }
+            if down < 0 { pushedUp() }
             return
         }
 
@@ -1343,13 +1366,15 @@ final class NotchController {
             }
             guard opens else { return }
             pull += down
+            // Pushing up on the closed notch, it waits to open on hover: it's being swiped away.
+            if model.state != .open, pull < 0 { openTask?.cancel() }
             if !pullFired, model.state != .open, pull > 40 {
                 pullFired = true
                 pull = 0
                 open()
-            } else if !pullFired, model.state == .open, pull < -48 {
+            } else if !pullFired, pull < (model.state == .open ? -48 : -30) {
                 pullFired = true
-                close(holdUntilExit: true)
+                pushedUp()
                 return
             }
             guard model.state == .open || pull > 0 else { return }
@@ -1376,6 +1401,44 @@ final class NotchController {
                 model.stretch = 0
                 model.nudge = 0
                 model.pageNudge = 0
+            }
+        }
+    }
+
+    /// Swiped up: the open notch closes, and opened to an activity's own view, that goes too; the
+    /// closed notch's live activity goes, as the Dynamic Island's do when they're swiped away.
+    private func pushedUp() {
+        if model.state == .open {
+            let expanded = model.expanded
+            close(holdUntilExit: true)
+            if let expanded { dismiss(expanded) }
+            return
+        }
+        if let alert = model.alert {
+            // A timer that's done stops ringing; anything else announced folds away.
+            if alert.kind == .timerDone { ClockActivity.shared.dismissRing() } else { Activities.shared.dismiss(alert.kind) }
+        } else if let first = model.activities.first {
+            dismiss(first)
+        } else {
+            return
+        }
+        // It stays closed until the pointer leaves it and comes back.
+        close(holdUntilExit: true)
+    }
+
+    /// A live activity swiped away, until it changes: music until the next song, or until it
+    /// plays again; a timer or the stopwatch until it's started, paused or ended; AirDrop until
+    /// the next file; AirPlay until the next speaker.
+    private func dismiss(_ activity: NotchModel.Activity) {
+        withAnimation(IslandMotion.fold) {
+            if activity == .music {
+                musicDismissed = true
+                activityTask?.cancel()
+                popTask?.cancel()
+                model.activity = false
+                model.pop = false
+            } else {
+                model.dismissed.insert(activity)
             }
         }
     }
