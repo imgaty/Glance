@@ -145,33 +145,61 @@ final class AirDropWatch: NSObject, ObservableObject {
     }
 }
 
-/// AirDrop as the iPhone's Dynamic Island draws it, by the island's height: in its blue, its
-/// symbol beside the camera, and a ring filling as the file comes in.
+/// AirDrop as the iPhone's Dynamic Island draws it, measured from it, by the island's height: in
+/// its light blue, its symbol beside the camera and a ring filling over a navy one; opened, as tall
+/// as the Alarm, a picture of the file at the left end, the ring around a stop button at the right.
 enum AirDropLayout {
-    static let tint = Color.blue
-    static let title: CGFloat = 0.5
+    static let tint = Color(red: 0x57 / 255, green: 0xA9 / 255, blue: 0xF8 / 255)
+    static let track = Color(red: 0x13 / 255, green: 0x42 / 255, blue: 0x7B / 255)
+    static let badgeFill = Color(red: 0x25 / 255, green: 0x25 / 255, blue: 0x28 / 255)
+    static let badgeGlyph = Color(red: 0x3C / 255, green: 0x8F / 255, blue: 0xE6 / 255)
+    static let secondary = Color(red: 0x91 / 255, green: 0x91 / 255, blue: 0x91 / 255)
+    // Beside the camera.
+    static let symbol: CGFloat = 0.58
+    static let symbolEdge: CGFloat = 0.21
+    static let ring: CGFloat = 0.62
+    static let ringLine: CGFloat = 0.075
+    static let ringEdge: CGFloat = 0.22
+    // Opened.
+    static let thumb: CGFloat = 1.35
+    static let thumbCorner: CGFloat = 0.23
+    static let badge: CGFloat = 0.55
+    static let badgeOut: CGFloat = 0.065
+    static let gap: CGFloat = 0.35
+    static let title: CGFloat = 0.455
     static let subtitle: CGFloat = 0.42
-    /// Between the picture and the words.
-    static let gap: CGFloat = 0.32
-    /// The picture's round corners, and AirDrop's badge on its corner, by the island's height.
-    static let corner: CGFloat = 0.3
-    static let badge: CGFloat = 0.6
-    /// Opened, the ring around the stop button, its line, and the square in it.
-    static let ring: CGFloat = 1.0
-    static let ringLine: CGFloat = 0.09
-    static let stop: CGFloat = 0.3
+    static let lineGap: CGFloat = -0.055
+    static let bigRing: CGFloat = 1.34
+    static let bigRingLine: CGFloat = 0.127
+    static let stop: CGFloat = 0.43
+    /// Who it's from runs this far before it's cut short.
+    static let wordsLimit: CGFloat = 7
 
-    /// As wide as the iPhone's expanded activities, or as its words need.
+    /// The picture and the ring as far in from their ends as from the top and bottom.
+    static func thumbEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * thumb, in: TimerLayout.tallHeight(h)) }
+    static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * bigRing, in: TimerLayout.tallHeight(h)) }
+
+    /// Opened: the picture and the words at the left end, the ring at the right, the camera between
+    /// them, each side as wide as the wider; on an island, as wide as the iPhone's, or as its words
+    /// need.
     @MainActor
-    static func width(for shown: AirDropShown, restingHeight h: CGFloat) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: h * subtitle, weight: .semibold)
-        let words = ceil((ExpandedAirDropView.from(shown) as NSString).size(withAttributes: [.font: font]).width)
-        let needs = TimerLayout.rowEdge(h) * 2 + h * (TimerLayout.button * 2 + gap * 2) + words
-        return min(max(h * TimerLayout.wide, needs), h * 14)
+    static func width(for shown: AirDropShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
+        let gap = LiveActivityView.cameraGap
+        let left = thumbEdge(h) + h * (thumb + self.gap) + words(for: shown, h) + gap
+        let right = gap + h * bigRing + ringEdge(h)
+        return camera > 0 ? camera + max(left, right) * 2 : max(h * TimerLayout.wide, left + right + h * self.gap)
+    }
+
+    @MainActor
+    static func words(for shown: AirDropShown, _ h: CGFloat) -> CGFloat {
+        func width(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
+            ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * size, weight: weight)]).width)
+        }
+        return min(max(width("AirDrop", title, .semibold), width(ExpandedAirDropView.from(shown), subtitle, .medium)), h * wordsLimit)
     }
 }
 
-/// How far along, as a ring filling clockwise from the top over a faint one.
+/// How far along, as a ring filling clockwise from the top over a navy one.
 struct AirDropRing: View {
     let fraction: Double
     let diameter: CGFloat
@@ -179,7 +207,7 @@ struct AirDropRing: View {
 
     var body: some View {
         ZStack {
-            Circle().stroke(AirDropLayout.tint.opacity(0.3), lineWidth: line)
+            Circle().stroke(AirDropLayout.track, lineWidth: line)
             Circle()
                 .trim(from: 0, to: fraction)
                 .stroke(AirDropLayout.tint, style: StrokeStyle(lineWidth: line, lineCap: .round))
@@ -191,8 +219,8 @@ struct AirDropRing: View {
     }
 }
 
-/// AirDrop beside the camera: its symbol at the left end, in its square, as the cover is; the ring
-/// at the right, as far in from it as from the top and bottom, as the timer's is.
+/// AirDrop beside the camera, as the iPhone's: its symbol at the left end, the ring at the right,
+/// each as far in from its end.
 struct AirDropMark: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
@@ -200,15 +228,13 @@ struct AirDropMark: View {
 
     var body: some View {
         let h = restingHeight
-        let side = SystemActivityView.side(h, island)
         ZStack {
-            AirDropSymbol.glyph(size: side * 0.72)
+            AirDropSymbol.glyph(size: h * AirDropLayout.symbol)
                 .foregroundStyle(AirDropLayout.tint)
-                .frame(width: side, height: side)
-                .padding(.leading, LiveActivityView.edgeInset(island: island, restingHeight: h))
+                .padding(.leading, h * AirDropLayout.symbolEdge)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            AirDropRing(fraction: shown.fraction, diameter: h * TimerLayout.ring, line: h * TimerLayout.ringLine)
-                .padding(.trailing, SystemActivityView.ringEdge(h))
+            AirDropRing(fraction: shown.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
+                .padding(.trailing, h * AirDropLayout.ringEdge)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .accessibilityElement(children: .ignore)
@@ -216,12 +242,14 @@ struct AirDropMark: View {
     }
 }
 
-/// Opened, as the iPhone's AirDrop expands: a picture of the file with AirDrop's badge on its
-/// corner, AirDrop and who it's from, and the ring around a button to stop it, all below the
-/// camera, each end as far in as from the bottom, concentric with the round corners.
+/// Opened, as the iPhone's AirDrop expands, as tall as the Alarm: a picture of the file with
+/// AirDrop's badge on its corner and, beside it, AirDrop and who it's from, at the left end; the
+/// ring around a button to stop it at the right; the camera between them.
 struct ExpandedAirDropView: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
+    /// The camera housing's width, which the row goes either side of; none on an island.
+    let camera: CGFloat
     let width: CGFloat
     @State private var hovering = false
 
@@ -232,62 +260,84 @@ struct ExpandedAirDropView: View {
 
     var body: some View {
         let h = restingHeight
-        let edge = TimerLayout.rowEdge(h)
-        HStack(spacing: h * AirDropLayout.gap) {
+        let left = HStack(spacing: h * AirDropLayout.gap) {
             preview(h)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: h * AirDropLayout.lineGap) {
                 Text("AirDrop")
                     .font(.system(size: h * AirDropLayout.title, weight: .semibold))
                     .foregroundStyle(.white)
                 Text(Self.from(shown))
-                    .font(.system(size: h * AirDropLayout.subtitle, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: h * AirDropLayout.subtitle, weight: .medium))
+                    .foregroundStyle(AirDropLayout.secondary)
             }
             .lineLimit(1)
             .truncationMode(.tail)
-            Spacer(minLength: 0)
-            Button {
-                AirDropWatch.shared.stop()
-            } label: {
-                ZStack {
-                    Circle().fill(AirDropLayout.tint.opacity(hovering ? 0.3 : 0.2))
-                    AirDropRing(fraction: shown.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
-                    RoundedRectangle(cornerRadius: h * 0.06, style: .continuous)
-                        .fill(AirDropLayout.tint)
-                        .frame(width: h * AirDropLayout.stop, height: h * AirDropLayout.stop)
-                }
-                .frame(width: h * TimerLayout.button, height: h * TimerLayout.button)
-                .contentShape(Circle())
-            }
-            .buttonStyle(IslandPress(highlight: false, contactSize: nil))
-            .onHover { hovering = $0 }
-            .notchControl()
-            .accessibilityLabel("Stop AirDrop")
+            .frame(maxWidth: AirDropLayout.words(for: shown, h), alignment: .leading)
         }
-        .padding(.horizontal, edge)
-        .padding(.top, h + LiveActivityView.cameraGap)
-        .padding(.bottom, edge)
-        .frame(width: width, height: TimerLayout.rowHeight(h), alignment: .top)
+        .padding(.leading, AirDropLayout.thumbEdge(h))
+        let right = stopButton(h).padding(.trailing, AirDropLayout.ringEdge(h))
+        Group {
+            if camera > 0 {
+                let side = max((width - camera) / 2, 0)
+                HStack(spacing: 0) {
+                    left.frame(width: side, alignment: .leading)
+                    Color.clear.frame(width: camera)
+                    right.frame(width: side, alignment: .trailing)
+                }
+            } else {
+                ZStack {
+                    left.frame(maxWidth: .infinity, alignment: .leading)
+                    right.frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+        }
+        .frame(width: width, height: TimerLayout.tallHeight(h))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Self.spoken(shown))
     }
 
-    /// The file, as macOS pictures it, or its kind's icon, with AirDrop's badge on its corner.
+    /// The ring around a square that stops it, as the iPhone's, faintly lit under the pointer.
+    private func stopButton(_ h: CGFloat) -> some View {
+        Button {
+            AirDropWatch.shared.stop()
+        } label: {
+            ZStack {
+                Circle().fill(AirDropLayout.tint.opacity(hovering ? 0.12 : 0))
+                AirDropRing(fraction: shown.fraction, diameter: h * AirDropLayout.bigRing, line: h * AirDropLayout.bigRingLine)
+                RoundedRectangle(cornerRadius: h * AirDropLayout.stop * 0.22, style: .continuous)
+                    .fill(AirDropLayout.tint)
+                    .frame(width: h * AirDropLayout.stop, height: h * AirDropLayout.stop)
+            }
+            .frame(width: h * AirDropLayout.bigRing, height: h * AirDropLayout.bigRing)
+            .contentShape(Circle())
+            .animation(.easeOut(duration: 0.15), value: hovering)
+        }
+        .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+        .onHover { hovering = $0 }
+        .notchControl()
+        .accessibilityLabel("Stop AirDrop")
+    }
+
+    /// The file, as macOS pictures it, or its kind's icon, with AirDrop's badge, a dark tile with
+    /// its symbol in blue, on its corner.
     private func preview(_ h: CGFloat) -> some View {
-        let side = h * TimerLayout.button
+        let side = h * AirDropLayout.thumb
+        let badge = h * AirDropLayout.badge
         let picture = shown.preview ?? NSWorkspace.shared.icon(for: .data)
         return Image(nsImage: picture)
             .resizable()
             .aspectRatio(contentMode: shown.preview == nil ? .fit : .fill)
             .frame(width: side, height: side)
-            .clipShape(RoundedRectangle(cornerRadius: h * AirDropLayout.corner, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: h * AirDropLayout.thumbCorner, style: .continuous))
             .overlay(alignment: .bottomTrailing) {
-                AirDropSymbol.glyph(size: h * AirDropLayout.badge * 0.55)
-                    .foregroundStyle(.white)
-                    .frame(width: h * AirDropLayout.badge, height: h * AirDropLayout.badge)
-                    .background(Circle().fill(AirDropLayout.tint))
-                    .overlay(Circle().strokeBorder(.black, lineWidth: h * 0.05))
-                    .offset(x: h * 0.15, y: h * 0.15)
+                AirDropSymbol.glyph(size: badge * 0.64)
+                    .foregroundStyle(AirDropLayout.badgeGlyph)
+                    .frame(width: badge, height: badge)
+                    .background(RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous).fill(AirDropLayout.badgeFill))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous)
+                            .strokeBorder(.black.opacity(0.6), lineWidth: h * 0.03))
+                    .offset(x: h * AirDropLayout.badgeOut, y: h * AirDropLayout.badgeOut)
             }
     }
 }

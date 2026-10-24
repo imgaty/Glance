@@ -24,7 +24,7 @@ struct NotchAlert: Identifiable, Equatable {
         case device(symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int?)
         /// The Mac's battery: a word on the left, its level and a battery on the right.
         case battery(title: String, level: BatteryLevel)
-        /// The Mac's battery running low, taller than the notch, with a button to turn on Low Power
+        /// The Mac's battery running low, as tall as the Alarm, with a button to turn on Low Power
         /// Mode (see `LowBatteryView`).
         case lowBattery(percent: Int)
         /// A state, as Silent Mode and a Focus are shown: a symbol in its color on the left, a word
@@ -54,13 +54,6 @@ struct NotchAlert: Identifiable, Equatable {
         case .timerDone, .lowBattery: true
         default: false
         }
-    }
-
-    /// Its height while it's tall, by the notch's: the Alarm's, or Low Battery's, its row below the
-    /// camera.
-    func tallHeight(_ h: CGFloat) -> CGFloat {
-        if case .lowBattery = content { return LowBatteryLayout.height(h) }
-        return TimerLayout.tallHeight(h)
     }
 
     let id = UUID()

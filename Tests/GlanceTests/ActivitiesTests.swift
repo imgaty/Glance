@@ -92,10 +92,11 @@ struct ActivitiesTests {
         #expect(mouse.spoken == "Magic Mouse connected, 15 percent")
         #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", pictures: [], battery: nil))
         // AirPlay's device, by its name, as Control Center draws it.
-        #expect(AirPlayRoute.symbol(for: "Living Room Apple TV") == "appletv.fill")
+        #expect(AirPlayRoute.symbol(for: "Living Room Apple TV") == "appletv")
         #expect(AirPlayRoute.symbol(for: "Samsung TV") == "tv")
-        #expect(AirPlayRoute.symbol(for: "Kitchen HomePod") == "homepod.fill")
-        #expect(AirPlayRoute.symbol(for: "Bedroom") == "hifispeaker.fill")
+        #expect(AirPlayRoute.symbol(for: "Kitchen HomePod") == "homepod")
+        #expect(AirPlayRoute.symbol(for: "Sam's MacBook Pro") == "macbook")
+        #expect(AirPlayRoute.symbol(for: "Bedroom") == "hifispeaker")
         #expect(DeviceWatch.shortName("Hilário\u{2019}s AirPods Pro") == "AirPods Pro")
         #expect(DeviceWatch.shortName("Sam's Magic Keyboard") == "Magic Keyboard")
         #expect(DeviceWatch.shortName("MX Master 3S") == "MX Master 3S")
@@ -482,24 +483,22 @@ struct ActivitiesTests {
         #expect(model.expansion(fromBubble: .trailing) == .stopwatch)
     }
 
-    @Test("Low Battery is tall, its row below the camera, as wide as the iPhone's, its button concentric with the corners")
+    @Test("Low Battery is as tall as the Alarm, its words at one end and its capsule concentric with the other")
     func lowBattery() {
         let alert = BatteryWatch.lowBattery(.init(percent: 10, onPower: false, charging: false))
         #expect(alert.content == .lowBattery(percent: 10))
         #expect(alert.tall)
         let h: CGFloat = 32
-        // The camera, the button and, below it, as much as at its side.
-        let edge = LowBatteryLayout.edge(h)
-        #expect(abs(edge + h * TimerLayout.button / 2 - h * TimerLayout.corner) < 0.01)
-        #expect(alert.tallHeight(h) == (h + LiveActivityView.cameraGap + h * TimerLayout.button + edge).rounded())
-        #expect(alert.tallHeight(h) > TimerLayout.tallHeight(h))
-        // Its wings reach as wide as it is, across the notch.
-        let width = LowBatteryLayout.width(percent: 10, restingHeight: h)
-        #expect(width >= h * TimerLayout.wide)
-        #expect(SystemActivityView.wing(for: alert, restingHeight: h, island: false, notchWidth: 185) * 2 + 185 == width)
         let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
         model.alert = alert
-        #expect(model.restingHeight == alert.tallHeight(h))
+        #expect(model.restingHeight == TimerLayout.tallHeight(h))
+        // The capsule as far in from the end as from the top and bottom.
+        let edge = LowBatteryLayout.edge(h)
+        #expect(abs(edge * 2 + h * LowBatteryLayout.capsule.height - TimerLayout.tallHeight(h)) < 0.01)
+        // Each wing as wide as the words need, from the end, with the camera between them.
+        let font = NSFont.systemFont(ofSize: h * LowBatteryLayout.words, weight: .semibold)
+        let offer = ceil((LowBatteryView.offer as NSString).size(withAttributes: [.font: font]).width)
+        #expect(SystemActivityView.wing(for: alert, restingHeight: h, island: false) == edge + offer + LiveActivityView.cameraGap)
     }
 
     @Test("AirDrop comes right after music: the notch's once nothing plays, otherwise a bubble that opens to it")
@@ -519,9 +518,12 @@ struct ActivitiesTests {
         model.expanded = .airdrop
         model.airdrop = nil
         #expect(model.expandedGone)
-        // Opened, as tall as Low Battery, its row below the camera, as wide as the iPhone's.
-        #expect(LowBatteryLayout.height(32) == TimerLayout.rowHeight(32))
-        #expect(AirDropLayout.width(for: transfer, restingHeight: 32) == 32 * TimerLayout.wide)
+        // Opened, as tall as the Alarm, the picture and the words at one end, the ring at the other,
+        // the camera between them; on an island, as wide as the iPhone's.
+        let left = AirDropLayout.thumbEdge(32) + 32 * (AirDropLayout.thumb + AirDropLayout.gap) + AirDropLayout.words(for: transfer, 32)
+            + LiveActivityView.cameraGap
+        #expect(AirDropLayout.width(for: transfer, restingHeight: 32, camera: 185) == 185 + left * 2)
+        #expect(AirDropLayout.width(for: transfer, restingHeight: 32, camera: 0) == 32 * TimerLayout.wide)
         #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
     }
 
