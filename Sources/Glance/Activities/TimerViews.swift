@@ -39,13 +39,10 @@ enum TimerLayout {
     static let doneName: CGFloat = 0.71
     /// Opened and done, as tall as the iPhone's, for a notch this tall.
     static func tallHeight(_ h: CGFloat) -> CGFloat { (h * tall).rounded() }
-    /// Opened and done, how far in from its end each side sits: as far as from the top and bottom,
-    /// so the round buttons are concentric with the round ends, and words sit as far in as above and
-    /// below their line.
+    /// Opened and done, how far in from its end each side sits, buttons and words alike: as far as
+    /// the round buttons are from the top and bottom, so they're concentric with the round ends,
+    /// and the words at the other end match them.
     static func buttonEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * button, in: tallHeight(h)) }
-    static func wordsEdge(size: CGFloat, weight: NSFont.Weight, _ h: CGFloat) -> CGFloat {
-        LiveActivityView.concentric(LiveActivityView.lineHeight(size, weight), in: tallHeight(h))
-    }
 
     // Inside the round buttons.
     static let pauseBar = CGSize(width: 0.19, height: 0.6)
@@ -319,11 +316,8 @@ struct ExpandedTimerView: View {
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
     }
 
-    /// From the right end to the time: as far as above and below its line.
-    static func timeEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
-        if case .stopwatch = shown { return TimerLayout.wordsEdge(size: h * TimerLayout.stopwatchTime, weight: .medium, h) }
-        return TimerLayout.wordsEdge(size: h * TimerLayout.time, weight: .regular, h)
-    }
+    /// From the right end to the time: as far as the buttons are from the left end.
+    static func timeEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
 
     /// The timer's time large, as the iPhone's Timer; the stopwatch's a little smaller, medium, as
     /// its stopwatch.
@@ -409,8 +403,9 @@ struct TimerDoneView: View {
         return max(left, right)
     }
 
-    /// From the left end to its name: as far as above and below its line.
-    static func nameEdge(_ h: CGFloat) -> CGFloat { TimerLayout.wordsEdge(size: h * TimerLayout.doneName, weight: .semibold, h) }
+    /// From the left end to its name: as far as the buttons are from the right end, so the two
+    /// sides sit alike.
+    static func nameEdge(_ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
 }
 
 /// The buttons a timer that's done has in the closed notch.

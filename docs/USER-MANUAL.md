@@ -235,9 +235,9 @@ activity's color outlines it while it's collapsed, as around the Dynamic Island.
 
 Closed or opened, the notch is only as wide as the wider side of a live
 activity needs, the same on both sides, with nothing under the camera. Each
-side sits at its own end, as far in from it as from the top and bottom, and any
-room to spare is beside the camera. The notch widens or narrows as a timer or
-the stopwatch gains or loses a digit.
+side sits at its own end, as far in from it as from the top and bottom, and on
+the taller views, both ends alike. Any room to spare is beside the camera. The
+notch widens or narrows as a timer or the stopwatch gains or loses a digit.
 
 Turn these off with **Cover and waveform** and **Announce new audio** in
 **Settings > Music**.

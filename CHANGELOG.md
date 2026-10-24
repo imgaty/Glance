@@ -33,9 +33,9 @@
 - Changed every live activity, closed or opened, to keep the notch only as wide
   as the wider side needs, both sides alike, with nothing under the camera. Each
   side sits at its own end, as far in from it as from the top and bottom, so it
-  follows the end's roundness; any room to spare is beside the camera. The
-  notch widens or narrows as a timer or the stopwatch gains or loses a digit,
-  as from hours to minutes.
+  follows the end's roundness, and on the taller views both ends alike; any
+  room to spare is beside the camera. The notch widens or narrows as a timer
+  or the stopwatch gains or loses a digit, as from hours to minutes.
 - Changed the player, the tray and the lyrics to come and go with the same
   fade and blur as the notch opens, closes or turns its page, and a new song's
   cover to come in the same way as the last one goes.
