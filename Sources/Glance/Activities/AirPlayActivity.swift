@@ -116,7 +116,7 @@ enum AirPlayLayout {
 
     /// How far in the button sits from the sides and the bottom: the same, so its round ends are
     /// concentric with the notch's round corners, as the timer's buttons are.
-    static func buttonEdge(_ h: CGFloat) -> CGFloat { h * (TimerLayout.corner - button / 2) }
+    static func buttonEdge(_ h: CGFloat) -> CGFloat { TimerLayout.cornerEdge(h, button) }
 
     /// Opened, its header just below the camera, the button under it.
     static func height(_ h: CGFloat) -> CGFloat {

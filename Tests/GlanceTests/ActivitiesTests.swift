@@ -502,6 +502,29 @@ struct ActivitiesTests {
         #expect(model.restingHeight == alert.tallHeight(h))
     }
 
+    @Test("AirDrop comes right after music: the notch's once nothing plays, otherwise a bubble that opens to it")
+    func airDrop() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        let transfer = AirDropShown(id: "1", sender: "iPhone", preview: nil, fraction: 0.4)
+        model.timer = .running(until: .now + 300, total: 300)
+        model.airplay = AirPlayRoute(name: "Living Room", symbol: "hifispeaker.fill")
+        model.airdrop = transfer
+        #expect(model.activities == [.airdrop, .timer, .airplay])
+        #expect(model.notchClock == nil)
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32, island: false))
+        #expect(model.expansion(fromBubble: nil) == .airdrop)
+        model.activity = true
+        #expect(model.bubbles == [.airdrop, .timer])
+        #expect(model.expansion(fromBubble: .trailing) == .airdrop)
+        model.expanded = .airdrop
+        model.airdrop = nil
+        #expect(model.expandedGone)
+        // Opened, as tall as Low Battery, its row below the camera, as wide as the iPhone's.
+        #expect(LowBatteryLayout.height(32) == TimerLayout.rowHeight(32))
+        #expect(AirDropLayout.width(for: transfer, restingHeight: 32) == 32 * TimerLayout.wide)
+        #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
+    }
+
     @Test("AirPlay comes after the rest: the notch's once nothing else shows, its symbols in the cover's wings")
     func airPlay() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)

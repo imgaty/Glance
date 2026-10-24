@@ -105,6 +105,7 @@ final class NotchController {
     private var timerWatch: AnyCancellable?
     private var clockNameWatch: AnyCancellable?
     private var airPlayWatch: AnyCancellable?
+    private var airDropWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
     /// A trackpad gesture's direction, settled by its first movement.
@@ -320,6 +321,10 @@ final class NotchController {
         // The sound going to AirPlay (see `AirPlayWatch`).
         airPlayWatch = AirPlayWatch.shared.$route.removeDuplicates().sink { [weak self] route in
             MainActor.assumeIsolated { self?.show(airplay: route) }
+        }
+        // A file coming in over AirDrop (see `AirDropWatch`).
+        airDropWatch = AirDropWatch.shared.$transfer.removeDuplicates().sink { [weak self] transfer in
+            MainActor.assumeIsolated { self?.show(airdrop: transfer) }
         }
 
         // The live activity and the song announcements follow their settings as they change.
@@ -555,6 +560,18 @@ final class NotchController {
         // Opened to one that has ended, been cancelled or reset, the notch closes, for that to show.
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         refitAsTimersCount()
+    }
+
+    /// A file started coming in over AirDrop, came further, or is in: AirDrop's wings come, fill, or
+    /// go. Opened to it as it goes, the notch closes.
+    private func show(airdrop transfer: AirDropShown?) {
+        guard (transfer == nil) != (model.airdrop == nil) || transfer?.id != model.airdrop?.id else {
+            // Only further along: the ring fills on its own.
+            model.airdrop = transfer
+            return
+        }
+        withAnimation(transfer == nil ? IslandMotion.fold : IslandMotion.open) { model.airdrop = transfer }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
     /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it

@@ -347,6 +347,19 @@ as Repeat and Stop.
 Glance doesn't show Clock's alarms: macOS keeps them where other apps can't
 read them.
 
+### AirDrop
+
+While a file comes in over AirDrop, the notch shows it as the iPhone does, from
+when it starts coming until it's in: AirDrop's symbol in blue at its left end,
+and a ring at its right, filling as the file comes in. Behind music, it goes in
+a bubble of its own, showing the ring. Something waiting to be accepted shows
+once you accept it.
+
+Hover over or click the notch while AirDrop has it, or click its bubble, and it
+opens to a picture of the file, who it's from, and the ring around a button:
+click it to stop the transfer. Turn it off with `AirDrop` in
+**Settings > Live Activities**.
+
 ### AirPlay
 
 While the sound plays on an AirPlay speaker or TV, the notch shows it as the
@@ -438,6 +451,7 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay |
+| `AirDrop` | Shows files coming in over AirDrop, as they come |
 | `Clock` | **Open Clock** opens the Clock app, where timers and the stopwatch start |
 | `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
 | `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |

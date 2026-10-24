@@ -137,6 +137,8 @@ final class NotchModel: ObservableObject {
     @Published var timerName: String?
     /// The speaker or TV the sound plays on over AirPlay (see `AirPlayWatch`).
     @Published var airplay: AirPlayRoute?
+    /// A file coming in over AirDrop (see `AirDropWatch`).
+    @Published var airdrop: AirDropShown?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -191,19 +193,20 @@ final class NotchModel: ObservableObject {
     /// A full-screen app covers the display: around the notch it's all black.
     @Published var fullScreen = false
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
-    /// player: the timer, the stopwatch, or AirPlay.
+    /// player: AirDrop, the timer, the stopwatch, or AirPlay.
     @Published var expanded: Activity?
 
-    /// What can show at once, in the order they take the notch: music, Clock's timer, its stopwatch,
-    /// AirPlay.
+    /// What can show at once, in the order they take the notch: music, a file coming in over
+    /// AirDrop, Clock's timer, its stopwatch, AirPlay.
     enum Activity: Equatable {
-        case music, timer, stopwatch, airplay
+        case music, airdrop, timer, stopwatch, airplay
     }
 
     /// Those showing now, in that order.
     var activities: [Activity] {
         var shown: [Activity] = []
         if activity { shown.append(.music) }
+        if airdrop != nil { shown.append(.airdrop) }
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
         if airplay != nil { shown.append(.airplay) }
@@ -213,7 +216,7 @@ final class NotchModel: ObservableObject {
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
         switch activity {
-        case .music, .airplay: nil
+        case .music, .airdrop, .airplay: nil
         case .timer: timer.map(ClockShown.timer)
         case .stopwatch: stopwatch.map(ClockShown.stopwatch)
         }
@@ -259,6 +262,7 @@ final class NotchModel: ObservableObject {
         switch expanded {
         case .timer, .stopwatch: expandedClock == nil
         case .airplay: airplay == nil
+        case .airdrop: airdrop == nil
         case .music, nil: false
         }
     }
@@ -270,6 +274,7 @@ final class NotchModel: ObservableObject {
         case .timer: timerName ?? "Timer"
         case .stopwatch: "Stopwatch"
         case .airplay: "AirPlay"
+        case .airdrop: "AirDrop"
         }
     }
     var camera: CGFloat { island ? 0 : closedSize.width }
@@ -367,6 +372,13 @@ final class NotchModel: ObservableObject {
                     resting + 3 * proximity + pull
                 )
             case .peek: (restingWidth + 28 + pull * 0.4, resting + 7 + pull)
+            case .open where expanded == .airdrop:
+                (
+                    AirDropLayout.width(
+                        for: airdrop ?? AirDropShown(id: "", sender: "", preview: nil, fraction: 0), restingHeight: closedSize.height)
+                        + pull * 0.35,
+                    TimerLayout.rowHeight(closedSize.height) + pull
+                )
             case .open where expanded == .airplay:
                 (
                     ExpandedAirPlayView.width(for: airplay ?? AirPlayRoute(name: "", symbol: ""), restingHeight: closedSize.height)
@@ -566,6 +578,7 @@ struct NotchView: View {
                 restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
                 clock: model.activity || model.switching ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
+                airdrop: model.activities.first == .airdrop && !model.switching ? model.airdrop : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
                 hoveredButton: model.hoveredButton, open: { model.openNotch() }
             )
@@ -586,6 +599,7 @@ struct NotchView: View {
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
             expandedTimer(shown: expandedShown)
             expandedAirPlay(shown: expandedShown)
+            expandedAirDrop(shown: expandedShown)
             // Pulled down, the lyrics, the player and the tray move down with the notch, the cover
             // and the waveform with them, keeping their shape, and settle back with it.
             ZStack(alignment: .top) {
@@ -732,6 +746,7 @@ struct NotchView: View {
         return IslandBubble(
             side: side, shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
+            airdrop: activity == .airdrop ? model.airdrop : nil,
             name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble(side) },
             restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
             hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
@@ -762,6 +777,16 @@ struct NotchView: View {
         }
     }
 
+    /// Opened to AirDrop: its own view, laid out at its open size, so the growing shape reveals it.
+    @ViewBuilder private func expandedAirDrop(shown: Bool) -> some View {
+        if model.expanded == .airdrop, let transfer = model.airdrop {
+            let h = model.closedSize.height
+            ExpandedAirDropView(shown: transfer, restingHeight: h, width: AirDropLayout.width(for: transfer, restingHeight: h))
+                .modifier(PageFade(hidden: !shown))
+                .allowsHitTesting(places == nil && shown)
+        }
+    }
+
     /// The line in the activity's color around the notch in full screen, all black around it, as the
     /// Dynamic Island draws one over a dark background; only while it's collapsed, fading out as it
     /// expands.
@@ -781,6 +806,7 @@ struct NotchView: View {
         if model.activity { return nowPlaying.accent(from: accentSource) }
         if model.notchClock != nil { return .orange }
         if model.activities.first == .airplay { return AirPlayLayout.tint }
+        if model.activities.first == .airdrop { return AirDropLayout.tint }
         return nil
     }
 
