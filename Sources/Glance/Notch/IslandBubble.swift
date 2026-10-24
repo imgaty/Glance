@@ -71,7 +71,7 @@ struct IslandBubble: View {
                     case .stopwatch(let watch): StopwatchMark(watch: watch, height: h)
                     case nil:
                         if let keptAirDrop {
-                            AirDropRing(fraction: keptAirDrop.fraction, diameter: h * TimerLayout.ring, line: h * TimerLayout.ringLine)
+                            AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if keptRoute != nil {
                             Image(systemName: "airplay.audio")
                                 .font(.system(size: h * 0.5, weight: .semibold))

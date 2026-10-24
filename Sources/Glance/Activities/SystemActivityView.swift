@@ -63,9 +63,7 @@ struct SystemActivityView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .lowBattery(let percent) = alert.content {
-                // Laid out at its full size, from the top, so it never reflows as the notch grows.
-                LowBatteryView(percent: percent, restingHeight: restingHeight, hovered: hoveredButton == .lowPower)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                LowBatteryView(percent: percent, restingHeight: restingHeight, wing: wing, hovered: hoveredButton == .lowPower)
                     .islandFade(self.alert != nil)
                     .id(alert.id)
                     .transition(IslandMotion.fade)
@@ -313,9 +311,8 @@ struct SystemActivityView: View {
     /// bar beside the notch, beyond which a long name scrolls. A device's, with only symbols, is a little
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
     /// wider one.
-    /// Low Battery's, below the camera, as wide as the iPhone's, across the notch's own width.
     @MainActor
-    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool, notchWidth: CGFloat = 0) -> CGFloat {
+    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool) -> CGFloat {
         let size = LiveActivityView.textSize(for: restingHeight)
         let side = side(restingHeight, island)
         let gap = LiveActivityView.cameraGap
@@ -329,10 +326,8 @@ struct SystemActivityView: View {
             let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
-        if case .lowBattery(let percent) = alert.content {
-            return max((LowBatteryLayout.width(percent: percent, restingHeight: restingHeight) - notchWidth) / 2, 0)
-        }
         // As tall as the Alarm, as wide as its words or its buttons.
+        if case .lowBattery(let percent) = alert.content { return LowBatteryLayout.wing(percent: percent, restingHeight: restingHeight) }
         if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight, island: island)
         let (left, right): (CGFloat, CGFloat) =

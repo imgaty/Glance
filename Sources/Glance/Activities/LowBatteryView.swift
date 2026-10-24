@@ -52,43 +52,57 @@ final class LowPowerMode: ObservableObject {
     }
 }
 
-/// Low Battery as the iPhone's Dynamic Island shows it, by the island's height: taller than the
-/// notch, its row just below the camera, a round button with the battery in red at the left, its
-/// level and what the button does beside it.
+/// Low Battery as the iPhone's Dynamic Island shows it, measured from it, by the island's height:
+/// as tall as the Alarm, its level and an offer to turn on Low Power Mode at the left end, and at
+/// the right a capsule holding a large battery, a ring pulsing around its level. Red, and green
+/// once Low Power Mode is on.
 enum LowBatteryLayout {
-    static let title: CGFloat = 0.5
-    static let subtitle: CGFloat = 0.42
-    /// Between the button and the words.
-    static let gap: CGFloat = 0.32
-    /// The battery in the button, by the notch's height.
-    static let battery: CGFloat = 0.36
-    /// How long the battery takes to pulse, in seconds.
+    static let words: CGFloat = 0.425
+    /// Between the level and the offer, as the iPhone sets them.
+    static let lineGap: CGFloat = 0.055
+    static let capsule = CGSize(width: 2.32, height: 1.55)
+    static let body = CGSize(width: 1.06, height: 0.64)
+    static let bodyCorner: CGFloat = 0.15
+    /// The level inside the body, never narrower than at 10%, as the iPhone's.
+    static let levelInset: CGFloat = 0.1
+    static let leastLevel: CGFloat = 0.21
+    static let capGap: CGFloat = 0.2
+    static let cap = CGSize(width: 0.055, height: 0.23)
+    static let ring: CGFloat = 1.0
+    static let ringLine: CGFloat = 0.036
+    /// How long the ring takes to pulse, in seconds.
     static let pulse = 1.6
 
-    /// How far in the button sits from the end and the bottom: the same, so it's concentric with
-    /// the round corner, as the timer's buttons are.
-    static func edge(_ h: CGFloat) -> CGFloat { TimerLayout.rowEdge(h) }
-    static func height(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) }
+    static let red = Color(red: 0.94, green: 0.34, blue: 0.3)
+    static let redLevel = Color(red: 0xF3 / 255, green: 0x95 / 255, blue: 0x9E / 255)
+    static let green = Color(red: 0.3, green: 0.85, blue: 0.42)
+    static let greenLevel = Color(red: 0.64, green: 0.95, blue: 0.7)
 
-    /// As wide as the iPhone's expanded activities, or as its words need.
+    /// The capsule as far in from the right end as from the top and bottom, concentric with it; the
+    /// words as far in from the left.
+    static func edge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * capsule.height, in: TimerLayout.tallHeight(h)) }
+
+    /// Each wing: as wide as the wider side, the words or the capsule, each from its end.
     @MainActor
-    static func width(percent: Int, restingHeight h: CGFloat) -> CGFloat {
-        func width(_ text: String, _ size: CGFloat) -> CGFloat {
-            ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * size, weight: .semibold)]).width)
-        }
-        let words = max(width(LowBatteryView.title(percent), title), width(LowBatteryView.offer, subtitle), width(LowBatteryView.done, subtitle))
-        return max(h * TimerLayout.wide, edge(h) * 2 + h * (TimerLayout.button + gap) + words)
+    static func wing(percent: Int, restingHeight h: CGFloat) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: h * words, weight: .semibold)
+        let widest = [LowBatteryView.title(percent), LowBatteryView.offer, LowBatteryView.done]
+            .map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
+        let gap = LiveActivityView.cameraGap
+        return max(edge(h) + widest + gap, gap + h * capsule.width + edge(h))
     }
 }
 
-/// Low Battery, taller than the notch, as the iPhone's: the battery in a round button, red and
-/// pulsing, beside its level and an offer to turn on Low Power Mode. Clicked, Low Power Mode comes
-/// on, the battery turns green and stops pulsing, and it says so in green. With Reduce Motion on,
-/// it doesn't pulse.
+/// Low Battery, as tall as the Alarm, as the iPhone's: its level and an offer to turn on Low Power
+/// Mode at the left end, and the battery, large, in a capsule at the right, a ring pulsing around
+/// its level; clicked, Low Power Mode comes on, everything turns green and stops pulsing, and it
+/// says so. With Reduce Motion on, the ring doesn't pulse.
 struct LowBatteryView: View {
     let percent: Int
     let restingHeight: CGFloat
-    /// The pointer is on the button.
+    /// Each wing's width beside the camera (see `LowBatteryLayout.wing`).
+    var wing: CGFloat = 0
+    /// The pointer is on the capsule.
     let hovered: Bool
     @ObservedObject private var lowPower = LowPowerMode.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -100,42 +114,74 @@ struct LowBatteryView: View {
     var body: some View {
         let h = restingHeight
         let on = lowPower.isOn
-        let tint: Color = on ? .green : .red
         let edge = LowBatteryLayout.edge(h)
-        HStack(spacing: h * LowBatteryLayout.gap) {
-            TimelineView(.animation(paused: on || reduceMotion)) { context in
-                let pulse = on || reduceMotion ? 1 : Self.pulse(at: context.date)
-                IslandCircle(height: h, tint: tint, highlighted: hovered) {
-                    BatteryGlyph(level: BatteryLevel(percent: percent, charging: false), color: tint, height: h * LowBatteryLayout.battery)
-                        .opacity(0.5 + 0.5 * pulse)
-                }
-            }
-            .reportsFrame(.lowPower)
-            .spokenButton(on ? Self.done : "Turn on Low Power Mode") { LowPowerMode.shared.turnOn() }
-            VStack(alignment: .leading, spacing: 1) {
+        let gap = LiveActivityView.cameraGap
+        ZStack {
+            VStack(alignment: .leading, spacing: h * LowBatteryLayout.lineGap) {
                 Text(Self.title(percent))
-                    .font(.system(size: h * LowBatteryLayout.title, weight: .semibold))
                     .foregroundStyle(.white)
                 // One blurring into the other, as the island's words change.
                 Group {
                     if on {
-                        Text(Self.done).foregroundStyle(.green)
+                        Text(Self.done).foregroundStyle(LowBatteryLayout.green)
                     } else {
                         Text(Self.offer).foregroundStyle(.white.opacity(0.5))
                     }
                 }
-                .font(.system(size: h * LowBatteryLayout.subtitle, weight: .semibold))
                 .transition(.blurReplace)
             }
+            .font(.system(size: h * LowBatteryLayout.words, weight: .semibold))
             .lineLimit(1)
+            .frame(width: max(wing - edge - gap, 0), alignment: .leading)
+            .padding(.leading, edge)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
-            Spacer(minLength: 0)
+            capsule(h, on: on)
+                .reportsFrame(.lowPower)
+                .spokenButton(on ? Self.done : "Turn on Low Power Mode") { LowPowerMode.shared.turnOn() }
+                .padding(.trailing, edge)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, edge)
-        .padding(.top, h + LiveActivityView.cameraGap)
-        .padding(.bottom, edge)
-        .frame(width: LowBatteryLayout.width(percent: percent, restingHeight: h), height: LowBatteryLayout.height(h), alignment: .top)
+        .frame(maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.3), value: on)
+    }
+
+    /// The battery, large, in its capsule: the body faint, the level bright, the cap apart, and the
+    /// ring around the level.
+    private func capsule(_ h: CGFloat, on: Bool) -> some View {
+        let tint = on ? LowBatteryLayout.green : LowBatteryLayout.red
+        let body = LowBatteryLayout.body, cap = LowBatteryLayout.cap
+        let inner = body.width - LowBatteryLayout.levelInset * 2
+        let level = max(inner * CGFloat(percent) / 100, LowBatteryLayout.leastLevel)
+        let levelHeight = body.height - LowBatteryLayout.levelInset * 2
+        // The ring's middle, from the battery's left end: the level's.
+        let ringMiddle = LowBatteryLayout.levelInset + level / 2
+        return TimelineView(.animation(paused: on || reduceMotion)) { context in
+            let pulse = on || reduceMotion ? 1 : Self.pulse(at: context.date)
+            HStack(spacing: h * LowBatteryLayout.capGap) {
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: h * LowBatteryLayout.bodyCorner, style: .continuous)
+                        .fill(tint.opacity(0.45))
+                    Capsule()
+                        .fill(on ? LowBatteryLayout.greenLevel : LowBatteryLayout.redLevel)
+                        .frame(width: h * level, height: h * levelHeight)
+                        .padding(.leading, h * LowBatteryLayout.levelInset)
+                    Circle()
+                        .strokeBorder(tint.opacity(0.4), lineWidth: h * LowBatteryLayout.ringLine)
+                        .frame(width: h * LowBatteryLayout.ring, height: h * LowBatteryLayout.ring)
+                        .scaleEffect(0.9 + 0.12 * pulse)
+                        .opacity(on ? 0 : 0.55 + 0.45 * pulse)
+                        .offset(x: h * (ringMiddle - LowBatteryLayout.ring / 2))
+                }
+                .frame(width: h * body.width, height: h * body.height)
+                Capsule()
+                    .fill(tint.opacity(0.45))
+                    .frame(width: h * cap.width, height: h * cap.height)
+            }
+            .frame(width: h * LowBatteryLayout.capsule.width, height: h * LowBatteryLayout.capsule.height)
+            .background(Capsule().fill(tint.opacity(hovered ? 0.34 : 0.26)))
+        }
+        .animation(.easeOut(duration: 0.15), value: hovered)
     }
 
     /// 0 to 1 and back, gently, once a pulse.

@@ -347,10 +347,7 @@ final class NotchModel: ObservableObject {
     var restingTall: Bool { alert?.tall == true && !switching }
 
     /// The closed notch's height: more than twice as tall while what's announced is.
-    var restingHeight: CGFloat {
-        guard restingTall, let alert else { return closedSize.height }
-        return alert.tallHeight(closedSize.height)
-    }
+    var restingHeight: CGFloat { restingTall ? TimerLayout.tallHeight(closedSize.height) : closedSize.height }
 
     /// Open on an activity's own view, rather than the player or the tray.
     var expandedShown: Bool { state == .open && expanded != nil }
@@ -379,9 +376,10 @@ final class NotchModel: ObservableObject {
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(
-                        for: airdrop ?? AirDropShown(id: "", sender: "", preview: nil, fraction: 0), restingHeight: closedSize.height)
+                        for: airdrop ?? AirDropShown(id: "", sender: "", preview: nil, fraction: 0), restingHeight: closedSize.height,
+                        camera: camera)
                         + pull * 0.35,
-                    TimerLayout.rowHeight(closedSize.height) + pull
+                    TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where expanded == .airplay:
                 (
@@ -785,7 +783,9 @@ struct NotchView: View {
     @ViewBuilder private func expandedAirDrop(shown: Bool) -> some View {
         if model.expanded == .airdrop, let transfer = model.airdrop {
             let h = model.closedSize.height
-            ExpandedAirDropView(shown: transfer, restingHeight: h, width: AirDropLayout.width(for: transfer, restingHeight: h))
+            ExpandedAirDropView(
+                shown: transfer, restingHeight: h, camera: model.camera,
+                width: AirDropLayout.width(for: transfer, restingHeight: h, camera: model.camera))
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }

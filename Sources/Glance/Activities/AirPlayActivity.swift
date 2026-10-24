@@ -15,28 +15,31 @@ struct AirPlayRoute: Equatable {
     let name: String
     let symbol: String
 
-    /// What the device is, by its name, as Control Center draws it: a TV, a HomePod, a Mac, or a
-    /// speaker.
+    /// What the device is, by its name, as the iPhone draws it: a MacBook, another Mac, a TV, a
+    /// HomePod, or a speaker.
     static func symbol(for name: String) -> String {
         let name = name.lowercased()
         let candidates: [String] =
             if name.contains("homepod mini") {
-                ["homepodmini.fill", "homepod.fill"]
+                ["homepodmini", "homepod"]
             } else if name.contains("homepod") {
-                ["homepod.fill"]
+                ["homepod"]
             } else if name.contains("apple tv") {
-                ["appletv.fill", "tv"]
+                ["appletv", "tv"]
             } else if name.contains("tv") {
                 ["tv"]
             } else if name.contains("macbook") {
-                ["laptopcomputer"]
+                ["macbook", "laptopcomputer"]
             } else if name.contains("imac") || name.contains("mac mini") || name.contains("mac studio") || name.contains("mac pro") {
                 ["desktopcomputer"]
             } else {
-                ["hifispeaker.fill"]
+                ["hifispeaker"]
             }
-        return candidates.first { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil } ?? "hifispeaker.fill"
+        return candidates.first { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil } ?? "hifispeaker"
     }
+
+    /// A screen's own symbol draws its screen in gray inside the white, as the iPhone's does.
+    var hasScreen: Bool { ["macbook", "laptopcomputer", "tv", "desktopcomputer"].contains(symbol) }
 }
 
 /// The Mac's sound going to AirPlay, as the iPhone's Dynamic Island shows Screen Mirroring: beside
@@ -97,55 +100,70 @@ final class AirPlayWatch: ObservableObject {
     }
 }
 
-/// AirPlay as the iPhone's Screen Mirroring, measured from it, by the island's height: AirPlay's
-/// symbol in Control Center's blue, the device's in white.
+/// AirPlay as the iPhone's Screen Mirroring, measured from it, by the island's height: its symbol in
+/// the iPhone's muted blue, what it plays on in white, and a wide button in navy with blue words.
 enum AirPlayLayout {
-    static let tint = Color.blue
-    /// Opened, as wide as the iPhone's, and its header's symbol, title and name.
+    static let tint = Color(red: 0x52 / 255, green: 0x7D / 255, blue: 0xBE / 255)
+    static let buttonFill = Color(red: 0x16 / 255, green: 0x2B / 255, blue: 0x4B / 255)
+    static let buttonWords = Color(red: 0x60 / 255, green: 0x93 / 255, blue: 0xF8 / 255)
+    static let secondary = Color(red: 0xA1 / 255, green: 0xA0 / 255, blue: 0xA5 / 255)
+    // Beside the camera: the symbol and the device, each as far in from its end.
+    static let symbol: CGFloat = 0.6
+    static let device: CGFloat = 0.4
+    static let edge: CGFloat = 0.23
+    // Opened.
     static let wide: CGFloat = 10.2
-    static let symbol: CGFloat = 0.95
-    static let deviceSymbol: CGFloat = 0.8
-    static let title: CGFloat = 0.464
-    static let header: CGFloat = 1.15
-    static let headerInset: CGFloat = 0.8
-    static let titleGap: CGFloat = 0.36
-    /// Its button: as tall as the iPhone's, a capsule.
-    static let button: CGFloat = 1.18
-    static let buttonGap: CGFloat = 0.25
-    static let buttonText: CGFloat = 0.5
-
-    /// How far in the button sits from the sides and the bottom: the same, so its round ends are
-    /// concentric with the notch's round corners, as the timer's buttons are.
-    static func buttonEdge(_ h: CGFloat) -> CGFloat { TimerLayout.cornerEdge(h, button) }
+    static let bigSymbol: CGFloat = 0.95
+    static let symbolInset: CGFloat = 0.83
+    static let symbolGap: CGFloat = 0.53
+    static let bigDevice: CGFloat = 0.67
+    static let deviceInset: CGFloat = 0.68
+    static let title: CGFloat = 0.48
+    /// The title and the name close together, as the iPhone sets them.
+    static let lineGap: CGFloat = -0.09
+    static let header: CGFloat = 0.9
+    static let buttonGap: CGFloat = 0.4
+    static let button: CGFloat = 1.2
+    static let buttonInset: CGFloat = 0.545
+    static let buttonBottom: CGFloat = 0.47
+    static let buttonText: CGFloat = 0.48
 
     /// Opened, its header just below the camera, the button under it.
     static func height(_ h: CGFloat) -> CGFloat {
-        (h + LiveActivityView.cameraGap + h * (header + buttonGap + button) + buttonEdge(h)).rounded()
+        (h + LiveActivityView.cameraGap + h * (header + buttonGap + button + buttonBottom)).rounded()
     }
 }
 
-/// AirPlay beside the camera: its symbol at the left end, what it plays on at the right, each as
-/// far in from its end as from the top and bottom, as the cover is.
+/// What AirPlay plays on, in white; a screen's own drawn in gray inside.
+struct AirPlayDevice: View {
+    let route: AirPlayRoute
+    let size: CGFloat
+
+    var body: some View {
+        Image(systemName: route.symbol)
+            .font(.system(size: size, weight: .regular))
+            .symbolRenderingMode(route.hasScreen ? .hierarchical : .monochrome)
+            .foregroundStyle(.white)
+    }
+}
+
+/// AirPlay beside the camera, as the iPhone's Screen Mirroring: its symbol at the left end, what it
+/// plays on at the right, each as far in from its end.
 struct AirPlayMark: View {
     let route: AirPlayRoute
     let restingHeight: CGFloat
     let island: Bool
 
     var body: some View {
-        let side = SystemActivityView.side(restingHeight, island)
-        let edge = LiveActivityView.edgeInset(island: island, restingHeight: restingHeight)
+        let h = restingHeight
         ZStack {
             Image(systemName: "airplay.audio")
-                .font(.system(size: side * 0.82, weight: .semibold))
+                .font(.system(size: h * AirPlayLayout.symbol, weight: .regular))
                 .foregroundStyle(AirPlayLayout.tint)
-                .frame(width: side, height: side)
-                .padding(.leading, edge)
+                .padding(.leading, h * AirPlayLayout.edge)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: route.symbol)
-                .font(.system(size: side * 0.7, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: side, height: side)
-                .padding(.trailing, edge)
+            AirPlayDevice(route: route, size: h * AirPlayLayout.device)
+                .padding(.trailing, h * AirPlayLayout.edge)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .accessibilityElement(children: .ignore)
@@ -154,8 +172,8 @@ struct AirPlayMark: View {
 }
 
 /// Opened, as the iPhone's Screen Mirroring expands: AirPlay's symbol, large, then AirPlay and the
-/// device's name, what it is at the right end; under them, a wide button to stop it, in AirPlay's
-/// blue, which sends the sound back to where it played before.
+/// device's name, what it is at the right end; under them, a wide button to stop it, which sends
+/// the sound back to where it played before.
 struct ExpandedAirPlayView: View {
     let route: AirPlayRoute
     let restingHeight: CGFloat
@@ -165,56 +183,56 @@ struct ExpandedAirPlayView: View {
     var body: some View {
         let h = restingHeight
         VStack(spacing: h * AirPlayLayout.buttonGap) {
-            HStack(spacing: h * AirPlayLayout.titleGap) {
+            HStack(spacing: 0) {
                 Image(systemName: "airplay.audio")
-                    .font(.system(size: h * AirPlayLayout.symbol, weight: .regular))
+                    .font(.system(size: h * AirPlayLayout.bigSymbol, weight: .regular))
                     .foregroundStyle(AirPlayLayout.tint)
-                VStack(alignment: .leading, spacing: 1) {
+                    .padding(.leading, h * AirPlayLayout.symbolInset)
+                    .padding(.trailing, h * AirPlayLayout.symbolGap)
+                VStack(alignment: .leading, spacing: h * AirPlayLayout.lineGap) {
                     Text("AirPlay")
-                        .font(.system(size: h * AirPlayLayout.title, weight: .semibold))
                         .foregroundStyle(.white)
                     Text(route.name)
-                        .font(.system(size: h * AirPlayLayout.title, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(AirPlayLayout.secondary)
                 }
+                .font(.system(size: h * AirPlayLayout.title, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.tail)
-                Spacer(minLength: 0)
-                Image(systemName: route.symbol)
-                    .font(.system(size: h * AirPlayLayout.deviceSymbol, weight: .medium))
-                    .foregroundStyle(.white)
+                Spacer(minLength: h * 0.3)
+                AirPlayDevice(route: route, size: h * AirPlayLayout.bigDevice)
+                    .padding(.trailing, h * AirPlayLayout.deviceInset)
             }
             .frame(height: h * AirPlayLayout.header)
-            .padding(.horizontal, h * AirPlayLayout.headerInset)
             Button {
                 AirPlayWatch.shared.stop()
             } label: {
                 Text("Stop AirPlay")
                     .font(.system(size: h * AirPlayLayout.buttonText, weight: .semibold))
-                    .foregroundStyle(AirPlayLayout.tint)
+                    .foregroundStyle(AirPlayLayout.buttonWords)
                     .frame(maxWidth: .infinity)
                     .frame(height: h * AirPlayLayout.button)
-                    .background(AirPlayLayout.tint.opacity(hovering ? 0.3 : 0.22), in: Capsule())
+                    .background(AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85), in: Capsule())
                     .contentShape(Capsule())
             }
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
             .onHover { hovering = $0 }
             .notchControl()
-            .padding(.horizontal, AirPlayLayout.buttonEdge(h))
+            .padding(.horizontal, h * AirPlayLayout.buttonInset)
         }
         .padding(.top, h + LiveActivityView.cameraGap)
-        .padding(.bottom, AirPlayLayout.buttonEdge(h))
+        .padding(.bottom, h * AirPlayLayout.buttonBottom)
         .frame(width: width, height: AirPlayLayout.height(h), alignment: .top)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("AirPlay, playing on \(route.name)")
     }
 
-    /// As wide as the iPhone's, or as its title and the device's name need.
+    /// As wide as the iPhone's, or as AirPlay and the device's name need.
     @MainActor
     static func width(for route: AirPlayRoute, restingHeight h: CGFloat) -> CGFloat {
         let font = NSFont.systemFont(ofSize: h * AirPlayLayout.title, weight: .semibold)
         let name = ceil((route.name as NSString).size(withAttributes: [.font: font]).width)
-        let needs = h * (AirPlayLayout.headerInset * 2 + AirPlayLayout.symbol * 1.3 + AirPlayLayout.titleGap * 2 + AirPlayLayout.deviceSymbol * 1.3) + name
+        let needs = h * (AirPlayLayout.symbolInset + AirPlayLayout.bigSymbol * 1.05 + AirPlayLayout.symbolGap + 0.3
+            + AirPlayLayout.bigDevice * 1.45 + AirPlayLayout.deviceInset) + name
         return min(max(h * AirPlayLayout.wide, needs), h * 14)
     }
 }

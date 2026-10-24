@@ -43,13 +43,6 @@ enum TimerLayout {
     /// the round buttons are from the top and bottom, so they're concentric with the round ends,
     /// and the words at the other end match them.
     static func buttonEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * button, in: tallHeight(h)) }
-    /// How far in from the end and from the bottom something this tall, by the notch's height, sits
-    /// in a tall view's round corner: the same both ways, so it's concentric with it.
-    static func cornerEdge(_ h: CGFloat, _ content: CGFloat) -> CGFloat { h * (corner - content / 2) }
-    /// A row as tall as the round buttons below the camera, as Low Battery and AirDrop have: as far
-    /// in from the ends as from the bottom, and the view's height for it.
-    static func rowEdge(_ h: CGFloat) -> CGFloat { cornerEdge(h, button) }
-    static func rowHeight(_ h: CGFloat) -> CGFloat { (h + LiveActivityView.cameraGap + h * button + rowEdge(h)).rounded() }
 
     // Inside the round buttons.
     static let pauseBar = CGSize(width: 0.19, height: 0.6)
