@@ -86,6 +86,23 @@ struct PlayerScriptingTests {
         #expect(PlayerScripting.options(from: "true|false|true", app: spotify).favorite == nil)
     }
 
+    @Test("Spotify's DJ is told by shuffle and repeat not being offered, for its songs and its own words")
+    func spotifyDJ() {
+        #expect(
+            PlayerScripting.options(from: "false|false|false|spotify:track:1UYj8qTWjneZJDVjUMwMub", app: spotify)
+                == PlaybackOptions(dj: true))
+        #expect(
+            PlayerScripting.options(from: "false|false|false|spotify:media:0000000000000000000000", app: spotify)
+                == PlaybackOptions(dj: true))
+        // A podcast doesn't offer them either, but it isn't the DJ.
+        #expect(
+            PlayerScripting.options(from: "false|false|false|spotify:episode:4rOoJ6Egrf8K2IrywzwOMk", app: spotify)
+                == PlaybackOptions())
+        #expect(
+            PlayerScripting.options(from: "true|false|true|spotify:track:1UYj8qTWjneZJDVjUMwMub", app: spotify)
+                == PlaybackOptions(shuffle: true, repeatMode: .off))
+    }
+
     @Test("A reply that isn't options gives none", arguments: ["", "true", "garbage", "missing value"])
     func malformedReply(reply: String) {
         #expect(PlayerScripting.options(from: reply, app: music) == PlaybackOptions())
@@ -112,6 +129,8 @@ struct PlayerScriptingTests {
         #expect(spotifyScript.contains(#"tell application "Spotify""#))
         #expect(spotifyScript.contains("shuffling"))
         #expect(spotifyScript.contains("repeating"))
+        #expect(spotifyScript.contains("shuffling enabled"))
+        #expect(spotifyScript.contains("spotify url"))
         #expect(!spotifyScript.contains("favorited"))
 
         #expect(PlayerScripting.readScript(for: other) == nil)
@@ -211,5 +230,32 @@ struct PlayerScriptingTests {
         ])
     func noSpotifyTrackID(uri: String) {
         #expect(PlayerScripting.spotifyTrackID(uri) == nil)
+    }
+
+    // MARK: - Where it plays from
+
+    @Test("Spotify's song opens in the playlist it plays from: after it in the history, else what was asked to play")
+    @MainActor
+    func spotifyContext() {
+        let track = "spotify:track:1Q3t9fWvHUXKsMmpD2XpUu"
+        let playlist = "spotify:playlist:37i9dQZF1EYkqdzj48dyYq"
+        let album = "spotify:album:6i02UIhGdlmQcX6xnL0wCFj"
+        let history = ["spotify:track:AAA", album, track, playlist, "spotify:track:BBB", playlist]
+        #expect(PlayingSource.context(of: track, history: history, request: []) == playlist)
+        // Liked Songs, whose address runs longer.
+        let liked = "spotify:user:someone:collection"
+        #expect(PlayingSource.context(of: track, history: [track, liked], request: []) == liked)
+        // Not in the history: what was asked to play, if the song came with it.
+        #expect(PlayingSource.context(of: track, history: [], request: [playlist, track]) == playlist)
+        #expect(PlayingSource.context(of: track, history: [], request: [playlist, "spotify:track:CCC"]) == nil)
+    }
+
+    @Test("A browser's tab is found by what's playing, its title kept whole in the script")
+    @MainActor
+    func browserTab() {
+        let safari = PlayingSource.tabScript(app: "com.apple.Safari", title: #"Say "Hi" \ Bye"#)
+        #expect(safari?.contains(#"name of t contains "Say \"Hi\" \\ Bye""#) == true)
+        #expect(PlayingSource.tabScript(app: "com.google.Chrome", title: "Song")?.contains("active tab index") == true)
+        #expect(PlayingSource.tabScript(app: "org.mozilla.firefox", title: "Song") == nil)
     }
 }

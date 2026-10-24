@@ -96,6 +96,7 @@ struct NowPlayingView: View {
         .animation(.easeInOut(duration: 0.4), value: accentSource)
         .animation(.easeInOut(duration: 0.4), value: accentTimeline)
         .animation(.easeInOut(duration: 0.4), value: leftSlot)
+        .animation(.easeInOut(duration: 0.4), value: nowPlaying.djPlaying)
         .animation(.easeInOut(duration: 0.4), value: rightSlot)
         .animation(.easeInOut(duration: 0.3), value: nowPlaying.explicit)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -198,6 +199,10 @@ struct NowPlayingView: View {
             // (Its places, in order: one side, the three transport controls, the other side.)
             if let places {
                 ControlMark(place: .left, control: leftSlot, symbol: symbol(for: leftSlot), places: places)
+            } else if nowPlaying.djPlaying {
+                // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
+                DJButton(color: buttonGray, talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
+                    .transition(.opacity)
             } else {
                 slot(leftSlot)
             }

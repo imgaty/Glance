@@ -76,6 +76,54 @@
 
 <br>
 
+## Release 0.2.1
+
+`Released: not yet`
+
+### Player
+
+- Fixed Spotify's DJ not showing in the player: while the DJ chooses the music,
+  its symbol takes the left button's place, drawn as Spotify draws it, its
+  corner moving as the DJ talks. Clicking it switches to Spotify.
+- Fixed shuffle and repeat looking available while Spotify's DJ or a podcast
+  plays, when Spotify doesn't offer them.
+- Fixed the waveform not keeping the song's time: its color rises to the top of
+  its bars on each beat, and its bars fall back at the song's pace.
+- Fixed the cover's colors behind the player standing still through the song:
+  they pulse with the beat, as in Apple Music.
+- Fixed clicking the cover, or the app's icon on it, not going where the music
+  plays from: it opens the browser tab playing it, the playlist or album Spotify
+  plays it from, or the song in the playlist Music plays it from.
+- Fixed the cover giving no sign it can be clicked: it lifts gently under the
+  pointer, with a soft shadow, squashes as it's pressed, and springs back as
+  it's let go.
+- Fixed the waveform's color pulsing with the beat while Reduce Motion is on.
+
+### Tray
+
+- Fixed the photo in the tray's demo being enlarged from a smaller picture.
+- Fixed the tray's glass adding a blur and a darker tint of its own: it looks as
+  it's set in **Settings > Appearance**, as the player's does.
+
+### Opening
+
+- Fixed the player, the tray and the lyrics staying put while the open notch
+  stretches as it's pulled down with two fingers: they move down with it,
+  keeping their shape, and settle back with it.
+- Fixed the notch opening, turning between the player and the tray, and widening
+  for the lyrics without the Dynamic Island's bounce: it grows past its size and
+  settles back, as the island does. With Reduce Motion on, it goes straight to
+  its size.
+
+### Settings
+
+- Fixed toggles and the `Layout` choice lagging on the Settings pages with the
+  notch's preview.
+- Fixed Settings, opened from the menu bar, sometimes coming up a second or more
+  late, behind other apps, or drawn gray as if behind them while in use.
+
+<br>
+
 ## Release 0.2.0
 
 `Released: 16 October 2026`

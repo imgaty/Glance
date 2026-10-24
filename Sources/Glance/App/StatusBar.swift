@@ -450,11 +450,15 @@ final class StatusPanel {
     private var monitors: [Any] = []
     /// Glance's window that had the keys before the menu took them (Settings, say), given them back.
     private weak var previousKey: NSWindow?
+    /// A menu that has faded while one of Glance's windows is in front, kept until another app is.
+    private var lingering: MenuPanel?
+    private var resignWatch: NSObjectProtocol?
 
     var isShown: Bool { panel?.isVisible == true }
 
     func show(below button: NSStatusBarButton, content: some View) {
         close()
+        letLingeringGo()
         previousKey = NSApp.keyWindow
         let room = StatusMenu.shadowRoom
         let host = NotchHostingView(rootView: AnyView(content.fixedSize().padding(room)))
@@ -503,11 +507,21 @@ final class StatusPanel {
         guard let panel else { return }
         self.panel = nil
         let previous = previousKey
+        // Fading, it lets clicks through to what's under it.
+        panel.ignoresMouseEvents = true
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             panel.animator().alphaValue = 0
         } completionHandler: {
             MainActor.assumeIsolated {
+                // With one of Glance's windows in front, as Settings chosen in the menu, the menu stays,
+                // unseen, until another app is in use: the menu never made Glance the app in use, and
+                // taking it away now, macOS would hand the front back to the app that was, leaving
+                // the window behind it, drawn gray.
+                if NSApp.isActive, let key = NSApp.keyWindow, key !== panel, !(key is NSPanel) {
+                    self.linger(panel)
+                    return
+                }
                 panel.orderOut(nil)
                 // Still the app in use, with nothing else in front: the keys go back where they were.
                 if NSApp.isActive, NSApp.keyWindow == nil || NSApp.keyWindow === panel, let previous, previous.isVisible {
@@ -519,11 +533,35 @@ final class StatusPanel {
     }
 }
 
+extension StatusPanel {
+    /// Kept on the screen, unseen, until Glance is no longer the app in use; never taking the keys
+    /// meanwhile, as when the window in front closes.
+    private func linger(_ panel: MenuPanel) {
+        letLingeringGo()
+        panel.lingers = true
+        lingering = panel
+        resignWatch = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.letLingeringGo() }
+        }
+    }
+
+    private func letLingeringGo() {
+        if let resignWatch { NotificationCenter.default.removeObserver(resignWatch) }
+        resignWatch = nil
+        lingering?.orderOut(nil)
+        lingering = nil
+    }
+}
+
 /// Takes the focus for Escape, without making Glance the app in use, and looks like a window in front.
 private final class MenuPanel: NSPanel {
     var onCancel: (() -> Void)?
+    /// Gone from sight, kept only until another app is in use (see `StatusPanel.linger`).
+    var lingers = false
 
-    override var canBecomeKey: Bool { true }
+    override var canBecomeKey: Bool { !lingers }
     override func cancelOperation(_ sender: Any?) { onCancel?() }
 
     /// Private AppKit hooks: drawn as a window in front, so the switch has its color and the glass

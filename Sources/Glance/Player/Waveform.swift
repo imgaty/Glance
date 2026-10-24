@@ -53,10 +53,13 @@ struct HeroWaveform: View {
 
 /// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
 /// 1.3 times as wide as the gaps, in the accent color fading to gray at the top, and dots when
-/// nothing plays. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol for
-/// another: the bars draw together into a point and are gone, and the symbol springs out of it.
+/// nothing plays. On each beat the color floods up to their tops and ebbs back, so the gradient
+/// keeps the song's time. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol
+/// for another: the bars draw together into a point and are gone, and the symbol springs out of it.
 struct WaveformGlyph: View {
     @ObservedObject private var audio = AudioLevels.shared
+    /// With Reduce Motion on, the color holds still on the beat.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let color: Color
     let isPlaying: Bool
     var folded = false
@@ -68,18 +71,21 @@ struct WaveformGlyph: View {
     var body: some View {
         if demo {
             TimelineView(.animation(minimumInterval: 1.0 / 20, paused: !isPlaying)) { context in
-                glyph(levels: Self.demoLevels(at: context.date.timeIntervalSinceReferenceDate))
+                let t = context.date.timeIntervalSinceReferenceDate
+                glyph(levels: Self.demoLevels(at: t), pulse: Self.demoKick(at: t))
             }
         } else {
-            glyph(levels: audio.levels)
+            // Drawn each time the levels arrive, which is often enough for the beat to show.
+            glyph(levels: audio.levels, pulse: isPlaying && !reduceMotion ? audio.beat?.pulse(at: .now) ?? 0 : 0)
         }
     }
 
-    private func glyph(levels: [Float]) -> some View {
+    private func glyph(levels: [Float], pulse: Double) -> some View {
         GeometryReader { proxy in
             let size = proxy.size
             let bar = size.width / (6 + 5 / 1.3)
-            let fill = LinearGradient(colors: [color.mix(with: .gray, by: 0.5), color], startPoint: .top, endPoint: .bottom)
+            let top = color.mix(with: .gray, by: 0.5 * (1 - pulse))
+            let fill = LinearGradient(colors: [top, color], startPoint: .top, endPoint: .bottom)
             ZStack(alignment: .topLeading) {
                 ForEach(0..<AudioLevels.bands, id: \.self) { index in
                     let rect = folded ? gathered(in: size, dot: bar) : self.bar(index, level: levels[index], in: size, width: bar)
@@ -127,10 +133,14 @@ struct WaveformGlyph: View {
         return CGRect(x: CGFloat(index) * width * (1 + 1 / 1.3), y: (size.height - height) / 2, width: width, height: height)
     }
 
-    /// A made-up beat, for the welcome tour: every bar at its own pace, with a kick on the bass a
-    /// little under twice a second.
+    /// The made-up song's kick on the bass, a little under twice a second.
+    static func demoKick(at t: Double) -> Double {
+        pow(max(0, sin(t * 2 * .pi * 1.8)), 6)
+    }
+
+    /// A made-up beat, for the welcome tour: every bar at its own pace, with the kick on the bass.
     static func demoLevels(at t: Double) -> [Float] {
-        let kick = pow(max(0, sin(t * 2 * .pi * 1.8)), 6)
+        let kick = demoKick(at: t)
         let paces: [Double] = [5.3, 6.1, 3.7, 2.9, 2.3, 4.4]
         return paces.enumerated().map { bar, pace in
             let bass = bar == 3 || bar == 4 ? 0.35 * kick : 0

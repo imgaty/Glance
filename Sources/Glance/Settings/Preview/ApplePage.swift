@@ -13,26 +13,37 @@ import SwiftUI
 /// Apple Park across the top, then Apple's words about it, its architecture, the Rainbow and the
 /// Pond. It scrolls slowly to the end and back up, again and again, so what the glass and the blur
 /// do to what moves behind them shows. Its text and background are light or dark with the system.
+/// It's drawn once into a picture, which scrolls thirty times a second, under a point at a time:
+/// laid out afresh at every frame, its words and photos kept the whole window busy, and every toggle
+/// in it waited behind them.
 struct ApplePage: View {
     /// Held still where it is, on pages without the preview.
     var scrolls = true
+    /// How large it shows, which it's drawn for, so it's never drawn larger than it's seen.
+    var scale: CGFloat = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.displayScale) private var displayScale
     @EnvironmentObject private var preview: SettingsPreview
-    @State private var length: CGFloat = 0
+    @State private var drawn: CGImage?
 
     var body: some View {
         GeometryReader { proxy in
-            let travel = max(length - proxy.size.height, 0)
-            TimelineView(.animation(paused: !scrolls || reduceMotion)) { context in
-                Self.article(width: proxy.size.width)
-                    .onGeometryChange(for: CGFloat.self) {
-                        $0.size.height
-                    } action: {
-                        length = $0
-                    }
-                    .offset(y: -Self.offset(at: preview.scrollClock.time(at: context.date), travel: travel))
+            let pixels = displayScale * scale
+            let travel = max(CGFloat(drawn?.height ?? 0) / pixels - proxy.size.height, 0)
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !scrolls || reduceMotion || drawn == nil)) { context in
+                if let drawn {
+                    Image(decorative: drawn, scale: pixels)
+                        .offset(y: -Self.offset(at: preview.scrollClock.time(at: context.date), travel: travel))
+                } else {
+                    // Until it's drawn, the page itself, still, which looks the same.
+                    Self.article(width: proxy.size.width)
+                }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+            .task(id: "\(colorScheme) \(proxy.size.width) \(pixels)") {
+                drawn = Self.picture(width: proxy.size.width, pixels: pixels, colorScheme: colorScheme)
+            }
         }
         .clipped()
         .background(ApplePark.sheet)
@@ -55,6 +66,21 @@ struct ApplePage: View {
             .background(ApplePark.sheet)
             .allowsHitTesting(false)
         }
+    }
+
+    /// The whole page, drawn once for each width, size and look it's shown in: Settings' preview
+    /// and the welcome tour's share it.
+    private static var pictures: [String: CGImage] = [:]
+
+    private static func picture(width: CGFloat, pixels: CGFloat, colorScheme: ColorScheme) -> CGImage? {
+        let key = "\(colorScheme) \(width) \(pixels)"
+        if let picture = pictures[key] { return picture }
+        let renderer = ImageRenderer(content: article(width: width).environment(\.colorScheme, colorScheme))
+        renderer.proposedSize = ProposedViewSize(width: width, height: nil)
+        renderer.scale = pixels
+        let picture = renderer.cgImage
+        pictures[key] = picture
+        return picture
     }
 
     /// Down to the end at about 28 points a second, easing in and out, a pause, back up, a pause.

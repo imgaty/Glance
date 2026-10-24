@@ -111,6 +111,8 @@ final class NotchController {
     private var pressBeganClosed = false
     /// Fits the timer's wings to its seconds as its last minute starts.
     private var timerWingTask: Task<Void, Never>?
+    /// A new layout chosen while the notch is closed, taken once things have settled.
+    private var relayoutTask: Task<Void, Never>?
     /// Pressed on one of a done timer's buttons, which acts rather than opening the notch.
     private var pressedButton: AlertButton?
     /// A menu opened from inside the open notch, like the sound output's, is up: the pointer is on
@@ -471,11 +473,22 @@ final class NotchController {
         }
     }
 
-    /// Switches to the layout chosen in Settings, in place: the notch reshapes and the player's
-    /// pieces move to their new places.
+    /// Switches to the layout chosen in Settings, in place: open, the notch reshapes and the
+    /// player's pieces move to their new places. Closed, nothing of the new layout shows: it's taken
+    /// once the click that chose it has settled, rather than adding to the moment that click takes,
+    /// or as the notch opens, if that's sooner.
     func relayout() {
+        relayoutTask?.cancel()
         guard PlayerLayout.current != model.layout else { return }
-        withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.use(PlayerLayout.current) }
+        guard model.state == .open else {
+            relayoutTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(0.6))
+                guard let self, !Task.isCancelled else { return }
+                self.model.use(PlayerLayout.current)
+            }
+            return
+        }
+        withAnimation(NotchMotion.expand) { model.use(PlayerLayout.current) }
     }
 
     /// Something the Mac announces: the wings widen to show it, and fold back once it's said, with
@@ -826,6 +839,10 @@ final class NotchController {
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) {
+            if model.layout != PlayerLayout.current {
+                relayoutTask?.cancel()
+                model.use(PlayerLayout.current)
+            }
             model.bubbleHovered = nil
             model.bubblePressed = nil
             model.expanded = page == .player && !forDrop && !keyboardHold ? expansion : nil
@@ -1350,10 +1367,11 @@ final class NotchController {
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
     }
 
-    /// To the other page, sliding, the notch taking the new page's width.
+    /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
+    /// spring.
     private func turn(to page: NotchPage) {
         guard model.page != page || model.expanded != nil else { return }
-        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+        withAnimation(NotchMotion.expand) {
             model.expanded = nil
             model.page = page
             model.pageNudge = 0

@@ -108,8 +108,6 @@ private struct LookEditor: View {
                 Text("Background")
                 ThumbnailPicker(selection: $background, options: MusicBackground.allCases.map { ($0, $0.title) }) { background in
                     NotchThumbnail(layout: layout, display: display, background: background)
-                        // Drawn afresh for a new layout.
-                        .id(layout)
                 }
             }
         }

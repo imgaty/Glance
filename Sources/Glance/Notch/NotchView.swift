@@ -51,12 +51,6 @@ enum GlassLook {
     /// glass and it turns opaque near the end. The top is black whatever this is.
     static let floor = 0.35
     static func black(_ darkness: Double) -> Double { floor + (1 - floor) * darkness * darkness }
-    /// On the tray, the least the glass blurs what's behind it, whatever it's set to: enough for
-    /// the row and its name to read over a busy window, as a menu's glass does.
-    static let trayBlur = 0.55
-    /// On the tray, the least black over the glass: the items' names are words to read, and Apple
-    /// keeps words on its frosted glass, so it's dimmed further than the player.
-    static let trayBlack = 0.6
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
@@ -337,8 +331,15 @@ final class NotchModel: ObservableObject {
 
     var metrics: NotchMetrics { metrics(for: state) }
 
-    func metrics(for state: NotchState) -> NotchMetrics {
-        let pull = max(stretch, 0)
+    /// Pulled down, how far what the open notch shows moves down with it: half as far as the notch
+    /// has grown, so it stays in the middle of it, its shape as it is.
+    var pullShift: CGFloat {
+        guard state == .open, stretch > 0 else { return 0 }
+        return (metrics(for: .open).height - metrics(for: .open, pull: 0).height) / 2
+    }
+
+    func metrics(for state: NotchState, pull: CGFloat? = nil) -> NotchMetrics {
+        let pull = pull ?? max(stretch, 0)
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed:
@@ -368,6 +369,15 @@ final class NotchModel: ObservableObject {
     }
 }
 
+/// The Dynamic Island's bounce as its activities expand: past its size, by about a twentieth, and
+/// back, a bounce that's seen. With Reduce Motion on, straight to its size.
+enum NotchMotion {
+    static var expand: Animation {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)
+    }
+}
+
 /// How the notch moves between its states, the same on screen and in Settings' preview.
 extension NotchModel {
     func peek() {
@@ -382,9 +392,9 @@ extension NotchModel {
         }
     }
 
-    /// Critically damped: it grows straight to its size, never past it.
+    /// With the Dynamic Island's spring, as its activities expand (see `NotchMotion`).
     func open() {
-        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+        withAnimation(NotchMotion.expand) {
             state = .open
             proximity = 0
             pop = false
@@ -488,7 +498,6 @@ struct NotchView: View {
         let heroOpen = isOpen && !expandedShown
         let playerShown = heroOpen && !onTray
         let trayShown = heroOpen && onTray
-        let glassBlur = trayShown ? max(blur, GlassLook.trayBlur) : blur
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed && !tall ? 1 : 0
@@ -548,67 +557,74 @@ struct NotchView: View {
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
             expandedTimer(shown: expandedShown)
-            // Laid out at their open sizes so they never reflow; the growing shape reveals them.
-            // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
-            // right. They start below the camera, which sits over their left side, and the line
-            // being sung sits level with the middle of the notch.
-            LyricsView(store: nowPlaying.lyricsStore, isVisible: lyricsShown, middle: model.openSize.height / 2 - lyricsTop)
-                .frame(width: model.lyricsWidth, height: model.openSize.height - lyricsTop * 2 + model.closedSize.height)
-                .padding(.leading, model.openSize.width)
-                .padding(.top, lyricsTop)
-                .frame(width: m.totalWidth, height: m.height, alignment: .top)
-                .mask { awayFromCamera }
-                .islandFade(lyricsShown)
-                .allowsHitTesting(places == nil)
-            // The player and the tray side by side, as pages are: going to the tray, the player
-            // slides off to the left as the tray comes in from the right, and back.
-            NowPlayingView(isVisible: playerShown && !paused, hero: hero)
-                .frame(width: model.openSize.width, height: model.openSize.height)
-                .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
-                .environment(\.notchControls, playerShown)
-                .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
-                .modifier(PageFade(hidden: !playerShown))
-            if trayOn {
-                TrayView(
-                    tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
-                    airDropTargeted: model.airDropTargeted
+            // Pulled down, the lyrics, the player and the tray move down with the notch, the cover
+            // and the waveform with them, keeping their shape, and settle back with it.
+            ZStack(alignment: .top) {
+                // Laid out at their open sizes so they never reflow; the growing shape reveals
+                // them. With the lyrics, the notch widens both ways: the player takes the left, the
+                // lyrics the right. They start below the camera, which sits over their left side,
+                // and the line being sung sits level with the middle of the notch.
+                LyricsView(store: nowPlaying.lyricsStore, isVisible: lyricsShown, middle: model.openSize.height / 2 - lyricsTop)
+                    .frame(width: model.lyricsWidth, height: model.openSize.height - lyricsTop * 2 + model.closedSize.height)
+                    .padding(.leading, model.openSize.width)
+                    .padding(.top, lyricsTop)
+                    .frame(width: m.totalWidth, height: m.height, alignment: .top)
+                    .mask { awayFromCamera }
+                    .islandFade(lyricsShown)
+                    .allowsHitTesting(places == nil)
+                // The player and the tray side by side, as pages are: going to the tray, the
+                // player slides off to the left as the tray comes in from the right, and back.
+                NowPlayingView(isVisible: playerShown && !paused, hero: hero)
+                    .frame(width: model.openSize.width, height: model.openSize.height)
+                    .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
+                    .environment(\.notchControls, playerShown)
+                    .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
+                    .modifier(PageFade(hidden: !playerShown))
+                if trayOn {
+                    TrayView(
+                        tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
+                        airDropTargeted: model.airDropTargeted
+                    )
+                    .frame(width: model.trayWidth, height: model.trayHeight)
+                    .environment(\.notchControls, trayShown)
+                    .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
+                    .modifier(PageFade(hidden: !trayShown))
+                    .allowsHitTesting(places == nil && trayShown)
+                }
+                HeroArtwork(isOpen: heroOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
+                    .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
+                    .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .leading)
+                    .offset(x: model.nudge)
+                    // There open, or in the closed notch while something plays, coming and going as
+                    // the Dynamic Island's activities do, as everything in the notch does.
+                    .islandFade(heroOpen || artworkShown && !expandedShown)
+                    .modifier(PageFade(hidden: heroOpen && onTray))
+                    .environment(\.notchControls, !trayShown)
+                    // Over the tray, though unseen there: clicks go through it to the tray's items.
+                    .allowsHitTesting(places == nil && !trayShown)
+                HeroWaveform(
+                    isOpen: heroOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
+                    toggleLyrics: toggleLyrics
                 )
-                .frame(width: model.trayWidth, height: model.trayHeight)
-                .environment(\.notchControls, trayShown)
-                .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
-                .modifier(PageFade(hidden: !trayShown))
-                .allowsHitTesting(places == nil && trayShown)
-            }
-            HeroArtwork(isOpen: heroOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
-                .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
-                .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .leading)
-                .offset(x: model.nudge)
-                // There open, or in the closed notch while something plays, coming and going as the
-                // Dynamic Island's activities do, as everything in the notch does.
-                .islandFade(heroOpen || artworkShown && !expandedShown)
+                .matchedGeometryEffect(id: heroOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
+                .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .trailing)
+                // There open, or in the closed notch while something plays, out of the way when a
+                // new song's artist takes its place, coming and going as the Dynamic Island's
+                // activities do.
+                .islandFade(heroOpen || waveformShown && !expandedShown)
                 .modifier(PageFade(hidden: heroOpen && onTray))
                 .environment(\.notchControls, !trayShown)
-                // Over the tray, though unseen there: clicks go through it to the tray's items.
                 .allowsHitTesting(places == nil && !trayShown)
-            HeroWaveform(
-                isOpen: heroOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
-                toggleLyrics: toggleLyrics
-            )
-            .matchedGeometryEffect(id: heroOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
-            .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .trailing)
-            // There open, or in the closed notch while something plays, out of the way when a new
-            // song's artist takes its place, coming and going as the Dynamic Island's activities do.
-            .islandFade(heroOpen || waveformShown && !expandedShown)
-            .modifier(PageFade(hidden: heroOpen && onTray))
-            .environment(\.notchControls, !trayShown)
-            .allowsHitTesting(places == nil && !trayShown)
+            }
+            .frame(width: m.totalWidth, height: m.height, alignment: .top)
+            .offset(y: model.pullShift)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
         .environment(\.lyricsControl, LyricsControl(shown: model.showsLyrics, available: model.songPlaying && lyricsOn, toggle: toggleLyrics))
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
-            if !lyricsOn { withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics = false } }
+            if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
         }
         // Liquid Glass takes a new size at once, while a frame's size otherwise animates only in
         // the picture, so the glass and the notch's black and outline would part as it changes size
@@ -644,14 +660,11 @@ struct NotchView: View {
                     // Clear Liquid Glass under black, as dark as set, blurring what's behind it as much as set.
                     Color.clear
                         .glassEffect(.clear, in: shape)
-                        .background(GlassBlur(radius: GlassLook.blur(glassBlur)))
+                        .background(GlassBlur(radius: GlassLook.blur(blur)))
                         .mask { WithoutFlares(flare: m.flare) }
                         .mask { shape }
                         .opacity(visible)
-                    shape.fill(.black.opacity((trayShown ? max(GlassLook.black(darkness), GlassLook.trayBlack) : GlassLook.black(darkness)) * visible))
-                        // The tray's darker glass is there as the tray arrives, as its blur is,
-                        // rather than following the page's slower slide.
-                        .animation(.easeOut(duration: 0.15), value: trayShown)
+                    shape.fill(.black.opacity(GlassLook.black(darkness) * visible))
                 }
             }
         }
@@ -742,9 +755,10 @@ struct NotchView: View {
     /// How far a page slides as the other takes its place.
     private var pageShift: CGFloat { reduceMotion ? 0 : 28 }
 
-    /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
+    /// The lyrics open beside the player, widening the notch with the Dynamic Island's spring, from
+    /// the waveform or a lyrics button.
     private func toggleLyrics() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics.toggle() }
+        withAnimation(NotchMotion.expand) { model.lyrics.toggle() }
     }
 
     /// The lyrics keep the same space below the camera as above the notch's bottom edge.
