@@ -133,6 +133,8 @@ final class NotchController {
     /// A sideways swipe on the tray was let go and the row glides on.
     private var trayGliding = false
     private var glideCheck: Task<Void, Never>?
+    /// When a wheel with Shift held brought the tray's row to its end toward the player.
+    private var trayEdgeSince: Date?
 
     /// A full-screen app covers this display and the user chose to hide the notch then. Like the
     /// menu bar there, it stays out of sight until the pointer reaches the top edge, slides down
@@ -1043,17 +1045,17 @@ final class NotchController {
             }
             return
         }
-        // A mouse's wheel on a tray with more than fits scrolls its row, as a wheel scrolls any row on
-        // a Mac: down or with Shift, toward its end; up, back. A notch at a time, gliding there.
-        if onTray, event.phase.isEmpty, trayReach > 0 {
-            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
-            return wheelTray(by: along * (event.hasPreciseScrollingDeltas ? 1 : 24))
-        }
         // Scrolling with Shift held goes sideways between the pages, as Shift makes any scroll go
         // sideways: toward the tray, which is to the right, or back to the player.
         let switches =
             model.state == .open && Tray.isOn && event.modifierFlags.contains(.shift)
             && UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch)
+        // A mouse's wheel on a tray with more than fits scrolls its row, as a wheel scrolls any row on
+        // a Mac: down or with Shift, toward its end; up, back. A notch at a time, gliding there.
+        if onTray, event.phase.isEmpty, trayReach > 0 {
+            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+            return wheelTray(by: along * (event.hasPreciseScrollingDeltas ? 1 : 24), switches: switches)
+        }
         // A wheel, a notch at a time.
         if switches, event.phase.isEmpty {
             let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
@@ -1196,12 +1198,30 @@ final class NotchController {
         withTransaction(still) { model.trayScroll = min(max(next, -48), reach + 48) }
     }
 
-    /// A wheel's notch: the row glides there, never past its ends.
-    private func wheelTray(by delta: CGFloat) {
+    /// A wheel's notch: the row glides there, never past its ends. With Shift held, scrolling on
+    /// past its end toward the player turns back to it, as Shift turns the pages everywhere else;
+    /// only after a moment there, so a wheel spun along the row stops at its end first.
+    private func wheelTray(by delta: CGFloat, switches: Bool) {
+        // Toward the player: back along the row, or onward if the pages are turned around.
+        let towardPlayer = delta != 0 && (delta < 0) == switchReversed
+        let edge = switchReversed ? trayReach : 0
+        if switches, towardPlayer, abs(model.trayScroll - edge) < 0.5 {
+            if let since = trayEdgeSince, Date.now.timeIntervalSince(since) > Self.edgePause {
+                trayEdgeSince = nil
+                turn(to: .player)
+            } else if trayEdgeSince == nil {
+                trayEdgeSince = .now
+            }
+            return
+        }
         let target = min(max(model.trayScroll - delta, 0), trayReach)
+        trayEdgeSince = switches && towardPlayer && abs(target - edge) < 0.5 ? .now : nil
         guard target != model.trayScroll else { return }
         withAnimation(.smooth(duration: 0.2)) { model.trayScroll = target }
     }
+
+    /// How long a wheel rests at the row's end before scrolling on turns the page.
+    private static let edgePause = 0.25
 
     /// Back within the row's ends, springing.
     private func settleTray() {
