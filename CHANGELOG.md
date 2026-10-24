@@ -30,6 +30,12 @@
 
 - Fixed the photo in the tray's demo being enlarged from a smaller picture.
 
+### Opening
+
+- Fixed the player, the tray and the lyrics staying put while the open notch
+  stretches as it's pulled down with two fingers: they stretch with it, as
+  rubber does, and settle back with it.
+
 ### Settings
 
 - Fixed toggles and the `Layout` choice lagging on the Settings pages with the

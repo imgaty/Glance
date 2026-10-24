@@ -222,8 +222,16 @@ final class NotchModel: ObservableObject {
 
     var metrics: NotchMetrics { metrics(for: state) }
 
-    func metrics(for state: NotchState) -> NotchMetrics {
-        let pull = max(stretch, 0)
+    /// Pulled down, how far the open notch has grown past its own size, across and down, for what
+    /// it shows to stretch with it; 1 otherwise.
+    var pullStretch: CGSize {
+        guard state == .open, stretch > 0 else { return CGSize(width: 1, height: 1) }
+        let pulled = metrics(for: .open), rest = metrics(for: .open, pull: 0)
+        return CGSize(width: pulled.bodyWidth / max(rest.bodyWidth, 1), height: pulled.height / max(rest.height, 1))
+    }
+
+    func metrics(for state: NotchState, pull: CGFloat? = nil) -> NotchMetrics {
+        let pull = pull ?? max(stretch, 0)
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed:
@@ -391,68 +399,74 @@ struct NotchView: View {
                 .frame(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
                 .animation(.easeOut(duration: 0.2)) { $0.opacity(model.activity && !isOpen ? 1 : 0) }
-            // Laid out at their open sizes so they never reflow; the growing shape reveals them.
-            // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
-            // right. They start below the camera, which sits over their left side, and the line
-            // being sung sits level with the middle of the notch.
-            LyricsView(store: nowPlaying.lyricsStore, isVisible: lyricsShown, middle: model.openSize.height / 2 - lyricsTop)
-                .frame(width: model.lyricsWidth, height: model.openSize.height - lyricsTop * 2 + model.closedSize.height)
-                .padding(.leading, model.openSize.width)
-                .padding(.top, lyricsTop)
-                .frame(width: m.totalWidth, height: m.height, alignment: .top)
-                .mask { awayFromCamera }
-                .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
-                .allowsHitTesting(places == nil)
-            // The player and the tray side by side, as pages are: going to the tray, the player
-            // slides off to the left as the tray comes in from the right, and back.
-            NowPlayingView(isVisible: playerShown && !paused, hero: hero)
-                .frame(width: model.openSize.width, height: model.openSize.height)
-                .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
-                .environment(\.notchControls, playerShown)
-                .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
-                .modifier(PageFade(hidden: !playerShown))
-            if trayOn {
-                TrayView(
-                    tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
-                    airDropTargeted: model.airDropTargeted
+            // Pulled down, the lyrics, the player and the tray stretch with the notch, as rubber
+            // does, the cover and the waveform with them, and settle back with it.
+            ZStack(alignment: .top) {
+                // Laid out at their open sizes so they never reflow; the growing shape reveals
+                // them. With the lyrics, the notch widens both ways: the player takes the left, the
+                // lyrics the right. They start below the camera, which sits over their left side,
+                // and the line being sung sits level with the middle of the notch.
+                LyricsView(store: nowPlaying.lyricsStore, isVisible: lyricsShown, middle: model.openSize.height / 2 - lyricsTop)
+                    .frame(width: model.lyricsWidth, height: model.openSize.height - lyricsTop * 2 + model.closedSize.height)
+                    .padding(.leading, model.openSize.width)
+                    .padding(.top, lyricsTop)
+                    .frame(width: m.totalWidth, height: m.height, alignment: .top)
+                    .mask { awayFromCamera }
+                    .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
+                    .allowsHitTesting(places == nil)
+                // The player and the tray side by side, as pages are: going to the tray, the player
+                // slides off to the left as the tray comes in from the right, and back.
+                NowPlayingView(isVisible: playerShown && !paused, hero: hero)
+                    .frame(width: model.openSize.width, height: model.openSize.height)
+                    .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
+                    .environment(\.notchControls, playerShown)
+                    .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
+                    .modifier(PageFade(hidden: !playerShown))
+                if trayOn {
+                    TrayView(
+                        tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
+                        airDropTargeted: model.airDropTargeted
+                    )
+                    .frame(width: model.trayWidth, height: model.trayHeight)
+                    .environment(\.notchControls, trayShown)
+                    .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
+                    .modifier(PageFade(hidden: !trayShown))
+                    .allowsHitTesting(places == nil && trayShown)
+                }
+                HeroArtwork(isOpen: isOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
+                    .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
+                    .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
+                    .offset(x: model.nudge)
+                    // There open, or in the closed notch while something plays. Opening and closing, it
+                    // comes and goes just as the player's words and buttons do.
+                    .animation(isOpen || !model.activity ? Self.fade(in: isOpen) : .spring(response: 0.45, dampingFraction: 0.8)) {
+                        $0.opacity(isOpen || model.activity ? 1 : 0)
+                    }
+                    .modifier(PageFade(hidden: isOpen && onTray))
+                    .environment(\.notchControls, !trayShown)
+                    // Over the tray, though unseen there: clicks go through it to the tray's items.
+                    .allowsHitTesting(places == nil && !trayShown)
+                HeroWaveform(
+                    isOpen: isOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
+                    toggleLyrics: toggleLyrics
                 )
-                .frame(width: model.trayWidth, height: model.trayHeight)
-                .environment(\.notchControls, trayShown)
-                .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
-                .modifier(PageFade(hidden: !trayShown))
-                .allowsHitTesting(places == nil && trayShown)
-            }
-            HeroArtwork(isOpen: isOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
-                .matchedGeometryEffect(id: isOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
-                .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .leading)
-                .offset(x: model.nudge)
-                // There open, or in the closed notch while something plays. Opening and closing, it
-                // comes and goes just as the player's words and buttons do.
-                .animation(isOpen || !model.activity ? Self.fade(in: isOpen) : .spring(response: 0.45, dampingFraction: 0.8)) {
-                    $0.opacity(isOpen || model.activity ? 1 : 0)
+                .matchedGeometryEffect(id: isOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
+                .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
+                // There open, or in the closed notch while something plays, out of the way quickly
+                // when a new song's artist takes its place. Opening and closing, it comes and goes
+                // just as the player's words and buttons do.
+                .animation(
+                    isOpen || !model.activity
+                        ? Self.fade(in: isOpen) : model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)
+                ) {
+                    $0.opacity(isOpen || (model.activity && !model.pop) ? 1 : 0)
                 }
                 .modifier(PageFade(hidden: isOpen && onTray))
                 .environment(\.notchControls, !trayShown)
-                // Over the tray, though unseen there: clicks go through it to the tray's items.
                 .allowsHitTesting(places == nil && !trayShown)
-            HeroWaveform(
-                isOpen: isOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
-                toggleLyrics: toggleLyrics
-            )
-            .matchedGeometryEffect(id: isOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
-            .scaleEffect(isOpen ? 1 : swell, anchor: isOpen ? .center : .trailing)
-            // There open, or in the closed notch while something plays, out of the way quickly when a
-            // new song's artist takes its place. Opening and closing, it comes and goes just as the
-            // player's words and buttons do.
-            .animation(
-                isOpen || !model.activity
-                    ? Self.fade(in: isOpen) : model.pop ? .easeOut(duration: 0.15) : .easeOut(duration: 0.3).delay(0.15)
-            ) {
-                $0.opacity(isOpen || (model.activity && !model.pop) ? 1 : 0)
             }
-            .modifier(PageFade(hidden: isOpen && onTray))
-            .environment(\.notchControls, !trayShown)
-            .allowsHitTesting(places == nil && !trayShown)
+            .frame(width: m.totalWidth, height: m.height, alignment: .top)
+            .scaleEffect(x: model.pullStretch.width, y: model.pullStretch.height, anchor: .top)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
