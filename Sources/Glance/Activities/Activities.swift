@@ -24,6 +24,9 @@ struct NotchAlert: Identifiable, Equatable {
         case device(symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int?)
         /// The Mac's battery: a word on the left, its level and a battery on the right.
         case battery(title: String, level: BatteryLevel)
+        /// The Mac's battery running low, taller than the notch, with a button to turn on Low Power
+        /// Mode (see `LowBatteryView`).
+        case lowBattery(percent: Int)
         /// A state, as Silent Mode and a Focus are shown: a symbol in its color on the left, a word
         /// or a name on the right.
         case status(symbol: String, tint: Color, text: String)
@@ -35,6 +38,7 @@ struct NotchAlert: Identifiable, Equatable {
             switch self {
             case .device(_, _, _, let battery): battery.map(BatteryRing.color(for:)) ?? .white
             case .battery(_, let level): level.color
+            case .lowBattery: .red
             case .status(_, let tint, _): tint
             case .timerDone: .orange
             }
@@ -46,8 +50,17 @@ struct NotchAlert: Identifiable, Equatable {
 
     /// Taller than the notch, as the Dynamic Island's Alarm is, for what's to be acted on.
     var tall: Bool {
-        if case .timerDone = content { return true }
-        return false
+        switch content {
+        case .timerDone, .lowBattery: true
+        default: false
+        }
+    }
+
+    /// Its height while it's tall, by the notch's: the Alarm's, or Low Battery's, its row below the
+    /// camera.
+    func tallHeight(_ h: CGFloat) -> CGFloat {
+        if case .lowBattery = content { return LowBatteryLayout.height(h) }
+        return TimerLayout.tallHeight(h)
     }
 
     let id = UUID()
@@ -115,6 +128,17 @@ final class Activities: ObservableObject {
         }
         // A short line: older news goes first.
         if waiting.count > 3 { waiting.removeFirst() }
+    }
+
+    /// What shows, of this kind, stays a while longer: what was done on it is seen.
+    func keep(_ kind: NotchAlert.Kind, for seconds: Double) {
+        guard let alert, alert.kind == kind, !alert.stays else { return }
+        shownTask?.cancel()
+        shownTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds), tolerance: .zero)
+            guard !Task.isCancelled else { return }
+            self?.next()
+        }
     }
 
     /// One that stays, of this kind, goes; or one waiting.

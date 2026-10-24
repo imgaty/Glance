@@ -13,7 +13,10 @@
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
-  place of macOS's own notification, which is taken away as it shows.
+  place of macOS's own notification, which is taken away as it shows. As on
+  the iPhone, it grows taller, its battery pulsing red in a button that turns
+  on Low Power Mode: the battery turns green, and it says
+  `Low Power Mode On`.
 - Added AirPods, headphones, keyboards, mice, trackpads and game controllers
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,

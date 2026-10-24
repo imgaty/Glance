@@ -338,7 +338,10 @@ final class NotchModel: ObservableObject {
     var restingTall: Bool { alert?.tall == true && !switching }
 
     /// The closed notch's height: more than twice as tall while what's announced is.
-    var restingHeight: CGFloat { restingTall ? TimerLayout.tallHeight(closedSize.height) : closedSize.height }
+    var restingHeight: CGFloat {
+        guard restingTall, let alert else { return closedSize.height }
+        return alert.tallHeight(closedSize.height)
+    }
 
     /// Open on an activity's own view, rather than the player or the tray.
     var expandedShown: Bool { state == .open && expanded != nil }
@@ -352,16 +355,18 @@ final class NotchModel: ObservableObject {
         return (metrics(for: .open).height - metrics(for: .open, pull: 0).height) / 2
     }
 
-    func metrics(for state: NotchState, pull: CGFloat? = nil) -> NotchMetrics {
+    /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
+    func metrics(for state: NotchState, pull: CGFloat? = nil, short: Bool = false) -> NotchMetrics {
         let pull = pull ?? max(stretch, 0)
+        let resting = short ? closedSize.height : restingHeight
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed:
                 (
                     (restingWidth + 10 * proximity + pull * 0.4) * (1 - squeeze) + closedSize.height * squeeze,
-                    restingHeight + 3 * proximity + pull
+                    resting + 3 * proximity + pull
                 )
-            case .peek: (restingWidth + 28 + pull * 0.4, restingHeight + 7 + pull)
+            case .peek: (restingWidth + 28 + pull * 0.4, resting + 7 + pull)
             case .open where expanded == .airplay:
                 (
                     ExpandedAirPlayView.width(for: airplay ?? AirPlayRoute(name: "", symbol: ""), restingHeight: closedSize.height)
@@ -571,9 +576,11 @@ struct NotchView: View {
             // shape over an activity coming or going: what rides in with the wings' ends as they fold
             // passes under it. Kept at the closed size while open, so closing it never shrinks from the
             // open notch's height over the glass, and back only once the notch has all but closed.
+            // Never taller than the notch itself, so what's announced below the camera shows.
             let rest = isOpen ? model.metrics(for: .closed) : m
+            let restHeight = min(rest.height, model.metrics(for: isOpen ? .closed : model.state, short: true).height)
             NotchShape(corners: model.corners).fill(.black)
-                .frame(width: restingBody(m) + rest.flare * 2, height: rest.height)
+                .frame(width: restingBody(m) + rest.flare * 2, height: restHeight)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
