@@ -349,10 +349,30 @@ struct ActivitiesTests {
         let plain = TimerDoneView.wing(length: 300, restingHeight: 32)
         let long = TimerDoneView.wing(length: 300, name: String(repeating: "Long label ", count: 10), restingHeight: 32)
         #expect(long >= plain)
-        #expect(long <= 32 * (TimerLayout.doneInset + TimerLayout.titleLimit) + LiveActivityView.cameraGap + 2)
+        #expect(long <= TimerDoneView.nameEdge(32) + 32 * TimerLayout.titleLimit + LiveActivityView.cameraGap + 2)
     }
 
-    @Test("Opened to a timer, the notch is as tall as the Timer's expanded view, with the player's room at its ends and beside the camera")
+    @Test("Each side sits at its wing's end, as far in from it as from the top and bottom, concentric with the round end")
+    func concentricEnds() {
+        let h: CGFloat = 32
+        // The timer's ring and a device's battery ring: as far from the end as from the top.
+        #expect(isClose(SystemActivityView.ringEdge(h) * 2 + h * TimerLayout.ring, h))
+        let layout = DeviceLayout(height: h)
+        #expect(isClose(layout.trailing * 2 + layout.ring, h))
+        #expect(isClose(layout.edge * 2 + layout.picture, h))
+        // Words, by their line, a little further in than the cover.
+        let words = LiveActivityView.textEdge(restingHeight: h)
+        #expect(words > LiveActivityView.edgeInset(island: false, restingHeight: h) && words < 10)
+        let (left, right) = SystemActivityView.insets(
+            for: .battery(title: "Charging", level: BatteryLevel(percent: 64, charging: true)), restingHeight: h, island: false)
+        #expect(left == words && right == words)
+        // Opened and done, the round buttons are concentric with the round ends, the Dynamic
+        // Island's 44 points.
+        let round = min(TimerLayout.tallHeight(h) / 2, h * TimerLayout.corner)
+        #expect(abs(TimerLayout.buttonEdge(h) + h * TimerLayout.button / 2 - round) < 0.5)
+    }
+
+    @Test("Opened to a timer, the notch is as tall as the Timer's expanded view, each side from its end, concentric with it")
     func expandedTimer() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.timer = .running(until: .now + 300, total: 300)
@@ -361,7 +381,7 @@ struct ActivitiesTests {
         #expect(open.height == (32 * TimerLayout.tall).rounded())
         // Either side of the camera, only as wide as the buttons, wider than "5:00", need.
         let buttons = 32 * (TimerLayout.button * 2 + TimerLayout.buttonGap)
-        #expect(abs(open.bodyWidth - (185 + 2 * (PlayerLayout.padding + buttons + LiveActivityView.cameraGap))) < 1)
+        #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.buttonEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
         #expect(open.flare == NotchCorners.restingFlare)
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
@@ -394,12 +414,13 @@ struct ActivitiesTests {
         let speaker = DeviceWatch.alert(name: "The Living Room Speaker Upstairs, By the Window", symbol: "airplayaudio", kind: .output)
         #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false) == SystemActivityView.maxWing)
         #expect(SystemActivityView.maxWing <= 120)
-        // A timer's wings as wide as its time needs as it reads now, against the camera, and no wider.
+        // A timer's wings as wide as its time needs as it reads now, from the end, and no wider.
         let early = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false)
         let late = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false, at: .now + 550)
         let font = NSFont.monospacedDigitSystemFont(ofSize: LiveActivityView.textSize(for: resting), weight: .semibold)
         func needs(_ reading: String) -> CGFloat {
-            LiveActivityView.cameraGap + ceil((reading as NSString).size(withAttributes: [.font: font]).width) + resting * TimerLayout.textInset
+            LiveActivityView.cameraGap + ceil((reading as NSString).size(withAttributes: [.font: font]).width)
+                + LiveActivityView.textEdge(restingHeight: resting)
         }
         #expect(abs(early - needs("00m")) < 0.5)
         #expect(abs(late - needs("0:00")) < 0.5)

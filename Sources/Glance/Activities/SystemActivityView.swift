@@ -13,7 +13,9 @@ import SwiftUI
 /// beside its battery's ring; the Mac's battery as a word beside its level; a state's symbol in its
 /// color beside a word. A timer counts down on the right, its ring on the left; the stopwatch counts
 /// up beside its symbol; music playing beside them goes in a bubble of its own (see `IslandBubble`).
-/// With Reduce Motion on, nothing turns or shakes.
+/// Each side sits at its wing's end, as far in from it as from the top and bottom, concentric with
+/// the round end; any room to spare is beside the camera. With Reduce Motion on, nothing turns or
+/// shakes.
 struct SystemActivityView: View {
     let restingHeight: CGFloat
     let island: Bool
@@ -58,14 +60,14 @@ struct SystemActivityView: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert {
-                // Each side kept to its own end, so it rides in and out with it, and against the
-                // camera within it.
+                // Each side kept to its own end, so it rides in and out with it, and from the end
+                // within it.
                 ZStack {
                     leading(alert.content, side: side, size: size)
-                        .frame(width: max(wing - inset - LiveActivityView.cameraGap, side), alignment: .trailing)
+                        .frame(width: max(wing - inset - LiveActivityView.cameraGap, side), alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     trailing(alert.content, side: side, size: size)
-                        .frame(width: max(wing - outset - LiveActivityView.cameraGap, side), alignment: .leading)
+                        .frame(width: max(wing - outset - LiveActivityView.cameraGap, side), alignment: .trailing)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .padding(.leading, inset)
@@ -85,9 +87,8 @@ struct SystemActivityView: View {
                         case .stopwatch(let watch): StopwatchMark(watch: watch, height: restingHeight)
                         }
                     }
-                    // Against the camera, within its end's lane.
-                    .frame(width: max(wing - restingHeight * TimerLayout.ringInset - LiveActivityView.cameraGap, 0), alignment: .trailing)
-                    .padding(.leading, restingHeight * TimerLayout.ringInset)
+                    // From its end, as far as from the top and bottom.
+                    .padding(.leading, Self.ringEdge(restingHeight))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     TimelineView(.periodic(from: .now, by: shown.countsDown ? 0.5 : 1)) { context in
                         let reading = Self.reading(shown, at: context.date)
@@ -117,8 +118,7 @@ struct SystemActivityView: View {
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
                     }
-                    .frame(width: max(wing - restingHeight * TimerLayout.textInset - LiveActivityView.cameraGap, 0), alignment: .leading)
-                    .padding(.trailing, restingHeight * TimerLayout.textInset)
+                    .padding(.trailing, LiveActivityView.textEdge(restingHeight: restingHeight))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .islandFade(self.clock != nil)
@@ -174,15 +174,13 @@ struct SystemActivityView: View {
     static let pauseGap: CGFloat = 4
 
     /// A device arriving, sized as the Dynamic Island shows AirPods, by the notch's height: the device
-    /// a little under half of it tall, its battery's ring a little over half of it across. Each is
-    /// against the camera: the device as near as it comes as it turns, the ring as near as can be.
+    /// a little under half of it tall, its battery's ring a little over half of it across. Each is at
+    /// its end, as far in from it as from the top and bottom: the device as near as it comes as it
+    /// turns.
     private func device(symbol: String, model: Headphones?, pictures: [String], battery: Int?, size: CGFloat, leaving: Bool) -> some View {
         let layout = DeviceLayout(height: restingHeight)
         let axis = Self.deviceAxis(model: model, pictures: pictures, layout: layout)
-        let width = Self.deviceWidth(model: model, pictures: pictures, layout: layout)
         let reach = Self.deviceReach(model: model, pictures: pictures, layout: layout)
-        let gap = LiveActivityView.cameraGap
-        let end = LiveActivityView.inset(island: island)
         return ZStack {
             Group {
                 if let model, let turn = DeviceTurn.cached(model) {
@@ -193,10 +191,8 @@ struct SystemActivityView: View {
                     TurningSymbol(symbol: symbol, side: layout.picture)
                 }
             }
-            // Its middle as far from the camera as it reaches, turning.
-            .padding(.trailing, max(gap + reach - (width - axis), 0))
-            .frame(width: max(wing - end, 0), alignment: .trailing)
-            .padding(.leading, end)
+            // Its middle as far in from the end as it reaches, turning.
+            .padding(.leading, layout.edge + max(reach - axis, 0))
             .frame(maxWidth: .infinity, alignment: .leading)
             Group {
                 if let battery {
@@ -211,15 +207,13 @@ struct SystemActivityView: View {
                         BatteryRing(percent: battery, diameter: layout.ring)
                     }
                     .modifier(RingArrival(leaving: leaving))
-                    .frame(width: max(wing - gap - layout.trailing, 0), alignment: .leading)
                     .padding(.trailing, layout.trailing)
                 } else {
                     Text("Connected")
                         .font(.system(size: size, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(1)
-                        .frame(width: max(wing - gap - layout.textInset, 0), alignment: .leading)
-                        .padding(.trailing, layout.textInset)
+                        .padding(.trailing, LiveActivityView.textEdge(restingHeight: restingHeight))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -256,20 +250,28 @@ struct SystemActivityView: View {
                 BatteryGlyph(level: level, color: level.color, height: restingHeight * BatteryGlyph.height)
             }
         case .status(_, _, let text):
-            MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .leading)
+            MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
                 .foregroundStyle(.white)
         case .timerDone:
             EmptyView()
         }
     }
 
-    /// In from each end: a battery's words and its level as far in as the iPhone's Charging has
-    /// them; the rest as far as the cover is.
+    /// In from each end, as far as from the top and bottom: words by their line, a battery's level
+    /// too, which its battery is no taller than; a symbol by its square, as the cover is.
     static func insets(for content: NotchAlert.Content?, restingHeight h: CGFloat, island: Bool) -> (CGFloat, CGFloat) {
-        if case .battery = content { return (h * 0.355, h * 0.309) }
         let edge = LiveActivityView.edgeInset(island: island, restingHeight: h)
-        return (edge, edge)
+        let words = LiveActivityView.textEdge(restingHeight: h)
+        switch content {
+        case .battery: return (words, words)
+        case .status: return (edge, words)
+        default: return (edge, edge)
+        }
     }
+
+    /// How far in from its end the timer's ring or the stopwatch's symbol sits: as far as from the
+    /// top and bottom, concentric with the end.
+    static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * TimerLayout.ring, in: h) }
 
     /// A symbol's square, as the cover's beside the camera.
     static func side(_ restingHeight: CGFloat, _ island: Bool) -> CGFloat {
@@ -291,9 +293,10 @@ struct SystemActivityView: View {
             let layout = DeviceLayout(height: restingHeight)
             let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
             let reach = deviceReach(model: model, pictures: pictures, layout: layout)
-            let device = LiveActivityView.inset(island: island) + max(axis, reach) + reach + gap
+            let device = layout.edge + max(axis, reach) + reach + gap
             let level = battery.map { model.flatMap(DeviceTurn.cached) == nil ? width("\($0)%", size, .semibold) + percentGap : 0 } ?? 0
-            let end = battery == nil ? width("Connected", size, .semibold) + layout.textInset : level + layout.ring + layout.trailing
+            let words = LiveActivityView.textEdge(restingHeight: restingHeight)
+            let end = battery == nil ? width("Connected", size, .semibold) + words : level + layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
         // As tall as the Alarm, as wide as its words or its buttons.
@@ -338,7 +341,7 @@ struct SystemActivityView: View {
             ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
     }
 
-    /// As wide as the ring and the time need, against the camera, the time as it reads now, its
+    /// As wide as the ring and the time need, each from its end, the time as it reads now, its
     /// digits all as wide as each other; paused, with the pause symbol too. The notch refits as the
     /// time gains or loses a digit (see `widthChange(after:)`).
     static func wing(for clock: ClockShown, restingHeight h: CGFloat, island: Bool, at date: Date = .now) -> CGFloat {
@@ -355,8 +358,8 @@ struct SystemActivityView: View {
             time = StopwatchReading.width(watch.elapsed(at: date), size: size)
         }
         let paused = clock.isRunning ? 0 : pauseWidth(size) + pauseGap
-        let right = gap + paused + time + h * TimerLayout.textInset
-        let left = h * (TimerLayout.ringInset + TimerLayout.ring) + gap
+        let right = gap + paused + time + LiveActivityView.textEdge(restingHeight: h)
+        let left = ringEdge(h) + h * TimerLayout.ring + gap
         return max(right, left)
     }
 
@@ -390,14 +393,14 @@ struct SystemActivityView: View {
 
 /// How large a device arriving shows, by the notch's height, measured frame by frame from the
 /// iPhone's AirPods in the Dynamic Island, which stands no taller for them: the device 46.4% of the
-/// height tall; the ring 54% of it across, as far in from the end as from the top and bottom.
+/// height tall; the ring 54% of it across. Each as far in from its end as from the top and bottom.
 struct DeviceLayout {
     let height: CGFloat
     var picture: CGFloat { height * 0.464 }
     var ring: CGFloat { height * 0.54 }
-    var trailing: CGFloat { (height - ring) / 2 }
-    /// Beside a word in place of the ring.
-    var textInset: CGFloat { height * 0.4 }
+    /// From the left end to the device, as it reaches furthest turning.
+    var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
+    var trailing: CGFloat { LiveActivityView.concentric(ring, in: height) }
 }
 
 /// AirPods or Beats arriving, in 3D, facing you as they arrive and turning steadily about their

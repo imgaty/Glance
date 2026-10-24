@@ -30,11 +30,12 @@
   notch widens without bouncing and nothing blurs. In full screen, a thin line
   in the activity's color outlines the collapsed notch, as around the Dynamic
   Island, fading out as it expands.
-- Changed every live activity, closed or opened, to sit right against the
-  camera, as black as the notch around it, with nothing under it: the notch is
-  only as wide as the wider side needs, both sides alike, any room to spare at
-  the ends. It widens or narrows as a timer or the stopwatch gains or loses a
-  digit, as from hours to minutes.
+- Changed every live activity, closed or opened, to keep the notch only as wide
+  as the wider side needs, both sides alike, with nothing under the camera. Each
+  side sits at its own end, as far in from it as from the top and bottom, so it
+  follows the end's roundness; any room to spare is beside the camera. The
+  notch widens or narrows as a timer or the stopwatch gains or loses a digit,
+  as from hours to minutes.
 - Changed the player, the tray and the lyrics to come and go with the same
   fade and blur as the notch opens, closes or turns its page, and a new song's
   cover to come in the same way as the last one goes.

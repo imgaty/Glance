@@ -330,7 +330,7 @@ final class NotchModel: ObservableObject {
     var restingTall: Bool { alert?.tall == true && !switching }
 
     /// The closed notch's height: more than twice as tall while what's announced is.
-    var restingHeight: CGFloat { restingTall ? (closedSize.height * TimerLayout.tall).rounded() : closedSize.height }
+    var restingHeight: CGFloat { restingTall ? TimerLayout.tallHeight(closedSize.height) : closedSize.height }
 
     /// Open on an activity's own view, rather than the player or the tray.
     var expandedShown: Bool { state == .open && expanded != nil }
@@ -353,7 +353,7 @@ final class NotchModel: ObservableObject {
                         for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? "Timer",
                         restingHeight: closedSize.height, camera: camera)
                         + pull * 0.35,
-                    (closedSize.height * TimerLayout.tall).rounded() + pull
+                    TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
@@ -702,7 +702,7 @@ struct NotchView: View {
             let name = model.expanded.map(model.name(of:)) ?? "Timer"
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
             ExpandedTimerView(shown: clock, name: name, restingHeight: h, camera: model.camera, width: width)
-                .frame(width: width, height: (h * TimerLayout.tall).rounded())
+                .frame(width: width, height: TimerLayout.tallHeight(h))
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }

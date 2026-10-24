@@ -9,10 +9,11 @@ import AppKit
 import SwiftUI
 
 /// The closed notch while music plays, like the Dynamic Island's compact activity: the artwork on
-/// one side of the camera, the waveform on the other, each right up against the camera housing,
-/// which is as black as they're on. The notch draws those two, flying them in and out of the open
-/// player; this marks their places, and shows a new song's title and artist when the wings widen to
-/// announce it, against the camera too, any room to spare at the ends.
+/// one side of the camera, the waveform on the other, each at its wing's end, as far in from it as
+/// from the top and bottom, so it sits concentric with the round end. The notch draws those two,
+/// flying them in and out of the open player; this marks their places, and shows a new song's
+/// title and artist when the wings widen to announce it, from the ends too, any room to spare
+/// beside the camera.
 struct LiveActivityView: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
@@ -38,12 +39,25 @@ struct LiveActivityView: View {
         let side = restingHeight - inset * 2
         return max(restingHeight / 2 - side * ArtworkShape.restingRadius, inset)
     }
-    /// Between what the wings show and the camera housing, both black: as near as can be without
-    /// anything going under it.
+    /// The least between what the wings show and the camera housing, both black: as near as can be
+    /// without anything going under it.
     static let cameraGap: CGFloat = 3
 
+    /// How far in from a wing's round end something as tall as this sits: as far as from the top and
+    /// bottom, so it's concentric with the end, as the Dynamic Island keeps its own.
+    static func concentric(_ content: CGFloat, in height: CGFloat) -> CGFloat { max((height - content) / 2, 0) }
+
+    /// A line of words' height at this size, as it's laid out.
+    static func lineHeight(_ size: CGFloat, _ weight: NSFont.Weight = .semibold) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: size, weight: weight)
+        return font.ascender - font.descender + font.leading
+    }
+
+    /// How far in from a wing's end its words sit: as far as above and below their line.
+    static func textEdge(restingHeight h: CGFloat) -> CGFloat { concentric(lineHeight(textSize(for: h)), in: h) }
+
     /// Each wing at rest with music: the artwork's square, in from the end as far as from the top
-    /// and bottom, and right up to the camera. On an island, which has no camera, a little wider,
+    /// and bottom, and up to the camera. On an island, which has no camera, a little wider,
     /// so they don't crowd its ends.
     static func restingWing(restingHeight h: CGFloat, island: Bool) -> CGFloat {
         island ? (h * 1.25).rounded() : h - inset(island: island) + cameraGap
@@ -65,7 +79,7 @@ struct LiveActivityView: View {
         }
         let side = restingHeight - inset * 2
         let left = edge + side + textGap + width(title, .semibold) + cameraGap
-        let right = cameraGap + width(artist, .medium) + edge
+        let right = cameraGap + width(artist, .medium) + textEdge(restingHeight: restingHeight)
         return min(max(left, right, restingHeight), NotchModel.maxPopWing)
     }
 
@@ -81,10 +95,12 @@ struct LiveActivityView: View {
         let edge = Self.edgeInset(island: island, restingHeight: restingHeight)
         let side = restingHeight - Self.inset(island: island) * 2
         let popLeaving = popKept && !pop
+        let words = pop || popKept
         let lane = popLeaving ? max(popLane, wing - edge - Self.cameraGap, side) : max(wing - edge - Self.cameraGap, side)
+        // The artist, in place of the waveform, as far in as above and below its line.
+        let textEdge = Self.textEdge(restingHeight: restingHeight)
         let size = Self.textSize(for: restingHeight)
         let accent = nowPlaying.accent(from: accentSource)
-        let words = pop || popKept
         // Each side kept to its own end, so it rides in and out with it.
         ZStack {
             HStack(spacing: Self.textGap) {
@@ -99,24 +115,26 @@ struct LiveActivityView: View {
                         .transition(IslandMotion.fade)
                 }
             }
-            // Against the camera; to spare, at the end.
-            .frame(width: lane, alignment: .trailing)
+            // From the end; to spare, beside the camera.
+            .frame(width: lane, alignment: .leading)
+            .padding(.leading, edge)
             .frame(maxWidth: .infinity, alignment: .leading)
-            ZStack(alignment: .leading) {
+            ZStack(alignment: .trailing) {
                 Color.clear
                     .frame(width: side, height: side)
                     .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
+                    .padding(.trailing, edge)
                 if words {
-                    MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .leading)
+                    MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .trailing)
                         .foregroundStyle(accent.readableOnBlack(opacity: 0.7))
                         .islandFade(pop)
                         .transition(IslandMotion.fade)
+                        .frame(width: max(lane + edge - textEdge, 0), alignment: .trailing)
+                        .padding(.trailing, textEdge)
                 }
             }
-            .frame(width: lane, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, edge)
         .frame(maxHeight: .infinity)
         .onChange(of: wing, initial: true) {
             if pop { popLane = max(wing - edge - Self.cameraGap, side) }
