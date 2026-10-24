@@ -47,6 +47,8 @@
 
 - Fixed toggles and the `Layout` choice lagging on the Settings pages with the
   notch's preview.
+- Fixed Settings, opened from the menu bar, sometimes coming up a second or more
+  late, behind other apps, or drawn gray as if behind them while in use.
 
 <br>
 
