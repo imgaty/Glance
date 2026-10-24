@@ -9,9 +9,10 @@ import AppKit
 import SwiftUI
 
 /// The closed notch while music plays, like the Dynamic Island's compact activity: the artwork on
-/// one side of the camera, the waveform on the other. The notch draws those two, flying them in and
-/// out of the open player; this marks their places, and shows a new song's title and artist when
-/// the wings widen to announce it.
+/// one side of the camera, the waveform on the other, each right up against the camera housing,
+/// which is as black as they're on. The notch draws those two, flying them in and out of the open
+/// player; this marks their places, and shows a new song's title and artist when the wings widen to
+/// announce it, against the camera too, any room to spare at the ends.
 struct LiveActivityView: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
@@ -37,8 +38,16 @@ struct LiveActivityView: View {
         let side = restingHeight - inset * 2
         return max(restingHeight / 2 - side * ArtworkShape.restingRadius, inset)
     }
-    /// Between the song's title or artist and the camera.
-    static let cameraGap: CGFloat = 10
+    /// Between what the wings show and the camera housing, both black: as near as can be without
+    /// anything going under it.
+    static let cameraGap: CGFloat = 3
+
+    /// Each wing at rest with music: the artwork's square, in from the end as far as from the top
+    /// and bottom, and right up to the camera. On an island, which has no camera, a little wider,
+    /// so they don't crowd its ends.
+    static func restingWing(restingHeight h: CGFloat, island: Bool) -> CGFloat {
+        island ? (h * 1.25).rounded() : h - inset(island: island) + cameraGap
+    }
     /// Between the artwork and the title.
     static let textGap: CGFloat = 8
 
@@ -90,20 +99,21 @@ struct LiveActivityView: View {
                         .transition(IslandMotion.fade)
                 }
             }
-            .frame(width: lane, alignment: .leading)
+            // Against the camera; to spare, at the end.
+            .frame(width: lane, alignment: .trailing)
             .frame(maxWidth: .infinity, alignment: .leading)
-            ZStack(alignment: .trailing) {
+            ZStack(alignment: .leading) {
                 Color.clear
                     .frame(width: side, height: side)
                     .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
                 if words {
-                    MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .trailing)
+                    MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .leading)
                         .foregroundStyle(accent.readableOnBlack(opacity: 0.7))
                         .islandFade(pop)
                         .transition(IslandMotion.fade)
                 }
             }
-            .frame(width: lane, alignment: .trailing)
+            .frame(width: lane, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(.horizontal, edge)

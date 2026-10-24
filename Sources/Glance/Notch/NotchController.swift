@@ -534,21 +534,15 @@ final class NotchController {
         refitAsTimersCount()
     }
 
-    /// Refits the notch where a running timer's time changes length: under an hour, and under ten
-    /// minutes, where it loses a digit opened and counts in minutes and seconds beside the camera;
-    /// and where the stopwatch's gains one, at ten minutes and an hour.
+    /// Refits the notch whenever what it shows of a timer or the stopwatch gains or loses a digit,
+    /// closed or opened, so it's never wider than they need: a timer from hours to minutes and from
+    /// minutes to seconds, the stopwatch from minutes to hours.
     private func refitAsTimersCount() {
         timerWingTask?.cancel()
-        var waits: [TimeInterval] = []
-        if let timer = model.timer, case .running = timer {
-            let left = timer.left()
-            waits += [3_599.0, 599].filter { left > $0 }.map { left - $0 + 0.05 }
-        }
-        if let stopwatch = model.stopwatch, stopwatch.isRunning {
-            let elapsed = stopwatch.elapsed()
-            waits += [600.0, 3_600].filter { elapsed < $0 }.map { $0 - elapsed + 0.05 }
-        }
-        guard let wait = waits.min() else { return }
+        let now = Date.now
+        let clocks = [model.timer.map(ClockShown.timer), model.stopwatch.map(ClockShown.stopwatch)].compactMap { $0 }
+        guard let next = clocks.compactMap({ SystemActivityView.widthChange(after: now, of: $0) }).min() else { return }
+        let wait = next.timeIntervalSince(now) + 0.05
         timerWingTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(wait))
             guard let self, !Task.isCancelled else { return }

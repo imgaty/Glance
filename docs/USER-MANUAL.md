@@ -233,6 +233,11 @@ the notch widens without bouncing, and what it shows fades without a blur. In
 full screen, where it's all black around the notch, a thin line in the
 activity's color outlines it while it's collapsed, as around the Dynamic Island.
 
+What each live activity shows sits right against the camera, closed or opened,
+with nothing under it. The notch is only as wide as the wider side needs, the
+same on both sides, and widens or narrows as a timer or the stopwatch gains or
+loses a digit.
+
 Turn these off with **Cover and waveform** and **Announce new audio** in
 **Settings > Music**.
 

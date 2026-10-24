@@ -308,11 +308,11 @@ final class NotchModel: ObservableObject {
         corners.openHeight = min(openSize.height, trayHeight)
     }
 
-    /// Each side of the camera while music plays: as wide as the notch is tall, so the artwork and
-    /// waveform sit in squares (on an island, a little wider, so they don't crowd its ends), or
-    /// wider while a new song is announced.
+    /// Each side of the camera while music plays: as wide as the artwork's square needs, right up to
+    /// the camera (on an island, a little wider, so they don't crowd its ends), or wider while a new
+    /// song is announced; as wide as an announcement or a timer needs, against the camera too.
     var wing: CGFloat {
-        let resting = island ? (closedSize.height * 1.25).rounded() : closedSize.height
+        let resting = LiveActivityView.restingWing(restingHeight: closedSize.height, island: island)
         if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }

@@ -22,10 +22,6 @@ enum TimerLayout {
     static let handFrom: CGFloat = 0.06
     static let handTo: CGFloat = 0.17
     static let textInset: CGFloat = 0.255
-    /// The least each wing reaches past the island at rest.
-    static let wing: CGFloat = 1.02
-    /// Between what the wings show and the camera, which the iPhone's runs right up to.
-    static let snug: CGFloat = 0.06
     // Opened, and done.
     static let tall: CGFloat = 2.4
     /// As wide as the iPhone's expanded Timer.
@@ -204,16 +200,17 @@ struct ExpandedTimerView: View {
         let h = restingHeight
         Group {
             if camera > 0 {
-                // The buttons left of the camera, the time right of it, the time's name under it.
+                // The buttons against the camera on its left, the time against it on its right, the
+                // time's name under it; to spare, at the ends.
                 let side = max((width - camera) / 2, 0)
                 HStack(spacing: 0) {
                     buttons(h)
-                        .padding(.leading, PlayerLayout.padding)
-                        .frame(width: side, alignment: .leading)
+                        .padding(.trailing, LiveActivityView.cameraGap)
+                        .frame(width: side, alignment: .trailing)
                     Color.clear.frame(width: camera)
                     time(h)
-                        .padding(.trailing, PlayerLayout.padding)
-                        .frame(width: side, alignment: .trailing)
+                        .padding(.leading, LiveActivityView.cameraGap)
+                        .frame(width: side, alignment: .leading)
                 }
             } else {
                 // As the iPhone's: the buttons at the left end, the time at the right.
@@ -264,15 +261,12 @@ struct ExpandedTimerView: View {
         .accessibilityHint(clock.canControl ? "" : "Needs Accessibility")
     }
 
-    /// Its name, small, and the time, large, on one line.
+    /// The time, large, its name small before it, on one line: under the camera, beside it, as far
+    /// as the camera's far side; on an island, at its limit.
     private func time(_ h: CGFloat) -> some View {
-        // A long label is cut short where it would run past the camera; on an island, at its limit.
-        let room =
-            camera > 0
-            ? (width - camera) / 2 - PlayerLayout.padding + camera - h * TimerLayout.titleGap - Self.timeWidth(shown, h)
-            : h * TimerLayout.titleLimit
+        let room = camera > 0 ? camera + LiveActivityView.cameraGap - h * TimerLayout.titleGap : h * TimerLayout.titleLimit
         let ticking: Bool = { if case .stopwatch(let watch) = shown { return watch.isRunning } else { return false } }()
-        return HStack(alignment: .firstTextBaseline, spacing: h * TimerLayout.titleGap) {
+        return Group {
             if case .stopwatch = shown {
                 // Alone, to the hundredth, as Clock's own counts, while it runs.
                 TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !ticking)) { context in
@@ -280,11 +274,6 @@ struct ExpandedTimerView: View {
                         .font(Self.timeFont(shown, h))
                 }
             } else {
-                Text(name)
-                    .font(.system(size: h * TimerLayout.title, weight: .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(width: max(min(Self.titleWidth(name, h), room), 0), alignment: .trailing)
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     Text(shown.reading(at: context.date))
                         .font(Self.timeFont(shown, h))
@@ -293,13 +282,25 @@ struct ExpandedTimerView: View {
                 }
             }
         }
+        .overlay(alignment: Alignment(horizontal: .leading, vertical: .firstTextBaseline)) {
+            if case .timer = shown {
+                let label = max(min(Self.titleWidth(name, h), room), 0)
+                Text(name)
+                    .font(.system(size: h * TimerLayout.title, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: label, alignment: .trailing)
+                    // Its end just before the time's start.
+                    .offset(x: -(label + h * TimerLayout.titleGap))
+            }
+        }
         .foregroundStyle(.orange)
         .fixedSize()
     }
 
-    /// Either side of the camera, as wide as the wider of the buttons and the time needs, with the
-    /// player's room at the ends and beside the camera; on an island, as wide as the iPhone's, or as
-    /// they need. For the time as it reads then: it narrows or widens as it loses or gains a digit.
+    /// Either side of the camera, as wide as the wider of the buttons and the time needs, against the
+    /// camera, with the player's room at the ends; on an island, as wide as the iPhone's, or as they
+    /// need. For the time as it reads then: it narrows or widens as it loses or gains a digit.
     @MainActor
     static func width(for shown: ClockShown, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
         let buttons = h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
@@ -309,7 +310,7 @@ struct ExpandedTimerView: View {
             let title: CGFloat = { if case .stopwatch = shown { return 0 } else { return min(titleWidth(name, h), h * TimerLayout.titleLimit) + h * TimerLayout.titleGap } }()
             return max(h * TimerLayout.wide, padding * 2 + buttons + h + title + time)
         }
-        return camera + 2 * (padding + max(buttons, time) + PlayerLayout.besideCamera)
+        return camera + 2 * (padding + max(buttons, time) + LiveActivityView.cameraGap)
     }
 
     /// The timer's time large, as the iPhone's Timer; the stopwatch's a little smaller, medium, as
@@ -344,20 +345,22 @@ struct TimerDoneView: View {
     /// Timer, or the label it was given in Clock.
     var name = "Timer"
     let restingHeight: CGFloat
+    /// Each wing's width beside the camera (see `wing(length:name:restingHeight:)`).
+    var wing: CGFloat = 0
     /// Which button the pointer is on.
     let hovered: AlertButton?
 
     var body: some View {
         let h = restingHeight
+        let gap = LiveActivityView.cameraGap
+        // Each against the camera, within its end's lane; to spare, at the end.
         ZStack {
             Text(name)
                 .font(.system(size: h * TimerLayout.doneName, weight: .semibold))
                 .foregroundStyle(.orange)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                // A long label is cut short, as the wings are only so wide.
-                .frame(maxWidth: h * TimerLayout.titleLimit, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: max(wing - h * TimerLayout.doneInset - gap, 0), alignment: .trailing)
                 .padding(.leading, h * TimerLayout.doneInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityHidden(true)
@@ -375,21 +378,23 @@ struct TimerDoneView: View {
                 .reportsFrame(.stop)
                 .spokenButton("Stop") { ClockActivity.shared.dismissRing() }
             }
+            .frame(width: max(wing - h * TimerLayout.buttonInset - gap, 0), alignment: .leading)
             .padding(.trailing, h * TimerLayout.buttonInset)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxHeight: .infinity)
     }
 
-    /// Each wing: as wide as the wider side, the name or the buttons, and the camera between them.
-    /// A long label is cut short at the island's limit.
+    /// Each wing: as wide as the wider side, the name or the buttons, against the camera. A long
+    /// label is cut short at the island's limit.
     static func wing(length: TimeInterval, name: String = "Timer", restingHeight h: CGFloat) -> CGFloat {
+        let gap = LiveActivityView.cameraGap
         let words = min(
             ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.doneName, weight: .semibold)]).width) + 2,
             h * TimerLayout.titleLimit)
-        let left = h * TimerLayout.doneInset + words
-        let right = h * (TimerLayout.buttonInset + TimerLayout.button * 2 + TimerLayout.buttonGap)
-        return max(left, right) + h * TimerLayout.snug
+        let left = h * TimerLayout.doneInset + words + gap
+        let right = gap + h * (TimerLayout.button * 2 + TimerLayout.buttonGap + TimerLayout.buttonInset)
+        return max(left, right)
     }
 }
 
