@@ -288,7 +288,8 @@ Glance's icon in the menu bar opens a menu:
 With **Reduce transparency** or **Increase contrast** on in **System Settings >
 Accessibility > Display**, the notch is opaque, and with **Increase contrast**
 the player sits on plain black. With **Reduce motion** on, covers and their
-colors hold still, and long titles end in an ellipsis instead of scrolling.
+colors hold still, the waveform's color doesn't pulse with the beat, and long
+titles end in an ellipsis instead of scrolling.
 
 ### Music
 

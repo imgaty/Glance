@@ -58,6 +58,8 @@ struct HeroWaveform: View {
 /// for another: the bars draw together into a point and are gone, and the symbol springs out of it.
 struct WaveformGlyph: View {
     @ObservedObject private var audio = AudioLevels.shared
+    /// With Reduce Motion on, the color holds still on the beat.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let color: Color
     let isPlaying: Bool
     var folded = false
@@ -74,7 +76,7 @@ struct WaveformGlyph: View {
             }
         } else {
             // Drawn each time the levels arrive, which is often enough for the beat to show.
-            glyph(levels: audio.levels, pulse: isPlaying ? audio.beat?.pulse(at: .now) ?? 0 : 0)
+            glyph(levels: audio.levels, pulse: isPlaying && !reduceMotion ? audio.beat?.pulse(at: .now) ?? 0 : 0)
         }
     }
 

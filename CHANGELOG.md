@@ -25,6 +25,7 @@
 - Fixed the cover giving no sign it can be clicked: it lifts gently under the
   pointer, with a soft shadow, squashes as it's pressed, and springs back as
   it's let go.
+- Fixed the waveform's color pulsing with the beat while Reduce Motion is on.
 
 ### Tray
 
