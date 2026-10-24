@@ -285,8 +285,9 @@ Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or
 cancel it, with the round buttons left of the camera. The time is right of it,
 and its name under the camera. Opened, the stopwatch shows its time alone, to
-the hundredth: stop it or start a new lap with its buttons, or, once it's
-stopped, start it again or reset it. Bubbles open only with a click.
+the hundredth: stop it, or start it over from 0:00 with **↻**, and it keeps
+running. Once it's stopped, start it again or reset it. Bubbles open only with
+a click.
 
 Its buttons work as Clock's own do, and what they do shows at once: Glance opens
 Clock hidden, shows it for a moment behind every other window, and, if it wasn't

@@ -101,7 +101,7 @@ final class StatusBarController: NSObject {
     @objc private func repeatTimer() { ClockActivity.shared.repeatTimer() }
     @objc private func stopTimer() { ClockActivity.shared.dismissRing() }
     @objc private func startStopStopwatch() { ClockActivity.shared.startStopStopwatch() }
-    @objc private func lapResetStopwatch() { ClockActivity.shared.lapResetStopwatch() }
+    @objc private func resetStopwatch() { ClockActivity.shared.resetStopwatch() }
     @objc private func rebuildFromMenu() { rebuild() }
     @objc private func settingsFromMenu() { onOpenSettings?() }
 
@@ -210,7 +210,7 @@ extension StatusBarController: NSMenuDelegate {
         }
         if let watch = clock.stopwatch {
             add(watch.isRunning ? "Stop Stopwatch" : "Start Stopwatch", #selector(startStopStopwatch))
-            add(watch.isRunning ? "Lap" : "Reset Stopwatch", #selector(lapResetStopwatch))
+            add(watch.isRunning ? "Restart Stopwatch" : "Reset Stopwatch", #selector(resetStopwatch))
         }
         guard !items.isEmpty else { return }
         items.append(.separator())

@@ -51,7 +51,7 @@
 - Added Clock's stopwatch, counting up beside the camera as the iPhone's does:
   its symbol with a hand going round once a minute, its hundredths small after
   the seconds. Opened, it shows its time alone, to the hundredth, with buttons
-  to stop it and lap, or to start it again and reset it.
+  to stop it and start it over from 0:00, or to start it again and reset it.
 - Added the activities after the first in bubbles of their own beside the
   notch, as the Dynamic Island shows them: music keeps the notch, the next
   activity goes in a round bubble as tall as the notch off its right end, and

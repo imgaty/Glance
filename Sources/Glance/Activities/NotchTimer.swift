@@ -85,6 +85,16 @@ enum Stopwatch: Equatable {
         }
     }
 
+    /// Both reset, both stopped, or both running from about the same moment: started over, it's
+    /// running still, but from now.
+    static func alike(_ a: Stopwatch?, _ b: Stopwatch?) -> Bool {
+        switch (a, b) {
+        case (nil, nil), (.stopped?, .stopped?): true
+        case (.running(let one)?, .running(let other)?): abs(one.timeIntervalSince(other)) < 1.5
+        default: false
+        }
+    }
+
     /// From what macOS keeps of it: running, from when it last started less what was on it then,
     /// its laps' and the lap it was on; stopped, with that much on it.
     static func current(in kept: [[String: Any]]) -> Stopwatch? {

@@ -180,7 +180,7 @@ struct StopwatchReading: View {
 /// Opened to a timer, as the iPhone's Timer expands, as tall: round buttons to pause or go on and to
 /// cancel left of the camera, the time left, large, right of it, its name under the camera, as the
 /// player's title sits under it. Opened to the stopwatch, as the iPhone's: its buttons to stop it and
-/// to lap, or, stopped, to start it and to reset it, and its time alone, to the hundredth. In from the notch's ends as far as the player
+/// to start it over, or, stopped, to start it and to reset it, and its time alone, to the hundredth. In from the notch's ends as far as the player
 /// is, and as far from the camera as the player's cover; the notch only as wide as that needs, for
 /// the time as it reads now. They're Clock's, pressed through Clock (see `ClockActivity`); without
 /// Accessibility, the buttons are dimmed, and a press asks for it.
@@ -228,7 +228,7 @@ struct ExpandedTimerView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Pause or go on, and cancel; or start or stop, and lap or reset.
+    /// Pause or go on, and cancel; or start or stop, and start over or reset.
     private func buttons(_ h: CGFloat) -> some View {
         let running = shown.isRunning
         let stopwatch = { if case .stopwatch = shown { return true } else { return false } }()
@@ -244,10 +244,10 @@ struct ExpandedTimerView: View {
                         .foregroundStyle(.orange)
                 }
             }
-            IslandCircleButton(height: h, tint: .white, label: stopwatch ? (running ? "Lap" : "Reset") : "Cancel") {
-                stopwatch ? clock.lapResetStopwatch() : clock.cancelTimer()
+            IslandCircleButton(height: h, tint: .white, label: stopwatch ? (running ? "Restart" : "Reset") : "Cancel") {
+                stopwatch ? clock.resetStopwatch() : clock.cancelTimer()
             } glyph: {
-                // A lap starts the next one: round again.
+                // Running, it starts over: round again.
                 if stopwatch, running {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: h * 0.58, weight: .semibold))

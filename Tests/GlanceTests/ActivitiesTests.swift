@@ -158,6 +158,12 @@ struct ActivitiesTests {
         #expect(Stopwatch.hundredths(7.999) == "99")
         #expect(StopwatchReading.width(7, size: 14) > 0)
         #expect(StopwatchReading.width(3_700, size: 14) > StopwatchReading.width(7, size: 14))
+        // Started over, it's still running, but from now: what macOS kept from before isn't it yet.
+        #expect(Stopwatch.alike(.running(since: now - 0.5), .running(since: now)))
+        #expect(!Stopwatch.alike(.running(since: now - 30), .running(since: now)))
+        #expect(Stopwatch.alike(.stopped(elapsed: 3), .stopped(elapsed: 7.5)))
+        #expect(Stopwatch.alike(nil, nil))
+        #expect(!Stopwatch.alike(nil, .running(since: now)))
     }
 
     @Test("A Clock timer that rings is told by when macOS notes it rang, the last one's length and label")

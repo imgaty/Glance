@@ -18,8 +18,8 @@ import ApplicationServices
 /// round.
 ///
 /// While a timer shows, the menu bar's own is taken out, through Accessibility, so it isn't shown
-/// twice, unless Hide in menu bar is off. They're paused, resumed, cancelled, started again, lapped
-/// and reset with Clock's own buttons for them (see `control(_:)`).
+/// twice, unless Hide in menu bar is off. They're paused, resumed, cancelled, started again and
+/// reset with Clock's own buttons for them (see `control(_:)`).
 @MainActor
 final class ClockActivity: ObservableObject {
     static let shared = ClockActivity()
@@ -98,7 +98,7 @@ final class ClockActivity: ObservableObject {
 
         var nextStopwatch = defaults.bool(forKey: Preferences.activityStopwatch) ? Stopwatch.current(in: kept("MTStopwatches")) : nil
         if let expected = expectedStopwatch {
-            if Date.now < expected.until, nextStopwatch?.isRunning != expected.state?.isRunning {
+            if Date.now < expected.until, !Stopwatch.alike(nextStopwatch, expected.state) {
                 nextStopwatch = expected.state
             } else {
                 expectedStopwatch = nil
@@ -263,14 +263,22 @@ final class ClockActivity: ObservableObject {
         guard let stopwatch, allowed() else { return }
         let elapsed = stopwatch.elapsed()
         expect(stopwatch: stopwatch.isRunning ? .stopped(elapsed: elapsed) : .running(since: .now - elapsed))
-        control(.stopwatch(identifier: "StartStopButton"))
+        control(.stopwatch(identifiers: ["StartStopButton"]))
     }
 
-    /// A lap while it runs; stopped, it's reset, as its Lap and Reset button does.
-    func lapResetStopwatch() {
+    /// Back to 0:00, shown at once. While it runs, it starts over and keeps running: Clock's Lap
+    /// would change nothing the notch shows, so it's stopped, reset and started again with Clock's
+    /// own buttons. Stopped, it's reset, as its Reset button does.
+    func resetStopwatch() {
         guard let stopwatch, allowed() else { return }
-        if !stopwatch.isRunning { expect(stopwatch: nil) }
-        control(.stopwatch(identifier: "LapResetButton"))
+        guard stopwatch.isRunning else {
+            expect(stopwatch: nil)
+            return control(.stopwatch(identifiers: ["LapResetButton"]))
+        }
+        // At 0:00 for the moment Clock takes to press its three buttons, so it doesn't step back once
+        // Clock's own start is read; expected long enough for Clock to be opened first.
+        expect(stopwatch: .running(since: .now + 0.6), for: 8)
+        control(.stopwatch(identifiers: ["StartStopButton", "LapResetButton", "StartStopButton"]))
     }
 
     private func allowed() -> Bool {
@@ -284,8 +292,8 @@ final class ClockActivity: ObservableObject {
         timer = next
     }
 
-    private func expect(stopwatch next: Stopwatch?) {
-        expectedStopwatch = (next, .now + 4)
+    private func expect(stopwatch next: Stopwatch?, for seconds: TimeInterval = 4) {
+        expectedStopwatch = (next, .now + seconds)
         stopwatch = next
     }
 
@@ -300,8 +308,8 @@ final class ClockActivity: ObservableObject {
     private enum Control {
         case toggleTimer, cancelTimer
         case repeatTimer(length: TimeInterval, title: String?)
-        /// One of the stopwatch's buttons, by the name Clock gives it in any language.
-        case stopwatch(identifier: String)
+        /// The stopwatch's buttons, one after another, by the names Clock gives them in any language.
+        case stopwatch(identifiers: [String])
     }
 
     private static let clock = URL(fileURLWithPath: "/System/Applications/Clock.app")
@@ -406,9 +414,13 @@ final class ClockActivity: ObservableObject {
                 AXUIElementSetAttributeValue(label, kAXValueAttribute as CFString, (title ?? "") as CFString)
             }
             AXUIElementPerformAction(start, kAXPressAction as CFString)
-        case .stopwatch(let identifier):
-            guard let button = await onAnyPage(in: window, find: identified(identifier)) else { return false }
-            AXUIElementPerformAction(button, kAXPressAction as CFString)
+        case .stopwatch(let identifiers):
+            for (index, identifier) in identifiers.enumerated() {
+                // Each found again once Clock has answered the last: it makes its buttons anew.
+                if index > 0 { try? await Task.sleep(for: .milliseconds(150)) }
+                guard let button = await onAnyPage(in: window, find: identified(identifier)) else { return false }
+                AXUIElementPerformAction(button, kAXPressAction as CFString)
+            }
         }
         return true
     }
