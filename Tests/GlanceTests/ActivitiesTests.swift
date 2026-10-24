@@ -410,7 +410,9 @@ struct ActivitiesTests {
         let layout = DeviceLayout(height: resting)
         let keyboard = NotchAlert(
             kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "Magic Keyboard connected, 15 percent")
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) > layout.ring + layout.trailing + 15)
+        // Its battery as a ring alone, with no level in numbers beside it.
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) >= layout.ring + layout.trailing)
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) < layout.ring + layout.trailing + 15)
         let speaker = DeviceWatch.alert(name: "The Living Room Speaker Upstairs, By the Window", symbol: "airplayaudio", kind: .output)
         #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false) == SystemActivityView.maxWing)
         #expect(SystemActivityView.maxWing <= 120)

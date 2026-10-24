@@ -18,8 +18,8 @@
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
-  battery as a ring, with its level in numbers when they aren't in 3D. And
-  sound going to AirPlay.
+  battery as a ring. A device that doesn't tell its battery isn't announced.
+  And sound going to AirPlay.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the

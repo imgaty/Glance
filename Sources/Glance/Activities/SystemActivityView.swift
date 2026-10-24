@@ -166,9 +166,6 @@ struct SystemActivityView: View {
     /// Long enough for what's leaving to have faded as the wings fold.
     static let folding = Duration.milliseconds(300)
 
-    /// Between a device's level and its ring.
-    static let percentGap: CGFloat = 5
-
     /// The pause symbol before a paused timer's time, and the space between them.
     static func pauseWidth(_ size: CGFloat) -> CGFloat { (size * 0.8).rounded() }
     static let pauseGap: CGFloat = 4
@@ -194,29 +191,14 @@ struct SystemActivityView: View {
             // Its middle as far in from the end as it reaches, turning.
             .padding(.leading, layout.edge + max(reach - axis, 0))
             .frame(maxWidth: .infinity, alignment: .leading)
-            Group {
-                if let battery {
-                    HStack(spacing: Self.percentGap) {
-                        // Beside a device that isn't turning in 3D, its level in words too: low, a ring
-                        // alone reads as something loading.
-                        if model.flatMap(DeviceTurn.cached) == nil {
-                            Text("\(battery)%")
-                                .font(.system(size: size, weight: .semibold).monospacedDigit())
-                                .foregroundStyle(BatteryRing.color(for: battery))
-                        }
-                        BatteryRing(percent: battery, diameter: layout.ring)
-                    }
+            // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
+            // announced (see `DeviceWatch`).
+            if let battery {
+                BatteryRing(percent: battery, diameter: layout.ring)
                     .modifier(RingArrival(leaving: leaving))
                     .padding(.trailing, layout.trailing)
-                } else {
-                    Text("Connected")
-                        .font(.system(size: size, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(1)
-                        .padding(.trailing, LiveActivityView.textEdge(restingHeight: restingHeight))
-                }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
@@ -294,9 +276,7 @@ struct SystemActivityView: View {
             let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
             let reach = deviceReach(model: model, pictures: pictures, layout: layout)
             let device = layout.edge + max(axis, reach) + reach + gap
-            let level = battery.map { model.flatMap(DeviceTurn.cached) == nil ? width("\($0)%", size, .semibold) + percentGap : 0 } ?? 0
-            let words = LiveActivityView.textEdge(restingHeight: restingHeight)
-            let end = battery == nil ? width("Connected", size, .semibold) + words : level + layout.ring + layout.trailing
+            let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
         // As tall as the Alarm, as wide as its words or its buttons.

@@ -242,6 +242,8 @@ final class DeviceWatch {
         guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
             return
         }
+        // A device is announced with its battery, as AirPods are; one that doesn't tell it, not at all.
+        guard kind != .device || battery != nil else { return }
         recent[name] = now
         Activities.shared.post(
             Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery, kind: kind))

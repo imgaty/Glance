@@ -275,8 +275,8 @@ sliding under the notch as it folds:
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery, yellow in Low Power Mode |
 | A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | `Low Battery`, and its level, in red |
-| AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's, with its level beside it for those not in 3D |
-| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and, when it tells the Mac, its battery's level beside a ring |
+| AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's |
+| A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring. One that doesn't tell the Mac its battery isn't announced |
 | The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
 
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
