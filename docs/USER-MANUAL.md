@@ -260,10 +260,10 @@ sliding under the notch as it folds:
 | Moment | What shows |
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery, yellow in Low Power Mode |
-| A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | The notch grows taller: its level, as `10% Battery`, and the battery in a red capsule, a ring pulsing around its level. Click the capsule to turn on Low Power Mode: it turns green, and the notch says `Low Power Mode On` |
+| A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | The notch grows taller: its level, as `10% Battery`, and the battery in a capsule, a ring pulsing around its level, pulsing from a reddish yellow into a soft red as it arrives. Click the capsule to turn on Low Power Mode: it turns green, and the notch says `Low Power Mode On` |
 | AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and its battery as a ring. One that doesn't tell the Mac its battery isn't announced |
-| A device's battery at 20%, and again at 10% | The device as it shows connecting, its ring red |
+| A device's battery at 20%, and again at 10% | The device as it shows connecting, its ring red, with its level in numbers inside |
 
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 If macOS doesn't turn Low Power Mode on from the notch,

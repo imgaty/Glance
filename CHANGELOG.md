@@ -15,17 +15,17 @@
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
   place of macOS's own notification, which is taken away as it shows. As on
   the iPhone, it grows as tall as the Alarm, its level at the left and, at the
-  right, the battery in a red capsule, a ring pulsing around its level.
-  Clicking the capsule turns on Low Power Mode: it turns green, and it says
-  `Low Power Mode On`.
+  right, the battery in a capsule, a ring pulsing around its level, pulsing
+  from a reddish yellow into a soft red as it arrives. Clicking the capsule
+  turns on Low Power Mode: it turns green, and it says `Low Power Mode On`.
 - Added AirPods, headphones, keyboards, mice, trackpads and game controllers
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
   battery as a ring. A device that doesn't tell its battery isn't announced.
   One whose battery runs down past 20% or 10% is announced the same way, its
-  ring red, in place of macOS's own banner, which is hidden, and AirPods' own
-  notification, which is taken away.
+  ring red with its level in numbers inside, in place of macOS's own banner,
+  which is hidden, and AirPods' own notification, which is taken away.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the

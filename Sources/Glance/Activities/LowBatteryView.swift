@@ -62,19 +62,24 @@ enum LowBatteryLayout {
     static let lineGap: CGFloat = 0.055
     static let capsule = CGSize(width: 2.32, height: 1.55)
     static let body = CGSize(width: 1.06, height: 0.64)
-    static let bodyCorner: CGFloat = 0.15
+    static let bodyCorner: CGFloat = 0.135
     /// The level inside the body, never narrower than at 10%, as the iPhone's.
     static let levelInset: CGFloat = 0.1
+    static let levelTop: CGFloat = 0.09
     static let leastLevel: CGFloat = 0.21
     static let capGap: CGFloat = 0.2
     static let cap = CGSize(width: 0.055, height: 0.23)
     static let ring: CGFloat = 1.0
     static let ringLine: CGFloat = 0.036
-    /// How long the ring takes to pulse, in seconds.
-    static let pulse = 1.6
+    /// How long the ring takes to pulse, in seconds; and how long, arriving, it takes to settle
+    /// from its reddish yellow into red.
+    static let pulse = 1.2
+    static let warmUp = 2.4
 
     static let red = Color(red: 0.94, green: 0.34, blue: 0.3)
-    static let redLevel = Color(red: 0xF3 / 255, green: 0x95 / 255, blue: 0x9E / 255)
+    static let redLevel = Color(red: 1, green: 0x72 / 255, blue: 0x84 / 255)
+    static let amber = Color(red: 1, green: 0.62, blue: 0.24)
+    static let amberLevel = Color(red: 1, green: 0.84, blue: 0.56)
     static let green = Color(red: 0.3, green: 0.85, blue: 0.42)
     static let greenLevel = Color(red: 0.64, green: 0.95, blue: 0.7)
 
@@ -95,8 +100,9 @@ enum LowBatteryLayout {
 
 /// Low Battery, as tall as the Alarm, as the iPhone's: its level and an offer to turn on Low Power
 /// Mode at the left end, and the battery, large, in a capsule at the right, a ring pulsing around
-/// its level; clicked, Low Power Mode comes on, everything turns green and stops pulsing, and it
-/// says so. With Reduce Motion on, the ring doesn't pulse.
+/// its level, settling from a reddish yellow into red; clicked, Low Power Mode comes on, everything
+/// turns green and stops pulsing, and it says so. With Reduce Motion on, it's red at once and
+/// doesn't pulse.
 struct LowBatteryView: View {
     let percent: Int
     let restingHeight: CGFloat
@@ -106,6 +112,8 @@ struct LowBatteryView: View {
     let hovered: Bool
     @ObservedObject private var lowPower = LowPowerMode.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// When it showed, which its colors settle from.
+    @State private var shownAt = Date.now
 
     static func title(_ percent: Int) -> String { "\(percent)% Battery" }
     static let offer = "Click to turn on Low Power Mode"
@@ -146,42 +154,59 @@ struct LowBatteryView: View {
         .animation(.easeInOut(duration: 0.3), value: on)
     }
 
-    /// The battery, large, in its capsule: the body faint, the level bright, the cap apart, and the
-    /// ring around the level.
+    /// The battery, large, in its capsule: the body faint, the level bright and glowing, the cap
+    /// apart, and the ring around the level. Arriving, it pulses from a reddish yellow into a soft
+    /// red, as the iPhone's does, and goes on breathing.
     private func capsule(_ h: CGFloat, on: Bool) -> some View {
-        let tint = on ? LowBatteryLayout.green : LowBatteryLayout.red
         let body = LowBatteryLayout.body, cap = LowBatteryLayout.cap
         let inner = body.width - LowBatteryLayout.levelInset * 2
         let level = max(inner * CGFloat(percent) / 100, LowBatteryLayout.leastLevel)
-        let levelHeight = body.height - LowBatteryLayout.levelInset * 2
+        let levelHeight = body.height - LowBatteryLayout.levelTop * 2
         // The ring's middle, from the battery's left end: the level's.
         let ringMiddle = LowBatteryLayout.levelInset + level / 2
         return TimelineView(.animation(paused: on || reduceMotion)) { context in
+            let t = context.date.timeIntervalSince(shownAt)
+            let warm = reduceMotion ? 1 : Self.warming(after: t)
             let pulse = on || reduceMotion ? 1 : Self.pulse(at: context.date)
+            // Each beat brightens it, less as it settles into red.
+            let beat = on || reduceMotion ? 0 : (1 - pulse) * (1 - warm * 0.6)
+            let tint = on ? LowBatteryLayout.green : LowBatteryLayout.amber.mix(with: LowBatteryLayout.red, by: warm)
+            let bright = on ? LowBatteryLayout.greenLevel : LowBatteryLayout.amberLevel.mix(with: LowBatteryLayout.redLevel, by: warm)
             HStack(spacing: h * LowBatteryLayout.capGap) {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: h * LowBatteryLayout.bodyCorner, style: .continuous)
-                        .fill(tint.opacity(0.45))
+                        .fill(tint.opacity(0.45 + 0.1 * beat))
                     Capsule()
-                        .fill(on ? LowBatteryLayout.greenLevel : LowBatteryLayout.redLevel)
+                        .fill(bright)
                         .frame(width: h * level, height: h * levelHeight)
+                        .shadow(color: bright.opacity(0.7), radius: h * 0.08)
                         .padding(.leading, h * LowBatteryLayout.levelInset)
-                    Circle()
-                        .strokeBorder(tint.opacity(0.4), lineWidth: h * LowBatteryLayout.ringLine)
-                        .frame(width: h * LowBatteryLayout.ring, height: h * LowBatteryLayout.ring)
-                        .scaleEffect(0.9 + 0.12 * pulse)
-                        .opacity(on ? 0 : 0.55 + 0.45 * pulse)
-                        .offset(x: h * (ringMiddle - LowBatteryLayout.ring / 2))
                 }
                 .frame(width: h * body.width, height: h * body.height)
+                // Over the battery, outside its layout, so it never sizes it.
+                .overlay(alignment: .leading) {
+                    Circle()
+                        .fill(tint.opacity(0.08))
+                        .strokeBorder(tint.opacity(0.45), lineWidth: h * LowBatteryLayout.ringLine)
+                        .frame(width: h * LowBatteryLayout.ring, height: h * LowBatteryLayout.ring)
+                        .scaleEffect(0.92 + 0.1 * pulse)
+                        .opacity(on ? 0 : 0.6 + 0.4 * pulse)
+                        .offset(x: h * (ringMiddle - LowBatteryLayout.ring / 2))
+                }
                 Capsule()
                     .fill(tint.opacity(0.45))
                     .frame(width: h * cap.width, height: h * cap.height)
             }
             .frame(width: h * LowBatteryLayout.capsule.width, height: h * LowBatteryLayout.capsule.height)
-            .background(Capsule().fill(tint.opacity(hovered ? 0.34 : 0.26)))
+            .background(Capsule().fill(tint.opacity((hovered ? 0.34 : 0.26) + 0.12 * beat)))
         }
         .animation(.easeOut(duration: 0.15), value: hovered)
+    }
+
+    /// From its reddish yellow, 0, to its soft red, 1, over its first pulses, easing in and out.
+    static func warming(after t: TimeInterval) -> CGFloat {
+        let x = min(max(t / LowBatteryLayout.warmUp, 0), 1)
+        return x * x * (3 - 2 * x)
     }
 
     /// 0 to 1 and back, gently, once a pulse.
