@@ -245,6 +245,15 @@ final class NotchModel: ObservableObject {
     }
 }
 
+/// The Dynamic Island's own spring as its activities expand, measured from it: a little past its
+/// size, then back. With Reduce Motion on, straight to its size.
+enum NotchMotion {
+    static var expand: Animation {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.55, dampingFraction: 0.8)
+    }
+}
+
 /// How the notch moves between its states, the same on screen and in Settings' preview.
 extension NotchModel {
     func peek() {
@@ -259,9 +268,9 @@ extension NotchModel {
         }
     }
 
-    /// Critically damped: it grows straight to its size, never past it.
+    /// With the Dynamic Island's spring, as its activities expand (see `NotchMotion`).
     func open() {
-        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+        withAnimation(NotchMotion.expand) {
             state = .open
             proximity = 0
             pop = false
@@ -466,7 +475,7 @@ struct NotchView: View {
         .environment(\.lyricsControl, LyricsControl(shown: model.showsLyrics, available: model.songPlaying && lyricsOn, toggle: toggleLyrics))
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
-            if !lyricsOn { withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics = false } }
+            if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
         }
         // Liquid Glass takes a new size at once, while a frame's size otherwise animates only in
         // the picture, so the glass and the notch's black and outline would part as it changes size
@@ -533,9 +542,10 @@ struct NotchView: View {
     /// How far a page slides as the other takes its place.
     private var pageShift: CGFloat { reduceMotion ? 0 : 28 }
 
-    /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
+    /// The lyrics open beside the player, widening the notch with the Dynamic Island's spring, from
+    /// the waveform or a lyrics button.
     private func toggleLyrics() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics.toggle() }
+        withAnimation(NotchMotion.expand) { model.lyrics.toggle() }
     }
 
     /// The lyrics keep the same space below the camera as above the notch's bottom edge.

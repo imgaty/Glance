@@ -439,7 +439,7 @@ final class NotchController {
             }
             return
         }
-        withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.use(PlayerLayout.current) }
+        withAnimation(NotchMotion.expand) { model.use(PlayerLayout.current) }
     }
 
     /// A new song: the closed notch's wings widen for a few seconds to show its title and artist.
@@ -1173,10 +1173,11 @@ final class NotchController {
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
     }
 
-    /// To the other page, sliding, the notch taking the new page's width.
+    /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
+    /// spring.
     private func turn(to page: NotchPage) {
         guard model.page != page else { return }
-        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+        withAnimation(NotchMotion.expand) {
             model.page = page
             model.pageNudge = 0
         }
