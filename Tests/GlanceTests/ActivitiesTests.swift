@@ -166,6 +166,25 @@ struct ActivitiesTests {
         #expect(!Stopwatch.alike(nil, .running(since: now)))
     }
 
+    @Test("A timer's chime is the tone Clock names, in whichever version macOS has, or Radial; none without one")
+    func timerChime() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let rings = folder.appendingPathComponent("Ringtones"), alerts = folder.appendingPathComponent("AlertTones/Modern")
+        try FileManager.default.createDirectory(at: rings, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: alerts, withIntermediateDirectories: true)
+        for file in [rings.appendingPathComponent("Radial-EncoreInfinitum.m4r"), rings.appendingPathComponent("Night Owl.m4r"),
+            alerts.appendingPathComponent("Chord.m4r")]
+        {
+            FileManager.default.createFile(atPath: file.path, contents: Data())
+        }
+        #expect(TimerChime.file(for: "system:Radial", in: folder)?.lastPathComponent == "Radial-EncoreInfinitum.m4r")
+        #expect(TimerChime.file(for: "system:Night Owl", in: folder)?.lastPathComponent == "Night Owl.m4r")
+        #expect(TimerChime.file(for: "system:Chord", in: folder)?.lastPathComponent == "Chord.m4r")
+        #expect(TimerChime.file(for: "system:Gone", in: folder)?.lastPathComponent == "Radial-EncoreInfinitum.m4r")
+        #expect(TimerChime.file(for: nil, in: folder) == nil)
+    }
+
     @Test("A Clock timer that rings is told by when macOS notes it rang, the last one's length and label")
     func timerRings() {
         let now = Date.now
@@ -180,6 +199,12 @@ struct ActivitiesTests {
         #expect(last?.length == 90)
         #expect(last?.title == "Pasta")
         #expect(last?.dismissed == false)
+        #expect(last?.tone == nil)
+        // The tone it rings with, which the notch rings with in place of macOS's alert.
+        var toned = rung(now - 1, 60, "")
+        toned["$MTTimer"] = (toned["$MTTimer"] as! [String: Any]).merging(
+            ["MTTimerSound": ["$MTSound": ["MTSoundToneID": "system:Radial", "MTSoundType": 2]]]) { $1 }
+        #expect(ClockActivity.lastRung(in: [toned])?.tone == "system:Radial")
         // Stopped or repeated in macOS's own alert, macOS notes when.
         var answered = rung(now - 5, 60, "")
         answered["$MTTimer"] = (answered["$MTTimer"] as! [String: Any]).merging(["MTTimerDismissedDate": now - 2]) { $1 }

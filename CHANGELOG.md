@@ -12,7 +12,8 @@
 
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
-  MacBooks.
+  MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
+  place of macOS's own notification, which is taken away as it shows.
 - Added AirPods, headphones, keyboards, mice, trackpads and game controllers
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
@@ -45,9 +46,10 @@
   it left of the camera, the time right of it and its name under the camera, at
   least as far in from the notch's ends as the player is. When it rings, the
   notch says so as the iPhone's Timer does, its name beside buttons to start it
-  again or stop it, which answer macOS's own alert and stop its chime; answered
-  in macOS's alert, it goes from the notch too. VoiceOver reads it as its name
-  and the time left in words, and opens it.
+  again or stop it, and rings with the timer's sound from Clock in place of
+  macOS's own alert, which is taken away. Without `Accessibility`, macOS's
+  alert chimes beside it, and the notch's buttons answer it. VoiceOver reads it
+  as its name and the time left in words, and opens it.
 - Added Clock's stopwatch, counting up beside the camera as the iPhone's does:
   its symbol with a hand going round once a minute, its hundredths small after
   the seconds. Opened, it shows its time alone, to the hundredth, with buttons

@@ -251,12 +251,14 @@ sliding under the notch as it folds:
 | Moment | What shows |
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery, yellow in Low Power Mode |
-| A MacBook's battery at 20%, and again at 10% | `Low Battery`, and its level, in red |
+| A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | `Low Battery`, and its level, in red |
 | AirPods, Beats or other headphones connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2, older Beats and other headphones, their symbol), and their battery as a ring: the lower earbud's, with its level beside it for those not in 3D |
 | A Bluetooth keyboard, mouse, trackpad or game controller connecting | Its symbol turning in, and, when it tells the Mac, its battery's level beside a ring |
 | The sound going to an AirPlay speaker or TV | AirPlay's symbol, and the speaker's name |
 
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
+With `Accessibility` allowed, macOS's own Low Battery notification is taken away
+as it shows, since the notch says so.
 
 What's connected when Glance starts, or reconnects as the Mac wakes, isn't
 announced. Turn each of these off in **Settings > Live Activities**.
@@ -296,10 +298,14 @@ they're dimmed, and pressing one asks for it (see [Permissions](#permissions)).
 The notch's right-click menu has the same buttons.
 
 When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
-beside macOS's own alert and chime. Click **Repeat** to start the same length
-again, or **✕** to stop it; both answer macOS's alert too, which stops its
-chime, and leave the notch closed. Opening the notch stops it too. Stopped or
-repeated in macOS's alert, it goes from the notch as well.
+and rings with the timer's sound, as chosen in Clock, in place of macOS's own
+alert, which it takes away. Click **Repeat** to start the same length again, or
+**✕** to stop it; both leave the notch closed. Opening the notch stops it too.
+With no one there, it stops ringing after five minutes.
+
+Without `Accessibility`, macOS's own alert and chime show beside the notch:
+**Repeat** and **✕** answer that alert too, which stops its chime, and stopped
+or repeated in macOS's alert, the timer goes from the notch as well.
 
 While a timer shows, Glance takes macOS's own timer out of the menu bar, with
 `Accessibility` allowed; macOS keeps that choice. To have it back in the menu
@@ -435,7 +441,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch, and answering its alert when a timer rings; and taking macOS's own timer out of the menu bar while the notch shows it |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; and taking macOS's own timer out of the menu bar while the notch shows it |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>

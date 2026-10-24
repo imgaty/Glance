@@ -8,10 +8,13 @@
 import Foundation
 import IOKit.ps
 import SwiftUI
+import notify
 
 /// A MacBook's battery, as the iPhone's Dynamic Island shows its own: plugged in, Charging and its
 /// level beside a battery; running low, at 20% and again at 10%, Low Battery. Green, or red at 20%
-/// and below. A Mac without a battery has nothing to say.
+/// and below. A Mac without a battery has nothing to say. macOS warns of a low battery too, at its
+/// own moments, in a notification from Control Center: the notch says so then, if it hasn't just,
+/// and, while it's on, takes macOS's away (see `SystemNotices`).
 @MainActor
 final class BatteryWatch {
     /// The battery as last read.
@@ -26,6 +29,9 @@ final class BatteryWatch {
 
     private var last: Reading?
     private var source: CFRunLoopSource?
+    private var warningToken: Int32 = 0
+    /// When the notch last said the battery is low.
+    private var saidLow: Date?
 
     func start() {
         last = Self.read()
@@ -41,6 +47,9 @@ final class BatteryWatch {
         else { return }
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
         self.source = source
+        notify_register_dispatch(kIOPSNotifyLowBattery, &warningToken, .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.warned() }
+        }
     }
 
     private func changed() {
@@ -50,6 +59,30 @@ final class BatteryWatch {
         let key = alert.kind == .charging ? Preferences.activityCharging : Preferences.activityLowBattery
         guard UserDefaults.standard.bool(forKey: key) else { return }
         Activities.shared.post(alert)
+        if alert.kind == .lowBattery {
+            saidLow = .now
+            Self.hideSystemWarning()
+        }
+    }
+
+    /// macOS has warned of a low battery: the notch says so, unless it just has, in its place.
+    private func warned() {
+        guard IOPSGetBatteryWarningLevel() != kIOPSLowBatteryWarningNone, let now = Self.read(), !now.onPower,
+            UserDefaults.standard.bool(forKey: Preferences.activityLowBattery)
+        else { return }
+        if saidLow.map({ Date.now.timeIntervalSince($0) > 120 }) ?? true {
+            saidLow = .now
+            Activities.shared.post(Self.lowBattery(now))
+        }
+        Self.hideSystemWarning()
+    }
+
+    /// Control Center's own Low Battery notification, taken away as it shows, while the notch is on.
+    private static func hideSystemWarning() {
+        guard UserDefaults.standard.bool(forKey: Preferences.notchEnabled) else { return }
+        let center = URL(fileURLWithPath: "/System/Library/CoreServices/ControlCenter.app")
+        SystemNotices.close(
+            from: SystemNotices.name(of: center), saying: [SystemNotices.words("Low Battery", table: "Battery", of: center)])
     }
 
     /// What's worth saying about the battery going from one reading to the next: plugged in, or
@@ -61,11 +94,16 @@ final class BatteryWatch {
             return NotchAlert(kind: .charging, content: .battery(title: title, level: level), spoken: "\(title), \(new.percent) percent")
         }
         if !new.onPower, warnings.contains(where: { new.percent <= $0 && old.percent > $0 }) {
-            return NotchAlert(
-                kind: .lowBattery, content: .battery(title: "Low Battery", level: level), spoken: "Low battery, \(new.percent) percent",
-                seconds: 4)
+            return lowBattery(new, lowPower: lowPower)
         }
         return nil
+    }
+
+    static func lowBattery(_ reading: Reading, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> NotchAlert {
+        let level = BatteryLevel(percent: reading.percent, charging: reading.charging, lowPower: lowPower)
+        return NotchAlert(
+            kind: .lowBattery, content: .battery(title: "Low Battery", level: level), spoken: "Low battery, \(reading.percent) percent",
+            seconds: 4)
     }
 
     /// The Mac's own battery, if it has one.
