@@ -51,12 +51,6 @@ enum GlassLook {
     /// glass and it turns opaque near the end. The top is black whatever this is.
     static let floor = 0.35
     static func black(_ darkness: Double) -> Double { floor + (1 - floor) * darkness * darkness }
-    /// On the tray, the least the glass blurs what's behind it, whatever it's set to: enough for
-    /// the row and its name to read over a busy window, as a menu's glass does.
-    static let trayBlur = 0.55
-    /// On the tray, the least black over the glass: the items' names are words to read, and Apple
-    /// keeps words on its frosted glass, so it's dimmed further than the player.
-    static let trayBlack = 0.6
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
@@ -364,7 +358,6 @@ struct NotchView: View {
         // Open on the player, rather than on the tray.
         let playerShown = isOpen && !onTray
         let trayShown = isOpen && onTray
-        let glassBlur = trayShown ? max(blur, GlassLook.trayBlur) : blur
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed ? 1 : 0
@@ -504,14 +497,11 @@ struct NotchView: View {
                     // Clear Liquid Glass under black, as dark as set, blurring what's behind it as much as set.
                     Color.clear
                         .glassEffect(.clear, in: shape)
-                        .background(GlassBlur(radius: GlassLook.blur(glassBlur)))
+                        .background(GlassBlur(radius: GlassLook.blur(blur)))
                         .mask { WithoutFlares(flare: m.flare) }
                         .mask { shape }
                         .opacity(visible)
-                    shape.fill(.black.opacity((trayShown ? max(GlassLook.black(darkness), GlassLook.trayBlack) : GlassLook.black(darkness)) * visible))
-                        // The tray's darker glass is there as the tray arrives, as its blur is,
-                        // rather than following the page's slower slide.
-                        .animation(.easeOut(duration: 0.15), value: trayShown)
+                    shape.fill(.black.opacity(GlassLook.black(darkness) * visible))
                 }
             }
         }
