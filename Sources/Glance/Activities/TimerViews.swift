@@ -408,9 +408,11 @@ struct TimerDoneView: View {
     static func nameEdge(_ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
 }
 
-/// The buttons a timer that's done has in the closed notch.
+/// The buttons a timer that's done, and Low Battery, have in the closed notch.
 enum AlertButton: Hashable {
     case again, stop
+    /// Low Battery's, which turns on Low Power Mode.
+    case lowPower
 }
 
 /// Where the closed notch's buttons are, in the notch's points, while they show.
@@ -424,14 +426,14 @@ struct AlertButtonFrames: PreferenceKey {
 extension View {
     /// A drawn button, which the closed notch presses by where it is, as a button VoiceOver can name
     /// and press.
-    fileprivate func spokenButton(_ label: String, action: @escaping () -> Void) -> some View {
+    func spokenButton(_ label: String, action: @escaping () -> Void) -> some View {
         accessibilityElement(children: .ignore)
             .accessibilityLabel(label)
             .accessibilityAddTraits(.isButton)
             .accessibilityAction(.default, action)
     }
 
-    fileprivate func reportsFrame(_ button: AlertButton) -> some View {
+    func reportsFrame(_ button: AlertButton) -> some View {
         background {
             GeometryReader { proxy in
                 Color.clear.preference(key: AlertButtonFrames.self, value: [button: proxy.frame(in: .named(ControlFrames.space))])

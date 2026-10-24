@@ -57,6 +57,15 @@ struct SystemActivityView: View {
                     // Its buttons inside, which VoiceOver can press.
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
+            } else if let alert = shownAlert, case .lowBattery(let percent) = alert.content {
+                // Laid out at its full size, from the top, so it never reflows as the notch grows.
+                LowBatteryView(percent: percent, restingHeight: restingHeight, hovered: hoveredButton == .lowPower)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .islandFade(self.alert != nil)
+                    .id(alert.id)
+                    .transition(IslandMotion.fade)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size, leaving: self.alert == nil)
                     .islandFade(self.alert != nil)
@@ -234,8 +243,8 @@ struct SystemActivityView: View {
                 .lineLimit(1)
         case .status(let symbol, let tint, _):
             ArrivingSymbol(symbol: symbol, color: tint, size: size + 2, side: side)
-        // Laid out on its own (see `TimerDoneView`).
-        case .timerDone:
+        // Laid out on their own (see `TimerDoneView` and `LowBatteryView`).
+        case .timerDone, .lowBattery:
             EmptyView()
         }
     }
@@ -254,7 +263,7 @@ struct SystemActivityView: View {
         case .status(_, _, let text):
             MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
                 .foregroundStyle(.white)
-        case .timerDone:
+        case .timerDone, .lowBattery:
             EmptyView()
         }
     }
@@ -284,8 +293,9 @@ struct SystemActivityView: View {
     /// bar beside the notch, beyond which a long name scrolls. A device's, with only symbols, is a little
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
     /// wider one.
+    /// Low Battery's, below the camera, as wide as the iPhone's, across the notch's own width.
     @MainActor
-    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool) -> CGFloat {
+    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool, notchWidth: CGFloat = 0) -> CGFloat {
         let size = LiveActivityView.textSize(for: restingHeight)
         let side = side(restingHeight, island)
         let gap = LiveActivityView.cameraGap
@@ -299,12 +309,15 @@ struct SystemActivityView: View {
             let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
+        if case .lowBattery(let percent) = alert.content {
+            return max((LowBatteryLayout.width(percent: percent, restingHeight: restingHeight) - notchWidth) / 2, 0)
+        }
         // As tall as the Alarm, as wide as its words or its buttons.
         if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight, island: island)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device, .timerDone:
+            case .device, .timerDone, .lowBattery:
                 (0, 0)
             case .battery(let title, let level):
                 (

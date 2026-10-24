@@ -508,7 +508,8 @@ final class NotchController {
             }
             return
         }
-        let wing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, island: model.island)
+        let wing = SystemActivityView.wing(
+            for: alert, restingHeight: model.closedSize.height, island: model.island, notchWidth: model.closedSize.width)
         func announce() {
             withAnimation(open) {
                 model.switching = false
@@ -737,9 +738,10 @@ final class NotchController {
         }
     }
 
-    /// The button of a timer that's done, in the closed notch, at a point on the screen.
+    /// The button of a timer that's done, or Low Battery's, in the closed notch, at a point on the
+    /// screen.
     private func alertButton(at p: CGPoint) -> AlertButton? {
-        guard model.alert?.kind == .timerDone, model.state != .open, let view = panel.contentView else { return nil }
+        guard model.alert?.tall == true, model.state != .open, let view = panel.contentView else { return nil }
         let local = view.convert(panel.convertPoint(fromScreen: p), from: nil)
         let inNotch = CGPoint(x: local.x, y: local.y - Layout.pastTop)
         return model.alertButtons.first { $0.value.contains(inNotch) }?.key
@@ -779,6 +781,10 @@ final class NotchController {
             switch button {
             case .again: ClockActivity.shared.repeatTimer()
             case .stop: ClockActivity.shared.dismissRing()
+            case .lowPower:
+                LowPowerMode.shared.turnOn()
+                // Long enough to see it come on.
+                Activities.shared.keep(.lowBattery, for: 2.5)
             }
             model.hoveredButton = nil
             return

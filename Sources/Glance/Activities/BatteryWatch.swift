@@ -11,8 +11,8 @@ import SwiftUI
 import notify
 
 /// A MacBook's battery, as the iPhone's Dynamic Island shows its own: plugged in, Charging and its
-/// level beside a battery; running low, at 20% and again at 10%, Low Battery. Green, or red at 20%
-/// and below. A Mac without a battery has nothing to say. macOS warns of a low battery too, at its
+/// level beside a battery; running low, at 20% and again at 10%, Low Battery, with a button to turn
+/// on Low Power Mode (see `LowBatteryView`). Green, or red at 20% and below. A Mac without a battery has nothing to say. macOS warns of a low battery too, at its
 /// own moments, in a notification from Control Center: the notch says so then, if it hasn't just,
 /// and, while it's on, takes macOS's away (see `SystemNotices`).
 @MainActor
@@ -94,16 +94,13 @@ final class BatteryWatch {
             return NotchAlert(kind: .charging, content: .battery(title: title, level: level), spoken: "\(title), \(new.percent) percent")
         }
         if !new.onPower, warnings.contains(where: { new.percent <= $0 && old.percent > $0 }) {
-            return lowBattery(new, lowPower: lowPower)
+            return lowBattery(new)
         }
         return nil
     }
 
-    static func lowBattery(_ reading: Reading, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> NotchAlert {
-        let level = BatteryLevel(percent: reading.percent, charging: reading.charging, lowPower: lowPower)
-        return NotchAlert(
-            kind: .lowBattery, content: .battery(title: "Low Battery", level: level), spoken: "Low battery, \(reading.percent) percent",
-            seconds: 4)
+    static func lowBattery(_ reading: Reading) -> NotchAlert {
+        NotchAlert(kind: .lowBattery, content: .lowBattery(percent: reading.percent), spoken: "Low battery, \(reading.percent) percent", seconds: 6)
     }
 
     /// The Mac's own battery, if it has one.

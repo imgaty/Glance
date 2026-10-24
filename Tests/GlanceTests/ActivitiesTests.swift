@@ -482,6 +482,26 @@ struct ActivitiesTests {
         #expect(model.expansion(fromBubble: .trailing) == .stopwatch)
     }
 
+    @Test("Low Battery is tall, its row below the camera, as wide as the iPhone's, its button concentric with the corners")
+    func lowBattery() {
+        let alert = BatteryWatch.lowBattery(.init(percent: 10, onPower: false, charging: false))
+        #expect(alert.content == .lowBattery(percent: 10))
+        #expect(alert.tall)
+        let h: CGFloat = 32
+        // The camera, the button and, below it, as much as at its side.
+        let edge = LowBatteryLayout.edge(h)
+        #expect(abs(edge + h * TimerLayout.button / 2 - h * TimerLayout.corner) < 0.01)
+        #expect(alert.tallHeight(h) == (h + LiveActivityView.cameraGap + h * TimerLayout.button + edge).rounded())
+        #expect(alert.tallHeight(h) > TimerLayout.tallHeight(h))
+        // Its wings reach as wide as it is, across the notch.
+        let width = LowBatteryLayout.width(percent: 10, restingHeight: h)
+        #expect(width >= h * TimerLayout.wide)
+        #expect(SystemActivityView.wing(for: alert, restingHeight: h, island: false, notchWidth: 185) * 2 + 185 == width)
+        let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
+        model.alert = alert
+        #expect(model.restingHeight == alert.tallHeight(h))
+    }
+
     @Test("AirPlay comes after the rest: the notch's once nothing else shows, its symbols in the cover's wings")
     func airPlay() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
