@@ -198,9 +198,13 @@ final class NotchModel: ObservableObject {
 
     /// What can show at once, in the order they take the notch: music, a file coming in over
     /// AirDrop, Clock's timer, its stopwatch, AirPlay.
-    enum Activity: Equatable {
+    enum Activity: Hashable {
         case music, airdrop, timer, stopwatch, airplay
     }
+
+    /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop, AirPlay. Music's
+    /// goes with `activity`.
+    @Published var dismissed: Set<Activity> = []
 
     /// Those showing now, in that order.
     var activities: [Activity] {
@@ -210,7 +214,7 @@ final class NotchModel: ObservableObject {
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
         if airplay != nil { shown.append(.airplay) }
-        return shown
+        return shown.filter { !dismissed.contains($0) }
     }
 
     /// An activity's timer or stopwatch, if it's one.

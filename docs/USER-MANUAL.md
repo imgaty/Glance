@@ -71,7 +71,7 @@ Reduce Motion on, they only fade.
 | Hover | Opens the notch, after the hover delay |
 | Click | Opens the notch; click and hold, if a hold time is set |
 | Swipe down with two fingers | Opens the notch |
-| Swipe up with two fingers | Closes the notch |
+| Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away (see [Live Activities](#live-activities)) |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
 | Swipe left or right with three fingers, on the open notch | Switches to the tray, and back to the player (with `Accessibility` allowed) |
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead |
@@ -260,6 +260,14 @@ activity needs, the same on both sides, with nothing under the camera. Each
 side sits at its own end, as far in from it as from the top and bottom, and on
 the taller views, both ends alike. Any room to spare is beside the camera. The
 notch widens or narrows as a timer or the stopwatch gains or loses a digit.
+
+Swipe up with two fingers on the closed notch to swipe away what it shows, as
+on the iPhone: an announcement folds away, a timer that's ringing stops, and a
+live activity stays away until it changes. Music comes back with the next song
+or when it plays again, a timer or the stopwatch when it's started, paused or
+ended, AirDrop with the next file, and AirPlay with the next speaker. Opened to
+a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the notch and
+swipes that away too.
 
 Turn these off with **Cover and waveform** and **Announce new audio** in
 **Settings > Music**.

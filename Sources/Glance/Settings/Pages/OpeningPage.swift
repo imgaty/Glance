@@ -38,7 +38,7 @@ struct OpeningPage: View {
             Section {
                 Toggle(isOn: $swipeToOpen) {
                     Text("Open and close")
-                    Text("Swipe down with two fingers to open, and up to close.")
+                    Text("Swipe down with two fingers to open, and up to close or to swipe a live activity away.")
                 }
                 Toggle(isOn: $swipeToSkip) {
                     Text("Change songs")
