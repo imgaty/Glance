@@ -70,7 +70,9 @@ struct SystemActivityView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
-                device(symbol: symbol, model: model, pictures: pictures, battery: battery, size: size, leaving: self.alert == nil)
+                device(
+                    symbol: symbol, model: model, pictures: pictures, battery: battery, low: alert.kind == .deviceBattery, size: size,
+                    leaving: self.alert == nil)
                     .islandFade(self.alert != nil)
                     .id(alert.id)
                     .transition(IslandMotion.fade)
@@ -221,8 +223,10 @@ struct SystemActivityView: View {
     /// a little under half of it tall, its battery's ring a little over half of it across. Each is at
     /// its end, as far in from it as from the top and bottom: the device as near as it comes as it
     /// turns.
-    private func device(symbol: String, model: Headphones?, pictures: [String], battery: Int?, size: CGFloat, leaving: Bool) -> some View {
-        let layout = DeviceLayout(height: restingHeight)
+    private func device(
+        symbol: String, model: Headphones?, pictures: [String], battery: Int?, low: Bool, size: CGFloat, leaving: Bool
+    ) -> some View {
+        let layout = DeviceLayout(height: restingHeight, low: low)
         let axis = Self.deviceAxis(model: model, pictures: pictures, layout: layout)
         let reach = Self.deviceReach(model: model, pictures: pictures, layout: layout)
         return ZStack {
@@ -241,7 +245,8 @@ struct SystemActivityView: View {
             // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
             // announced (see `DeviceWatch`).
             if let battery {
-                BatteryRing(percent: battery, diameter: layout.ring)
+                // Running low, its level in numbers in the middle.
+                BatteryRing(percent: battery, diameter: layout.ring, showsPercent: low)
                     .modifier(RingArrival(leaving: leaving))
                     .padding(.trailing, layout.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -319,7 +324,7 @@ struct SystemActivityView: View {
         // A device's wings as wide as it turns, against the camera, with none of it going under the
         // camera; or as its ring or its word needs.
         if case .device(_, let model, let pictures, let battery) = alert.content {
-            let layout = DeviceLayout(height: restingHeight)
+            let layout = DeviceLayout(height: restingHeight, low: alert.kind == .deviceBattery)
             let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
             let reach = deviceReach(model: model, pictures: pictures, layout: layout)
             let device = layout.edge + max(axis, reach) + reach + gap
@@ -424,8 +429,10 @@ struct SystemActivityView: View {
 /// height tall; the ring 54% of it across. Each as far in from its end as from the top and bottom.
 struct DeviceLayout {
     let height: CGFloat
+    /// Running low, its ring a little larger, for its level in numbers inside.
+    var low = false
     var picture: CGFloat { height * 0.464 }
-    var ring: CGFloat { height * 0.54 }
+    var ring: CGFloat { height * (low ? 0.68 : 0.54) }
     /// From the left end to the device, as it reaches furthest turning.
     var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
     var trailing: CGFloat { LiveActivityView.concentric(ring, in: height) }
@@ -652,14 +659,16 @@ private struct TurningPictures: View {
 struct BatteryRing: View {
     let percent: Int
     let diameter: CGFloat
+    /// Its level in numbers in its middle, as for a device running low.
+    var showsPercent = false
     /// The iPhone's, as it shows AirPods' battery.
     static let green = Color(red: 68 / 255, green: 231 / 255, blue: 114 / 255)
 
     static func color(for percent: Int) -> Color { percent <= 20 ? .red : green }
 
     var body: some View {
-        // As thick as the iPhone's: an eighth of the ring across.
-        let line = max(diameter * 0.12, 2)
+        // As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
+        let line = max(diameter * (showsPercent ? 0.1 : 0.12), 2)
         let color = Self.color(for: percent)
         ZStack {
             Circle().stroke(color.opacity(0.3), lineWidth: line)
@@ -667,6 +676,12 @@ struct BatteryRing: View {
                 .trim(from: 0, to: CGFloat(percent) / 100)
                 .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
+            if showsPercent {
+                Text("\(percent)")
+                    .font(.system(size: diameter * 0.42, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(color)
+                    .minimumScaleFactor(0.6)
+            }
         }
         .padding(line / 2)
         .frame(width: diameter, height: diameter)

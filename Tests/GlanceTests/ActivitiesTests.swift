@@ -508,6 +508,12 @@ struct ActivitiesTests {
         let font = NSFont.systemFont(ofSize: h * LowBatteryLayout.words, weight: .semibold)
         let offer = ceil((LowBatteryView.offer as NSString).size(withAttributes: [.font: font]).width)
         #expect(SystemActivityView.wing(for: alert, restingHeight: h, island: false) == edge + offer + LiveActivityView.cameraGap)
+        // Arriving, it settles from its reddish yellow into red, easing in and out.
+        #expect(LowBatteryView.warming(after: 0) == 0)
+        #expect(LowBatteryView.warming(after: LowBatteryLayout.warmUp / 2) == 0.5)
+        #expect(LowBatteryView.warming(after: LowBatteryLayout.warmUp * 2) == 1)
+        // A device running low has a larger ring, for its level in numbers inside.
+        #expect(DeviceLayout(height: h, low: true).ring > DeviceLayout(height: h).ring)
     }
 
     @Test("AirDrop comes right after music: the notch's once nothing plays, otherwise a bubble that opens to it")
