@@ -283,9 +283,10 @@ private struct TileLayout<Icon: View>: View {
 }
 
 /// AirDrop's own symbol, as Finder's sidebar shows it, in the white the notch's symbols are, for
-/// the place to drop things to send them. Its app icon, which macOS draws in the icon style chosen
-/// in Appearance settings (a gray glass tile with Clear), sat apart from everything around it.
-private enum AirDropSymbol {
+/// the place to drop things to send them, and in AirDrop's blue for what comes in (see
+/// `AirDropWatch`). Its app icon, which macOS draws in the icon style chosen in Appearance settings
+/// (a gray glass tile with Clear), sat apart from everything around it.
+enum AirDropSymbol {
     /// The symbol, at a size as a font's. Apple keeps it among its own symbols, out of the public
     /// list, so it's asked for by its private name; failing that, the app icon stands in.
     @ViewBuilder static func glyph(size: CGFloat) -> some View {

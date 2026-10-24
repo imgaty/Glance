@@ -180,6 +180,7 @@ enum Preferences {
             activityCharging: true,
             activityLowBattery: true,
             activityDevices: true,
+            activityAirDrop: true,
             activityClockTimers: true,
             clockTimerHidesMenuBar: true,
             activityStopwatch: true,
@@ -264,10 +265,11 @@ enum Preferences {
     /// Apps whose copies are never kept, comma separated (see TrayApps).
     static let trayIgnoredApps = "trayIgnoredApps"
     /// What the Mac announces beside the camera (see Activities): plugged in, low on battery, a
-    /// device connecting or the sound going to AirPlay.
+    /// device connecting or the sound going to AirPlay; and files coming in over AirDrop.
     static let activityCharging = "activityCharging"
     static let activityLowBattery = "activityLowBattery"
     static let activityDevices = "activityDevices"
+    static let activityAirDrop = "activityAirDrop"
     /// Clock's timers show (see ClockActivity), and while one does, the menu bar's own is taken out;
     /// and Clock's stopwatch shows.
     static let activityClockTimers = "activityClockTimers"

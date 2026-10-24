@@ -67,11 +67,8 @@ enum LowBatteryLayout {
 
     /// How far in the button sits from the end and the bottom: the same, so it's concentric with
     /// the round corner, as the timer's buttons are.
-    static func edge(_ h: CGFloat) -> CGFloat { h * (TimerLayout.corner - TimerLayout.button / 2) }
-
-    static func height(_ h: CGFloat) -> CGFloat {
-        (h + LiveActivityView.cameraGap + h * TimerLayout.button + edge(h)).rounded()
-    }
+    static func edge(_ h: CGFloat) -> CGFloat { TimerLayout.rowEdge(h) }
+    static func height(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) }
 
     /// As wide as the iPhone's expanded activities, or as its words need.
     @MainActor

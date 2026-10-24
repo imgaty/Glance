@@ -15,6 +15,7 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
+    @AppStorage(Preferences.activityAirDrop) private var airDrop = true
     @AppStorage(Preferences.activityClockTimers) private var timers = true
     @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
     @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = true
@@ -47,6 +48,10 @@ struct ActivitiesPage: View {
                 Toggle(isOn: $devices) {
                     Text("Devices")
                     Text("Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay.")
+                }
+                Toggle(isOn: $airDrop) {
+                    Text("AirDrop")
+                    Text("Shows files coming in over AirDrop, as they come.")
                 }
             }
             Section {

@@ -114,6 +114,7 @@ final class Activities: ObservableObject {
         devices.start()
         watches = [battery, devices]
         AirPlayWatch.shared.start()
+        AirDropWatch.shared.start()
     }
 
     /// Just woken, things reconnecting are expected, not announced.

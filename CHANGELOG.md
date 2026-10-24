@@ -58,6 +58,11 @@
   its symbol with a hand going round once a minute, its hundredths small after
   the seconds. Opened, it shows its time alone, to the hundredth, with buttons
   to stop it and start it over from 0:00, or to start it again and reset it.
+- Added files coming in over AirDrop as the iPhone shows them, from when one
+  starts coming until it's in: AirDrop's symbol beside the camera and a ring
+  filling as it comes. Opened, it shows a picture of the file, who it's from,
+  and the ring around a button to stop it. `AirDrop` in
+  **Settings > Live Activities** turns it off.
 - Added sound going to AirPlay as the iPhone shows Screen Mirroring, for as
   long as it plays there: AirPlay's symbol in blue at the notch's left end, and
   the speaker or TV at its right. Opened, it shows the speaker's name, with

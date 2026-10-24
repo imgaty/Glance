@@ -12,8 +12,9 @@ import SwiftUI
 /// iPhone's Dynamic Island draws its own, the two sides read as one: a device's symbol turning in
 /// beside its battery's ring; the Mac's battery as a word beside its level; a state's symbol in its
 /// color beside a word. A timer counts down on the right, its ring on the left; the stopwatch counts
-/// up beside its symbol; AirPlay shows its symbol and the device's; music playing beside them goes
-/// in a bubble of its own (see `IslandBubble`).
+/// up beside its symbol; AirDrop shows its symbol and a ring filling as a file comes in; AirPlay shows
+/// its symbol and the device's; music playing beside them goes in a bubble of its own (see
+/// `IslandBubble`).
 /// Each side sits at its wing's end, as far in from it as from the top and bottom, concentric with
 /// the round end; any room to spare is beside the camera. With Reduce Motion on, nothing turns or
 /// shakes.
@@ -26,6 +27,8 @@ struct SystemActivityView: View {
     let clock: ClockShown?
     /// Where the sound plays over AirPlay, when that has the notch.
     var route: AirPlayRoute? = nil
+    /// A file coming in over AirDrop, when that has the notch.
+    var airdrop: AirDropShown? = nil
     /// The timer's name, as VoiceOver says it.
     var timerName = "Timer"
     /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
@@ -38,15 +41,17 @@ struct SystemActivityView: View {
     @State private var leaving: NotchAlert?
     @State private var leavingClock: ClockShown?
     @State private var leavingRoute: AirPlayRoute?
+    @State private var leavingAirDrop: AirDropShown?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (alert: 0, clock: 0, route: 0)
+    @State private var changes = (alert: 0, clock: 0, route: 0, airdrop: 0)
 
     var body: some View {
         let side = Self.side(restingHeight, island)
         let size = LiveActivityView.textSize(for: restingHeight)
         let shownAlert = alert ?? leaving
         let shownClock = shownAlert == nil ? clock ?? leavingClock : nil
-        let shownRoute = shownAlert == nil && shownClock == nil ? route ?? leavingRoute : nil
+        let shownAirDrop = shownAlert == nil && shownClock == nil ? airdrop ?? leavingAirDrop : nil
+        let shownRoute = shownAlert == nil && shownClock == nil && shownAirDrop == nil ? route ?? leavingRoute : nil
         let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight, island: island)
         ZStack {
             if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
@@ -138,6 +143,12 @@ struct SystemActivityView: View {
                 .islandFade(self.clock != nil)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
+            } else if let shownAirDrop {
+                AirDropMark(shown: shownAirDrop, restingHeight: restingHeight, island: island)
+                    .islandFade(airdrop != nil)
+                    .transition(IslandMotion.fade)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction(.default, open)
             } else if let shownRoute {
                 AirPlayMark(route: shownRoute, restingHeight: restingHeight, island: island)
                     .islandFade(route != nil)
@@ -163,6 +174,15 @@ struct SystemActivityView: View {
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
                 if changes.clock == change { leavingClock = nil }
+            }
+        }
+        .onChange(of: airdrop, initial: true) { _, new in
+            changes.airdrop += 1
+            if let new { leavingAirDrop = new; return }
+            let change = changes.airdrop
+            Task { @MainActor in
+                try? await Task.sleep(for: Self.folding)
+                if changes.airdrop == change { leavingAirDrop = nil }
             }
         }
         .onChange(of: route, initial: true) { _, new in
