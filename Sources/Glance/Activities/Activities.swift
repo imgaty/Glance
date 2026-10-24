@@ -13,7 +13,7 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, timerDone
+        case charging, lowBattery, device, deviceBattery, timerDone
     }
 
     /// What shows on either side of the camera.

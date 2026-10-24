@@ -16,7 +16,10 @@ import UniformTypeIdentifiers
 /// arrive, by their model and battery as System Information reports them; and keyboards, mice,
 /// trackpads and game controllers over Bluetooth, as the Mac's list of devices sees them. None of
 /// it needs a permission. What's connected as Glance starts, or reconnects as the Mac wakes, isn't
-/// announced. The sound going to AirPlay is an activity of its own (see `AirPlayWatch`).
+/// announced. The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device
+/// whose battery runs down past 20% or 10% is announced the same way, its ring red, as the iPhone
+/// announces AirPods running low; macOS's own banner for it, and AirPods' notification, are taken
+/// away (see `SystemNotices`).
 @MainActor
 final class DeviceWatch {
     /// Sound devices there are, by ID.
@@ -25,6 +28,10 @@ final class DeviceWatch {
     private var recent: [String: Date] = [:]
     private var port: IONotificationPortRef?
     private var iterator: io_iterator_t = 0
+    /// Each connected device's battery as last read, by name.
+    private var batteries: [String: Int] = [:]
+    private var batteryTimer: Timer?
+    private var reading = false
 
     func start() {
         outputs = Set(AudioOutput.outputs().map(\.id))
@@ -33,6 +40,7 @@ final class DeviceWatch {
             MainActor.assumeIsolated { self?.devicesChanged() }
         }
         watchAccessories()
+        watchBatteries()
     }
 
     // MARK: Sound
@@ -143,6 +151,11 @@ final class DeviceWatch {
     /// the lower of two earbuds', and its model, by product ID. It asks the Bluetooth service, which
     /// needs no permission of Glance's; it takes a moment, so it's never on the main thread.
     nonisolated static func bluetooth(named name: String) async -> BluetoothInfo? {
+        await bluetoothReport()[name.lowercased()]
+    }
+
+    /// Every connected device in System Information's report, by its name in lowercase.
+    nonisolated static func bluetoothReport() async -> [String: BluetoothInfo] {
         await Task.detached(priority: .utility) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
@@ -150,10 +163,10 @@ final class DeviceWatch {
             let output = Pipe()
             process.standardOutput = output
             process.standardError = FileHandle.nullDevice
-            guard (try? process.run()) != nil else { return nil }
+            guard (try? process.run()) != nil else { return [:] }
             let data = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-            return connected(in: data)[name.lowercased()]
+            return connected(in: data)
         }.value
     }
 
@@ -215,6 +228,95 @@ final class DeviceWatch {
         return candidates.first { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil }
     }
 
+    // MARK: Running low
+
+    /// Connected devices' batteries, read every two minutes, and the moment macOS's own banner for a
+    /// device shows; the first reading only counts them.
+    private func watchBatteries() {
+        let timer = Timer(timeInterval: 120, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.readBatteries() } }
+        timer.tolerance = 20
+        RunLoop.main.add(timer, forMode: .common)
+        batteryTimer = timer
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) {
+            [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            guard app?.bundleIdentifier == SystemNotices.bluetoothBanners else { return }
+            MainActor.assumeIsolated { self?.readBatteries() }
+        }
+        readBatteries()
+    }
+
+    /// A device's battery as read, with what it's shown as.
+    struct Battery {
+        var symbol: String
+        var product: Int?
+        var percent: Int
+    }
+
+    private func readBatteries() {
+        guard !reading else { return }
+        reading = true
+        // Keyboards, mice and trackpads tell the Mac; headphones, System Information, which takes a
+        // moment, so it's asked only while some are connected.
+        var found: [String: Battery] = [:]
+        var entries: io_iterator_t = 0
+        if IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching(kIOHIDDeviceKey), &entries) == KERN_SUCCESS {
+            while case let entry = IOIteratorNext(entries), entry != 0 {
+                defer { IOObjectRelease(entry) }
+                if let accessory = Self.accessory(entry), let percent = Self.battery(of: entry) {
+                    found[accessory.name] = Battery(symbol: accessory.symbol, percent: percent)
+                }
+            }
+            IOObjectRelease(entries)
+        }
+        let headphones = AudioOutput.outputs().filter { Self.isBluetooth($0.transport) }
+        Task { [weak self] in
+            if !headphones.isEmpty {
+                let report = await Self.bluetoothReport()
+                for device in headphones {
+                    guard let info = report[device.name.lowercased()], let percent = info.battery else { continue }
+                    let symbol = info.product.flatMap(Self.symbol(product:)) ?? device.symbol
+                    found[device.name] = Battery(symbol: symbol, product: info.product, percent: percent)
+                }
+            }
+            self?.batteriesRead(found)
+        }
+    }
+
+    private func batteriesRead(_ found: [String: Battery]) {
+        reading = false
+        defer { batteries = found.mapValues(\.percent) }
+        for (name, battery) in found {
+            guard let before = batteries[name], Self.runsLow(from: before, to: battery.percent) else { continue }
+            Task { [weak self] in
+                let model = battery.product.flatMap(Headphones.init(product:))
+                if let model { _ = await DeviceTurn.prepare(model) }
+                self?.announceLow(name, battery: battery, model: model)
+            }
+        }
+    }
+
+    /// Down past 20% or 10%, as the Mac's own battery is announced.
+    static func runsLow(from old: Int, to new: Int) -> Bool {
+        BatteryWatch.warnings.contains { new <= $0 && old > $0 }
+    }
+
+    private func announceLow(_ name: String, battery: Battery, model: Headphones?) {
+        guard !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else { return }
+        let pictures = battery.product.map(DevicePictures.names(product:)) ?? []
+        Activities.shared.post(
+            Self.lowBattery(name: Self.shortName(name), symbol: battery.symbol, model: model, pictures: pictures, battery: battery.percent))
+        SystemNotices.hideBluetoothBanner()
+        if model != nil { SystemNotices.closeAirPodsReminder() }
+    }
+
+    /// Running low: as it connects, its ring red.
+    static func lowBattery(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int) -> NotchAlert {
+        NotchAlert(
+            kind: .deviceBattery, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
+            spoken: "\(name) battery low, \(battery) percent")
+    }
+
     // MARK: Announcing
 
     private func announce(_ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) {
@@ -227,9 +329,11 @@ final class DeviceWatch {
         guard battery != nil else { return }
         recent[name] = now
         Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery))
+        // macOS's own banner for it says the same.
+        SystemNotices.hideBluetoothBanner()
     }
 
-    /// Without its owner's name, as the iPhone names AirPods: Hilário's AirPods Pro as AirPods Pro.
+    /// Without its owner's name, as the iPhone names AirPods: Sam's AirPods Pro as AirPods Pro.
     static func shortName(_ name: String) -> String {
         for mark in ["\u{2019}s ", "'s "] {
             if let range = name.range(of: mark), range.upperBound < name.endIndex { return String(name[range.upperBound...]) }

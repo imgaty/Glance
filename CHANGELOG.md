@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 24 October 2026`
+`Created: 11 October 2026` | `Last updated: 25 October 2026`
 
 <br>
 
@@ -23,6 +23,9 @@
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
   battery as a ring. A device that doesn't tell its battery isn't announced.
+  One whose battery runs down past 20% or 10% is announced the same way, its
+  ring red, in place of macOS's own banner, which is hidden, and AirPods' own
+  notification, which is taken away.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the
