@@ -59,14 +59,13 @@
   it, and into it while a new song's name shows. Clicking a bubble opens its
   own activity. VoiceOver reads each as a button that opens it. With Reduce
   Motion on, bubbles fade in and out where they rest.
-- Added Clock's buttons for its timer and stopwatch to the notch, Glance's menu
-  in the menu bar and the notch's right-click menu, which work as Clock's own
-  do, at once, with Clock opened hidden and quit half a minute after the last
-  press. Without `Accessibility`, they're dimmed, and pressing one asks for it.
-  While a timer shows, macOS's own is taken out of the menu bar. `Timers`,
-  `Stopwatch` and `Hide in menu bar` in **Settings > Live Activities** turn
-  each off, beside **Open Clock** and a way to Menu Bar settings to bring
-  macOS's own timer back.
+- Added Clock's buttons for its timer and stopwatch to the notch and its
+  right-click menu, which work as Clock's own do, at once, with Clock opened
+  hidden and quit half a minute after the last press. Without `Accessibility`,
+  they're dimmed, and pressing one asks for it. While a timer shows, macOS's own
+  is taken out of the menu bar. `Timers`, `Stopwatch` and `Hide in menu bar` in
+  **Settings > Live Activities** turn each off, beside **Open Clock** and a way
+  to Menu Bar settings to bring macOS's own timer back.
 - Added a Live Activities page to Settings, to turn each one off, with a way to
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't

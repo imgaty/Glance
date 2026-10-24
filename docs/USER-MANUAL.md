@@ -292,8 +292,7 @@ Its buttons work as Clock's own do, and what they do shows at once: Glance opens
 Clock hidden, shows it for a moment behind every other window, and, if it wasn't
 open, quits it half a minute after the last press. Without `Accessibility`,
 they're dimmed, and pressing one asks for it (see [Permissions](#permissions)).
-Glance's menu in the menu bar and the notch's right-click menu have the same
-buttons.
+The notch's right-click menu has the same buttons.
 
 When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
 beside macOS's own alert and chime. Click **Repeat** to start the same length
@@ -324,8 +323,6 @@ Glance's icon in the menu bar opens a menu:
 | Item | Operation |
 | --- | --- |
 | `Glance` switch | Turns the notch off on every display, until it's turned back on |
-| `Timer` | While Clock's timer shows, pauses, resumes or cancels it; once it has rung, repeats it or stops saying it |
-| `Stopwatch` | While Clock's stopwatch shows, starts or stops it, and laps or resets it |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |

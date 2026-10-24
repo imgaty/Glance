@@ -347,7 +347,6 @@ private struct StatusMenu: View {
     let state: StatusMenuState
     let perform: (Action) -> Void
     @ObservedObject private var updater = Updater.shared
-    @ObservedObject private var clock = ClockActivity.shared
     @AppStorage(Preferences.notchEnabled) private var enabled = true
     @Environment(\.colorScheme) private var scheme
 
@@ -369,10 +368,6 @@ private struct StatusMenu: View {
             .padding(.horizontal, 9)
             .frame(height: 36)
             separator
-            if StatusClock.shows(clock) {
-                StatusClock()
-                separator
-            }
             StatusMenuRow(title: "Check for Updates…", enabled: updater.canCheck) { perform(.checkForUpdates) }
             // Only in builds made from source, which know where it is.
             if state.canRebuild {
@@ -535,137 +530,4 @@ private final class MenuPanel: NSPanel {
     /// isn't the flat look of a window behind.
     @objc func _hasActiveAppearance() -> Bool { true }
     @objc func _hasActiveAppearanceIgnoringKeyFocus() -> Bool { true }
-}
-
-/// Clock's timer and stopwatch, as Control Center lays out a module, while they show: each one's name
-/// and time, with buttons to pause or resume the timer and cancel it, or to start or stop the
-/// stopwatch and lap or reset it; a timer that has rung, with buttons to start it again or stop
-/// saying it. They're pressed through Clock (see `ClockActivity`); without Accessibility, the
-/// buttons are dimmed, and a press asks for it.
-private struct StatusClock: View {
-    @ObservedObject var clock = ClockActivity.shared
-    /// Between the buttons, as far apart as their bezels need.
-    static let spacing: CGFloat = 10
-
-    /// Something of Clock's to show.
-    static func shows(_ clock: ClockActivity) -> Bool { clock.timer != nil || clock.rang != nil || clock.stopwatch != nil }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let timer = clock.timer {
-                row(clock.timerTitle ?? "Timer") {
-                    Self.time(running: timer.isRunning) { NotchTimer.format(timer.left(at: $0)) }
-                    buttons {
-                        StatusRoundButton(symbol: timer.isRunning ? "pause.fill" : "play.fill", label: timer.isRunning ? "Pause" : "Resume") {
-                            clock.toggleTimer()
-                        }
-                        StatusRoundButton(symbol: "xmark", label: "Cancel") { clock.cancelTimer() }
-                    }
-                }
-            } else if let rang = clock.rang {
-                row(rang.title ?? "Timer") {
-                    Text("Done").font(.system(size: 13, weight: .medium))
-                    buttons {
-                        StatusRoundButton(symbol: "arrow.counterclockwise", label: "Repeat") { clock.repeatTimer() }
-                        StatusRoundButton(symbol: "stop.fill", label: "Stop") { clock.dismissRing() }
-                    }
-                }
-            }
-            if let watch = clock.stopwatch {
-                row("Stopwatch") {
-                    Self.time(running: watch.isRunning) { Stopwatch.format(watch.elapsed(at: $0)) }
-                    buttons {
-                        StatusRoundButton(symbol: watch.isRunning ? "pause.fill" : "play.fill", label: watch.isRunning ? "Stop" : "Start") {
-                            clock.startStopStopwatch()
-                        }
-                        StatusRoundButton(symbol: watch.isRunning ? "flag.fill" : "arrow.counterclockwise", label: watch.isRunning ? "Lap" : "Reset") {
-                            clock.lapResetStopwatch()
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-    }
-
-    private func row<Trailing: View>(_ name: String, @ViewBuilder trailing: () -> Trailing) -> some View {
-        HStack(spacing: Self.spacing) {
-            Text(name)
-                .font(.system(size: 13, weight: .semibold))
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            trailing()
-        }
-    }
-
-    /// Without Accessibility, dimmed; a press asks for it.
-    private func buttons<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        HStack(spacing: Self.spacing) { content() }
-            .opacity(clock.canControl ? 1 : 0.45)
-            .help(clock.canControl ? "" : "Allow Glance in Accessibility to control Clock")
-            .accessibilityHint(clock.canControl ? "" : "Needs Accessibility")
-    }
-
-    /// The time, ticking. Paused or stopped, it says so with a symbol before the time, which waits.
-    /// In the label's own color, which the glass keeps readable whatever is behind it; an orange
-    /// can't be.
-    private static func time(running: Bool, reading: @escaping (Date) -> String) -> some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { context in
-            HStack(spacing: 4) {
-                if !running {
-                    Image(systemName: "pause.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                        .accessibilityLabel("Paused")
-                }
-                Text(reading(context.date))
-                    .font(.system(size: 13, weight: .medium).monospacedDigit())
-            }
-            .foregroundStyle(.primary)
-        }
-    }
-}
-
-/// A small round button with a symbol, as Control Center's modules have.
-private struct StatusRoundButton: View {
-    let symbol: String
-    let label: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
-                .frame(width: 28, height: 28)
-        }
-        .buttonStyle(StatusTimerButtonStyle(shape: Circle()))
-        .accessibilityLabel(label)
-    }
-}
-
-/// The timer's buttons: a faint fill, fainter at rest than under the pointer or pressed. Buttons of
-/// their own, so the keyboard reaches them too.
-private struct StatusTimerButtonStyle<S: Shape>: ButtonStyle {
-    let shape: S
-
-    func makeBody(configuration: Configuration) -> some View {
-        StatusTimerButtonBody(label: configuration.label, pressed: configuration.isPressed, shape: shape)
-    }
-}
-
-private struct StatusTimerButtonBody<Label: View, S: Shape>: View {
-    let label: Label
-    let pressed: Bool
-    let shape: S
-    @State private var hovering = false
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        let dark = scheme == .dark
-        let fill = pressed ? (dark ? 0.28 : 0.18) : hovering ? (dark ? 0.2 : 0.12) : (dark ? 0.1 : 0.06)
-        label
-            .background(shape.fill(dark ? Color.white : Color.black).opacity(fill))
-            .contentShape(shape)
-            .onHover { hovering = $0 }
-    }
 }
