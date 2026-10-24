@@ -121,6 +121,8 @@
 - Fixed the photo in the tray's demo being enlarged from a smaller picture.
 - Fixed the tray's glass adding a blur and a darker tint of its own: it looks as
   it's set in **Settings > Appearance**, as the player's does.
+- Fixed a mouse's wheel with Shift held never leaving a tray with more than
+  fits: scrolled on past the row's end, it goes back to the player.
 
 ### Opening
 
