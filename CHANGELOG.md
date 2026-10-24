@@ -24,12 +24,13 @@
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the
   island's do, and what it shows rides in and out with them, fading in out of a
-  blur and away into one, under the notch at rest, which stays sharp over it.
-  An announcement shows as long as the iPhone shows AirPods arriving. Between
-  two, it folds to rest before opening for the next. With Reduce Motion on, the
-  notch widens without bouncing and nothing blurs. In full screen, a thin line
-  in the activity's color outlines the collapsed notch, as around the Dynamic
-  Island, fading out as it expands.
+  blur and away into one, under the notch at rest, which stays sharp over it. An
+  announcement shows as long as the iPhone shows AirPods arriving. Between two,
+  it folds to rest before opening for the next, and the pointer on it folds it
+  away at once, the notch opening once it has. With Reduce Motion on, the notch
+  widens without bouncing and nothing blurs. In full screen, a thin line in the
+  activity's color outlines the collapsed notch, as around the Dynamic Island,
+  fading out as it expands.
 - Changed every live activity, closed or opened, to keep the notch only as wide
   as the wider side needs, both sides alike, with nothing under the camera. Each
   side sits at its own end, as far in from it as from the top and bottom, so it
