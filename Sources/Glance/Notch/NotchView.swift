@@ -354,13 +354,6 @@ final class NotchModel: ObservableObject {
 
     var metrics: NotchMetrics { metrics(for: state) }
 
-    /// Pulled down, how far what the open notch shows moves down with it: half as far as the notch
-    /// has grown, so it stays in the middle of it, its shape as it is.
-    var pullShift: CGFloat {
-        guard state == .open, stretch > 0 else { return 0 }
-        return (metrics(for: .open).height - metrics(for: .open, pull: 0).height) / 2
-    }
-
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, pull: CGFloat? = nil, short: Bool = false) -> NotchMetrics {
         let pull = pull ?? max(stretch, 0)
@@ -602,8 +595,8 @@ struct NotchView: View {
             expandedTimer(shown: expandedShown)
             expandedAirPlay(shown: expandedShown)
             expandedAirDrop(shown: expandedShown)
-            // Pulled down, the lyrics, the player and the tray move down with the notch, the cover
-            // and the waveform with them, keeping their shape, and settle back with it.
+            // Pulled down, only the notch stretches: the lyrics, the player and the tray stay where
+            // they are, as they're laid out.
             ZStack(alignment: .top) {
                 // Laid out at their open sizes so they never reflow; the growing shape reveals
                 // them. With the lyrics, the notch widens both ways: the player takes the left, the
@@ -662,7 +655,6 @@ struct NotchView: View {
                 .allowsHitTesting(places == nil && !trayShown)
             }
             .frame(width: m.totalWidth, height: m.height, alignment: .top)
-            .offset(y: model.pullShift)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)

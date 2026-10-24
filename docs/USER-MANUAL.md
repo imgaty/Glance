@@ -84,9 +84,8 @@ The notch opens on the player. The tray is to its right: swipe toward it with
 three fingers on the open notch, or hold Shift and scroll, and back to return.
 Three fingers anywhere else still move between desktops.
 
-Pulled down with two fingers, the open notch stretches, and the player, the
-tray or the lyrics move down with it, keeping their shape, then settle back as
-you let go.
+Pulled down with two fingers, the open notch stretches, and settles back as you
+let go. The player, the tray and the lyrics stay where they are.
 
 Opened with a shortcut, the notch stays open until you press it again, click
 elsewhere, or move the pointer onto the notch and away. It takes the keyboard
