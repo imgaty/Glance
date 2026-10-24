@@ -38,9 +38,9 @@
   stretches as it's pulled down with two fingers: they stretch with it, as
   rubber does, and settle back with it.
 - Fixed the notch opening, turning between the player and the tray, and widening
-  for the lyrics without the Dynamic Island's bounce: it grows a little past its
-  size and settles back, as the island does. With Reduce Motion on, it goes
-  straight to its size.
+  for the lyrics without the Dynamic Island's bounce: it grows past its size and
+  settles back, as the island does. With Reduce Motion on, it goes straight to
+  its size.
 
 ### Settings
 

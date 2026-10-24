@@ -245,12 +245,12 @@ final class NotchModel: ObservableObject {
     }
 }
 
-/// The Dynamic Island's own spring as its activities expand, measured from it: a little past its
-/// size, then back. With Reduce Motion on, straight to its size.
+/// The Dynamic Island's bounce as its activities expand: past its size, by about a twentieth, and
+/// back, a bounce that's seen. With Reduce Motion on, straight to its size.
 enum NotchMotion {
     static var expand: Animation {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.55, dampingFraction: 0.8)
+            ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)
     }
 }
 
