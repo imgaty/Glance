@@ -284,7 +284,9 @@ With `Accessibility` allowed, macOS's own Low Battery notification is taken away
 as it shows, since the notch says so.
 
 What's connected when Glance starts, or reconnects as the Mac wakes, isn't
-announced. Turn each of these off in **Settings > Live Activities**.
+announced. With the pointer on the notch, an announcement folds away at once,
+and the notch opens once it has. Turn each of these off in
+**Settings > Live Activities**.
 
 ### Timer and stopwatch
 

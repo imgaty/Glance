@@ -84,6 +84,8 @@ final class NotchController {
     private let topY: CGFloat
 
     private var openTask: Task<Void, Never>?
+    /// Until when an announcement is folding away for the notch to open (see `foldAnnouncement`).
+    private var foldingUntil = Date.distantPast
     private var closeTask: Task<Void, Never>?
     private var pollTimer: Timer?
     /// After an explicit close, stay shut until the pointer leaves the notch.
@@ -504,7 +506,9 @@ final class NotchController {
                 model.alert = nil
                 model.switching = wingsShowing
             }
-            guard wingsShowing else { return }
+            // Folded for the notch to open: what was there shows in the open notch, not first beside
+            // the camera.
+            guard wingsShowing, foldingUntil < .now else { return }
             switchTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(Self.switchPause))
                 guard let self, !Task.isCancelled else { return }
@@ -801,11 +805,24 @@ final class NotchController {
     private func peek() {
         model.peek()
         startPolling()
+        foldAnnouncement()
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).
         if opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
     }
+
+    /// An announcement, which has nothing of its own to open to, folds away the moment the pointer
+    /// comes onto the notch, and the notch opens only once it has, as the Dynamic Island finishes
+    /// one activity's motion before the next. One with buttons, as a rung timer, stays for them.
+    private func foldAnnouncement() {
+        guard let alert = model.alert, !alert.tall, model.state != .open else { return }
+        foldingUntil = .now + Self.foldTime
+        Activities.shared.dismiss(alert.kind)
+    }
+
+    /// As long as an announcement takes to fold away.
+    private static let foldTime = 0.32
 
     private func scheduleOpen(after delay: Double) {
         openTask?.cancel()
@@ -820,12 +837,33 @@ final class NotchController {
         openTask?.cancel()
         model.settle(closeness: closeness(to: p))
         stopPolling()
+        // Gone before the notch opened, after an announcement folded away for it: what was there
+        // comes back beside the camera.
+        if foldingUntil > .distantPast, model.alert == nil, model.switching {
+            withAnimation(IslandMotion.open) { model.switching = false }
+        }
+        foldingUntil = .distantPast
     }
 
     /// Opens on the player, unless told otherwise; for something dragged to it, with its places to
     /// drop.
     private func open(on page: NotchPage = .player, forDrop: Bool = false) {
         guard model.state != .open else { return }
+        // An announcement folds away first, from a click or a shortcut as from the pointer (see
+        // `foldAnnouncement`); something dragged to the notch doesn't wait for it.
+        if !forDrop {
+            foldAnnouncement()
+            let wait = foldingUntil.timeIntervalSinceNow
+            if wait > 0 {
+                openTask?.cancel()
+                openTask = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(wait))
+                    guard !Task.isCancelled else { return }
+                    self?.open(on: page)
+                }
+                return
+            }
+        }
         // A timer that's done has been seen: it's no longer said.
         ClockActivity.shared.dismissRing()
         openTask?.cancel()
@@ -839,6 +877,8 @@ final class NotchController {
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still) {
+            // What an announcement folded away for shows in the open notch.
+            if model.alert == nil { model.switching = false }
             if model.layout != PlayerLayout.current {
                 relayoutTask?.cancel()
                 model.use(PlayerLayout.current)
