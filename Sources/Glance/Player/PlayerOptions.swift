@@ -222,7 +222,8 @@ enum AccentWash {
 /// The gradient the waveform's bars show, as the iPhone's waveform shows one: made from the
 /// cover's colors, region by region, three across and three down, each the region's most vivid
 /// colors mixed, made light enough to read on black and softer, and blended smoothly into one
-/// another. A gradient made from the cover, never a picture of it.
+/// another, each drawn halfway to them all, as if blurred, so no two regions stand apart. A
+/// gradient made from the cover, never a picture of it.
 @MainActor
 enum WaveformGradient {
     /// Where its nine colors sit, in its own unit square.
@@ -239,6 +240,9 @@ enum WaveformGradient {
         return colors
     }
 
+    /// How far each region's color is drawn toward them all.
+    private static let blending: CGFloat = 0.45
+
     /// Nine colors, left to right and top to bottom.
     static func colors(of image: NSImage) -> [Color]? {
         let side = 12, cell = side / 3
@@ -251,8 +255,8 @@ enum WaveformGradient {
         bitmap.interpolationQuality = .high
         bitmap.draw(source, in: CGRect(x: 0, y: 0, width: side, height: side))
         guard let data = bitmap.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
-        return (0..<3).flatMap { row in
-            (0..<3).map { column -> Color in
+        let regions = (0..<3).flatMap { row in
+            (0..<3).map { column -> NSColor in
                 // Weighted toward the region's vivid pixels, so a black or white edge doesn't wash
                 // its color out.
                 var red = 0.0, green = 0.0, blue = 0.0, total = 0.0
@@ -269,11 +273,19 @@ enum WaveformGradient {
                         total += weight
                     }
                 }
-                let mixed = NSColor(srgbRed: red / total, green: green / total, blue: blue / total, alpha: 1)
-                return Color(
-                    hue: mixed.hueComponent, saturation: min(mixed.saturationComponent * 0.8, 0.6),
-                    brightness: 0.8 + 0.2 * mixed.brightnessComponent)
+                return NSColor(srgbRed: red / total, green: green / total, blue: blue / total, alpha: 1)
             }
+        }
+        let count = CGFloat(regions.count)
+        let mean = regions.reduce((0.0, 0.0, 0.0)) { ($0.0 + $1.redComponent / count, $0.1 + $1.greenComponent / count, $0.2 + $1.blueComponent / count) }
+        return regions.map { region in
+            let t = blending
+            let blended = NSColor(
+                srgbRed: region.redComponent + (mean.0 - region.redComponent) * t, green: region.greenComponent + (mean.1 - region.greenComponent) * t,
+                blue: region.blueComponent + (mean.2 - region.blueComponent) * t, alpha: 1)
+            return Color(
+                hue: blended.hueComponent, saturation: min(blended.saturationComponent * 0.8, 0.6),
+                brightness: 0.8 + 0.2 * blended.brightnessComponent)
         }
     }
 }
