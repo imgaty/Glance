@@ -123,7 +123,9 @@ struct ActivitiesTests {
             "device_not_connected":[{"iPad":{}}]}]}
             """.utf8)
         let connected = DeviceWatch.connected(in: report)
-        #expect(connected["airpods pro"] == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024))
+        #expect(
+            connected["airpods pro"]
+                == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024, levels: .init(left: 31, right: 39, chargingCase: 42)))
         // Listed again for the case alone, they keep their earbuds' battery and model.
         let twice = DeviceWatch.connected(
             in: Data(
@@ -131,12 +133,14 @@ struct ActivitiesTests {
                 {"SPBluetoothDataType":[{"device_connected":[{"Airpods Pro":{"device_batteryLevelLeft":"31%","device_batteryLevelRight":"39%",
                 "device_productID":"0x2024"}},{"Airpods Pro":{"device_batteryLevelCase":"42%"}}]}]}
                 """.utf8))
-        #expect(twice["airpods pro"] == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024))
+        #expect(
+            twice["airpods pro"]
+                == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024, levels: .init(left: 31, right: 39, chargingCase: 42)))
         // Pictured as macOS pictures them, earbud by earbud, or a model it doesn't picture, none.
         #expect(DevicePictures.names(product: 0x2024) == ["airpod_left", "airpod_right"])
         #expect(DevicePictures.names(product: 0x201F) == ["B515d-Default"])
         #expect(DevicePictures.names(product: 0x2019).isEmpty)
-        #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil))
+        #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil, levels: .init(main: 80)))
         #expect(connected["ipad"] == nil)
         #expect(DeviceWatch.connected(in: Data("not json".utf8)).isEmpty)
         // As macOS names the models.

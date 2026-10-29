@@ -173,6 +173,16 @@ final class DeviceWatch {
     struct BluetoothInfo: Equatable, Sendable {
         var battery: Int?
         var product: Int?
+        /// Each part's level, as the Sound menu shows AirPods': each earbud's and the case's, or
+        /// the one battery of headphones that have one.
+        var levels = Levels()
+    }
+
+    struct Levels: Equatable, Sendable {
+        var left: Int?
+        var right: Int?
+        var chargingCase: Int?
+        var main: Int?
     }
 
     /// Each connected device in System Information's report, by its name in lowercase.
@@ -187,14 +197,19 @@ final class DeviceWatch {
                     func percent(_ key: String) -> Int? {
                         (info[key] as? String).flatMap { Int($0.trimmingCharacters(in: CharacterSet(charactersIn: "% "))) }
                     }
-                    let buds = [percent("device_batteryLevelLeft"), percent("device_batteryLevelRight")].compactMap { $0 }
-                    let battery = buds.min() ?? percent("device_batteryLevelMain") ?? percent("device_batteryLevelCase")
+                    let left = percent("device_batteryLevelLeft"), right = percent("device_batteryLevelRight")
+                    let main = percent("device_batteryLevelMain"), chargingCase = percent("device_batteryLevelCase")
+                    let buds = [left, right].compactMap { $0 }
+                    let battery = buds.min() ?? main ?? chargingCase
                     let product = (info["device_productID"] as? String).flatMap { Int($0.replacingOccurrences(of: "0x", with: ""), radix: 16) }
                     // AirPods are listed twice, the second time for their case alone: what the first
                     // told stays, the earbuds' battery and the model.
                     let earlier = found[name.lowercased()]
+                    let levels = Levels(
+                        left: left ?? earlier?.levels.left, right: right ?? earlier?.levels.right,
+                        chargingCase: chargingCase ?? earlier?.levels.chargingCase, main: main ?? earlier?.levels.main)
                     found[name.lowercased()] = BluetoothInfo(
-                        battery: buds.isEmpty ? earlier?.battery ?? battery : battery, product: product ?? earlier?.product)
+                        battery: buds.isEmpty ? earlier?.battery ?? battery : battery, product: product ?? earlier?.product, levels: levels)
                 }
             }
         }

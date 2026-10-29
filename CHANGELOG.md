@@ -109,6 +109,13 @@
 - Changed the volume slider in the sound output menu to show its knob while a
   finger drags it.
 
+### Player
+
+- Changed the sound output menu to look like the Mac's Sound menu: the playing
+  app's name and icon beside its volume, and each output in a circle, the one
+  playing in the accent color, with the Mac's own speakers first. AirPods show
+  each earbud's battery and the case's, and other headphones their one battery.
+
 ### Opening
 
 - Fixed the closed notch swelling under the pointer twice as much at its ends
