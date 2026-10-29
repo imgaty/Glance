@@ -119,7 +119,7 @@ final class SettingsWindowController {
 private final class SettingsWindow: NSWindow {
     override func sendEvent(_ event: NSEvent) {
         if [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type) {
-            if !NSApp.isActive { NSApp.activate() }
+            if !NSApp.isActive { AppWindows.comeForward() }
             if !isKeyWindow { makeKey() }
         }
         super.sendEvent(event)

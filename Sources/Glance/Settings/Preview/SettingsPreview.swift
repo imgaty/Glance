@@ -322,8 +322,11 @@ struct PreviewHeader: View {
         // As the page's groups are rounded.
         .clipShape(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous))
         .padding([.horizontal, .top], 20)
-        // A new layout reshapes the open notch in place, as the real one does.
-        .onChange(of: layout) { withAnimation(.spring(response: 0.5, dampingFraction: 1)) { preview.model.use(layout) } }
+        // A new layout reshapes the open notch in place, as the real one does; on a page without
+        // it, it simply takes it, rather than animating what can't be seen.
+        .onChange(of: layout) {
+            withAnimation(pane.showsPreview ? .spring(response: 0.5, dampingFraction: 1) : nil) { preview.model.use(layout) }
+        }
         // From a page that shows the notch, it closes (or opens) before your eyes; from one without
         // it, it's simply there, as the page wants it. The Tray page shows it open on the tray.
         .onChange(of: pane, initial: true) { old, new in

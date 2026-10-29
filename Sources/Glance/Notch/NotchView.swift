@@ -51,12 +51,6 @@ enum GlassLook {
     /// glass and it turns opaque near the end. The top is black whatever this is.
     static let floor = 0.35
     static func black(_ darkness: Double) -> Double { floor + (1 - floor) * darkness * darkness }
-    /// On the tray, the least the glass blurs what's behind it, whatever it's set to: enough for
-    /// the row and its name to read over a busy window, as a menu's glass does.
-    static let trayBlur = 0.55
-    /// On the tray, the least black over the glass: the items' names are words to read, and Apple
-    /// keeps words on its frosted glass, so it's dimmed further than the player.
-    static let trayBlack = 0.6
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
@@ -421,6 +415,15 @@ final class NotchModel: ObservableObject {
     }
 }
 
+/// The Dynamic Island's bounce as its activities expand: past its size, by about a twentieth, and
+/// back, a bounce that's seen. With Reduce Motion on, straight to its size.
+enum NotchMotion {
+    static var expand: Animation {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)
+    }
+}
+
 /// How the notch moves between its states, the same on screen and in Settings' preview.
 extension NotchModel {
     func peek() {
@@ -435,9 +438,9 @@ extension NotchModel {
         }
     }
 
-    /// Critically damped: it grows straight to its size, never past it.
+    /// With the Dynamic Island's spring, as its activities expand (see `NotchMotion`).
     func open() {
-        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+        withAnimation(NotchMotion.expand) {
             state = .open
             proximity = 0
             pop = false
@@ -543,7 +546,6 @@ struct NotchView: View {
         let heroOpen = isOpen && !expandedShown
         let playerShown = heroOpen && !onTray
         let trayShown = heroOpen && onTray
-        let glassBlur = trayShown ? max(blur, GlassLook.trayBlur) : blur
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed && !tall ? 1 : 0
@@ -655,7 +657,6 @@ struct NotchView: View {
                 .islandFade(heroOpen || artworkShown && !expandedShown)
                 .modifier(PageFade(hidden: heroOpen && onTray))
                 .environment(\.notchControls, !trayShown)
-                // Over the tray, though unseen there: clicks go through it to the tray's items.
                 .allowsHitTesting(places == nil && !trayShown)
             HeroWaveform(
                 isOpen: heroOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
@@ -674,7 +675,7 @@ struct NotchView: View {
         .environment(\.lyricsControl, LyricsControl(shown: model.showsLyrics, available: model.songPlaying && lyricsOn, toggle: toggleLyrics))
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
-            if !lyricsOn { withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics = false } }
+            if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
         }
         // Liquid Glass takes a new size at once, while a frame's size otherwise animates only in
         // the picture, so the glass and the notch's black and outline would part as it changes size
@@ -710,14 +711,11 @@ struct NotchView: View {
                     // Clear Liquid Glass under black, as dark as set, blurring what's behind it as much as set.
                     Color.clear
                         .glassEffect(.clear, in: shape)
-                        .background(GlassBlur(radius: GlassLook.blur(glassBlur)))
+                        .background(GlassBlur(radius: GlassLook.blur(blur)))
                         .mask { WithoutFlares(flare: m.flare) }
                         .mask { shape }
                         .opacity(visible)
-                    shape.fill(.black.opacity((trayShown ? max(GlassLook.black(darkness), GlassLook.trayBlack) : GlassLook.black(darkness)) * visible))
-                        // The tray's darker glass is there as the tray arrives, as its blur is,
-                        // rather than following the page's slower slide.
-                        .animation(.easeOut(duration: 0.15), value: trayShown)
+                    shape.fill(.black.opacity(GlassLook.black(darkness) * visible))
                 }
             }
         }
@@ -838,9 +836,10 @@ struct NotchView: View {
     /// How far a page slides as the other takes its place.
     private var pageShift: CGFloat { reduceMotion ? 0 : 28 }
 
-    /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
+    /// The lyrics open beside the player, widening the notch with the Dynamic Island's spring, from
+    /// the waveform or a lyrics button.
     private func toggleLyrics() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics.toggle() }
+        withAnimation(NotchMotion.expand) { model.lyrics.toggle() }
     }
 
     /// The open player's size with the lyrics beside it while they show, which they show in.

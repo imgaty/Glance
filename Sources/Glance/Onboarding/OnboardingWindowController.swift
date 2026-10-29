@@ -76,19 +76,26 @@ final class OnboardingWindowController {
 /// Settings and onboarding bring in the Dock icon and menu bar, which leave with the last of them.
 @MainActor
 enum AppWindows {
-    /// Shows the window in front of every app's windows. Glance is rarely the active app (it runs
-    /// in the background), and macOS may decline to activate it, so the window doesn't wait for that.
+    /// Shows the window in front of every app's windows, with Glance the app in use. Glance is
+    /// rarely the active app (it runs in the background), and asked politely, macOS can take a
+    /// second or more to let it come forward, the window drawn behind meanwhile, gray: asked for by
+    /// the user, it comes forward at once.
     static func bringForward(_ window: NSWindow) {
         NSApp.setActivationPolicy(.regular)
         window.orderFrontRegardless()
         window.makeKey()
-        NSApp.activate()
+        comeForward()
         // Just after turning into an app with a Dock icon, macOS can let the first request go by.
         DispatchQueue.main.async {
             guard window.isVisible else { return }
-            if !NSApp.isActive { NSApp.activate() }
+            if !NSApp.isActive { comeForward() }
             window.makeKeyAndOrderFront(nil)
         }
+    }
+
+    /// Glance made the app in use, whatever app is: only ever for what the user asked for.
+    static func comeForward() {
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     static func didClose(_ window: NSWindow) {

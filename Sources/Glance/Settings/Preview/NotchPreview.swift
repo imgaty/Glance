@@ -54,7 +54,7 @@ struct NotchPreview: View {
                 }, scale: scale)
             ZStack(alignment: .top) {
                 ScreenPicture(top: top, size: CGSize(width: proxy.size.width / scale, height: proxy.size.height / scale)) {
-                    ApplePage(scrolls: !still)
+                    ApplePage(scrolls: !still, scale: scale)
                 } notch: {
                     // Its sizes change as a whole: drawn smaller, the glass otherwise loses its place
                     // as the notch changes size, and stays there.
@@ -263,15 +263,18 @@ private struct TryItPointer: View {
 /// display shown above (or with a given background), at the top of that display's screen, over a
 /// window below the menu bar, as the preview above shows it.
 struct NotchThumbnail: View {
+    let layout: PlayerLayout
     let display: String
     let top: ScreenTop
     let background: MusicBackground?
     @StateObject private var model: NotchModel
     @Environment(\.shownPage) private var shownPage
     @Environment(\.settingsPage) private var page
+    @Environment(\.notchPaused) private var paused
 
     init(layout: PlayerLayout, display: String, background: MusicBackground? = nil) {
         let top = ScreenTop(NSScreen.with(id: display) ?? NSScreen.main)
+        self.layout = layout
         self.display = display
         self.top = top
         self.background = background
@@ -279,6 +282,9 @@ struct NotchThumbnail: View {
     }
 
     var body: some View {
+        let hidden = page != nil && shownPage.map { $0.page != page } == true
+        // Still where asked, or on a page not shown.
+        let still = paused || hidden
         GeometryReader { proxy in
             let size = model.openSize
             let scale = proxy.size.width / (size.width + PlayerLayout.cornerRadius * 2 + 20)
@@ -293,8 +299,7 @@ struct NotchThumbnail: View {
                 } notch: {
                     NotchView(model: model, display: display, background: background)
                         .allowsHitTesting(false)
-                        // Still on a page not shown.
-                        .environment(\.notchPaused, page != nil && shownPage.map { $0.page != page } == true)
+                        .environment(\.notchPaused, still)
                         .environment(\.notchThumbnail, true)
                 }
                 .scaleEffect(scale, anchor: .top)
@@ -305,5 +310,10 @@ struct NotchThumbnail: View {
             .drawingGroup()
         }
         .allowsHitTesting(false)
+        // A new layout reshapes the same notch, rather than building the picture again, which took a
+        // moment felt in the click that chose it; on a page not shown, once its page shows.
+        .onChange(of: "\(layout) \(hidden)") {
+            if !hidden, model.layout != layout { model.use(layout) }
+        }
     }
 }

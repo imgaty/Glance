@@ -12,7 +12,10 @@ Glance's current, planned, and rejected features.
 
 Whatever is playing, in almost any app, with its cover, a progress bar to drag
 through the song, and buttons to play, pause and skip. You choose in Settings
-which apps show. See the [User Manual](USER-MANUAL.md#the-player).
+which apps show. Click the cover to go where it plays from: its browser tab, or
+the playlist it plays from in Spotify or Music. While Spotify's DJ chooses the
+music, its symbol takes a button's place, moving as the DJ talks. See the
+[User Manual](USER-MANUAL.md#the-player).
 
 ### Tray
 
@@ -38,7 +41,7 @@ and hold it for its menu. See the
 ### Layouts and backgrounds
 
 Two layouts and four backgrounds for the player, on Liquid Glass or a blur, in
-the cover's colors or your Mac's accent color.
+the cover's colors or your Mac's accent color, pulsing with the beat.
 
 ### Live Activities
 
@@ -78,7 +81,8 @@ Glance checks for a new version once a day and installs it on its own. See the
 later.
 
 **Shuffle, repeat and favorites.** They work in `Music` and `Spotify`
-(favorites in `Music` only); for other apps the buttons show dimmed.
+(favorites in `Music` only); for other apps, and in `Spotify` while its DJ or a
+podcast plays, the buttons show dimmed.
 
 **Copies from other devices.** What you copy on an iPhone or iPad, through
 Universal Clipboard, isn't kept in the tray.

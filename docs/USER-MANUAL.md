@@ -74,7 +74,7 @@ Reduce Motion on, they only fade.
 | Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away (see [Live Activities](#live-activities)) |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
 | Swipe left or right with three fingers, on the open notch | Switches to the tray, and back to the player (with `Accessibility` allowed) |
-| Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead |
+| Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead, and, scrolled on past the row's end, goes back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
 | Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |
 | ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
@@ -83,6 +83,9 @@ Reduce Motion on, they only fade.
 The notch opens on the player. The tray is to its right: swipe toward it with
 three fingers on the open notch, or hold Shift and scroll, and back to return.
 Three fingers anywhere else still move between desktops.
+
+Pulled down with two fingers, the open notch stretches, and settles back as you
+let go. The player, the tray and the lyrics stay where they are.
 
 Opened with a shortcut, the notch stays open until you press it again, click
 elsewhere, or move the pointer onto the notch and away. It takes the keyboard
@@ -132,7 +135,15 @@ the display are macOS's, as they are on the trackpad.
 The open notch shows the cover, the song's name and artist, a progress bar, and
 the controls. Drag the progress bar to move through the song. With
 **Show app icon on artwork** on, the playing app's icon sits on the cover's
-corner; click it to switch to that app.
+corner.
+
+The cover lifts gently under the pointer, with a soft shadow, squashes as it's
+pressed, and springs back as it's let go.
+Click the cover, or the app's icon, to go where the music plays from: the tab
+playing it in Safari, Chrome, Brave, Edge or Vivaldi, the playlist or album
+Spotify plays it from, or the song in the playlist Music plays it from. Other
+browsers switch to the tab with `Accessibility` allowed, in the windows on the
+current desktop. Otherwise, it switches to the app.
 
 Behind the player, the cover's colors drift slowly through one another and
 pulse on the music's beat, as you hear it: on AirPods and other wireless
@@ -160,6 +171,11 @@ Beside the playback controls are two buttons of your choice. Choose them in
 | `Sound Output` | Chooses where the sound plays, and the app's volume |
 | `Lyrics` | Shows the song's words |
 | `None` | Leaves the place empty |
+
+While Spotify's DJ chooses the music, its symbol takes the left button's place,
+as it takes shuffle's in Spotify, and its corner moves while the DJ talks. Click
+it to switch to Spotify. Shuffle and repeat show dimmed then, because Spotify
+doesn't offer them with the DJ or a podcast.
 
 ### Sound output and volume
 
@@ -514,9 +530,10 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | Permission | Why |
 | --- | --- |
 | `Screen & System Audio Recording` (audio only) | The waveform, the colors behind the player pulsing on the beat, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
-| `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
-| `Automation` for `Spotify` | The shuffle, repeat and volume controls |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; and taking macOS's own timer out of the menu bar while the notch shows it |
+| `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
+| `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
+| `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; taking macOS's own timer out of the menu bar while the notch shows it; and switching to the tab that's playing in other browsers |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>

@@ -21,7 +21,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Glance changes shuffle, repeat, favorites and volume in Music and Spotify.</string>
+	<string>Glance changes shuffle, repeat, favorites and volume in Music and Spotify, and finds the browser tab that's playing.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Glance measures how loud the playing app is to move the waveform, and turns apps down for the volume slider. Nothing is recorded or leaves your Mac.</string>
 	<key>NSHighResolutionCapable</key>

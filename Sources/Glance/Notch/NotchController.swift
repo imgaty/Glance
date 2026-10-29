@@ -126,6 +126,8 @@ final class NotchController {
     private var pressBeganClosed = false
     /// Fits the timer's wings to its seconds as its last minute starts.
     private var timerWingTask: Task<Void, Never>?
+    /// A new layout chosen while the notch is closed, taken once things have settled.
+    private var relayoutTask: Task<Void, Never>?
     /// Pressed on one of a done timer's buttons, which acts rather than opening the notch.
     private var pressedButton: AlertButton?
     /// What keeps the open notch open with the pointer off it.
@@ -165,6 +167,8 @@ final class NotchController {
     /// A sideways swipe on the tray was let go and the row glides on.
     private var trayGliding = false
     private var glideCheck: Task<Void, Never>?
+    /// When a wheel with Shift held brought the tray's row to its end toward the player.
+    private var trayEdgeSince: Date?
 
     /// A full-screen app covers this display and the user chose to hide the notch then. Like the
     /// menu bar there, it stays out of sight until the pointer reaches the top edge, slides down
@@ -548,11 +552,22 @@ final class NotchController {
         }
     }
 
-    /// Switches to the layout chosen in Settings, in place: the notch reshapes and the player's
-    /// pieces move to their new places.
+    /// Switches to the layout chosen in Settings, in place: open, the notch reshapes and the
+    /// player's pieces move to their new places. Closed, nothing of the new layout shows: it's taken
+    /// once the click that chose it has settled, rather than adding to the moment that click takes,
+    /// or as the notch opens, if that's sooner.
     func relayout() {
+        relayoutTask?.cancel()
         guard PlayerLayout.current != model.layout else { return }
-        withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.use(PlayerLayout.current) }
+        guard model.state == .open else {
+            relayoutTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(0.6))
+                guard let self, !Task.isCancelled else { return }
+                self.model.use(PlayerLayout.current)
+            }
+            return
+        }
+        withAnimation(NotchMotion.expand) { model.use(PlayerLayout.current) }
     }
 
     /// Something the Mac announces: the wings widen to show it, and fold back once it's said, with
@@ -1053,6 +1068,10 @@ final class NotchController {
         withTransaction(still) {
             // What an announcement folded away for shows in the open notch.
             if model.alert == nil { model.switching = false }
+            if model.layout != PlayerLayout.current {
+                relayoutTask?.cancel()
+                model.use(PlayerLayout.current)
+            }
             model.bubbleHovered = nil
             model.bubblePressed = nil
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
@@ -1446,15 +1465,15 @@ final class NotchController {
             }
             return
         }
+        // Scrolling with Shift held goes sideways between the pages, as Shift makes any scroll go
+        // sideways: toward the tray, which is to the right, or back to the player.
+        let switches = turnsPages(event.modifierFlags.contains(.shift))
         // A mouse's wheel on a tray with more than fits scrolls its row, as a wheel scrolls any row on
         // a Mac: down or with Shift, toward its end; up, back. A notch at a time, gliding there.
         if onTray, event.phase.isEmpty, trayReach > 0 {
             let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
-            return wheelTray(by: along * (event.hasPreciseScrollingDeltas ? 1 : 24))
+            return wheelTray(by: along * (event.hasPreciseScrollingDeltas ? 1 : 24), switches: switches)
         }
-        // Scrolling with Shift held goes sideways between the pages, as Shift makes any scroll go
-        // sideways: toward the tray, which is to the right, or back to the player.
-        let switches = turnsPages(event.modifierFlags.contains(.shift))
         // A wheel, a notch at a time.
         if switches, event.phase.isEmpty {
             let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
@@ -1640,10 +1659,11 @@ final class NotchController {
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
     }
 
-    /// To the other page, sliding, the notch taking the new page's width.
+    /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
+    /// spring.
     private func turn(to page: NotchPage) {
         guard model.page != page || model.expanded != nil else { return }
-        withAnimation(.spring(response: 0.42, dampingFraction: 1)) {
+        withAnimation(NotchMotion.expand) {
             model.expanded = nil
             model.page = page
             model.pageNudge = 0
@@ -1663,12 +1683,30 @@ final class NotchController {
         withTransaction(still) { model.trayScroll = min(max(next, -48), reach + 48) }
     }
 
-    /// A wheel's notch: the row glides there, never past its ends.
-    private func wheelTray(by delta: CGFloat) {
+    /// A wheel's notch: the row glides there, never past its ends. With Shift held, scrolling on
+    /// past its end toward the player turns back to it, as Shift turns the pages everywhere else;
+    /// only after a moment there, so a wheel spun along the row stops at its end first.
+    private func wheelTray(by delta: CGFloat, switches: Bool) {
+        // Toward the player: back along the row, or onward if the pages are turned around.
+        let towardPlayer = delta != 0 && (delta < 0) == switchReversed
+        let edge = switchReversed ? trayReach : 0
+        if switches, towardPlayer, abs(model.trayScroll - edge) < 0.5 {
+            if let since = trayEdgeSince, Date.now.timeIntervalSince(since) > Self.edgePause {
+                trayEdgeSince = nil
+                turn(to: .player)
+            } else if trayEdgeSince == nil {
+                trayEdgeSince = .now
+            }
+            return
+        }
         let target = min(max(model.trayScroll - delta, 0), trayReach)
+        trayEdgeSince = switches && towardPlayer && abs(target - edge) < 0.5 ? .now : nil
         guard target != model.trayScroll else { return }
         withAnimation(.smooth(duration: 0.2)) { model.trayScroll = target }
     }
+
+    /// How long a wheel rests at the row's end before scrolling on turns the page.
+    private static let edgePause = 0.25
 
     /// Back within the row's ends, springing.
     private func settleTray() {

@@ -10,7 +10,8 @@ import SwiftUI
 
 /// The one artwork that flies between the closed notch and the open player, its corners rounding
 /// from the closed notch's to the player's as it grows. The playing app's icon sits on its corner
-/// in the player.
+/// in the player. Clicked, the cover or the icon goes where it plays from: its tab in the browser,
+/// the playlist it plays from.
 struct HeroArtwork: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var motion = MotionArtworkStore.shared
@@ -24,6 +25,10 @@ struct HeroArtwork: View {
     @Environment(\.notchThumbnail) private var thumbnail
     /// With Reduce Motion on, the cover is its picture, never the moving one.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The pointer on the open cover, which lifts it a little and lights it, and a click held on it,
+    /// which squashes it down, as a soft button (see `CoverMotion`).
+    @State private var coverHovered = false
+    @State private var coverPressed = false
 
     /// The app icon's tile on the cover, one size in every layout, and how far past the cover's
     /// corner its corner is.
@@ -34,6 +39,13 @@ struct HeroArtwork: View {
         let size = layout.artwork
         let video =
             animated && !nowPlaying.isDemo && !reduceMotion ? motion.video(artist: nowPlaying.artist, album: nowPlaying.album) : nil
+        // Under the pointer, it lights and rises, with a soft shadow that spreads as it lifts and
+        // draws in close as it's pressed down.
+        let light: Double = coverHovered ? (coverPressed ? 0.04 : 0.08) : 0
+        let shadow: Double = coverHovered ? (coverPressed ? 0.3 : 0.45) : 0
+        let shadowRadius: CGFloat = coverHovered ? (coverPressed ? 4 : 14) : 6
+        let shadowY: CGFloat = coverHovered ? (coverPressed ? 1.5 : 7) : 2
+        let rise: CGFloat = coverHovered && !coverPressed && !reduceMotion ? -1.5 : 0
         // Exactly the square it's given: artwork that isn't square, like a video's thumbnail, is
         // cropped to fill it.
         Color.clear
@@ -70,11 +82,16 @@ struct HeroArtwork: View {
             }
             // Like Music's mini player: the artwork dims, and settles back a little, while paused.
             .overlay(Color.black.opacity(nowPlaying.hasMedia && !nowPlaying.isPlaying ? 0.4 : 0))
+            .overlay(Color.white.opacity(light))
             .clipShape(
                 ArtworkShape(
                     small: restingSide, smallRadius: restingSide * ArtworkShape.restingRadius,
                     large: size, largeRadius: layout.artworkRadius)
             )
+            .shadow(color: .black.opacity(shadow), radius: shadowRadius, y: shadowY)
+            // The light and the shadow ease in and out, without the cover's bounce.
+            .animation(CoverMotion.light, value: coverHovered)
+            .animation(CoverMotion.light, value: coverPressed)
             .onChange(of: video) { motionReady = false }
             // Looked up when the player opens on a new album.
             .onChange(
@@ -87,8 +104,9 @@ struct HeroArtwork: View {
                         albumID: nowPlaying.albumID, artwork: nowPlaying.artwork)
                 }
             }
+            .overlay { sourceButton }
             .overlay {
-                // The playing app, on the artwork's corner. Click it to switch to the app. One size
+                // The playing app, on the artwork's corner. Click it to go there, as the cover. One size
                 // always, whatever the layout or the cover's size as it flies; its corner just past the
                 // cover's, which it moves with. An icon's tile fills four fifths of its image.
                 if let icon = nowPlaying.appIcon {
@@ -96,7 +114,7 @@ struct HeroArtwork: View {
                         let tile = Self.badgeTile, past = Self.badgePast
                         let mark = tile / 0.8
                         Button {
-                            nowPlaying.openApp()
+                            nowPlaying.openSource()
                         } label: {
                             Image(nsImage: icon)
                                 .resizable()
@@ -119,6 +137,64 @@ struct HeroArtwork: View {
             }
             .scaleEffect(isOpen && nowPlaying.hasMedia && !nowPlaying.isPlaying ? 0.92 : 1)
             .animation(.spring(response: 0.45, dampingFraction: 0.8), value: nowPlaying.isPlaying)
+            // Lifted under the pointer, squashed while held, sprung back past its lift when let go.
+            .scaleEffect(x: coverScale.width, y: coverScale.height)
+            .offset(y: rise)
+            .animation(CoverMotion.hover, value: coverHovered)
+            .animation(coverPressed ? CoverMotion.press : CoverMotion.release, value: coverPressed)
+            .onChange(of: isOpen) { _, open in
+                if !open { coverHovered = false; coverPressed = false }
+            }
+    }
+
+    /// Lifted under the pointer, squashed while held; with Reduce Motion on, it only lights.
+    private var coverScale: CGSize {
+        guard !reduceMotion else { return CGSize(width: 1, height: 1) }
+        if coverPressed { return CoverMotion.squashed }
+        return coverHovered ? CoverMotion.lifted : CGSize(width: 1, height: 1)
+    }
+}
+
+/// How the open cover answers the pointer, as a soft button does: it lifts gently, with a little
+/// bounce; pressed, it squashes down quickly, a little more in height than in width; let go, it
+/// springs back on a looser spring, past its lift, and settles.
+enum CoverMotion {
+    static let hover = Animation.spring(response: 0.45, dampingFraction: 0.55)
+    static let press = Animation.spring(response: 0.16, dampingFraction: 0.82)
+    static let release = Animation.spring(response: 0.48, dampingFraction: 0.45)
+    /// The light on it and its shadow.
+    static let light = Animation.easeOut(duration: 0.3)
+
+    static let lifted = CGSize(width: 1.04, height: 1.04)
+    static let squashed = CGSize(width: 0.96, height: 0.935)
+}
+
+extension HeroArtwork {
+    /// The open cover goes where it plays from (see `PlayingSource`).
+    private var sourceButton: some View {
+        let clickable = isOpen && nowPlaying.hasMedia
+        return Button {
+            nowPlaying.openSource()
+        } label: {
+            Color.clear.contentShape(Rectangle())
+        }
+        .buttonStyle(PressReporting(pressed: $coverPressed))
+        .onHover { coverHovered = $0 && clickable }
+        .notchControl(enabled: clickable)
+        .allowsHitTesting(clickable)
+        .help(nowPlaying.appBundleID.flatMap(InstalledApps.name).map { "Show in \($0)" } ?? "Show Where It's Playing")
+        .accessibilityLabel("Show Where It's Playing")
+        .accessibilityHidden(!clickable)
+    }
+}
+
+/// A button that tells whether it's held down, so what it sits on can press in as a whole.
+private struct PressReporting: ButtonStyle {
+    @Binding var pressed: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, down in pressed = down }
     }
 }
 
