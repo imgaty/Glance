@@ -172,3 +172,10 @@ final class Activities: ObservableObject {
         }
     }
 }
+
+extension Color {
+    /// A color as the iPhone's own screenshots hold it, in Display P3, from its 0 to 255 values.
+    static func p3(_ red: Int, _ green: Int, _ blue: Int) -> Color {
+        Color(.displayP3, red: Double(red) / 255, green: Double(green) / 255, blue: Double(blue) / 255)
+    }
+}

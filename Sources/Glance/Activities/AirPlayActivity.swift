@@ -102,11 +102,12 @@ final class AirPlayWatch: ObservableObject {
 
 /// AirPlay as the iPhone's Screen Mirroring, measured from it, by the island's height: its symbol in
 /// the iPhone's muted blue, what it plays on in white, and a wide button in navy with blue words.
+/// Its colors are the iPhone's own, in Display P3.
 enum AirPlayLayout {
-    static let tint = Color(red: 0x52 / 255, green: 0x7D / 255, blue: 0xBE / 255)
-    static let buttonFill = Color(red: 0x16 / 255, green: 0x2B / 255, blue: 0x4B / 255)
-    static let buttonWords = Color(red: 0x60 / 255, green: 0x93 / 255, blue: 0xF8 / 255)
-    static let secondary = Color(red: 0xA1 / 255, green: 0xA0 / 255, blue: 0xA5 / 255)
+    static let tint = Color.p3(0x3B, 0x69, 0xB4)
+    static let buttonFill = Color.p3(0x12, 0x20, 0x3B)
+    static let buttonWords = Color.p3(0x4B, 0x80, 0xF1)
+    static let secondary = Color.p3(0x93, 0x92, 0x98)
     // Beside the camera: the symbol and the device, each as far in from its end.
     static let symbol: CGFloat = 0.6
     static let device: CGFloat = 0.4

@@ -148,14 +148,14 @@ final class AirDropWatch: NSObject, ObservableObject {
 /// AirDrop as the iPhone's Dynamic Island draws it, measured from it, by the island's height: in
 /// its light blue, its symbol beside the camera and a ring filling over a navy one; opened, as tall
 /// as the Alarm, a picture of the file at the left end, the ring around a stop button at the right.
+/// Its colors are the iPhone's own, in Display P3.
 enum AirDropLayout {
-    static let tint = Color(red: 0x57 / 255, green: 0xA9 / 255, blue: 0xF8 / 255)
-    static let track = Color(red: 0x13 / 255, green: 0x42 / 255, blue: 0x7B / 255)
-    static let badgeFill = Color(red: 0x25 / 255, green: 0x25 / 255, blue: 0x28 / 255)
-    static let badgeGlyph = Color(red: 0x3C / 255, green: 0x8F / 255, blue: 0xE6 / 255)
-    static let secondary = Color(red: 0x91 / 255, green: 0x91 / 255, blue: 0x91 / 255)
+    static let tint = Color.p3(0x45, 0x98, 0xF8)
+    static let track = Color.p3(0x11, 0x31, 0x6A)
+    static let badgeFill = Color.p3(0x1E, 0x1F, 0x1E)
+    static let secondary = Color.p3(0x85, 0x85, 0x85)
     // Beside the camera.
-    static let symbol: CGFloat = 0.58
+    static let symbol: CGFloat = 0.59
     static let symbolEdge: CGFloat = 0.21
     static let ring: CGFloat = 0.62
     static let ringLine: CGFloat = 0.075
@@ -229,7 +229,7 @@ struct AirDropMark: View {
     var body: some View {
         let h = restingHeight
         ZStack {
-            AirDropSymbol.glyph(size: h * AirDropLayout.symbol)
+            AirDropSymbol.glyph(size: h * AirDropLayout.symbol, weight: .medium)
                 .foregroundStyle(AirDropLayout.tint)
                 .padding(.leading, h * AirDropLayout.symbolEdge)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -319,7 +319,7 @@ struct ExpandedAirDropView: View {
     }
 
     /// The file, as macOS pictures it, or its kind's icon, with AirDrop's badge, a dark tile with
-    /// its symbol in blue, on its corner.
+    /// the iPhone's AirDrop glyph, on its corner.
     private func preview(_ h: CGFloat) -> some View {
         let side = h * AirDropLayout.thumb
         let badge = h * AirDropLayout.badge
@@ -330,14 +330,67 @@ struct ExpandedAirDropView: View {
             .frame(width: side, height: side)
             .clipShape(RoundedRectangle(cornerRadius: h * AirDropLayout.thumbCorner, style: .continuous))
             .overlay(alignment: .bottomTrailing) {
-                AirDropSymbol.glyph(size: badge * 0.64)
-                    .foregroundStyle(AirDropLayout.badgeGlyph)
-                    .frame(width: badge, height: badge)
+                AirDropBadgeGlyph(side: badge)
                     .background(RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous).fill(AirDropLayout.badgeFill))
                     .overlay(
                         RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous)
                             .strokeBorder(.black.opacity(0.6), lineWidth: h * 0.03))
                     .offset(x: h * AirDropLayout.badgeOut, y: h * AirDropLayout.badgeOut)
             }
+    }
+}
+
+/// AirDrop's glyph on the badge, as the iPhone draws it: three blue discs one inside another, each
+/// lighter at the top, the dot brightest, and a dark wedge opening down from just under the dot.
+struct AirDropBadgeGlyph: View {
+    /// The badge's side.
+    let side: CGFloat
+
+    /// Across each disc, and the wedge's opening, as the badge's side measures them.
+    static let outer: CGFloat = 0.826
+    static let middle: CGFloat = 0.5
+    static let dot: CGFloat = 0.207
+    static let wedge: Angle = .degrees(86)
+    static let outerShades: (Color, Color) = (.p3(0x1F, 0x49, 0x74), .p3(0x0F, 0x2A, 0x44))
+    static let middleShades: (Color, Color) = (.p3(0x2D, 0x72, 0xA9), .p3(0x22, 0x50, 0x7C))
+    static let dotShades: (Color, Color) = (.p3(0x3F, 0x86, 0xF0), .p3(0x2E, 0x7A, 0xDD))
+    static let wedgeFill = Color.p3(0x10, 0x10, 0x0F)
+
+    var body: some View {
+        ZStack {
+            disc(Self.outer, Self.outerShades)
+            disc(Self.middle, Self.middleShades)
+            // The wedge over the two bands, inside the outer disc, from just under the dot.
+            Wedge(apex: side * Self.dot / 2, opening: Self.wedge)
+                .fill(Self.wedgeFill)
+                .clipShape(Circle().size(width: side * Self.outer, height: side * Self.outer)
+                    .offset(x: side * (1 - Self.outer) / 2, y: side * (1 - Self.outer) / 2))
+            disc(Self.dot, Self.dotShades)
+        }
+        .frame(width: side, height: side)
+    }
+
+    private func disc(_ across: CGFloat, _ shades: (Color, Color)) -> some View {
+        Circle()
+            .fill(LinearGradient(colors: [shades.0, shades.1], startPoint: .top, endPoint: .bottom))
+            .frame(width: side * across, height: side * across)
+    }
+
+    /// From a point under the middle, opening downward, wider than the badge.
+    private struct Wedge: Shape {
+        let apex: CGFloat
+        let opening: Angle
+
+        func path(in rect: CGRect) -> Path {
+            let top = CGPoint(x: rect.midX, y: rect.midY + apex)
+            let reach = rect.height
+            let spread = reach * tan(opening.radians / 2)
+            var path = Path()
+            path.move(to: top)
+            path.addLine(to: CGPoint(x: top.x - spread, y: top.y + reach))
+            path.addLine(to: CGPoint(x: top.x + spread, y: top.y + reach))
+            path.closeSubpath()
+            return path
+        }
     }
 }

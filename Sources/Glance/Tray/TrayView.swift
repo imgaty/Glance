@@ -287,10 +287,10 @@ private struct TileLayout<Icon: View>: View {
 /// `AirDropWatch`). Its app icon, which macOS draws in the icon style chosen in Appearance settings
 /// (a gray glass tile with Clear), sat apart from everything around it.
 enum AirDropSymbol {
-    /// The symbol, at a size as a font's. Apple keeps it among its own symbols, out of the public
-    /// list, so it's asked for by its private name; failing that, the app icon stands in.
-    @ViewBuilder static func glyph(size: CGFloat) -> some View {
-        if let symbol = symbol?.withSymbolConfiguration(.init(pointSize: size, weight: .regular)) {
+    /// The symbol, at a size and weight as a font's. Apple keeps it among its own symbols, out of the
+    /// public list, so it's asked for by its private name; failing that, the app icon stands in.
+    @ViewBuilder static func glyph(size: CGFloat, weight: NSFont.Weight = .regular) -> some View {
+        if let symbol = symbol?.withSymbolConfiguration(.init(pointSize: size, weight: weight)) {
             Image(nsImage: symbol).renderingMode(.template)
         } else {
             Image(nsImage: icon).resizable().frame(width: size * 1.5, height: size * 1.5)
