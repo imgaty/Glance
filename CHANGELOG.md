@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 25 October 2026`
+`Created: 11 October 2026` | `Last updated: 29 October 2026`
 
 <br>
 
@@ -41,6 +41,12 @@
   for the lyrics without the Dynamic Island's bounce: it grows past its size and
   settles back, as the island does. With Reduce Motion on, it goes straight to
   its size.
+
+### Displays
+
+- Fixed `Hide in full screen` doing nothing on a Mac with a notch: apps in full
+  screen sit below the camera there, so the notch never noticed them. It now
+  hides whenever an app is in full screen, and comes back as the app leaves it.
 
 ### Settings
 
