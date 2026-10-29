@@ -30,9 +30,8 @@ final class NowPlaying: ObservableObject {
     /// The artwork tiny, blurred and vivid, for the backdrop and the glow. Scaled up it looks like
     /// a huge blur, for almost nothing.
     @Published private(set) var wash: NSImage?
-    /// The artwork's colors as the waveform's own gradient is made from them, as the iPhone's is:
-    /// blurred, each made light enough to read on black.
-    @Published private(set) var waveformColors: NSImage?
+    /// The gradient the waveform shows, made from the artwork's colors (see `WaveformGradient`).
+    @Published private(set) var waveformGradient: [Color]?
     @Published private(set) var appIcon: NSImage?
     /// The artwork's colors mixed into one, for the glow and the progress bar.
     @Published private(set) var accent = Color.white
@@ -453,7 +452,7 @@ final class NowPlaying: ObservableObject {
         artwork = image
         accent = image.flatMap(Self.accent(of:)) ?? .white
         wash = image.flatMap(Self.wash(of:))
-        waveformColors = wash.flatMap(AccentWash.readable)
+        waveformGradient = image.flatMap(WaveformGradient.colors(of:))
     }
 
     // MARK: Following Music and Spotify directly

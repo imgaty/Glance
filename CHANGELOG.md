@@ -118,10 +118,9 @@
 - Changed the cover's colors behind the player to move as the iPhone's do:
   softer patches of color, a little more vivid, drifting slowly through one
   another, two turning in place and two circling as they turn.
-- Changed the waveform to show the gradient made from the cover's colors, small,
-  drifting through its bars in step with the colors behind the player, lighter
-  and softer, as the iPhone's waveform does, in place of one color fading to
-  gray.
+- Changed the waveform to show a gradient made from the cover's colors, as the
+  iPhone's waveform does, each part of the cover's color in its part of the
+  gradient, lighter and softer, in place of one color fading to gray.
 - Added the cover's colors pulsing gently on the music's beat, as you hear it.
 - Changed the waveform to move more softly, as the iPhone's does: each bar
   eases toward its level over a tenth of a second or so, rather than leaping

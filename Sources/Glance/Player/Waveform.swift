@@ -33,7 +33,7 @@ struct HeroWaveform: View {
             Button(action: toggleLyrics) {
                 WaveformGlyph(
                     color: nowPlaying.accent(from: accentSource),
-                    colors: accentSource == .artwork ? nowPlaying.waveformColors : accentSource.nsColor.flatMap(AccentWash.waveform),
+                    gradient: accentSource == .artwork ? nowPlaying.waveformGradient : accentSource.nsColor.flatMap(WaveformGradient.colors),
                     isPlaying: nowPlaying.isPlaying && !paused,
                     folded: button && (hovering || contact.holds(demoPointer)), filled: lyricsShown, demo: nowPlaying.isDemo
                 )
@@ -55,16 +55,15 @@ struct HeroWaveform: View {
 
 /// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
 /// 1.3 times as wide as the gaps, and dots when nothing plays. As the iPhone fills its waveform,
-/// the bars are windows onto the player's own moving colors, the gradient made from the cover,
-/// small, drifting through them in step with the colors behind the player; or onto the chosen
-/// color's shades. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol for
-/// another: the bars draw together into a point and are gone, and the symbol springs out of it.
+/// the bars show a gradient made from the cover's colors (see `WaveformGradient`), or from the
+/// chosen color's shades, across all six at once. Folded, it becomes Apple's lyrics symbol, the way
+/// Apple swaps one symbol for another: the bars draw together into a point and are gone, and the
+/// symbol springs out of it.
 struct WaveformGlyph: View {
     @ObservedObject private var audio = AudioLevels.shared
     let color: Color
-    /// The colors whose gradient the bars show (see `AccentWash.readable`); without them, the
-    /// color alone.
-    var colors: NSImage? = nil
+    /// The nine colors of the gradient the bars show; without them, the color alone.
+    var gradient: [Color]? = nil
     let isPlaying: Bool
     var folded = false
     /// The lyrics are open: the bubble is filled, as Apple's is when lyrics show.
@@ -127,11 +126,10 @@ struct WaveformGlyph: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
     }
 
-    /// The cover's moving colors, or the color alone. Drawn this small, a few times a second is
-    /// enough for them to drift smoothly.
+    /// The gradient, or the color alone.
     @ViewBuilder private var paint: some View {
-        if let colors {
-            ArtworkSwirl(image: colors, active: isPlaying, demo: demo, frameRate: 15)
+        if let gradient, gradient.count == WaveformGradient.points.count {
+            MeshGradient(width: 3, height: 3, points: WaveformGradient.points, colors: gradient)
         } else {
             color
         }

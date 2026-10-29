@@ -185,8 +185,6 @@ struct ArtworkSwirl: View {
     let active: Bool
     /// The welcome tour's made-up song, whose beat is made up too.
     var demo = false
-    /// How often it's drawn while it moves: small, as in the waveform, it needs fewer.
-    var frameRate: Double = 30
     /// With Reduce Motion on, the colors stay where they are.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -194,7 +192,7 @@ struct ArtworkSwirl: View {
         GeometryReader { proxy in
             let width = proxy.size.width, height = proxy.size.height
             let side = max(width, height)
-            TimelineView(.animation(minimumInterval: 1.0 / frameRate, paused: !active || reduceMotion)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 let beat = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) : Double(AudioLevels.shared.beat)) : 0
                 ZStack {
