@@ -198,6 +198,11 @@ final class NotchModel: ObservableObject {
     @Published var hoveredButton: AlertButton?
     /// A full-screen app covers the display: around the notch it's all black.
     @Published var fullScreen = false
+
+    /// Collapsed in full screen, all black around it, the notch floats as the Dynamic Island's
+    /// capsule, outlined.
+    var floating: Bool { fullScreen && state != .open && !restingTall }
+
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
     /// player: AirDrop, the timer, the stopwatch, or AirPlay.
     @Published var expanded: Activity?
@@ -525,8 +530,10 @@ struct NotchView: View {
         let expandedShown = model.expandedShown
         // As tall as the Dynamic Island's expanded activities, it's black all through, as they are.
         let tall = isOpen ? model.expanded != nil : model.restingTall
-        // With wings out, their ends round as the Dynamic Island's do.
-        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0)
+        // With wings out, their ends round as the Dynamic Island's do; collapsed in full screen, it
+        // floats as the island's capsule.
+        let shape = NotchShape(
+            corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0, floating: model.floating ? 1 : 0)
         let onTray = trayOn && model.page == .tray
         // Open on the player, rather than on the tray.
         let heroOpen = isOpen && !expandedShown
@@ -789,9 +796,10 @@ struct NotchView: View {
     /// expands.
     private func keyLine(_ shape: NotchShape) -> some View {
         let tint = keyTint
-        let shown = tint != nil && model.fullScreen && model.state != .open && !model.restingTall
+        let shown = tint != nil && model.floating
         return KeyLine(notch: shape, width: model.closedSize.height * KeyLine.width)
-            .fill((tint ?? .clear).opacity(0.18))
+            .fill((tint ?? .clear).opacity(KeyLine.opacity))
+            .mask(alignment: .top) { KeyLine.fade(restingHeight: model.closedSize.height) }
             .animation(.easeOut(duration: 0.3)) { $0.opacity(shown ? 1 : 0) }
             .allowsHitTesting(false)
     }
@@ -999,10 +1007,13 @@ struct NotchShape: Shape {
     /// 1 for what's as tall as the Dynamic Island's expanded activities, more than twice the notch:
     /// its ends round right across, half its height, and its top keeps the notch's small flares.
     var tall: CGFloat = 0
+    /// 1 in full screen, all black around it: its flares draw in and its ends round right across,
+    /// top and bottom, so it's the Dynamic Island's capsule, as its outline shows.
+    var floating: CGFloat = 0
 
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(wingEnds, tall) }
-        set { (wingEnds, tall) = (newValue.first, newValue.second) }
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(wingEnds, tall), floating) }
+        set { ((wingEnds, tall), floating) = ((newValue.first.first, newValue.first.second), newValue.second) }
     }
 
     var island: Bool { corners.island }
@@ -1036,27 +1047,32 @@ struct NotchShape: Shape {
             let radius = min(radii.bottom, rect.width / 2, rect.height / 2)
             return RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect)
         }
-        let bottom = min(radii.bottom, body.width / 2, body.height - flare)
+        // Floating, its flares draw in, then its ends round into half circles, top and bottom: one
+        // after the other, so the two never meet halfway and leave a seam.
+        let round = min(body.height / 2, body.width / 2)
+        let top = round * max(floating * 2 - 1, 0)
+        let bottom = min(radii.bottom + (round - radii.bottom) * floating, body.width / 2, body.height - max(flare, top))
         let path = UnevenRoundedRectangle(
-            topLeadingRadius: 0, bottomLeadingRadius: bottom,
-            bottomTrailingRadius: bottom, topTrailingRadius: 0,
+            topLeadingRadius: top, bottomLeadingRadius: bottom,
+            bottomTrailingRadius: bottom, topTrailingRadius: top,
             style: .continuous
         ).path(in: body)
-        guard flare > 0.1 else { return path }
+        let reach = flare * max(1 - floating * 2, 0)
+        guard reach > 0.1 else { return path }
         // Each flare runs from the screen's edge into the body's side. Its handles sit closer to
         // the corner than a circle's would, which spreads the bend out like Apple's continuous
         // corners. It overlaps the body a point so they join without a seam.
         let handle: CGFloat = 0.62
         var flares = Path()
-        for (edge, side) in [(rect.minX, body.minX), (rect.maxX, body.maxX)] {
-            let inward: CGFloat = side > edge ? 1 : -1
+        for (side, inward) in [(body.minX, CGFloat(1)), (body.maxX, -1)] {
+            let edge = side - inward * reach
             flares.move(to: CGPoint(x: edge, y: rect.minY))
             flares.addLine(to: CGPoint(x: side + inward, y: rect.minY))
-            flares.addLine(to: CGPoint(x: side + inward, y: rect.minY + flare))
-            flares.addLine(to: CGPoint(x: side, y: rect.minY + flare))
+            flares.addLine(to: CGPoint(x: side + inward, y: rect.minY + reach))
+            flares.addLine(to: CGPoint(x: side, y: rect.minY + reach))
             flares.addCurve(
                 to: CGPoint(x: edge, y: rect.minY),
-                control1: CGPoint(x: side, y: rect.minY + flare * (1 - handle)),
+                control1: CGPoint(x: side, y: rect.minY + reach * (1 - handle)),
                 control2: CGPoint(x: edge + (side - edge) * handle, y: rect.minY))
             flares.closeSubpath()
         }

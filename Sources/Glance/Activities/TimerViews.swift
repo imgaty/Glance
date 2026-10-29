@@ -517,12 +517,16 @@ struct CrossGlyph: View {
 }
 
 /// The thin line in an activity's color that the Dynamic Island draws around itself over a dark
-/// background, so its edge shows: just outside the notch's sides and bottom, never along the top,
-/// which is the screen's edge. Drawn in full screen, all black around the notch.
+/// background, so its edge shows. Drawn in full screen, all black around the notch, where the
+/// notch floats as the island's capsule: just inside its edge, so it shows along the bottom too,
+/// over whatever's under the black band, and fading out toward the top, the screen's edge, so the
+/// top is left open.
 struct KeyLine: Shape {
     var notch: NotchShape
     /// How thick, by the notch's height.
     static let width: CGFloat = 0.045
+    /// How strongly the activity's color shows in it.
+    static let opacity = 0.3
     var width: CGFloat
 
     var animatableData: NotchShape.AnimatableData {
@@ -532,8 +536,19 @@ struct KeyLine: Shape {
 
     func path(in rect: CGRect) -> Path {
         let outline = notch.path(in: rect)
-        let ring = outline.strokedPath(StrokeStyle(lineWidth: width * 2)).subtracting(outline)
-        let top = notch.island ? rect.minY - width * 2 : rect.minY + notch.flare(in: rect) + 0.5
-        return ring.intersection(Path(CGRect(x: rect.minX - width * 2, y: top, width: rect.width + width * 4, height: rect.maxY + width * 2 - top)))
+        return outline.strokedPath(StrokeStyle(lineWidth: width * 2)).intersection(outline)
+    }
+
+    /// Clear at the top, the screen's edge, and whole from below the middle of the closed notch's
+    /// ends down, eased so the fade has no line where it starts or ends.
+    static func fade(restingHeight h: CGFloat) -> some View {
+        let stops = (0...12).map { i -> Gradient.Stop in
+            let t = CGFloat(i) / 12
+            return .init(color: .black.opacity(t * t * (3 - 2 * t)), location: t)
+        }
+        return VStack(spacing: 0) {
+            LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom).frame(height: h * 0.7)
+            Color.black
+        }
     }
 }
