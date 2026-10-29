@@ -30,6 +30,9 @@ final class NowPlaying: ObservableObject {
     /// The artwork tiny, blurred and vivid, for the backdrop and the glow. Scaled up it looks like
     /// a huge blur, for almost nothing.
     @Published private(set) var wash: NSImage?
+    /// The artwork as the waveform shows it, as the iPhone's does: its colors where they are on
+    /// the cover, blurred together, each made light enough to read on black.
+    @Published private(set) var waveformColors: NSImage?
     @Published private(set) var appIcon: NSImage?
     /// The artwork's colors mixed into one, for the glow and the progress bar.
     @Published private(set) var accent = Color.white
@@ -450,6 +453,7 @@ final class NowPlaying: ObservableObject {
         artwork = image
         accent = image.flatMap(Self.accent(of:)) ?? .white
         wash = image.flatMap(Self.wash(of:))
+        waveformColors = wash.flatMap(AccentWash.readable)
     }
 
     // MARK: Following Music and Spotify directly

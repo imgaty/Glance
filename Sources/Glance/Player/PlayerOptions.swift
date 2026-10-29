@@ -171,7 +171,47 @@ enum AccentSource: String, CaseIterable, Identifiable {
 @MainActor
 enum AccentWash {
     private static var made: [String: NSImage] = [:]
+    private static var madeReadable: [String: NSImage] = [:]
     private static let context = CIContext()
+
+    /// A color's wash as the waveform shows it, each shade made light enough to read on black.
+    static func waveform(for color: NSColor) -> NSImage? {
+        guard let rgb = color.usingColorSpace(.sRGB) else { return nil }
+        let key = "\(rgb.redComponent) \(rgb.greenComponent) \(rgb.blueComponent)"
+        if let image = madeReadable[key] { return image }
+        let image = Self.image(for: color).flatMap(readable)
+        madeReadable[key] = image
+        return image
+    }
+
+    /// An already blurred image's colors, each where it is, made light enough to read on black and
+    /// softer, as the iPhone's waveform shows its cover's: a dark blue stays blue, lighter and paler.
+    /// Small, since it's only ever a few points across.
+    static func readable(_ image: NSImage) -> NSImage? {
+        let side = 16
+        guard let source = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+            let space = CGColorSpace(name: CGColorSpace.sRGB),
+            let bitmap = CGContext(
+                data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        bitmap.interpolationQuality = .high
+        bitmap.draw(source, in: CGRect(x: 0, y: 0, width: side, height: side))
+        guard let data = bitmap.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
+        for i in stride(from: 0, to: side * side * 4, by: 4) {
+            let pixel = NSColor(
+                srgbRed: CGFloat(data[i]) / 255, green: CGFloat(data[i + 1]) / 255, blue: CGFloat(data[i + 2]) / 255, alpha: 1)
+            var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+            pixel.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+            let lifted = NSColor(hue: hue, saturation: min(saturation * 0.65, 0.65), brightness: 0.82 + 0.18 * brightness, alpha: 1)
+                .usingColorSpace(.sRGB) ?? pixel
+            data[i] = UInt8((lifted.redComponent * 255).rounded())
+            data[i + 1] = UInt8((lifted.greenComponent * 255).rounded())
+            data[i + 2] = UInt8((lifted.blueComponent * 255).rounded())
+            data[i + 3] = 255
+        }
+        return bitmap.makeImage().map { NSImage(cgImage: $0, size: NSSize(width: side, height: side)) }
+    }
 
     static func image(for color: NSColor) -> NSImage? {
         guard let rgb = color.usingColorSpace(.sRGB) else { return nil }

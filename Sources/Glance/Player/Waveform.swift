@@ -32,7 +32,9 @@ struct HeroWaveform: View {
             let contact = CGRect(x: place.midX - hitbox / 2, y: place.midY - hitbox / 2, width: hitbox, height: hitbox)
             Button(action: toggleLyrics) {
                 WaveformGlyph(
-                    color: nowPlaying.accent(from: accentSource), isPlaying: nowPlaying.isPlaying && !paused,
+                    color: nowPlaying.accent(from: accentSource),
+                    colors: accentSource == .artwork ? nowPlaying.waveformColors : accentSource.nsColor.flatMap(AccentWash.waveform),
+                    isPlaying: nowPlaying.isPlaying && !paused,
                     folded: button && (hovering || contact.holds(demoPointer)), filled: lyricsShown, demo: nowPlaying.isDemo
                 )
                 .frame(width: proxy.size.width, height: proxy.size.height)
@@ -52,12 +54,16 @@ struct HeroWaveform: View {
 }
 
 /// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
-/// 1.3 times as wide as the gaps, in the accent color fading to gray at the top, and dots when
-/// nothing plays. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol for
-/// another: the bars draw together into a point and are gone, and the symbol springs out of it.
+/// 1.3 times as wide as the gaps, and dots when nothing plays. As the iPhone fills its waveform,
+/// the bars are windows onto the cover's own colors, blurred, each where it is on the cover, so
+/// a blue sky shows across the top bars' ends and a red dress across the middle; or onto the
+/// chosen color's shades. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol
+/// for another: the bars draw together into a point and are gone, and the symbol springs out of it.
 struct WaveformGlyph: View {
     @ObservedObject private var audio = AudioLevels.shared
     let color: Color
+    /// The colors the bars show (see `AccentWash.readable`); without them, the color alone.
+    var colors: NSImage? = nil
     let isPlaying: Bool
     var folded = false
     /// The lyrics are open: the bubble is filled, as Apple's is when lyrics show.
@@ -79,21 +85,24 @@ struct WaveformGlyph: View {
         GeometryReader { proxy in
             let size = proxy.size
             let bar = size.width / (6 + 5 / 1.3)
-            let fill = LinearGradient(colors: [color.mix(with: .gray, by: 0.5), color], startPoint: .top, endPoint: .bottom)
             ZStack(alignment: .topLeading) {
-                ForEach(0..<AudioLevels.bands, id: \.self) { index in
-                    let rect = folded ? gathered(in: size, dot: bar) : self.bar(index, level: levels[index], in: size, width: bar)
-                    Capsule()
-                        .fill(fill)
-                        .frame(width: rect.width, height: rect.height)
-                        .position(x: rect.midX, y: rect.midY)
-                        .opacity(folded ? 0 : 1)
-                }
-                .animation(.spring(response: 0.26, dampingFraction: 0.9), value: folded)
+                paint
+                    .mask {
+                        ZStack(alignment: .topLeading) {
+                            ForEach(0..<AudioLevels.bands, id: \.self) { index in
+                                let rect = folded ? gathered(in: size, dot: bar) : self.bar(index, level: levels[index], in: size, width: bar)
+                                Capsule()
+                                    .frame(width: rect.width, height: rect.height)
+                                    .position(x: rect.midX, y: rect.midY)
+                                    .opacity(folded ? 0 : 1)
+                            }
+                            .animation(.spring(response: 0.26, dampingFraction: 0.9), value: folded)
+                        }
+                        .frame(width: size.width, height: size.height, alignment: .topLeading)
+                    }
                 // Apple's lyrics symbol, in the waveform's colors. Its tail hangs below the bubble, so
                 // it's lowered until the bubble itself sits where the bars do, its sides on theirs.
-                Rectangle()
-                    .fill(fill)
+                paint
                     .mask {
                         Image(systemName: filled ? "quote.bubble.fill" : "quote.bubble")
                             .resizable()
@@ -115,6 +124,15 @@ struct WaveformGlyph: View {
         // release), so they're drawn as they come. Animating each change as well kept SwiftUI
         // animating at the display's full rate the whole time music played: three times the work.
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
+    }
+
+    /// The cover's colors, or the color alone.
+    @ViewBuilder private var paint: some View {
+        if let colors {
+            Image(nsImage: colors).resizable().interpolation(.high)
+        } else {
+            color
+        }
     }
 
     /// A dot when nothing plays or nothing can be heard; a short dash when quiet; full height on the

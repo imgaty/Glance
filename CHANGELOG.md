@@ -118,6 +118,9 @@
 - Changed the cover's colors behind the player to move as the iPhone's do:
   softer patches of color, a little more vivid, drifting slowly through one
   another, two turning in place and two circling as they turn.
+- Changed the waveform to show the cover's own colors, each where it is on the
+  cover, lighter and softer, as the iPhone's waveform does, in place of one
+  color fading to gray.
 - Added the cover's colors pulsing on the music's beat, as you hear it.
 - Fixed the waveform moving ahead of the music on AirPods and other wireless
   headphones, which play a moment late: it now waits for the sound, as the
