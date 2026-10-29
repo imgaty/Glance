@@ -451,14 +451,14 @@ final class NotchManager {
         }
     }
 
-    /// Displays with another app's window exactly their size, which is what full screen looks like
-    /// from outside. Window positions and sizes are readable without any permission.
+    /// Displays showing a full-screen app: in a Space of its own, as WindowServer tells, where on a
+    /// display with a camera it sits below the housing; or, for apps that fill the screen without
+    /// one, with another app's window exactly the display's size. Window positions and sizes are
+    /// readable without any permission.
     private static func fullScreenDisplays() -> [CGRect] {
-        guard
-            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
-                as? [[String: Any]],
-            let primaryHeight = NSScreen.screens.first?.frame.height
-        else { return [] }
+        let spaces = NotchSpace.fullScreenDisplays()
+        let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
         let me = Int(ProcessInfo.processInfo.processIdentifier)
         let appWindows = windows.compactMap { info -> CGRect? in
             guard info[kCGWindowLayer as String] as? Int == 0, info[kCGWindowOwnerPID as String] as? Int != me,
@@ -466,11 +466,13 @@ final class NotchManager {
             else { return nil }
             return CGRect(dictionaryRepresentation: bounds as! CFDictionary)
         }
-        return NSScreen.screens.map(\.frame).filter { frame in
+        return NSScreen.screens.filter { screen in
+            if spaces.contains(screen.notchID) { return true }
             // Window bounds have their origin at the top left of the main display.
-            let flipped = CGRect(x: frame.minX, y: primaryHeight - frame.maxY, width: frame.width, height: frame.height)
-            return appWindows.contains(flipped)
+            let frame = screen.frame
+            return appWindows.contains(CGRect(x: frame.minX, y: primaryHeight - frame.maxY, width: frame.width, height: frame.height))
         }
+        .map(\.frame)
     }
 
     private func pointerMoved() {

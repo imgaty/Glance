@@ -23,6 +23,31 @@ enum NotchSpace {
         calls.remove(calls.connection(), [window.windowNumber] as CFArray, [space] as CFArray)
     }
 
+    /// The displays, by their identifiers (see `NSScreen.notchID`), whose Space in view is a
+    /// full-screen app's, as WindowServer keeps them; none, should it not say.
+    static func fullScreenDisplays() -> Set<String> {
+        guard let calls, let copySpaces, let displays = copySpaces(calls.connection())?.takeRetainedValue() as? [[String: Any]]
+        else { return [] }
+        return Set(
+            displays.compactMap { display in
+                guard let current = display["Current Space"] as? [String: Any], current["type"] as? Int == fullScreenKind else {
+                    return nil
+                }
+                // With one set of Spaces for every display, it goes by "Main": the main display's.
+                let id = display["Display Identifier"] as? String
+                return id == "Main" ? NSScreen.screens.first?.notchID : id
+            })
+    }
+
+    /// A full-screen app's Space, among WindowServer's kinds of Space.
+    private static let fullScreenKind = 4
+
+    private typealias CopySpaces = @convention(c) (Int32) -> Unmanaged<CFArray>?
+    private static let copySpaces: CopySpaces? = {
+        guard let skyLight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY) else { return nil }
+        return dlsym(skyLight, "SLSCopyManagedDisplaySpaces").map { unsafeBitCast($0, to: CopySpaces.self) }
+    }()
+
     /// Made once, shown above every other Space, and kept for as long as Glance runs.
     private static let space: UInt64? = {
         guard let calls else { return nil }
