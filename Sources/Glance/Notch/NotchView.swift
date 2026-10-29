@@ -616,6 +616,7 @@ struct NotchView: View {
                 .padding(.leading, model.openSize.width)
                 .padding(.top, lyricsTop)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
+                .withinNotch(playerSize, model: model)
                 .mask { awayFromCamera }
                 .islandFade(lyricsShown)
                 .allowsHitTesting(places == nil)
@@ -624,6 +625,8 @@ struct NotchView: View {
             NowPlayingView(isVisible: playerShown && !paused, hero: hero)
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
+                // Its own size: the lyrics coming or going beside it never fade it.
+                .withinNotch(model.openSize, model: model)
                 .environment(\.notchControls, playerShown)
                 .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
                 .modifier(PageFade(hidden: !playerShown))
@@ -633,6 +636,7 @@ struct NotchView: View {
                     airDropTargeted: model.airDropTargeted
                 )
                 .frame(width: model.trayWidth, height: model.trayHeight)
+                .withinNotch(CGSize(width: model.trayWidth, height: model.trayHeight), model: model)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
                 .modifier(PageFade(hidden: !trayShown))
@@ -763,6 +767,7 @@ struct NotchView: View {
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
             ExpandedTimerView(shown: clock, name: name, restingHeight: h, camera: model.camera, width: width)
                 .frame(width: width, height: TimerLayout.tallHeight(h))
+                .withinNotch(CGSize(width: width, height: TimerLayout.tallHeight(h)), model: model)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -774,6 +779,7 @@ struct NotchView: View {
             let h = model.closedSize.height
             let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
             ExpandedAirPlayView(route: route, restingHeight: h, width: width)
+                .withinNotch(CGSize(width: width, height: AirPlayLayout.height(h)), model: model)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -783,9 +789,9 @@ struct NotchView: View {
     @ViewBuilder private func expandedAirDrop(shown: Bool) -> some View {
         if model.expanded == .airdrop, let transfer = model.airdrop {
             let h = model.closedSize.height
-            ExpandedAirDropView(
-                shown: transfer, restingHeight: h, camera: model.camera,
-                width: AirDropLayout.width(for: transfer, restingHeight: h, camera: model.camera))
+            let width = AirDropLayout.width(for: transfer, restingHeight: h, camera: model.camera)
+            ExpandedAirDropView(shown: transfer, restingHeight: h, camera: model.camera, width: width)
+                .withinNotch(CGSize(width: width, height: TimerLayout.tallHeight(h)), model: model)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -831,6 +837,11 @@ struct NotchView: View {
     /// The lyrics open beside the player, widening the notch, from the waveform or a lyrics button.
     private func toggleLyrics() {
         withAnimation(.spring(response: 0.5, dampingFraction: 1)) { model.lyrics.toggle() }
+    }
+
+    /// The open player's size with the lyrics beside it while they show, which they show in.
+    private var playerSize: CGSize {
+        CGSize(width: model.openSize.width + (model.showsLyrics ? model.lyricsWidth : 0), height: model.openSize.height)
     }
 
     /// The lyrics keep the same space below the camera as above the notch's bottom edge.
@@ -1093,13 +1104,13 @@ private struct SteppedFrame: ViewModifier, Animatable {
 
     func body(content: Content) -> some View {
         content.frame(width: width, height: height, alignment: .top)
-            .environment(\.notchStep, width)
+            .environment(\.notchStep, CGSize(width: width, height: height))
     }
 }
 
 extension EnvironmentValues {
-    /// The notch's width at this step as it animates, flares and all (see `SteppedFrame`).
-    @Entry var notchStep: CGFloat?
+    /// The notch's size at this step as it animates, flares and all (see `SteppedFrame`).
+    @Entry var notchStep: CGSize?
 }
 
 extension View {
@@ -1117,7 +1128,35 @@ private struct AtNotchStep: ViewModifier {
     let width: CGFloat
 
     func body(content: Content) -> some View {
-        content.frame(width: step.map { max($0 - flare * 2, 0) } ?? width, height: height)
+        content.frame(width: step.map { max($0.width - flare * 2, 0) } ?? width, height: height)
+    }
+}
+
+extension View {
+    /// Laid out at the open notch's size, `size`, flares aside, it shows only as the notch has room
+    /// for it and its padding all round: fading in as the padding comes in while the notch opens,
+    /// and out as it goes while it closes, so none of it is ever cut off by the notch's edges or
+    /// pressed against them. Squeezed while pressed, the notch keeps it.
+    fileprivate func withinNotch(_ size: CGSize, model: NotchModel) -> some View {
+        modifier(WithinNotch(size: model.pressed ? CGSize(width: size.width * 0.975, height: size.height * 0.975) : size, corners: model.corners))
+    }
+}
+
+private struct WithinNotch: ViewModifier {
+    @Environment(\.notchStep) private var step
+    let size: CGSize
+    let corners: NotchCorners
+
+    func body(content: Content) -> some View {
+        let room =
+            step.map { step in
+                let flare = NotchShape(corners: corners).flare(in: CGRect(origin: .zero, size: step))
+                let padding = PlayerLayout.padding
+                let across = (step.width - flare * 2 - (size.width - padding * 2)) / (padding * 2)
+                let down = (step.height - (size.height - padding)) / padding
+                return min(max(min(across, down), 0), 1)
+            } ?? 1
+        content.opacity(room * room * (3 - 2 * room))
     }
 }
 

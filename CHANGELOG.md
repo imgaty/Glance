@@ -134,6 +134,10 @@
 - Fixed the closed notch swelling under the pointer twice as much at its ends
   as at its bottom, with music's cover and waveform crowding its ends. It now
   swells as much all round, and they keep the same padding on every side.
+- Fixed the player's words and buttons, the tray and the opened activities
+  being cut off by the notch's edges, or pressed against them, while it opened
+  and closed. They show only once the notch has room for them and their
+  padding, as the cover and the waveform fly in.
 
 <br>
 
