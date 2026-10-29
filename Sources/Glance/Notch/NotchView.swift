@@ -360,6 +360,11 @@ final class NotchModel: ObservableObject {
 
     var metrics: NotchMetrics { metrics(for: state) }
 
+    /// How much the closed notch swells under the pointer, and as the pointer nears: as much at its
+    /// ends as at its bottom, so what its wings show keeps the same padding all round.
+    static let peekSwell: CGFloat = 7
+    static let nearSwell: CGFloat = 3
+
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, short: Bool = false) -> NotchMetrics {
         let pull = max(stretch, 0)
@@ -368,10 +373,10 @@ final class NotchModel: ObservableObject {
             switch state {
             case .closed:
                 (
-                    (restingWidth + 10 * proximity + pull * 0.4) * (1 - squeeze) + closedSize.height * squeeze,
-                    resting + 3 * proximity + pull
+                    (restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4) * (1 - squeeze) + closedSize.height * squeeze,
+                    resting + Self.nearSwell * proximity + pull
                 )
-            case .peek: (restingWidth + 28 + pull * 0.4, resting + 7 + pull)
+            case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4, resting + Self.peekSwell + pull)
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(
@@ -534,7 +539,8 @@ struct NotchView: View {
         // With Increase Contrast on, the player's words and buttons sit on plain black.
         let lit = playerShown && nowPlaying.artwork != nil && background != .none && !accessibility.increasesContrast
         let lyricsShown = heroOpen && model.showsLyrics
-        // The closed notch swells under the pointer, and the artwork and waveform with it.
+        // The closed notch swells under the pointer, and the artwork and waveform with it, their
+        // padding too.
         let swell = isOpen ? 1 : m.height / model.restingHeight
 
         ZStack(alignment: .top) {
@@ -562,7 +568,8 @@ struct NotchView: View {
                 .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
             // As wide as the notch is at each step, so what the wings show rides in and out with their
             // ends, as the Dynamic Island's activities do.
-            LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, hero: hero)
+            LiveActivityView(
+                restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, swell: swell, hero: hero)
                 .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
                 .allowsHitTesting(places == nil)
                 .islandFade(liveShown)
@@ -624,9 +631,9 @@ struct NotchView: View {
                 .modifier(PageFade(hidden: !trayShown))
                 .allowsHitTesting(places == nil && trayShown)
             }
-            HeroArtwork(isOpen: heroOpen, restingSide: closed.height - LiveActivityView.inset(island: model.island) * 2)
+            // Its corners round as the notch's do, swollen or not.
+            HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset(island: model.island) * 2) * swell)
                 .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
-                .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .leading)
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays, coming and going as the
                 // Dynamic Island's activities do, as everything in the notch does.
@@ -640,7 +647,6 @@ struct NotchView: View {
                 toggleLyrics: toggleLyrics
             )
             .matchedGeometryEffect(id: heroOpen ? Hero.openWaveform : Hero.liveWaveform, in: hero, isSource: false)
-            .scaleEffect(heroOpen ? 1 : swell, anchor: heroOpen ? .center : .trailing)
             // There open, or in the closed notch while something plays, out of the way when a new
             // song's artist takes its place, coming and going as the Dynamic Island's activities do.
             .islandFade(heroOpen || waveformShown && !expandedShown)

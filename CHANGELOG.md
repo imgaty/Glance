@@ -108,6 +108,12 @@
 - Changed the volume slider in the sound output menu to show its knob while a
   finger drags it.
 
+### Opening
+
+- Fixed the closed notch swelling under the pointer twice as much at its ends
+  as at its bottom, with music's cover and waveform crowding its ends. It now
+  swells as much all round, and they keep the same padding on every side.
+
 <br>
 
 ## Release 0.2.0

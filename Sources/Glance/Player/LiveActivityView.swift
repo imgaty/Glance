@@ -25,6 +25,10 @@ struct LiveActivityView: View {
     let wing: CGFloat
     /// Announcing a new song.
     let pop: Bool
+    /// How much the notch has swollen under the pointer: the artwork and the waveform swell as
+    /// much, and their padding with them, so they stay as far from its ends as from its top and
+    /// bottom.
+    var swell: CGFloat = 1
     let hero: Namespace.ID
     /// Above and below the artwork and the waveform: a little less on an island, which is shorter
     /// than a notch, so they're about as big there. Both sit in squares of the same size.
@@ -92,8 +96,8 @@ struct LiveActivityView: View {
     @State private var popChanges = 0
 
     var body: some View {
-        let edge = Self.edgeInset(island: island, restingHeight: restingHeight)
-        let side = restingHeight - Self.inset(island: island) * 2
+        let edge = Self.edgeInset(island: island, restingHeight: restingHeight) * swell
+        let side = (restingHeight - Self.inset(island: island) * 2) * swell
         let popLeaving = popKept && !pop
         let words = pop || popKept
         let lane = popLeaving ? max(popLane, wing - edge - Self.cameraGap, side) : max(wing - edge - Self.cameraGap, side)
