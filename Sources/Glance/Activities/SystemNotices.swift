@@ -69,7 +69,7 @@ enum SystemNotices {
 
     /// Bluetooth's banners for devices, at the top of the screen: an app of their own, started for
     /// each while it shows.
-    static let bluetoothBanners = "com.apple.BluetoothUIService"
+    nonisolated static let bluetoothBanners = "com.apple.BluetoothUIService"
 
     /// Bluetooth's banner, as it shows within a few seconds, hidden while the notch says the same;
     /// shown again after, for any banner that comes later.
