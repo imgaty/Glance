@@ -55,14 +55,15 @@ struct HeroWaveform: View {
 
 /// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
 /// 1.3 times as wide as the gaps, and dots when nothing plays. As the iPhone fills its waveform,
-/// the bars are windows onto the cover's own colors, blurred, each where it is on the cover, so
-/// a blue sky shows across the top bars' ends and a red dress across the middle; or onto the
-/// chosen color's shades. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol
-/// for another: the bars draw together into a point and are gone, and the symbol springs out of it.
+/// the bars are windows onto the player's own moving colors, the gradient made from the cover,
+/// small, drifting through them in step with the colors behind the player; or onto the chosen
+/// color's shades. Folded, it becomes Apple's lyrics symbol, the way Apple swaps one symbol for
+/// another: the bars draw together into a point and are gone, and the symbol springs out of it.
 struct WaveformGlyph: View {
     @ObservedObject private var audio = AudioLevels.shared
     let color: Color
-    /// The colors the bars show (see `AccentWash.readable`); without them, the color alone.
+    /// The colors whose gradient the bars show (see `AccentWash.readable`); without them, the
+    /// color alone.
     var colors: NSImage? = nil
     let isPlaying: Bool
     var folded = false
@@ -126,10 +127,11 @@ struct WaveformGlyph: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
     }
 
-    /// The cover's colors, or the color alone.
+    /// The cover's moving colors, or the color alone. Drawn this small, a few times a second is
+    /// enough for them to drift smoothly.
     @ViewBuilder private var paint: some View {
         if let colors {
-            Image(nsImage: colors).resizable().interpolation(.high)
+            ArtworkSwirl(image: colors, active: isPlaying, demo: demo, frameRate: 15)
         } else {
             color
         }

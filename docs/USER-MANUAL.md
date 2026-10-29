@@ -253,16 +253,17 @@ with two fingers, or scroll a mouse's wheel, to see the rest.
 ## Live Activities
 
 While something plays, the closed notch shows the cover on its left and a
-waveform on its right, in the cover's own colors, each where it is on the
-cover, as on the iPhone. When something new starts playing, its name and artist
-appear beside the notch for a moment. Everything here comes and goes as on the
-iPhone's Dynamic Island: the notch widens and folds, and what it shows rides
-in and out with its ends, fading in out of a blur and away into one. A new
-song's cover comes in the same way as the last one goes. With Reduce Motion on,
-the notch widens without bouncing, and what it shows fades without a blur. In
-full screen, where it's all black around the notch, the collapsed notch rounds
-into the Dynamic Island's capsule, and a thin line in the activity's color
-outlines it just inside its edge, fading out toward the top of the screen.
+waveform on its right, filled with the gradient made from the cover's colors,
+drifting as the colors behind the player do, as on the iPhone. When something
+new starts playing, its name and artist appear beside the notch for a moment.
+Everything here comes and goes as on the iPhone's Dynamic Island: the notch
+widens and folds, and what it shows rides in and out with its ends, fading in
+out of a blur and away into one. A new song's cover comes in the same way as the
+last one goes. With Reduce Motion on, the notch widens without bouncing, and
+what it shows fades without a blur. In full screen, where it's all black around
+the notch, the collapsed notch rounds into the Dynamic Island's capsule, and a
+thin line in the activity's color outlines it just inside its edge, fading out
+toward the top of the screen.
 
 Closed or opened, the notch is only as wide as the wider side of a live
 activity needs, the same on both sides, with nothing under the camera. Each

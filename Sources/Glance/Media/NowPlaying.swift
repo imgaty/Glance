@@ -30,8 +30,8 @@ final class NowPlaying: ObservableObject {
     /// The artwork tiny, blurred and vivid, for the backdrop and the glow. Scaled up it looks like
     /// a huge blur, for almost nothing.
     @Published private(set) var wash: NSImage?
-    /// The artwork as the waveform shows it, as the iPhone's does: its colors where they are on
-    /// the cover, blurred together, each made light enough to read on black.
+    /// The artwork's colors as the waveform's own gradient is made from them, as the iPhone's is:
+    /// blurred, each made light enough to read on black.
     @Published private(set) var waveformColors: NSImage?
     @Published private(set) var appIcon: NSImage?
     /// The artwork's colors mixed into one, for the glow and the progress bar.
