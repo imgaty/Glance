@@ -20,6 +20,8 @@ import SwiftUI
 /// shakes.
 struct SystemActivityView: View {
     let restingHeight: CGFloat
+    /// The notch's width at rest, between the wings.
+    var closedWidth: CGFloat = 0
     let island: Bool
     let wing: CGFloat
     let alert: NotchAlert?
@@ -63,7 +65,8 @@ struct SystemActivityView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .lowBattery(let percent) = alert.content {
-                LowBatteryView(percent: percent, restingHeight: restingHeight, wing: wing, hovered: hoveredButton == .lowPower)
+                LowBatteryView(
+                    percent: percent, restingHeight: restingHeight, wing: wing, closedWidth: closedWidth, hovered: hoveredButton == .lowPower)
                     .islandFade(self.alert != nil)
                     .id(alert.id)
                     .transition(IslandMotion.fade)
@@ -315,9 +318,9 @@ struct SystemActivityView: View {
     /// How wide each wing must be for an announcement, up to a limit, so it covers little of the menu
     /// bar beside the notch, beyond which a long name scrolls. A device's, with only symbols, is a little
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
-    /// wider one.
+    /// wider one. Low Battery's row has a width of its own, which the notch at rest takes part of.
     @MainActor
-    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool) -> CGFloat {
+    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool, closedWidth: CGFloat) -> CGFloat {
         let size = LiveActivityView.textSize(for: restingHeight)
         let side = side(restingHeight, island)
         let gap = LiveActivityView.cameraGap
@@ -331,8 +334,10 @@ struct SystemActivityView: View {
             let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
+        if case .lowBattery(let percent) = alert.content {
+            return LowBatteryLayout.wing(percent: percent, restingHeight: restingHeight, closedWidth: closedWidth)
+        }
         // As tall as the Alarm, as wide as its words or its buttons.
-        if case .lowBattery(let percent) = alert.content { return LowBatteryLayout.wing(percent: percent, restingHeight: restingHeight) }
         if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight, island: island)
         let (left, right): (CGFloat, CGFloat) =

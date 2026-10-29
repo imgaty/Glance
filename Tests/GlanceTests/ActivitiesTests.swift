@@ -239,7 +239,7 @@ struct ActivitiesTests {
         // Its wings as wide as the ring and its level need, against the camera, and no wider.
         let keyboard = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
         let layout = DeviceLayout(height: 32)
-        let wing = SystemActivityView.wing(for: keyboard, restingHeight: 32, island: false)
+        let wing = SystemActivityView.wing(for: keyboard, restingHeight: 32, island: false, closedWidth: 185)
         #expect(wing < layout.ring + layout.trailing + 60)
     }
 
@@ -324,7 +324,7 @@ struct ActivitiesTests {
         let alert = NotchAlert(
             kind: .device, content: .device(symbol: "airpods.pro", pictures: ["airpod_left", "airpod_right"], battery: 31),
             spoken: "AirPods Pro connected")
-        model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, island: false)
+        model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, island: false, closedWidth: model.closedSize.width)
         model.alert = alert
         #expect(model.wing == model.alertWing)
         #expect(model.alertWing > resting && model.alertWing <= SystemActivityView.maxWing)
@@ -424,11 +424,11 @@ struct ActivitiesTests {
         let keyboard = NotchAlert(
             kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "Magic Keyboard connected, 15 percent")
         // Its battery as a ring alone, with no level in numbers beside it.
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) >= layout.ring + layout.trailing)
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false) < layout.ring + layout.trailing + 15)
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false, closedWidth: 185) >= layout.ring + layout.trailing)
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false, closedWidth: 185) < layout.ring + layout.trailing + 15)
         let long = "The Living Room Speaker Upstairs, By the Window"
         let speaker = NotchAlert(kind: .charging, content: .status(symbol: "airplay.audio", tint: .blue, text: long), spoken: long)
-        #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false) == SystemActivityView.maxWing)
+        #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false, closedWidth: 185) == SystemActivityView.maxWing)
         #expect(SystemActivityView.maxWing <= 120)
         // A timer's wings as wide as its time needs as it reads now, from the end, and no wider.
         let early = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false)
@@ -492,7 +492,7 @@ struct ActivitiesTests {
         #expect(model.expansion(fromBubble: .trailing) == .stopwatch)
     }
 
-    @Test("Low Battery is as tall as the Alarm, its words at one end and its capsule concentric with the other")
+    @Test("Low Battery is as tall as the Alarm, its level and its capsule against the camera, its offer under it")
     func lowBattery() {
         let alert = BatteryWatch.lowBattery(.init(percent: 10, onPower: false, charging: false))
         #expect(alert.content == .lowBattery(percent: 10))
@@ -504,10 +504,18 @@ struct ActivitiesTests {
         // The capsule as far in from the end as from the top and bottom.
         let edge = LowBatteryLayout.edge(h)
         #expect(abs(edge * 2 + h * LowBatteryLayout.capsule.height - TimerLayout.tallHeight(h)) < 0.01)
-        // Each wing as wide as the words need, from the end, with the camera between them.
-        let font = NSFont.systemFont(ofSize: h * LowBatteryLayout.words, weight: .semibold)
-        let offer = ceil((LowBatteryView.offer as NSString).size(withAttributes: [.font: font]).width)
-        #expect(SystemActivityView.wing(for: alert, restingHeight: h, island: false) == edge + offer + LiveActivityView.cameraGap)
+        // Each wing as wide as the level or the capsule needs against the camera, whichever is wider.
+        let gap = LiveActivityView.cameraGap
+        let level = LowBatteryLayout.width(LowBatteryView.title(10), h * LowBatteryLayout.words)
+        let wing = SystemActivityView.wing(for: alert, restingHeight: h, island: false, closedWidth: 185)
+        #expect(wing == max(LiveActivityView.textEdge(restingHeight: h) + level + gap, gap + h * LowBatteryLayout.capsule.width + edge))
+        #expect(wing < h * 3)
+        // The offer, under the camera, stays clear of the capsule.
+        let offer = LowBatteryLayout.width(LowBatteryView.offer, h * LowBatteryLayout.offerWords)
+        let lead = LowBatteryLayout.lead(percent: 10, restingHeight: h, closedWidth: 185)
+        #expect(-lead + offer + h * LowBatteryLayout.wordsGap <= 185 + gap)
+        // Its letters start just below the camera.
+        #expect(LowBatteryLayout.wordsTop(h) > 0)
         // Arriving, it settles from its reddish yellow into red, easing in and out.
         #expect(LowBatteryView.warming(after: 0) == 0)
         #expect(LowBatteryView.warming(after: LowBatteryLayout.warmUp / 2) == 0.5)

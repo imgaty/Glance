@@ -577,7 +577,8 @@ final class NotchController {
             }
             return
         }
-        let wing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, island: model.island)
+        let wing = SystemActivityView.wing(
+            for: alert, restingHeight: model.closedSize.height, island: model.island, closedWidth: model.closedSize.width)
         func announce() {
             withAnimation(open) {
                 model.switching = false

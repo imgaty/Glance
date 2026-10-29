@@ -568,7 +568,7 @@ struct NotchView: View {
                 .islandFade(liveShown)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
-                restingHeight: closed.height, island: model.island, wing: model.wing, alert: model.alert,
+                restingHeight: closed.height, closedWidth: closed.width, island: model.island, wing: model.wing, alert: model.alert,
                 clock: model.activity || model.switching ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.switching ? model.airdrop : nil,
