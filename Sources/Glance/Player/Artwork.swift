@@ -179,7 +179,7 @@ struct ArtworkLight: View {
 /// than the artwork, as the iPhone's are. Each is as blurred as the largest, as the iPhone blurs
 /// them all together, so even the smallest is a soft patch of color rather than a little cover;
 /// the smaller three fade out toward their edges, so no edge ever shows. On each beat of the music,
-/// as it's heard, they swell and brighten a touch and ease back.
+/// as it's heard, they swell and brighten just a little and ease back.
 struct ArtworkSwirl: View {
     let image: NSImage
     let active: Bool
@@ -205,8 +205,8 @@ struct ArtworkSwirl: View {
                         .blur(radius: side * 0.08)
                 }
                 .frame(width: width, height: height)
-                .scaleEffect(1 + 0.05 * beat)
-                .brightness(0.07 * beat)
+                .scaleEffect(1 + 0.025 * beat)
+                .brightness(0.04 * beat)
                 .saturation(1.2)
                 .contrast(1.2)
             }

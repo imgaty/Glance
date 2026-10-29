@@ -330,18 +330,22 @@ final class Analyzer {
     private static let bands: [(Double, Double)] = [(45, 90), (150, 260), (400, 700), (1_100, 1_800), (3_000, 5_000), (7_000, 12_000)]
     /// Bands to bars: bass sits right of center, as in the iPhone's waveform.
     private static let order = [4, 5, 3, 1, 0, 2]
-    private static let attack: [Float] = [0.55, 0.65, 0.75, 0.85, 0.9, 0.95]
-    private static let release: [Float] = [0.12, 0.18, 0.25, 0.32, 0.4, 0.5]
+    /// How far each bar moves toward its level at each reading, rising and falling: softly, over a
+    /// tenth of a second or so, as the iPhone's bars move, rather than leaping to every hit.
+    private static let attack: [Float] = [0.4, 0.42, 0.45, 0.48, 0.5, 0.52]
+    private static let release: [Float] = [0.1, 0.12, 0.14, 0.16, 0.18, 0.2]
     /// The loudness, in dB below full scale, at which the bars stay flat, and at which they can reach the top.
     private static let quiet: Float = -50
     private static let loud: Float = -14
     /// The least rise in the bass, in dB from one reading to the next, that's a beat; the fewest
-    /// readings (45 a second) between two beats; and how much of the beat is left at the next.
+    /// readings (45 a second) between two beats; how much of the beat is left at the next; and how
+    /// far the beat shown moves toward it at each reading, so it swells in rather than snapping.
     private static let beatRise: Float = 4
     /// How far above its usual level, in dB, the bass must reach.
     private static let beatAbove: Float = 3
     private static let beatGap = 9
     private static let beatFade: Float = 0.86
+    private static let beatAttack: Float = 0.5
 
     private let fft = vDSP.FFT(log2n: 10, radix: .radix2, ofType: DSPSplitComplex.self)!
     private let window = vDSP.window(ofType: Float.self, usingSequence: .hanningDenormalized, count: size, isHalfWindow: false)
@@ -351,6 +355,8 @@ final class Analyzer {
     private var previous = [Float](repeating: -120, count: 6)
     private var volume: Float = 0
     private var smoothed = [Float](repeating: 0, count: 6)
+    /// The last beat, fading; and the beat as shown, following it in.
+    private var kick: Float = 0
     private var beat: Float = 0
     private var sinceBeat = 0
     /// How sharply the bass has been rising lately, which a beat must clearly beat.
@@ -385,6 +391,7 @@ final class Analyzer {
         guard vDSP.sum(power) > 1e-9 else {
             smoothed = [Float](repeating: 0, count: 6)
             volume = 0
+            kick = 0
             beat = 0
             return AudioReading(levels: smoothed, beat: 0)
         }
@@ -403,14 +410,15 @@ final class Analyzer {
         // usual level, so the bass only wavering isn't one. The first reading has nothing to go by.
         let rise = decibels[0] - previous[0]
         let above = decibels[0] - (self.averages?[0] ?? decibels[0])
-        beat *= Self.beatFade
+        kick *= Self.beatFade
         sinceBeat += 1
         if self.averages != nil, rise > max(Self.beatRise, rises * 2.5), above > Self.beatAbove, sinceBeat >= Self.beatGap,
             volume > 0.05
         {
-            beat = max(beat, 0.55 + 0.45 * min((rise - Self.beatRise) / 9, 1))
+            kick = max(kick, 0.55 + 0.45 * min((rise - Self.beatRise) / 9, 1))
             sinceBeat = 0
         }
+        beat = kick > beat ? beat + (kick - beat) * Self.beatAttack : kick
         rises += (max(rise, 0) - rises) * 0.05
 
         var averages = self.averages ?? decibels
@@ -431,7 +439,7 @@ final class Analyzer {
         var bars = [Float](repeating: 0, count: 6)
         for band in 0..<6 {
             let own = relative[band] - shared, kick = max(kicks[band] - sharedKick, 0)
-            let shape = min(max(0.35 + 0.6 * (relative[band] - 0.5) + 0.8 * own + 0.6 * kick, 0), 1)
+            let shape = min(max(0.35 + 0.6 * (relative[band] - 0.5) + 0.8 * own + 0.35 * kick, 0), 1)
             let level = volume * shape
             // Each bar keeps its own temperament: bass swells and lets go slowly, treble flickers.
             let rate = level > smoothed[band] ? Self.attack[band] : Self.release[band]

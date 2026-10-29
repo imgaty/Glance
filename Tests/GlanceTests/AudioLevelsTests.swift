@@ -36,14 +36,15 @@ struct AudioLevelsTests {
         return (samples, beats)
     }
 
-    /// When the analysis found a beat, in seconds from the start: each reading whose beat jumped.
+    /// When the analysis found a beat, in seconds from the start: each reading where the beat shown
+    /// swelled past 0.4.
     static func found(in samples: [Float]) -> [Double] {
         let analyzer = Analyzer(sampleRate: rate)
         var last: Float = 0
         var found: [Double] = []
         for end in stride(from: Analyzer.size, through: samples.count, by: hop) {
             let beat = analyzer.reading(Array(samples[(end - Analyzer.size)..<end])).beat
-            if beat > last + 0.3 { found.append(Double(end) / rate) }
+            if beat >= 0.4, last < 0.4 { found.append(Double(end) / rate) }
             last = beat
         }
         return found
@@ -57,8 +58,8 @@ struct AudioLevelsTests {
         let expected = song.beats.filter { $0 >= 1 }
         #expect(found.count == expected.count)
         for (beat, at) in zip(expected, found) {
-            // Within the window it was heard in, and a reading.
-            #expect(at >= beat && at - beat < Double(Analyzer.size) / Self.rate + 1.0 / 45, "beat at \(beat), found at \(at)")
+            // Within the window it was heard in, and the two readings it takes to swell in.
+            #expect(at >= beat && at - beat < Double(Analyzer.size) / Self.rate + 2.0 / 45, "beat at \(beat), found at \(at)")
         }
     }
 
