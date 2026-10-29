@@ -172,9 +172,13 @@ struct ArtworkLight: View {
     }
 }
 
-/// Three copies of an already blurred artwork, large, middling and small, each turning and drifting
-/// at its own pace, so the colors keep slowly moving through one another. The smaller two fade out
-/// toward their edges, so no edge ever shows.
+/// Four copies of the already blurred artwork, as the iPhone draws behind its player: one larger
+/// than the whole background and one most of its size, each turning slowly in place, and one half
+/// and one a quarter of its size, each turning as it circles. A turn takes the best part of a
+/// minute, so the colors drift calmly through one another, a little more vivid and contrasted
+/// than the artwork, as the iPhone's are. Each is as blurred as the largest, as the iPhone blurs
+/// them all together, so even the smallest is a soft patch of color rather than a little cover;
+/// the smaller three fade out toward their edges, so no edge ever shows.
 struct ArtworkSwirl: View {
     let image: NSImage
     let active: Bool
@@ -183,22 +187,30 @@ struct ArtworkSwirl: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let side = max(proxy.size.width, proxy.size.height)
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
+            let width = proxy.size.width, height = proxy.size.height
+            let side = max(width, height)
+            TimelineView(.animation(minimumInterval: 1.0 / 24, paused: !active || reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 ZStack {
-                    layer(side * 1.5, turn: t / 24, drift: .zero, soft: false)
-                    layer(
-                        side * 0.9, turn: -t / 17 + 0.3,
-                        drift: CGSize(width: cos(t / 3) * side * 0.2, height: sin(t / 3.7) * side * 0.14))
-                    layer(
-                        side * 0.65, turn: t / 13 + 0.6,
-                        drift: CGSize(width: sin(t / 2.4) * side * 0.24, height: cos(t / 2.7) * side * 0.16))
+                    layer(side * 1.41, turn: t / 48, drift: .zero, soft: false)
+                    layer(side * 0.8, turn: -t / 24, drift: CGSize(width: -width * 0.1, height: -height * 0.1))
+                        .blur(radius: side * 0.05)
+                    layer(side * 0.5, turn: t / 48, drift: Self.circling(t / 64, radius: width / 4))
+                        .blur(radius: side * 0.07)
+                    layer(side * 0.25, turn: -t / 36, drift: Self.circling(-t / 40 + 0.4, radius: width / 8))
+                        .blur(radius: side * 0.08)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+                .frame(width: width, height: height)
+                .saturation(1.2)
+                .contrast(1.2)
             }
         }
         .clipped()
+    }
+
+    /// Where a copy is on its circle round the middle, `turns` of the way round.
+    private static func circling(_ turns: Double, radius: CGFloat) -> CGSize {
+        CGSize(width: cos(turns * 2 * .pi) * radius, height: sin(turns * 2 * .pi) * radius)
     }
 
     private func layer(_ size: CGFloat, turn: Double, drift: CGSize, soft: Bool = true) -> some View {

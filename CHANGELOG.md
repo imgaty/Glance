@@ -115,6 +115,9 @@
   app's name and icon beside its volume, and each output in a circle, the one
   playing in the accent color, with the Mac's own speakers first. AirPods show
   each earbud's battery and the case's, and other headphones their one battery.
+- Changed the cover's colors behind the player to move as the iPhone's do:
+  softer patches of color, a little more vivid, drifting slowly through one
+  another, two turning in place and two circling as they turn.
 
 ### Opening
 
