@@ -261,8 +261,9 @@ with its ends, fading in out of a blur and away into one. A new song's cover
 comes in the same way as the last one goes. With Reduce Motion on, the notch
 widens without bouncing, and what it shows fades without a blur. In full screen,
 where it's all black around the notch, the collapsed notch rounds into the
-Dynamic Island's capsule, and a thin line in the activity's color outlines it
-just inside its edge, fading out toward the top of the screen.
+Dynamic Island's capsule, reaching a little below the camera so its bottom edge
+shows, and a thin line in the activity's color outlines it just inside its edge,
+fading out toward the top of the screen.
 
 Closed or opened, the notch is only as wide as the wider side of a live
 activity needs, the same on both sides, with nothing under the camera. Each

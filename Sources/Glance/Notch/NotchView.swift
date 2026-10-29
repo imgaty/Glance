@@ -369,11 +369,15 @@ final class NotchModel: ObservableObject {
     /// ends as at its bottom, so what its wings show keeps the same padding all round.
     static let peekSwell: CGFloat = 7
     static let nearSwell: CGFloat = 3
+    /// Floating in full screen, how far the notch reaches below the camera housing, where the
+    /// display has no pixels, so its bottom edge and its outline show there too.
+    static let floatingDrop: CGFloat = 4
 
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, short: Bool = false) -> NotchMetrics {
         let pull = max(stretch, 0)
-        let resting = short ? closedSize.height : restingHeight
+        let below = hasCamera && fullScreen && state != .open && !restingTall ? Self.floatingDrop : 0
+        let resting = (short ? closedSize.height : restingHeight) + below
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed:
