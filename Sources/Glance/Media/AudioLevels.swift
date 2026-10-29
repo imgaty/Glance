@@ -9,9 +9,11 @@ import Accelerate
 import AppKit
 import CoreAudio
 
-/// How loud the playing app is in six frequency bands, for the waveforms. It listens to the
-/// player's own sound through a Core Audio process tap; nothing is recorded or kept. It only runs
-/// while music plays, and only once the user has allowed audio capture.
+/// How loud the playing app is in six frequency bands, for the waveforms, and its beat, for the
+/// colors behind the player. It listens to the player's own sound through a Core Audio process
+/// tap; nothing is recorded or kept. What it hears is shown as it's heard, held back by as long as
+/// the speakers or headphones take to play it. It only runs while music plays, and only once the
+/// user has allowed audio capture.
 @MainActor
 final class AudioLevels: ObservableObject {
     static let shared = AudioLevels()
@@ -19,6 +21,9 @@ final class AudioLevels: ObservableObject {
 
     /// 0...1 per bar, left to right. All zero while nothing is being measured.
     @Published private(set) var levels = [Float](repeating: 0, count: bands)
+    /// 0...1: 1 on a kick or a bass note's attack, easing off over a fraction of a second. Not
+    /// published: the colors read it as they're drawn, frame by frame.
+    private(set) var beat: Float = 0
 
     private var pipeline: TapPipeline?
     private var permissionProbe: TapPipeline?
@@ -63,8 +68,13 @@ final class AudioLevels: ObservableObject {
         stop()
         guard Permissions.audioCapture == .granted else { return }
         tappedPID = pid
-        pipeline = TapPipeline(target: .player(pid)) { [weak self] levels in
-            DispatchQueue.main.async { MainActor.assumeIsolated { self?.levels = levels } }
+        pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self?.levels = reading.levels
+                    self?.beat = reading.beat
+                }
+            }
         }
     }
 
@@ -80,6 +90,29 @@ final class AudioLevels: ObservableObject {
         pipeline = nil
         tappedPID = 0
         levels = [Float](repeating: 0, count: Self.bands)
+        beat = 0
+    }
+}
+
+/// What the analysis hears at a moment: the bars' levels and the beat.
+struct AudioReading: Equatable {
+    var levels: [Float]
+    var beat: Float
+}
+
+/// Readings held back until the sound they were made from is heard: the tap hears the player as it
+/// plays, ahead of the speakers or the headphones by as long as they take to play it.
+struct HeardLater {
+    /// In seconds.
+    var delay: TimeInterval = 0
+    private var waiting: [(time: TimeInterval, reading: AudioReading)] = []
+
+    /// Takes a reading made at `time`; gives back the latest one that's due by then, if any.
+    mutating func take(_ reading: AudioReading, at time: TimeInterval) -> AudioReading? {
+        waiting.append((time, reading))
+        var due: AudioReading?
+        while let first = waiting.first, first.time + delay <= time { due = waiting.removeFirst().reading }
+        return due
     }
 }
 
@@ -95,14 +128,16 @@ private final class TapPipeline: @unchecked Sendable {
 
     private let queue = DispatchQueue(label: "Glance.AudioLevels")
     private let ring = SampleRing(capacity: 4096)
-    private let publish: ([Float]) -> Void
+    private let publish: (AudioReading) -> Void
+    private var heard = HeardLater()
+    private var ticks = 0
     private var tapID = AudioObjectID(0)
     private var aggregateID = AudioObjectID(0)
     private var ioProc: AudioDeviceIOProcID?
     private var timer: DispatchSourceTimer?
     private var analyzer: Analyzer?
 
-    init(target: Target, publish: @escaping ([Float]) -> Void) {
+    init(target: Target, publish: @escaping (AudioReading) -> Void) {
         self.publish = publish
         queue.async { [self] in
             if !start(target) { tearDown() }
@@ -162,7 +197,11 @@ private final class TapPipeline: @unchecked Sendable {
         timer.schedule(deadline: .now(), repeating: 1.0 / 45)
         timer.setEventHandler { [weak self] in
             guard let self, let analyzer, let samples = ring.latest(Analyzer.size) else { return }
-            publish(analyzer.levels(samples))
+            // The sound can move to other speakers or headphones as it plays: how late it's heard is
+            // read again every second.
+            if ticks % 45 == 0 { heard.delay = Self.heardAfter(aggregate: aggregateID) }
+            ticks += 1
+            if let due = heard.take(analyzer.reading(samples), at: ProcessInfo.processInfo.systemUptime) { publish(due) }
         }
         timer.resume()
         self.timer = timer
@@ -202,6 +241,18 @@ private final class TapPipeline: @unchecked Sendable {
         var device = builtIn ?? 0
         if device == 0, !AudioProperty.read(system, kAudioHardwarePropertyDefaultOutputDevice, &device) { return nil }
         return AudioProperty.uid(of: device)
+    }
+
+    /// How much later the sound is heard than the tap hears it: as long as the Mac's sound output
+    /// takes to play it, less what the aggregate's buffer and the analysis's window already hold
+    /// it back.
+    private static func heardAfter(aggregate: AudioObjectID) -> TimeInterval {
+        var output = AudioObjectID(0)
+        guard AudioProperty.read(system, kAudioHardwarePropertyDefaultOutputDevice, &output), output != 0 else { return 0 }
+        var buffer: UInt32 = 0
+        _ = AudioProperty.read(aggregate, kAudioDevicePropertyBufferFrameSize, &buffer)
+        let own = (Double(buffer) + Double(Analyzer.size) / 2) / sampleRate(of: aggregate)
+        return max(AudioProperty.outputLatency(of: output) - own, 0)
     }
 
     private static func sampleRate(of device: AudioObjectID) -> Double {
@@ -270,8 +321,10 @@ private final class SampleRing: @unchecked Sendable {
 /// loud the music really is sets how tall the bars can grow, so a quiet song stays low. Within
 /// that, six separate slices of the spectrum each move against their own slow-moving average, with
 /// what they all share taken out, so a kick, a voice and a hi-hat each move their own bar; bass
-/// swells slowly, treble flickers.
-private final class Analyzer {
+/// swells slowly, treble flickers. The beat is the bass rising more sharply than it has been
+/// lately, to well above its usual level, as a kick or a bass note starts; no sooner than a fifth
+/// of a second after the last.
+final class Analyzer {
     static let size = 1024
     /// Bass, low mids, mids, upper mids, presence and air, in hertz.
     private static let bands: [(Double, Double)] = [(45, 90), (150, 260), (400, 700), (1_100, 1_800), (3_000, 5_000), (7_000, 12_000)]
@@ -282,6 +335,13 @@ private final class Analyzer {
     /// The loudness, in dB below full scale, at which the bars stay flat, and at which they can reach the top.
     private static let quiet: Float = -50
     private static let loud: Float = -14
+    /// The least rise in the bass, in dB from one reading to the next, that's a beat; the fewest
+    /// readings (45 a second) between two beats; and how much of the beat is left at the next.
+    private static let beatRise: Float = 4
+    /// How far above its usual level, in dB, the bass must reach.
+    private static let beatAbove: Float = 3
+    private static let beatGap = 9
+    private static let beatFade: Float = 0.86
 
     private let fft = vDSP.FFT(log2n: 10, radix: .radix2, ofType: DSPSplitComplex.self)!
     private let window = vDSP.window(ofType: Float.self, usingSequence: .hanningDenormalized, count: size, isHalfWindow: false)
@@ -291,6 +351,10 @@ private final class Analyzer {
     private var previous = [Float](repeating: -120, count: 6)
     private var volume: Float = 0
     private var smoothed = [Float](repeating: 0, count: 6)
+    private var beat: Float = 0
+    private var sinceBeat = 0
+    /// How sharply the bass has been rising lately, which a beat must clearly beat.
+    private var rises: Float = 0
 
     init(sampleRate: Double) {
         let hertzPerBin = sampleRate / Double(Self.size)
@@ -300,7 +364,7 @@ private final class Analyzer {
         }
     }
 
-    func levels(_ samples: [Float]) -> [Float] {
+    func reading(_ samples: [Float]) -> AudioReading {
         let windowed = vDSP.multiply(samples, window)
         var real = [Float](repeating: 0, count: Self.size / 2)
         var imaginary = [Float](repeating: 0, count: Self.size / 2)
@@ -321,7 +385,8 @@ private final class Analyzer {
         guard vDSP.sum(power) > 1e-9 else {
             smoothed = [Float](repeating: 0, count: 6)
             volume = 0
-            return smoothed
+            beat = 0
+            return AudioReading(levels: smoothed, beat: 0)
         }
 
         // How loud the music is, in dB below full scale, sets how tall the bars may grow.
@@ -334,6 +399,20 @@ private final class Analyzer {
             let energy: Float = power[bins[band]].reduce(0, +) / Float(bins[band].count)
             decibels[band] = 10 * log10(energy + 1e-12)
         }
+        // The beat, from how sharply the bass rose since the last reading, and how far above its
+        // usual level, so the bass only wavering isn't one. The first reading has nothing to go by.
+        let rise = decibels[0] - previous[0]
+        let above = decibels[0] - (self.averages?[0] ?? decibels[0])
+        beat *= Self.beatFade
+        sinceBeat += 1
+        if self.averages != nil, rise > max(Self.beatRise, rises * 2.5), above > Self.beatAbove, sinceBeat >= Self.beatGap,
+            volume > 0.05
+        {
+            beat = max(beat, 0.55 + 0.45 * min((rise - Self.beatRise) / 9, 1))
+            sinceBeat = 0
+        }
+        rises += (max(rise, 0) - rises) * 0.05
+
         var averages = self.averages ?? decibels
         var relative = [Float](repeating: 0, count: 6)
         var kicks = [Float](repeating: 0, count: 6)
@@ -359,6 +438,6 @@ private final class Analyzer {
             smoothed[band] += (level - smoothed[band]) * rate
             bars[Self.order.firstIndex(of: band)!] = smoothed[band]
         }
-        return bars
+        return AudioReading(levels: bars, beat: beat)
     }
 }

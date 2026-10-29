@@ -460,8 +460,11 @@ enum AudioProperty {
         AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
     }
 
-    static func read<T: BitwiseCopyable>(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector, _ value: inout T) -> Bool {
-        var address = address(selector)
+    static func read<T: BitwiseCopyable>(
+        _ object: AudioObjectID, _ selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal,
+        _ value: inout T
+    ) -> Bool {
+        var address = address(selector, scope: scope)
         var size = UInt32(MemoryLayout<T>.size)
         return AudioObjectGetPropertyData(object, &address, 0, nil, &size, &value) == noErr
     }
@@ -473,6 +476,25 @@ enum AudioProperty {
         var objects = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
         guard AudioObjectGetPropertyData(object, &address, 0, nil, &size, &objects) == noErr else { return [] }
         return objects
+    }
+
+    /// How long after a device is handed sound it's heard, in seconds: what it says it takes, its
+    /// stream's, its margin and its buffer. A moment on the Mac's speakers; on AirPods, a sixth of
+    /// a second or so.
+    static func outputLatency(of device: AudioObjectID) -> TimeInterval {
+        let output = kAudioObjectPropertyScopeOutput
+        var latency: UInt32 = 0, safety: UInt32 = 0, buffer: UInt32 = 0, stream: UInt32 = 0, rate: Float64 = 0
+        guard read(device, kAudioDevicePropertyNominalSampleRate, &rate), rate > 0 else { return 0 }
+        _ = read(device, kAudioDevicePropertyLatency, scope: output, &latency)
+        _ = read(device, kAudioDevicePropertySafetyOffset, scope: output, &safety)
+        _ = read(device, kAudioDevicePropertyBufferFrameSize, scope: output, &buffer)
+        var address = address(kAudioDevicePropertyStreams, scope: output)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        var first = AudioObjectID(0)
+        if AudioObjectGetPropertyData(device, &address, 0, nil, &size, &first) == noErr, first != 0 {
+            _ = read(first, kAudioStreamPropertyLatency, &stream)
+        }
+        return Double(latency + safety + buffer + stream) / rate
     }
 
     /// The property's size in bytes, 0 if it has none.

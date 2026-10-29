@@ -152,12 +152,12 @@ struct ArtworkLight: View {
     var body: some View {
         ZStack {
             if accentSource == .artwork, let image = nowPlaying.wash {
-                ArtworkSwirl(image: image, active: active && nowPlaying.isPlaying)
+                ArtworkSwirl(image: image, active: active && nowPlaying.isPlaying, demo: nowPlaying.isDemo)
                     .transition(.opacity)
                     .id(ObjectIdentifier(image))
             } else if let color = accentSource.nsColor, let image = AccentWash.image(for: color) {
                 // A color moves through its own shades, as the artwork's colors do.
-                ArtworkSwirl(image: image, active: active && nowPlaying.isPlaying)
+                ArtworkSwirl(image: image, active: active && nowPlaying.isPlaying, demo: nowPlaying.isDemo)
                     .transition(.opacity)
                     .id(ObjectIdentifier(image))
             } else {
@@ -178,10 +178,13 @@ struct ArtworkLight: View {
 /// minute, so the colors drift calmly through one another, a little more vivid and contrasted
 /// than the artwork, as the iPhone's are. Each is as blurred as the largest, as the iPhone blurs
 /// them all together, so even the smallest is a soft patch of color rather than a little cover;
-/// the smaller three fade out toward their edges, so no edge ever shows.
+/// the smaller three fade out toward their edges, so no edge ever shows. On each beat of the music,
+/// as it's heard, they swell and brighten a touch and ease back.
 struct ArtworkSwirl: View {
     let image: NSImage
     let active: Bool
+    /// The welcome tour's made-up song, whose beat is made up too.
+    var demo = false
     /// With Reduce Motion on, the colors stay where they are.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -189,8 +192,9 @@ struct ArtworkSwirl: View {
         GeometryReader { proxy in
             let width = proxy.size.width, height = proxy.size.height
             let side = max(width, height)
-            TimelineView(.animation(minimumInterval: 1.0 / 24, paused: !active || reduceMotion)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
+                let beat = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) : Double(AudioLevels.shared.beat)) : 0
                 ZStack {
                     layer(side * 1.41, turn: t / 48, drift: .zero, soft: false)
                     layer(side * 0.8, turn: -t / 24, drift: CGSize(width: -width * 0.1, height: -height * 0.1))
@@ -201,6 +205,8 @@ struct ArtworkSwirl: View {
                         .blur(radius: side * 0.08)
                 }
                 .frame(width: width, height: height)
+                .scaleEffect(1 + 0.05 * beat)
+                .brightness(0.07 * beat)
                 .saturation(1.2)
                 .contrast(1.2)
             }

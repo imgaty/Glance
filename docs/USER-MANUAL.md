@@ -134,6 +134,12 @@ the controls. Drag the progress bar to move through the song. With
 **Show app icon on artwork** on, the playing app's icon sits on the cover's
 corner; click it to switch to that app.
 
+Behind the player, the cover's colors drift slowly through one another and
+pulse on the music's beat, as you hear it: on AirPods and other wireless
+headphones, which play a moment late, the pulse and the waveform wait for the
+sound. The beat needs the `Audio from apps` permission. With Reduce Motion on,
+the colors hold still.
+
 <img src="../assets/screenshots/player.png"
      width="450"
      alt="The open notch: a cover beside the song's name and artist, a progress
@@ -505,7 +511,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 
 | Permission | Why |
 | --- | --- |
-| `Screen & System Audio Recording` (audio only) | The waveform, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
+| `Screen & System Audio Recording` (audio only) | The waveform, the colors behind the player pulsing on the beat, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls |
 | `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; and taking macOS's own timer out of the menu bar while the notch shows it |
