@@ -312,6 +312,12 @@ extension NSScreen {
         guard let uuid = CGDisplayCreateUUIDFromDisplayID(number)?.takeRetainedValue() else { return localizedName }
         return CFUUIDCreateString(nil, uuid) as String
     }
+
+    /// A display that takes a finger: a MacBook Pro's with Touch, or an iPad's over Sidecar.
+    var takesTouch: Bool {
+        guard #available(macOS 27, *) else { return false }
+        return touchCapabilities.contains(.multiTouch)
+    }
 }
 
 /// Owns one notch per display and feeds them pointer events.
@@ -323,7 +329,7 @@ final class NotchManager {
         self.nowPlaying = nowPlaying
     }
 
-    /// Shown when the notch is right-clicked.
+    /// Shown when the notch is right-clicked, or touched and held.
     var contextMenu: NSMenu?
 
     private var controllers: [NotchController] = []
@@ -417,10 +423,7 @@ final class NotchManager {
             controllers = [fallback]
         }
         for controller in controllers {
-            controller.onContextMenu = { [weak self] event, view in
-                guard let menu = self?.contextMenu else { return }
-                NSMenu.popUpContextMenu(menu, with: event, for: view)
-            }
+            controller.contextMenu = { [weak self] in self?.contextMenu }
             controller.show(expanding: switching)
         }
         updateFullScreen()

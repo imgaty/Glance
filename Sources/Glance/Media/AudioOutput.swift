@@ -123,11 +123,12 @@ private final class VolumeMenuSlider: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
         // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
-        slider.onTrackingEnded = { [weak self] in
-            if let self, !self.pointerInside { self.showKnob(false) }
-        }
         slider.target = self
         slider.action = #selector(slide)
+        // A finger brings no pointer to show the knob: it shows while the slider's being dragged, and
+        // stays after only under the pointer.
+        slider.addTarget(self, action: #selector(dragBegan), for: .trackingBegan)
+        slider.addTarget(self, action: #selector(dragEnded), for: [.trackingEndedInside, .trackingEndedOutside, .trackingCancelled])
         slider.isContinuous = true
         slider.doubleValue = volume.level
         slider.isEnabled = volume.canChange
@@ -209,6 +210,12 @@ private final class VolumeMenuSlider: NSView {
     @objc private func slide() {
         volume.set(slider.doubleValue)
     }
+
+    @objc private func dragBegan() { showKnob(true) }
+
+    @objc private func dragEnded() {
+        if !pointerInside { showKnob(false) }
+    }
 }
 
 /// Reading Core Audio's properties, for the sound output, the waveform's tap and the app volume.
@@ -285,7 +292,7 @@ enum AudioProperty {
 }
 
 /// The volume slider, drawn by NeutralSliderCell, its knob showing only while the pointer is over
-/// its row, fading in and out.
+/// its row or it's being dragged, fading in and out.
 private final class NeutralSlider: NSSlider {
     override class var cellClass: AnyClass? {
         get { NeutralSliderCell.self }
@@ -297,17 +304,8 @@ private final class NeutralSlider: NSSlider {
         didSet { needsDisplay = true }
     }
 
-    /// A drag has ended, wherever the pointer let go.
-    var onTrackingEnded: (() -> Void)?
-
     override static func defaultAnimation(forKey key: NSAnimatablePropertyKey) -> Any? {
         key == "knobOpacity" ? CABasicAnimation() : super.defaultAnimation(forKey: key)
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        // Follows the drag until the button is let go.
-        super.mouseDown(with: event)
-        onTrackingEnded?()
     }
 }
 

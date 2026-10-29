@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 25 October 2026`
+`Created: 11 October 2026` | `Last updated: 29 October 2026`
 
 <br>
 
@@ -94,6 +94,19 @@
   Music's own.
 - Changed Music's Live Activities setting to Cover and waveform, so it isn't
   mistaken for the Live Activities page.
+
+### Touch
+
+- Added the notch on a MacBook Pro with Touch, and on an iPad's display over
+  Sidecar. Tap the notch to open it, whatever `Open with` is set to, or a
+  bubble to open its activity. Drag down to open it, up to close it, and
+  sideways to change songs or scroll the tray, which glides on as you let go.
+  Two fingers sideways on the open notch switch between the player and the
+  tray. Opened with a finger, the notch stays open until you swipe it up, tap
+  just outside it, switch to another app, or move the pointer onto it and away.
+- Added the notch's menu, and each tray item's menu, on touch and hold.
+- Changed the volume slider in the sound output menu to show its knob while a
+  finger drags it.
 
 <br>
 

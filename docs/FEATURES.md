@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 24 October 2026`
+`Created: 11 October 2026` | `Last updated: 29 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -30,7 +30,9 @@ grows wider with what it keeps. See the
 Hover over it, click it, or either, with an optional delay. Swipe down with two
 fingers to open it, up to close it, and sideways to change songs. From any app,
 ⇧⌘1 opens it with the player and ⇧⌘2 with the tray, or shortcuts of your
-choice, and the keyboard works it until it closes. See the
+choice, and the keyboard works it until it closes. On a MacBook Pro with Touch,
+or an iPad over Sidecar, tap it, drag it the same ways with a finger, and touch
+and hold it for its menu. See the
 [User Manual](USER-MANUAL.md#opening-and-closing).
 
 ### Layouts and backgrounds

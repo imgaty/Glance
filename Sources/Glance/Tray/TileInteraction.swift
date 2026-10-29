@@ -37,8 +37,10 @@ final class TileInteractionView: NSView, NSDraggingSource {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control), let menu = menu(for: event) {
+            return NSMenu.popUpContextMenu(menu, with: event, for: self)
+        }
         NotificationCenter.default.post(name: Tray.didTouch, object: self)
-        if event.modifierFlags.contains(.control) { return showMenu(event) }
         downAt = event.locationInWindow
         dragged = false
     }
@@ -87,11 +89,6 @@ final class TileInteractionView: NSView, NSDraggingSource {
         }
     }
 
-    override func rightMouseDown(with event: NSEvent) {
-        NotificationCenter.default.post(name: Tray.didTouch, object: self)
-        showMenu(event)
-    }
-
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         guard let item else { return [] }
         // Not back onto the notch, where it came from; out to other apps, files go as Finder takes
@@ -106,12 +103,14 @@ final class TileInteractionView: NSView, NSDraggingSource {
 
     // MARK: The menu
 
-    private func showMenu(_ event: NSEvent) {
-        guard let item, let tray else { return }
+    /// Shown by AppKit for a right-click, and for a finger held on the item.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let item, let tray else { return nil }
+        NotificationCenter.default.post(name: Tray.didTouch, object: self)
         // Right-clicked outside the chosen items: the menu is for this one alone, chosen, as Finder
         // chooses a file it shows the menu for.
         if !tray.selection.contains(item.id) { tray.choose(item.id) }
-        NSMenu.popUpContextMenu(TrayMenu(items: tray.targets(of: item), tray: tray, anchor: self).menu, with: event, for: self)
+        return TrayMenu(items: tray.targets(of: item), tray: tray, anchor: self).menu
     }
 }
 

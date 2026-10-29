@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 25 October 2026`
+`Created: 11 October 2026` | `Last updated: 29 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -104,6 +104,26 @@ keyboard the same way:
 ⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
 replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
 shortcuts, change them in **Settings > Opening**.
+
+### With a finger
+
+On a MacBook Pro with Touch, or an iPad's display over Sidecar, the notch also
+works with a finger:
+
+| Gesture | Operation |
+| --- | --- |
+| Tap | Opens the notch, whatever `Open with` is set to; on a bubble, opens its activity; on a ringing timer, presses its button |
+| Drag down | Opens the notch |
+| Drag up | Closes the notch; on the closed notch, swipes its live activity away |
+| Drag left or right | Changes songs; on the tray, scrolls it, gliding on as you let go |
+| Drag left or right with two fingers, on the open notch | Switches to the tray, and back to the player |
+| Touch and hold | Shows the menu; on an item in the tray, the item's menu |
+
+A finger brings no pointer to leave the notch with, so once it opens the notch,
+the notch stays open until you swipe it up, tap just outside it, switch to
+another app, or move the pointer onto it and away. Dragging follows the same
+settings in **Settings > Opening** as swiping on the trackpad. Three fingers on
+the display are macOS's, as they are on the trackpad.
 
 <br>
 
@@ -456,9 +476,9 @@ colors hold still, and long titles end in an ellipsis instead of scrolling.
 | `Hover delay` | How long the pointer rests on the notch before it opens |
 | `Click and hold` | How long a click is held before it opens |
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
-| `Open and close` | Two-finger swipes down and up |
-| `Change songs` | Two-finger swipes left and right |
-| `Switch to the tray` | Three-finger swipes on the open notch, and scrolling sideways with Shift held |
+| `Open and close` | Two-finger swipes down and up, and dragging down and up on the display |
+| `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
+| `Switch to the tray` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
 | `Reverse direction` | Swiping and scrolling the other way to reach the tray |
 | `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
