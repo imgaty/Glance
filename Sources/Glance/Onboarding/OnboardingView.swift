@@ -526,6 +526,7 @@ private struct NotchScenePicture: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @EnvironmentObject private var preview: SettingsPreview
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
+    @AppStorage(Preferences.tray) private var trayOn = true
     /// A layout's been chosen below: the picture shows it, rather than turning between them.
     @State private var chosen = false
 
@@ -550,7 +551,7 @@ private struct NotchScenePicture: View {
     private var demo: NotchDemo? {
         switch scene {
         case .layouts: chosen ? nil : .layouts
-        case .tray: .dropInTray
+        case .tray: trayOn ? .dropInTray : nil
         case .tryOpening, .liveActivity: nil
         }
     }

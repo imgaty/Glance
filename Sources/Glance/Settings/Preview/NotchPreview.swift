@@ -22,7 +22,7 @@ struct NotchPreview: View {
     var interactive = false
     /// Interactive, the pointer shows where to open it now and then.
     var hintsOpening = true
-    /// The page behind holds still, on the Music page.
+    /// The page behind holds still.
     var still = false
     /// Drawn to the scale a picture this wide would draw it, rather than its own width's: the
     /// welcome tour's pictures, wider, draw the notch as large as Settings' preview does.

@@ -9,7 +9,7 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// The notch above the Appearance, Music and Opening pages: live, in the look of the display chosen
+/// The notch above the Appearance, Player, Tray and Opening pages: live, in the look of the display chosen
 /// in Appearance. One for the window, so it carries on between pages, open; on the Opening page it
 /// works as the real one does, to try opening and closing it.
 @MainActor
@@ -71,9 +71,10 @@ final class SettingsPreview: ObservableObject {
     private var closeTask: Task<Void, Never>?
     private var pressBeganClosed = false
 
-    /// On the Opening page it closes, to be opened; leaving, it opens again and stays open.
+    /// On the Opening page it closes, to be opened; leaving, it opens again and stays open, as it
+    /// does after the Tray page's drag, which leaves it closed.
     func setInteractive(_ on: Bool, animated: Bool) {
-        guard on != interactive else { return }
+        guard on != interactive || (!on && revealed && model.state != .open) else { return }
         interactive = on
         openTask?.cancel()
         closeTask?.cancel()
@@ -295,6 +296,11 @@ struct PreviewHeader: View {
     @EnvironmentObject private var preview: SettingsPreview
     @AppStorage(Preferences.sameLook) private var sameLook = false
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
+    @AppStorage(Preferences.tray) private var trayOn = true
+    /// A moment after the tray shows, it's shown how something's dragged there, round after round.
+    @State private var showsDrop = false
+
+    private var onTray: Bool { pane == .tray && trayOn }
 
     var body: some View {
         ZStack {
@@ -302,9 +308,11 @@ struct PreviewHeader: View {
             // the new one in once it has settled.
             NotchPreview(
                 model: preview.model, display: preview.display, top: preview.top,
-                interactive: pane == .opening, still: !pane.showsPreview
+                interactive: pane == .opening, still: !pane.showsPreview, demo: onTray && showsDrop ? .dropInTray : nil
             )
             .environment(\.notchPaused, !pane.showsPreview)
+            // The made-up tray the welcome tour shows: what's really in yours stays out of the picture.
+            .environment(\.tray, .demo)
             .id(identity)
             .transition(
                 .asymmetric(
@@ -322,15 +330,28 @@ struct PreviewHeader: View {
             withAnimation(pane.showsPreview ? .spring(response: 0.5, dampingFraction: 1) : nil) { preview.model.use(layout) }
         }
         // From a page that shows the notch, it closes (or opens) before your eyes; from one without
-        // it, it's simply there, as the page wants it. The Tray page shows it open on the tray.
+        // it, it's simply there, as the page wants it. The Tray page shows it open on the tray, or
+        // with the tray off, on the player.
         .onChange(of: pane, initial: true) { old, new in
-            let animated = old != new && old.showsPreview && new.showsPreview
-            preview.setInteractive(new == .opening, animated: animated)
-            let page: NotchPage = new == .tray ? .tray : .player
-            withAnimation(animated ? .spring(response: 0.4, dampingFraction: 1) : nil) { preview.model.page = page }
+            settle(animated: old != new && old.showsPreview && new.showsPreview)
         }
+        // Turned on and off, the tray and the player slide past each other, as swiping does.
+        .onChange(of: trayOn) { settle(animated: true) }
         // Opened the first time it shows.
         .onChange(of: pane.showsPreview, initial: true) { if pane.showsPreview { preview.reveal() } }
+        .task(id: onTray) {
+            showsDrop = false
+            guard onTray else { return }
+            try? await Task.sleep(for: .seconds(1.6))
+            if !Task.isCancelled { showsDrop = true }
+        }
+    }
+
+    /// As this page wants it.
+    private func settle(animated: Bool) {
+        preview.setInteractive(pane == .opening, animated: animated)
+        let page: NotchPage = onTray ? .tray : .player
+        withAnimation(animated ? .spring(response: 0.4, dampingFraction: 1) : nil) { preview.model.page = page }
     }
 
     /// What the preview shows: another display, the shared look, or the display's notch made anew.

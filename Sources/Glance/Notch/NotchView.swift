@@ -511,7 +511,7 @@ struct NotchView: View {
         let tall = isOpen ? model.expanded != nil : model.restingTall
         // With wings out, their ends round as the Dynamic Island's do.
         let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0)
-        let onTray = trayOn && model.page == .tray
+        let onTray = model.page == .tray
         // Open on the player, rather than on the tray.
         let heroOpen = isOpen && !expandedShown
         let playerShown = heroOpen && !onTray
@@ -594,24 +594,23 @@ struct NotchView: View {
                 .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
                 .allowsHitTesting(places == nil)
             // The player and the tray side by side, as pages are: going to the tray, the player
-            // slides off to the left as the tray comes in from the right, and back.
+            // slides off to the left as the tray comes in from the right, and back. The tray stays
+            // here turned off, to slide away: not showing, it costs nothing (see `TrayView`).
             NowPlayingView(isVisible: playerShown && !paused, hero: hero)
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
                 .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
                 .modifier(PageFade(hidden: !playerShown))
-            if trayOn {
-                TrayView(
-                    tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
-                    airDropTargeted: model.airDropTargeted
-                )
-                .frame(width: model.trayWidth, height: model.trayHeight)
-                .environment(\.notchControls, trayShown)
-                .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
-                .modifier(PageFade(hidden: !trayShown))
-                .allowsHitTesting(places == nil && trayShown)
-            }
+            TrayView(
+                tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
+                airDropTargeted: model.airDropTargeted
+            )
+            .frame(width: model.trayWidth, height: model.trayHeight)
+            .environment(\.notchControls, trayShown)
+            .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
+            .modifier(PageFade(hidden: !trayShown))
+            .allowsHitTesting(places == nil && trayShown)
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
             HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset * 2) * swell)
@@ -641,6 +640,10 @@ struct NotchView: View {
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
             if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
+        }
+        // Turned off while it shows, the tray slides away for the player, as swiping to it does.
+        .onChange(of: trayOn) {
+            if !trayOn, model.page == .tray { withAnimation(.spring(response: 0.4, dampingFraction: 1)) { model.page = .player } }
         }
         // Liquid Glass takes a new size at once, while a frame's size otherwise animates only in
         // the picture, so the glass and the notch's black and outline would part as it changes size
