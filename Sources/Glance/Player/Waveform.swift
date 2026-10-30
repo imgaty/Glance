@@ -54,7 +54,8 @@ struct HeroWaveform: View {
 }
 
 /// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
-/// 1.3 times as wide as the gaps, and dots when nothing plays. As the iPhone fills its waveform,
+/// 1.6 times as wide as the gaps, with round ends however tall it grows, and dots when nothing
+/// plays. As the iPhone fills its waveform,
 /// the bars show a gradient made from the cover's colors (see `WaveformGradient`), or from the
 /// chosen color's shades, across all six at once. Folded, it becomes Apple's lyrics symbol, the way
 /// Apple swaps one symbol for another: the bars draw together into a point and are gone, and the
@@ -84,14 +85,16 @@ struct WaveformGlyph: View {
     private func glyph(levels: [Float]) -> some View {
         GeometryReader { proxy in
             let size = proxy.size
-            let bar = size.width / (6 + 5 / 1.3)
+            let bar = size.width / (6 + 5 / Self.barToGap)
             ZStack(alignment: .topLeading) {
                 paint
                     .mask {
                         ZStack(alignment: .topLeading) {
                             ForEach(0..<AudioLevels.bands, id: \.self) { index in
                                 let rect = folded ? gathered(in: size, dot: bar) : self.bar(index, level: levels[index], in: size, width: bar)
-                                Capsule()
+                                // Circular: a continuous curve stretches along a tall bar, so
+                                // its ends would grow pointed as it grows.
+                                Capsule(style: .circular)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
                                     .opacity(folded ? 0 : 1)
@@ -142,8 +145,11 @@ struct WaveformGlyph: View {
         let sounding = max(width, size.height * (0.3 + 0.7 * level))
         // Settling into a dot as the sound fades out, rather than stopping at a dash.
         let height = isPlaying ? width + (sounding - width) * min(level / 0.05, 1) : width
-        return CGRect(x: CGFloat(index) * width * (1 + 1 / 1.3), y: (size.height - height) / 2, width: width, height: height)
+        return CGRect(x: CGFloat(index) * width * (1 + 1 / Self.barToGap), y: (size.height - height) / 2, width: width, height: height)
     }
+
+    /// How much wider a bar is than the gap beside it.
+    private static let barToGap: CGFloat = 1.6
 
     /// A made-up beat, for the welcome tour: every bar at its own pace, with a kick on the bass a
     /// little under twice a second.
