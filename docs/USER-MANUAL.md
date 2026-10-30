@@ -513,8 +513,7 @@ ellipsis instead of scrolling.
 
 | Setting | Operation |
 | --- | --- |
-| `Show on displays without a notch` | Draws one on external displays and Macs without a notch |
-| `Style` | `Notch` or `Dynamic Island`, for displays without a notch |
+| `Show on external displays` | Draws a notch on external displays too; the Mac's own display always has one |
 | `Hide in full screen` | Hides the notch with the menu bar in full-screen apps |
 
 <br>
@@ -573,7 +572,7 @@ their signature matches the one built into Glance.
    **Settings > Music > Apps**.
 
 7. **There's no notch on an external display.** Turn on
-   **Settings > Displays > Show on displays without a notch**.
+   **Settings > Displays > Show on external displays**.
 
 8. **What I copy doesn't show up in the tray.** Turn on
    **Settings > Tray > Keep what you copy**. If macOS asked about pasting from

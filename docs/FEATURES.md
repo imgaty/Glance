@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 29 October 2026`
+`Created: 11 October 2026` | `Last updated: 30 October 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -66,7 +66,8 @@ Apple Music's animated album covers, whichever app is playing the song.
 
 ### Displays without a notch
 
-External displays and Macs without a notch get a notch or a Dynamic Island.
+Macs without a notch get one, and so do external displays, which can be left
+out in Settings.
 
 ### Updates
 
@@ -96,7 +97,7 @@ apps can't read them. Clock's timer and stopwatch do.
 
 - [x] `Animated covers`: Apple Music's animated album covers.
 - [x] `More Live Activities`: battery, devices, Clock's timer and stopwatch.
-- [x] `Displays without a notch`: a notch or a Dynamic Island on any display.
+- [x] `Displays without a notch`: a notch on any display.
 - [x] `Now Playing`: whatever is playing, in any app, with its controls.
 - [x] `Shortcuts`: shortcuts to open the player and the tray.
 - [x] `Timed lyrics`: the words beside the player, line by line.

@@ -136,6 +136,12 @@
   rushing back with the notch's end ahead of its size. It flies straight back
   to its place now, inside the notch all the way.
 
+### Displays
+
+- Changed every display to show the notch. The Dynamic Island style is gone.
+- Changed `Show on displays without a notch` to `Show on external displays`:
+  the Mac's own display always has a notch.
+
 <br>
 
 ## Release 0.2.1

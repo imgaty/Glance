@@ -153,7 +153,6 @@ struct AirPlayDevice: View {
 struct AirPlayMark: View {
     let route: AirPlayRoute
     let restingHeight: CGFloat
-    let island: Bool
 
     var body: some View {
         let h = restingHeight

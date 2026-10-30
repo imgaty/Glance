@@ -56,7 +56,6 @@ struct GlassLookTests {
 @Suite("Notch corners")
 struct NotchCornersTests {
     private let notch = NotchCorners(restingHeight: 32, openHeight: 200, openRadius: 29)
-    private let island = NotchCorners(restingHeight: 32, openHeight: 200, openRadius: 29, island: true)
 
     @Test("Closed, it has the hardware notch's flares and corners")
     func resting() {
@@ -91,20 +90,6 @@ struct NotchCornersTests {
         let radii = notch.radii(forHeight: 10)
         #expect(radii.flare == 6)
         #expect(radii.bottom == 12)
-    }
-
-    @Test("A Dynamic Island has no flares and closes to a capsule")
-    func islandResting() {
-        let radii = island.radii(forHeight: 32)
-        #expect(radii.flare == 0)
-        #expect(radii.bottom == 16)
-    }
-
-    @Test("A Dynamic Island opens to the open radius")
-    func islandOpen() {
-        let radii = island.radii(forHeight: 200)
-        #expect(radii.flare == 0)
-        #expect(isClose(radii.bottom, 29))
     }
 
     @Test("Open and closed at the same height doesn't divide by zero")

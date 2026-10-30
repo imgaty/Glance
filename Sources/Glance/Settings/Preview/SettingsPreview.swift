@@ -35,18 +35,12 @@ final class SettingsPreview: ObservableObject {
         let display = Self.defaultDisplay
         self.display = display
         model = .picture(of: ScreenTop(NSScreen.with(id: display) ?? NSScreen.main), state: .closed)
-        // A display switched between a notch and a Dynamic Island, on the Displays page.
-        styleWatch = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in MainActor.assumeIsolated { self?.followDisplay() } }
     }
 
-    private var styleWatch: AnyCancellable?
-
-    /// The notch is the display's: as large, and a notch or an island as the display has.
+    /// The notch is the display's: as large.
     private func followDisplay() {
         let top = self.top
-        guard model.closedSize != top.notch || model.island != top.island else { return }
+        guard model.closedSize != top.notch else { return }
         model = .picture(of: top, state: model.state)
     }
 
@@ -251,7 +245,7 @@ final class SettingsPreview: ObservableObject {
 extension NotchModel {
     /// A notch for Settings' pictures: the display's own at rest, playing, and open unless said.
     static func picture(of top: ScreenTop, layout: PlayerLayout = .current, state: NotchState = .open) -> NotchModel {
-        let model = NotchModel(closedSize: top.notch, layout: layout, hasCamera: false, island: top.island)
+        let model = NotchModel(closedSize: top.notch, layout: layout, hasCamera: false)
         model.activity = true
         model.state = state
         return model

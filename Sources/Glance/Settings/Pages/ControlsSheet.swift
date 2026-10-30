@@ -37,13 +37,12 @@ struct ControlsSheet: View {
 
     var body: some View {
         let open = layout.size(closed: top.notch)
-        let gap = top.island ? NotchModel.islandGap : 0
         let chosen = content(at: selected)
         VStack(alignment: .leading, spacing: 0) {
             // As much of the screen as the sheet is wide, life size, down to a little below the player.
             ControlsPicture(layout: layout, display: display, top: top, places: places)
                 .id(layout)
-                .frame(width: Self.pictureWidth, height: top.edge + gap + open.height + 44)
+                .frame(width: Self.pictureWidth, height: top.edge + open.height + 44)
                 .clipShape(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous)

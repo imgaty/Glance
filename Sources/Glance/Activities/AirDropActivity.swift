@@ -180,14 +180,13 @@ enum AirDropLayout {
     static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * bigRing, in: TimerLayout.tallHeight(h)) }
 
     /// Opened: the picture and the words at the left end, the ring at the right, the camera between
-    /// them, each side as wide as the wider; on an island, as wide as the iPhone's, or as its words
-    /// need.
+    /// them, each side as wide as the wider.
     @MainActor
     static func width(for shown: AirDropShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let left = thumbEdge(h) + h * (thumb + self.gap) + words(for: shown, h) + gap
         let right = gap + h * bigRing + ringEdge(h)
-        return camera > 0 ? camera + max(left, right) * 2 : max(h * TimerLayout.wide, left + right + h * self.gap)
+        return camera + max(left, right) * 2
     }
 
     @MainActor
@@ -224,7 +223,6 @@ struct AirDropRing: View {
 struct AirDropMark: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
-    let island: Bool
 
     var body: some View {
         let h = restingHeight
@@ -248,7 +246,7 @@ struct AirDropMark: View {
 struct ExpandedAirDropView: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
-    /// The camera housing's width, which the row goes either side of; none on an island.
+    /// The camera housing's width, which the row goes either side of.
     let camera: CGFloat
     let width: CGFloat
     @State private var hovering = false
@@ -276,20 +274,11 @@ struct ExpandedAirDropView: View {
         }
         .padding(.leading, AirDropLayout.thumbEdge(h))
         let right = stopButton(h).padding(.trailing, AirDropLayout.ringEdge(h))
-        Group {
-            if camera > 0 {
-                let side = max((width - camera) / 2, 0)
-                HStack(spacing: 0) {
-                    left.frame(width: side, alignment: .leading)
-                    Color.clear.frame(width: camera)
-                    right.frame(width: side, alignment: .trailing)
-                }
-            } else {
-                ZStack {
-                    left.frame(maxWidth: .infinity, alignment: .leading)
-                    right.frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
+        let side = max((width - camera) / 2, 0)
+        HStack(spacing: 0) {
+            left.frame(width: side, alignment: .leading)
+            Color.clear.frame(width: camera)
+            right.frame(width: side, alignment: .trailing)
         }
         .frame(width: width, height: TimerLayout.tallHeight(h))
         .accessibilityElement(children: .contain)

@@ -605,8 +605,7 @@ private struct NotchScenePicture: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 model.popWing = min(
                     LiveActivityView.popWing(
-                        title: nowPlaying.title, artist: nowPlaying.artist, restingHeight: model.closedSize.height,
-                        island: model.island), room)
+                        title: nowPlaying.title, artist: nowPlaying.artist, restingHeight: model.closedSize.height), room)
                 model.pop = true
             }
             try? await Task.sleep(for: .seconds(3.5))

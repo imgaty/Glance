@@ -302,7 +302,6 @@ struct ScreenTop {
     let size: CGSize
     let menuBar: CGFloat
     let notch: CGSize
-    let island: Bool
     /// The notch is a camera housing.
     let camera: Bool
     let builtIn: Bool
@@ -314,7 +313,6 @@ struct ScreenTop {
             size = screen.frame.size
             menuBar = resting.menuBar
             notch = resting.size
-            island = resting.island
             camera = resting.camera
             builtIn = screen.isBuiltIn
         } else {
@@ -322,7 +320,6 @@ struct ScreenTop {
             size = CGSize(width: 1512, height: 982)
             menuBar = 32
             notch = CGSize(width: 185, height: 32)
-            island = false
             camera = true
             builtIn = true
         }

@@ -156,7 +156,7 @@ enum Preferences {
     /// What each setting is until it's changed.
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
-            showOnPlainDisplays: true,
+            showOnExternalDisplays: true,
             liveActivity: true,
             musicBackground: MusicBackground.replaceGlass.rawValue,
             musicAnimatedArtwork: true,
@@ -188,7 +188,8 @@ enum Preferences {
         ])
     }
 
-    static let showOnPlainDisplays = "showOnDisplaysWithoutNotch"
+    /// The key from when this meant every display without a notch, so the choice carries over.
+    static let showOnExternalDisplays = "showOnDisplaysWithoutNotch"
     /// Whether the notch's glass is the system's Liquid Glass, as set in Appearance settings,
     /// rather than the darkness and blur below.
     static let glassFollowsSystem = "glassFollowsSystem"
@@ -241,8 +242,6 @@ enum Preferences {
     static let musicTrackPop = "musicTrackPop"
     /// Off, there's no notch on any display until it's turned back on, from the menu bar.
     static let notchEnabled = "notchEnabled"
-    /// Per display without a notch (keyed with its ID): a NotchStyle.
-    static let notchStyle = "notchStyle"
     /// The trackpad gestures: two fingers down and up to open and close the notch, sideways to
     /// change songs.
     static let swipeToOpen = "swipeToOpen"
@@ -284,7 +283,7 @@ enum Preferences {
 
 /// The settings that are watched by their keys.
 extension UserDefaults {
-    @objc dynamic var showOnDisplaysWithoutNotch: Bool { bool(forKey: Preferences.showOnPlainDisplays) }
+    @objc dynamic var showOnDisplaysWithoutNotch: Bool { bool(forKey: Preferences.showOnExternalDisplays) }
     @objc dynamic var hideInFullScreen: Bool { bool(forKey: Preferences.hideInFullScreen) }
     @objc dynamic var sameLookEverywhere: Bool { bool(forKey: Preferences.sameLook) }
     @objc dynamic var musicLayout: String? { string(forKey: Preferences.musicLayout) }
@@ -335,7 +334,6 @@ final class NotchManager {
     private var controllers: [NotchController] = []
     private var monitors: [Any] = []
 
-    private var styles = ""
     /// The displays the notches were last made for, and how each one's top is laid out.
     private var madeFor = ""
     private var fullScreenTimer: Timer?
@@ -351,15 +349,6 @@ final class NotchManager {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, Self.displays != self.madeFor else { return }
-                self.reload()
-            }
-        }
-        // A display switched between a notch and a Dynamic Island in Settings.
-        styles = NotchStyle.signature
-        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, NotchStyle.signature != self.styles else { return }
-                self.styles = NotchStyle.signature
                 self.reload()
             }
         }
@@ -412,7 +401,7 @@ final class NotchManager {
     /// Recreates every notch from the current displays and preferences; none while the notch is off.
     /// Switching it off or on, they close away or come back rather than fade.
     func reload(switching: Bool = false) {
-        let showOnPlainDisplays = UserDefaults.standard.bool(forKey: Preferences.showOnPlainDisplays)
+        let onExternal = UserDefaults.standard.bool(forKey: Preferences.showOnExternalDisplays)
         controllers.forEach { $0.tearDown(collapsing: switching) }
         guard UserDefaults.standard.bool(forKey: Preferences.notchEnabled) else {
             controllers = []
@@ -420,9 +409,9 @@ final class NotchManager {
         }
         NSScreen.screens.forEach { Preferences.seed($0.notchID) }
         madeFor = Self.displays
-        controllers = NSScreen.screens.compactMap { NotchController(screen: $0, allowVirtual: showOnPlainDisplays, nowPlaying: nowPlaying) }
+        controllers = NSScreen.screens.compactMap { NotchController(screen: $0, onExternal: onExternal, nowPlaying: nowPlaying) }
         // Never leave the user with no notch at all.
-        if controllers.isEmpty, let main = NSScreen.main, let fallback = NotchController(screen: main, allowVirtual: true, nowPlaying: nowPlaying) {
+        if controllers.isEmpty, let main = NSScreen.main, let fallback = NotchController(screen: main, onExternal: true, nowPlaying: nowPlaying) {
             controllers = [fallback]
         }
         for controller in controllers {

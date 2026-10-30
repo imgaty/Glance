@@ -60,9 +60,6 @@ struct NotchCorners: Equatable {
     var restingHeight: CGFloat
     var openHeight: CGFloat
     var openRadius: CGFloat
-    /// A Dynamic Island instead, away from the top edge: no flares, all four corners round alike,
-    /// and closed, a capsule.
-    var island = false
 
     static let restingFlare: CGFloat = 6
     private static let restingBottomRadius: CGFloat = 12
@@ -75,9 +72,6 @@ struct NotchCorners: Equatable {
     func radii(forHeight height: CGFloat) -> Radii {
         // Settled at the open size: a pull never rounds the corners past it.
         let progress = min(max((height - restingHeight) / max(openHeight - restingHeight, 1), 0), 1)
-        if island {
-            return Radii(flare: 0, bottom: height / 2 + (openRadius - height / 2) * progress)
-        }
         return Radii(
             flare: Self.restingFlare + (openRadius - Self.restingFlare) * progress,
             bottom: Self.restingBottomRadius + (openRadius - Self.restingBottomRadius) * progress)
@@ -256,8 +250,7 @@ final class NotchModel: ObservableObject {
         return activity == .music ? nil : activity
     }
 
-    /// The timer or stopwatch opened to, and the room the camera takes in the middle of its row:
-    /// none on an island, which has no camera.
+    /// The timer or stopwatch opened to, and the room the camera takes in the middle of its row.
     var expandedClock: ClockShown? { expanded.flatMap(clock(of:)) }
     /// What the notch was opened to has gone: the timer ended, the stopwatch was reset, or the sound
     /// left AirPlay.
@@ -280,7 +273,7 @@ final class NotchModel: ObservableObject {
         case .airdrop: "AirDrop"
         }
     }
-    var camera: CGFloat { island ? 0 : closedSize.width }
+    var camera: CGFloat { closedSize.width }
 
     /// The bubble the pointer is on, which swells a little, and the one pressed, which squeezes.
     @Published var bubbleHovered: Side?
@@ -290,31 +283,20 @@ final class NotchModel: ObservableObject {
     var openBubble: (Side) -> Void = { _ in }
     var openNotch: () -> Void = {}
 
-    /// A Dynamic Island, floating just below the top of the screen, rather than a notch.
-    @Published var island: Bool {
-        didSet { corners.island = island }
-    }
-
-    /// How far below the top of the screen the island floats: just clear of it, so the island can
-    /// be as tall as the menu bar allows.
-    static let islandGap: CGFloat = 1
-    /// Turning the notch off and on, 0 to 1: an island draws into a dot (`squeeze`), which then
-    /// shrinks away (`vanish`); a notch on a display without one folds up into the top edge (`vanish`).
-    @Published var squeeze: CGFloat = 0
+    /// Turning the notch off and on, 0 to 1: a notch on a display without one folds up into the top
+    /// edge.
     @Published var vanish: CGFloat = 0
-    var gap: CGFloat { island ? Self.islandGap : 0 }
 
-    init(closedSize: CGSize, layout: PlayerLayout, hasCamera: Bool, island: Bool = false) {
+    init(closedSize: CGSize, layout: PlayerLayout, hasCamera: Bool) {
         self.closedSize = closedSize
         self.hasCamera = hasCamera
         self.layout = layout
-        self.island = island
         let openSize = layout.size(closed: closedSize)
         self.openSize = openSize
         // Fully round by the shorter of the two pages, so both have the same corners.
         corners = NotchCorners(
             restingHeight: closedSize.height, openHeight: min(openSize.height, Self.trayHeight(closed: closedSize)),
-            openRadius: PlayerLayout.cornerRadius, island: island)
+            openRadius: PlayerLayout.cornerRadius)
     }
 
     /// Switches to another layout in place.
@@ -325,10 +307,10 @@ final class NotchModel: ObservableObject {
     }
 
     /// Each side of the camera while music plays: as wide as the artwork's square needs, right up to
-    /// the camera (on an island, a little wider, so they don't crowd its ends), or wider while a new
-    /// song is announced; as wide as an announcement or a timer needs, against the camera too.
+    /// the camera, or wider while a new song is announced; as wide as an announcement or a timer
+    /// needs, against the camera too.
     var wing: CGFloat {
-        let resting = LiveActivityView.restingWing(restingHeight: closedSize.height, island: island)
+        let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
         if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
@@ -366,7 +348,7 @@ final class NotchModel: ObservableObject {
             switch state {
             case .closed:
                 (
-                    (restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4) * (1 - squeeze) + closedSize.height * squeeze,
+                    restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4,
                     resting + Self.nearSwell * proximity + pull
                 )
             case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4, resting + Self.peekSwell + pull)
@@ -400,7 +382,7 @@ final class NotchModel: ObservableObject {
         let press: CGFloat = pressed ? 0.975 : 1
         // As tall as the Dynamic Island's expanded activities, it keeps the notch's small flares.
         let tall = state == .open ? expanded != nil : restingTall
-        let flare = tall && !island ? NotchCorners.restingFlare : corners.radii(forHeight: height * press).flare
+        let flare = tall ? NotchCorners.restingFlare : corners.radii(forHeight: height * press).flare
         return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare)
     }
 }
@@ -569,13 +551,13 @@ struct NotchView: View {
                 .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
             // As wide as the notch is at each step, so what the wings show rides in and out with their
             // ends, as the Dynamic Island's activities do.
-            LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, swell: swell)
+            LiveActivityView(restingHeight: closed.height, wing: model.wing, pop: model.pop, swell: swell)
                 .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
                 .allowsHitTesting(places == nil)
                 .islandFade(liveShown)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
-                restingHeight: closed.height, closedWidth: closed.width, island: model.island, wing: model.wing, alert: model.alert,
+                restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.alert,
                 clock: model.activity || model.switching ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.switching ? model.airdrop : nil,
@@ -593,7 +575,7 @@ struct NotchView: View {
             let rest = isOpen ? model.metrics(for: .closed) : m
             let restHeight = min(rest.height, model.metrics(for: isOpen ? .closed : model.state, short: true).height)
             NotchShape(corners: model.corners).fill(.black)
-                .frame(width: restingBody(m) + rest.flare * 2, height: restHeight)
+                .frame(width: model.closedSize.width + rest.flare * 2, height: restHeight)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
@@ -633,7 +615,7 @@ struct NotchView: View {
             }
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
-            HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset(island: model.island) * 2) * swell)
+            HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset * 2) * swell)
                 .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays, coming and going as the
@@ -704,14 +686,8 @@ struct NotchView: View {
         }
         // Pushed up, the open notch shrinks a little as a whole, so nothing in it is cut off.
         .scaleEffect(1 + min(model.stretch, 0) * 0.005, anchor: .top)
-        // Turned off: an island's dot shrinks away into its middle; a notch on a display without one
-        // folds up into the top edge.
-        .scaleEffect(
-            x: model.island ? max(1 - model.vanish, 0.001) : 1, y: max(1 - model.vanish, 0.001),
-            anchor: model.island ? .center : .top
-        )
-        // An island floats a little below the top of the screen.
-        .padding(.top, model.gap)
+        // Turned off: a notch on a display without one folds up into the top edge.
+        .scaleEffect(x: 1, y: max(1 - model.vanish, 0.001), anchor: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .coordinateSpace(.named(ControlFrames.space))
         .onPreferenceChange(ControlFrames.self) { model.controlFrames = $0 }
@@ -785,8 +761,8 @@ struct NotchView: View {
     /// the notch does, inside it all the way and never past the camera, rather than chasing its ends.
     private func restingPlaces(_ m: NotchMetrics, swell: CGFloat) -> some View {
         let h = model.closedSize.height
-        let side = (h - LiveActivityView.inset(island: model.island) * 2) * swell
-        let edge = LiveActivityView.edgeInset(island: model.island, restingHeight: h) * swell
+        let side = (h - LiveActivityView.inset * 2) * swell
+        let edge = LiveActivityView.inset * swell
         return ZStack(alignment: .topLeading) {
             Color.clear
                 .frame(width: side, height: side)
@@ -799,12 +775,6 @@ struct NotchView: View {
         }
         .frame(width: m.totalWidth, height: m.height)
         .allowsHitTesting(false)
-    }
-
-    /// The closed notch's width without its wings, as it narrows to a dot while turning off.
-    private func restingBody(_ m: NotchMetrics) -> CGFloat {
-        let closed = model.closedSize
-        return closed.width * (1 - model.squeeze) + closed.height * model.squeeze
     }
 
     /// The notch's own points, from the top left of its whole shape, flares and all.
@@ -1006,11 +976,9 @@ struct NotchShape: Shape {
         set { (wingEnds, tall) = (newValue.first, newValue.second) }
     }
 
-    var island: Bool { corners.island }
-
     private func radii(in rect: CGRect) -> NotchCorners.Radii {
         var radii = corners.radii(forHeight: rect.height)
-        if !corners.island, wingEnds > 0 {
+        if wingEnds > 0 {
             // Opening, the open notch's own corners take over.
             let open = min(max((rect.height - corners.restingHeight) / max(corners.openHeight - corners.restingHeight, 1), 0), 1)
             radii.bottom += (rect.height / 2 - radii.bottom) * wingEnds * (1 - open)
@@ -1019,7 +987,7 @@ struct NotchShape: Shape {
             // Round right across at the Dynamic Island's height, never rounder than its 44 points.
             let round = min(rect.height / 2, corners.restingHeight * TimerLayout.corner)
             radii.bottom += (round - radii.bottom) * tall
-            if !corners.island { radii.flare += (NotchCorners.restingFlare - radii.flare) * tall }
+            radii.flare += (NotchCorners.restingFlare - radii.flare) * tall
         }
         return radii
     }
@@ -1033,10 +1001,6 @@ struct NotchShape: Shape {
         let radii = radii(in: rect)
         let flare = flare(in: rect)
         let body = rect.insetBy(dx: flare, dy: 0)
-        if corners.island {
-            let radius = min(radii.bottom, rect.width / 2, rect.height / 2)
-            return RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect)
-        }
         let bottom = min(radii.bottom, body.width / 2, body.height - flare)
         let path = UnevenRoundedRectangle(
             topLeadingRadius: 0, bottomLeadingRadius: bottom,

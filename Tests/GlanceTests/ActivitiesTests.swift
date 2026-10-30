@@ -243,7 +243,7 @@ struct ActivitiesTests {
         // Its wings as wide as the ring and its level need, against the camera, and no wider.
         let keyboard = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
         let layout = DeviceLayout(height: 32)
-        let wing = SystemActivityView.wing(for: keyboard, restingHeight: 32, island: false, closedWidth: 185)
+        let wing = SystemActivityView.wing(for: keyboard, restingHeight: 32, closedWidth: 185)
         #expect(wing < layout.ring + layout.trailing + 60)
     }
 
@@ -317,28 +317,28 @@ struct ActivitiesTests {
         let resting = model.closedSize.height
         #expect(model.wing == 0)
         model.timer = .running(until: .now + 300, total: 300)
-        model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: resting, island: false)
+        model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: resting)
         #expect(model.wing == model.timerWing)
         // With music, the timer goes in a bubble, and the notch has music's wings.
         model.activity = true
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: resting, island: false))
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: resting))
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
         let alert = NotchAlert(
             kind: .device, content: .device(symbol: "airpods.pro", pictures: ["airpod_left", "airpod_right"], battery: 31),
             spoken: "AirPods Pro connected")
-        model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, island: false, closedWidth: model.closedSize.width)
+        model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, closedWidth: model.closedSize.width)
         model.alert = alert
         #expect(model.wing == model.alertWing)
         #expect(model.alertWing > resting && model.alertWing <= SystemActivityView.maxWing)
         // An hour or more takes more room than minutes.
-        let minutes = SystemActivityView.wing(for: .timer(.running(until: .now + 300, total: 300)), restingHeight: resting, island: false)
-        let hours = SystemActivityView.wing(for: .timer(.running(until: .now + 3_700, total: 3_700)), restingHeight: resting, island: false)
+        let minutes = SystemActivityView.wing(for: .timer(.running(until: .now + 300, total: 300)), restingHeight: resting)
+        let hours = SystemActivityView.wing(for: .timer(.running(until: .now + 3_700, total: 3_700)), restingHeight: resting)
         #expect(hours > minutes)
         // The stopwatch gains a digit at an hour.
-        let short = SystemActivityView.wing(for: .stopwatch(.running(since: .now - 30)), restingHeight: resting, island: false)
-        let long = SystemActivityView.wing(for: .stopwatch(.running(since: .now - 3_700)), restingHeight: resting, island: false)
+        let short = SystemActivityView.wing(for: .stopwatch(.running(since: .now - 30)), restingHeight: resting)
+        let long = SystemActivityView.wing(for: .stopwatch(.running(since: .now - 3_700)), restingHeight: resting)
         #expect(long > short)
     }
 
@@ -379,9 +379,9 @@ struct ActivitiesTests {
         #expect(isClose(layout.edge * 2 + layout.picture, h))
         // Words, by their line, a little further in than the cover.
         let words = LiveActivityView.textEdge(restingHeight: h)
-        #expect(words > LiveActivityView.edgeInset(island: false, restingHeight: h) && words < 10)
+        #expect(words > LiveActivityView.inset && words < 10)
         let (left, right) = SystemActivityView.insets(
-            for: .battery(title: "Charging", level: BatteryLevel(percent: 64, charging: true)), restingHeight: h, island: false)
+            for: .battery(title: "Charging", level: BatteryLevel(percent: 64, charging: true)), restingHeight: h)
         #expect(left == words && right == words)
         // Opened and done, the round buttons are concentric with the round ends, the Dynamic
         // Island's 44 points.
@@ -409,34 +409,29 @@ struct ActivitiesTests {
         model.expanded = .stopwatch
         #expect(model.metrics(for: .open).height == open.height)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
-        // On an island, which has no camera, as wide as the iPhone's.
-        let island = NotchModel(closedSize: CGSize(width: 126, height: 32), layout: .top, hasCamera: false, island: true)
-        island.timer = .running(until: .now + 300, total: 300)
-        island.expanded = .timer
-        #expect(abs(island.metrics(for: .open).bodyWidth - 32 * TimerLayout.wide) < 1)
     }
 
     @Test("Paused, a timer makes room for its pause symbol; a device not in 3D, for its level; a long name scrolls within the limit")
     func roomForWhatShows() {
         let resting: CGFloat = 32
-        let running = SystemActivityView.wing(for: .timer(.running(until: .now + 300, total: 300)), restingHeight: resting, island: false)
-        let paused = SystemActivityView.wing(for: .timer(.paused(left: 300, total: 300)), restingHeight: resting, island: false)
+        let running = SystemActivityView.wing(for: .timer(.running(until: .now + 300, total: 300)), restingHeight: resting)
+        let paused = SystemActivityView.wing(for: .timer(.paused(left: 300, total: 300)), restingHeight: resting)
         #expect(paused > running)
-        let stopped = SystemActivityView.wing(for: .stopwatch(.stopped(elapsed: 7)), restingHeight: resting, island: false)
-        #expect(stopped > SystemActivityView.wing(for: .stopwatch(.running(since: .now - 7)), restingHeight: resting, island: false))
+        let stopped = SystemActivityView.wing(for: .stopwatch(.stopped(elapsed: 7)), restingHeight: resting)
+        #expect(stopped > SystemActivityView.wing(for: .stopwatch(.running(since: .now - 7)), restingHeight: resting))
         let layout = DeviceLayout(height: resting)
         let keyboard = NotchAlert(
             kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "Magic Keyboard connected, 15 percent")
         // Its battery as a ring alone, with no level in numbers beside it.
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false, closedWidth: 185) >= layout.ring + layout.trailing)
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, island: false, closedWidth: 185) < layout.ring + layout.trailing + 15)
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, closedWidth: 185) >= layout.ring + layout.trailing)
+        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, closedWidth: 185) < layout.ring + layout.trailing + 15)
         let long = "The Living Room Speaker Upstairs, By the Window"
         let speaker = NotchAlert(kind: .charging, content: .status(symbol: "airplay.audio", tint: .blue, text: long), spoken: long)
-        #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, island: false, closedWidth: 185) == SystemActivityView.maxWing)
+        #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, closedWidth: 185) == SystemActivityView.maxWing)
         #expect(SystemActivityView.maxWing <= 120)
         // A timer's wings as wide as its time needs as it reads now, from the end, and no wider.
-        let early = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false)
-        let late = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, island: false, at: .now + 550)
+        let early = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting)
+        let late = SystemActivityView.wing(for: .timer(.running(until: .now + 600, total: 600)), restingHeight: resting, at: .now + 550)
         let font = NSFont.monospacedDigitSystemFont(ofSize: LiveActivityView.textSize(for: resting), weight: .semibold)
         func needs(_ reading: String) -> CGFloat {
             LiveActivityView.cameraGap + ceil((reading as NSString).size(withAttributes: [.font: font]).width)
@@ -466,7 +461,7 @@ struct ActivitiesTests {
         #expect(model.bubbles == [.timer])
         #expect(model.bubble(.trailing) == .timer)
         #expect(model.bubble(.leading) == nil)
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32, island: false))
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
         #expect(model.notchClock == nil)
         // The stopwatch goes off its left end.
         model.stopwatch = .stopped(elapsed: 12)
@@ -511,7 +506,7 @@ struct ActivitiesTests {
         // Each wing as wide as the level or the capsule needs against the camera, whichever is wider.
         let gap = LiveActivityView.cameraGap
         let level = LowBatteryLayout.width(LowBatteryView.title(10), h * LowBatteryLayout.words)
-        let wing = SystemActivityView.wing(for: alert, restingHeight: h, island: false, closedWidth: 185)
+        let wing = SystemActivityView.wing(for: alert, restingHeight: h, closedWidth: 185)
         #expect(wing == max(LiveActivityView.textEdge(restingHeight: h) + level + gap, gap + h * LowBatteryLayout.capsule.width + edge))
         #expect(wing < h * 3)
         // The offer, under the camera, stays clear of the capsule.
@@ -537,7 +532,7 @@ struct ActivitiesTests {
         model.airdrop = transfer
         #expect(model.activities == [.airdrop, .timer, .airplay])
         #expect(model.notchClock == nil)
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32, island: false))
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
         #expect(model.expansion(fromBubble: nil) == .airdrop)
         model.activity = true
         #expect(model.bubbles == [.airdrop, .timer])
@@ -546,11 +541,10 @@ struct ActivitiesTests {
         model.airdrop = nil
         #expect(model.expandedGone)
         // Opened, as tall as the Alarm, the picture and the words at one end, the ring at the other,
-        // the camera between them; on an island, as wide as the iPhone's.
+        // the camera between them.
         let left = AirDropLayout.thumbEdge(32) + 32 * (AirDropLayout.thumb + AirDropLayout.gap) + AirDropLayout.words(for: transfer, 32)
             + LiveActivityView.cameraGap
         #expect(AirDropLayout.width(for: transfer, restingHeight: 32, camera: 185) == 185 + left * 2)
-        #expect(AirDropLayout.width(for: transfer, restingHeight: 32, camera: 0) == 32 * TimerLayout.wide)
         #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
     }
 
@@ -576,7 +570,7 @@ struct ActivitiesTests {
         let route = AirPlayRoute(name: "Living Room", symbol: "appletv.fill")
         model.airplay = route
         #expect(model.activities == [.airplay])
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32, island: false))
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
         #expect(model.expansion(fromBubble: nil) == .airplay)
         // Behind music, in a bubble that opens to it.
         model.activity = true
@@ -630,13 +624,9 @@ struct ActivitiesTests {
         model.timerName = "Pasta"
         #expect(model.name(of: .timer) == "Pasta")
         #expect(model.name(of: .stopwatch) == "Stopwatch")
-        // Beside the camera it runs under the camera, which the width doesn't change for; on an
-        // island, it widens the notch only so far.
+        // Beside the camera it runs under the camera, which the width doesn't change for.
         let state = ClockShown.timer(.paused(left: 300, total: 300))
         #expect(ExpandedTimerView.width(for: state, name: "Pasta", restingHeight: 32, camera: 185) == ExpandedTimerView.width(for: state, restingHeight: 32, camera: 185))
-        let long = String(repeating: "Long label ", count: 10)
-        let plain = 32 * TimerLayout.wide
-        #expect(ExpandedTimerView.width(for: state, name: long, restingHeight: 32, camera: 0) <= plain + 32 * TimerLayout.titleLimit)
     }
 
     @Test("The bubble buds off the notch's end joined to it, thins away, and rests apart")

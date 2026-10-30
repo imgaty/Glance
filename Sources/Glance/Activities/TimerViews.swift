@@ -22,8 +22,6 @@ enum TimerLayout {
     static let handTo: CGFloat = 0.17
     // Opened, and done.
     static let tall: CGFloat = 2.4
-    /// As wide as the iPhone's expanded Timer.
-    static let wide: CGFloat = 10.2
     /// Its round corners at the bottom, the Dynamic Island's 44 points.
     static let corner: CGFloat = 1.2
     static let button: CGFloat = 1.364
@@ -33,7 +31,7 @@ enum TimerLayout {
     static let titleGap: CGFloat = 0.228
     /// The stopwatch's time opened, as the iPhone's: smaller than the timer's, for its hundredths.
     static let stopwatchTime: CGFloat = 0.92
-    /// On an island, how long a label runs before it's cut short.
+    /// How long a timer's name runs, once it's done, before it's cut short.
     static let titleLimit: CGFloat = 4
     // Done, as the iPhone's Timer: its name, large.
     static let doneName: CGFloat = 0.71
@@ -192,7 +190,7 @@ struct ExpandedTimerView: View {
     /// Its name beside the time: Timer, the label Clock's timer was given, or Stopwatch.
     var name = "Timer"
     let restingHeight: CGFloat
-    /// The camera housing's width, which the row goes either side of; none on an island.
+    /// The camera housing's width, which the row goes either side of.
     let camera: CGFloat
     /// Its own width (see `width(for:name:restingHeight:camera:at:)`), which changes as the time
     /// loses or gains a digit.
@@ -201,31 +199,17 @@ struct ExpandedTimerView: View {
 
     var body: some View {
         let h = restingHeight
-        Group {
-            if camera > 0 {
-                // The buttons at the left end, the time at the right, the time's name under the
-                // camera; to spare, beside the camera.
-                let side = max((width - camera) / 2, 0)
-                HStack(spacing: 0) {
-                    buttons(h)
-                        .padding(.leading, TimerLayout.buttonEdge(h))
-                        .frame(width: side, alignment: .leading)
-                    Color.clear.frame(width: camera)
-                    time(h)
-                        .padding(.trailing, Self.timeEdge(shown, h))
-                        .frame(width: side, alignment: .trailing)
-                }
-            } else {
-                // As the iPhone's: the buttons at the left end, the time at the right.
-                ZStack {
-                    buttons(h)
-                        .padding(.leading, TimerLayout.buttonEdge(h))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    time(h)
-                        .padding(.trailing, Self.timeEdge(shown, h))
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
+        // The buttons at the left end, the time at the right, the time's name under the camera; to
+        // spare, beside the camera.
+        let side = max((width - camera) / 2, 0)
+        HStack(spacing: 0) {
+            buttons(h)
+                .padding(.leading, TimerLayout.buttonEdge(h))
+                .frame(width: side, alignment: .leading)
+            Color.clear.frame(width: camera)
+            time(h)
+                .padding(.trailing, Self.timeEdge(shown, h))
+                .frame(width: side, alignment: .trailing)
         }
         // In the middle of its height, as the iPhone's is.
         .frame(height: h * TimerLayout.button)
@@ -266,9 +250,9 @@ struct ExpandedTimerView: View {
     }
 
     /// The time, large, its name small before it, on one line: under the camera, beside it, as far
-    /// as the camera's far side; on an island, at its limit.
+    /// as the camera's far side.
     private func time(_ h: CGFloat) -> some View {
-        let room = camera > 0 ? camera + LiveActivityView.cameraGap - h * TimerLayout.titleGap : h * TimerLayout.titleLimit
+        let room = camera + LiveActivityView.cameraGap - h * TimerLayout.titleGap
         let ticking: Bool = { if case .stopwatch(let watch) = shown { return watch.isRunning } else { return false } }()
         return Group {
             if case .stopwatch = shown {
@@ -303,16 +287,11 @@ struct ExpandedTimerView: View {
     }
 
     /// Either side of the camera, as wide as the wider of the buttons and the time needs, each from
-    /// its end; on an island, as wide as the iPhone's, or as they need. For the time as it reads then:
-    /// it narrows or widens as it loses or gains a digit.
+    /// its end. For the time as it reads then: it narrows or widens as it loses or gains a digit.
     @MainActor
     static func width(for shown: ClockShown, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
         let buttons = TimerLayout.buttonEdge(h) + h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
         let time = timeWidth(shown, h, at: date) + timeEdge(shown, h)
-        guard camera > 0 else {
-            let title: CGFloat = { if case .stopwatch = shown { return 0 } else { return min(titleWidth(name, h), h * TimerLayout.titleLimit) + h * TimerLayout.titleGap } }()
-            return max(h * TimerLayout.wide, buttons + h + title + time)
-        }
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
     }
 
@@ -392,7 +371,7 @@ struct TimerDoneView: View {
     }
 
     /// Each wing: as wide as the wider side, the name or the buttons, each from its end. A long
-    /// label is cut short at the island's limit.
+    /// label is cut short at its limit.
     static func wing(length: TimeInterval, name: String = "Timer", restingHeight h: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let words = min(

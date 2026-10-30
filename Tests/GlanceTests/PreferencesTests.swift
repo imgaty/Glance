@@ -17,7 +17,7 @@ struct PreferencesTests {
     @Test(
         "Settings keys stay the same",
         arguments: [
-            (Preferences.showOnPlainDisplays, "showOnDisplaysWithoutNotch"),
+            (Preferences.showOnExternalDisplays, "showOnDisplaysWithoutNotch"),
             (Preferences.glassFollowsSystem, "glassFollowsSystem"),
             (Preferences.glassDarkness, "glassDarkness"),
             (Preferences.glassBlur, "glassBlur"),
@@ -37,7 +37,6 @@ struct PreferencesTests {
             (Preferences.sameLook, "sameLookEverywhere"),
             (Preferences.musicTrackPop, "musicTrackPop"),
             (Preferences.notchEnabled, "notchEnabled"),
-            (Preferences.notchStyle, "notchStyle"),
             (Preferences.swipeToOpen, "swipeToOpen"),
             (Preferences.swipeToSkip, "swipeToSkip"),
             (Preferences.onboardingDone, "onboardingDone"),
@@ -174,7 +173,7 @@ struct PreferencesTests {
     func registeredDefaults() {
         Preferences.registerDefaults()
         let registered = UserDefaults.standard.volatileDomain(forName: UserDefaults.registrationDomain)
-        #expect(registered[Preferences.showOnPlainDisplays] as? Bool == true)
+        #expect(registered[Preferences.showOnExternalDisplays] as? Bool == true)
         #expect(registered[Preferences.liveActivity] as? Bool == true)
         #expect(registered[Preferences.musicBackground] as? String == MusicBackground.replaceGlass.rawValue)
         #expect(registered[Preferences.musicAnimatedArtwork] as? Bool == true)

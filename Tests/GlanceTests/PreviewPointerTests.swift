@@ -78,28 +78,11 @@ struct PreviewPointerTests {
     }
 }
 
-/// On a Dynamic Island, the artwork keeps as far from the island's round ends as from its top and
-/// bottom; on a notch, it sits as it always has.
 @Suite("Live activity spacing")
 struct LiveActivitySpacingTests {
     @Test("A notch's are 6 points all round")
     func notch() {
-        #expect(LiveActivityView.inset(island: false) == 6)
-        #expect(LiveActivityView.edgeInset(island: false, restingHeight: 32) == 6)
-    }
-
-    @Test("An island's artwork sits in from the round ends, its corners clear of the curve")
-    func island() {
-        let height: CGFloat = 28
-        let inset = LiveActivityView.inset(island: true)
-        let edge = LiveActivityView.edgeInset(island: true, restingHeight: height)
-        let side = height - inset * 2
-        #expect(edge > inset)
-        // The artwork's corner, as far inside the island's end as the artwork is from the top.
-        let radius = side * ArtworkShape.restingRadius
-        let end = CGPoint(x: height / 2, y: height / 2)
-        let corner = CGPoint(x: edge + radius, y: inset + radius)
-        #expect(isClose(hypot(end.x - corner.x, end.y - corner.y) + radius, height / 2 - inset, tolerance: 0.01))
+        #expect(LiveActivityView.inset == 6)
     }
 
     @Test("The demos' pointer moves as a hand does: off quickly, short of the place, then onto it")

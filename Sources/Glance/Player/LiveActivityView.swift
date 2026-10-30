@@ -20,7 +20,6 @@ struct LiveActivityView: View {
     /// The closed notch's height at rest, which the layout is made for.
     let restingHeight: CGFloat
     /// On a Dynamic Island, shorter than a notch and round at its ends, they sit differently.
-    let island: Bool
     /// Each wing's width beside the camera.
     let wing: CGFloat
     /// Announcing a new song.
@@ -29,19 +28,10 @@ struct LiveActivityView: View {
     /// much, and their padding with them, so they stay as far from its ends as from its top and
     /// bottom.
     var swell: CGFloat = 1
-    /// Above and below the artwork and the waveform: a little less on an island, which is shorter
+    /// Above, below and in from the ends of the artwork and the waveform.
     /// than a notch, so they're about as big there. Both sit in squares of the same size.
-    static func inset(island: Bool) -> CGFloat { island ? 3.5 : 6 }
+    static let inset: CGFloat = 6
 
-    /// In from the ends. An island's ends are round, so the artwork sits in from them by as much as
-    /// keeps its rounded corners as far from the curve as from the top and bottom, as the iPhone's
-    /// does; nearer, it crowds the end.
-    static func edgeInset(island: Bool, restingHeight: CGFloat) -> CGFloat {
-        let inset = inset(island: island)
-        guard island else { return inset }
-        let side = restingHeight - inset * 2
-        return max(restingHeight / 2 - side * ArtworkShape.restingRadius, inset)
-    }
     /// The least between what the wings show and the camera housing, both black: as near as can be
     /// without anything going under it.
     static let cameraGap: CGFloat = 3
@@ -60,11 +50,8 @@ struct LiveActivityView: View {
     static func textEdge(restingHeight h: CGFloat) -> CGFloat { concentric(lineHeight(textSize(for: h)), in: h) }
 
     /// Each wing at rest with music: the artwork's square, in from the end as far as from the top
-    /// and bottom, and up to the camera. On an island, which has no camera, a little wider,
-    /// so they don't crowd its ends.
-    static func restingWing(restingHeight h: CGFloat, island: Bool) -> CGFloat {
-        island ? (h * 1.25).rounded() : h - inset(island: island) + cameraGap
-    }
+    /// and bottom, and up to the camera.
+    static func restingWing(restingHeight h: CGFloat) -> CGFloat { h - inset + cameraGap }
     /// Between the artwork and the title.
     static let textGap: CGFloat = 8
 
@@ -73,15 +60,14 @@ struct LiveActivityView: View {
 
     /// How wide each wing must be for the title and the artist to show in full, up to a limit
     /// past which they scroll instead. The notch stays centered, so both wings take the wider one.
-    static func popWing(title: String, artist: String, restingHeight: CGFloat, island: Bool) -> CGFloat {
-        let inset = inset(island: island), edge = edgeInset(island: island, restingHeight: restingHeight)
+    static func popWing(title: String, artist: String, restingHeight: CGFloat) -> CGFloat {
         let size = textSize(for: restingHeight)
         func width(_ text: String, _ weight: NSFont.Weight) -> CGFloat {
             // A point to spare, so rounding never sets a title that fits scrolling.
             ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
         }
         let side = restingHeight - inset * 2
-        let left = edge + side + textGap + width(title, .semibold) + cameraGap
+        let left = inset + side + textGap + width(title, .semibold) + cameraGap
         let right = cameraGap + width(artist, .medium) + textEdge(restingHeight: restingHeight)
         return min(max(left, right, restingHeight), NotchModel.maxPopWing)
     }
@@ -95,8 +81,8 @@ struct LiveActivityView: View {
     @State private var popChanges = 0
 
     var body: some View {
-        let edge = Self.edgeInset(island: island, restingHeight: restingHeight) * swell
-        let side = (restingHeight - Self.inset(island: island) * 2) * swell
+        let edge = Self.inset * swell
+        let side = (restingHeight - Self.inset * 2) * swell
         let popLeaving = popKept && !pop
         let words = pop || popKept
         let lane = popLeaving ? max(popLane, wing - edge - Self.cameraGap, side) : max(wing - edge - Self.cameraGap, side)

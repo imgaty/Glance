@@ -49,7 +49,7 @@ struct NotchPreview: View {
                 rect: { state in
                     let m = model.metrics(for: state)
                     return CGRect(
-                        x: proxy.size.width / 2 - m.totalWidth * scale / 2, y: (top.edge + model.gap) * scale,
+                        x: proxy.size.width / 2 - m.totalWidth * scale / 2, y: top.edge * scale,
                         width: m.totalWidth * scale, height: m.height * scale)
                 }, scale: scale)
             ZStack(alignment: .top) {

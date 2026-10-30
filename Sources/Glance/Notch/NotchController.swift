@@ -13,9 +13,6 @@ import SwiftUI
 
 private enum Layout {
     static let virtualNotchWidth: CGFloat = 185
-    /// An island's length, and its tallest, the iPhone's.
-    static let islandWidth: CGFloat = 126
-    static let islandMaxHeight: CGFloat = 32
     /// How far away (pt) the closed notch starts to notice the pointer.
     static let proximityRange: CGFloat = 60
     /// Room around the open notch for its glass edge and rubber-band stretch.
@@ -23,24 +20,6 @@ private enum Layout {
     /// How far the window reaches past the top of the screen, with nothing drawn there: a window
     /// that ends right at the top edge misses a click with the pointer pushed against it.
     static let pastTop: CGFloat = 2
-}
-
-/// What a display without a notch shows: a notch, like the built-in display's, or a Dynamic Island,
-/// floating just below the top of the screen.
-enum NotchStyle: String, CaseIterable, Identifiable {
-    case notch, island
-
-    var id: Self { self }
-    var title: String { self == .notch ? "Notch" : "Dynamic Island" }
-
-    static func of(_ screen: NSScreen) -> NotchStyle {
-        NotchStyle(rawValue: UserDefaults.standard.string(forKey: Preferences.key(Preferences.notchStyle, for: screen.notchID)) ?? "") ?? .notch
-    }
-
-    /// Every display's, so a change can be noticed.
-    static var signature: String {
-        NSScreen.screens.map { of($0).rawValue }.joined(separator: ",")
-    }
 }
 
 /// How the notch opens, read fresh each time so changes in Settings apply at once.
@@ -189,11 +168,10 @@ final class NotchController {
     var screenFrame: CGRect { screen.frame }
 
     /// The notch at rest on a display: the camera housing's own size where there is one; otherwise a
-    /// notch as tall as the menu bar, or a Dynamic Island, as chosen for the display.
+    /// notch as tall as the menu bar.
     struct Resting {
         let size: CGSize
         let centerX: CGFloat
-        let island: Bool
         let camera: Bool
         /// The menu bar's height on that display.
         let menuBar: CGFloat
@@ -203,33 +181,26 @@ final class NotchController {
         let frame = screen.frame
         if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea, screen.safeAreaInsets.top > 0 {
             let size = CGSize(width: right.minX - left.maxX, height: screen.safeAreaInsets.top)
-            return Resting(size: size, centerX: left.maxX + size.width / 2, island: false, camera: true, menuBar: size.height)
+            return Resting(size: size, centerX: left.maxX + size.width / 2, camera: true, menuBar: size.height)
         }
         let menuBar = frame.maxY - screen.visibleFrame.maxY
         let barHeight = (20...44).contains(menuBar) ? menuBar : 24
-        // A Dynamic Island, if chosen for this display: a pill as long as the iPhone's, inside the menu
-        // bar, so it never hangs over the windows below it.
-        let island = NotchStyle.of(screen) == .island
-        let islandHeight = min(Layout.islandMaxHeight, barHeight - NotchModel.islandGap * 2)
         return Resting(
-            size: island
-                ? CGSize(width: Layout.islandWidth, height: islandHeight)
-                : CGSize(width: Layout.virtualNotchWidth, height: barHeight),
-            centerX: frame.midX, island: island, camera: false, menuBar: barHeight)
+            size: CGSize(width: Layout.virtualNotchWidth, height: barHeight), centerX: frame.midX, camera: false, menuBar: barHeight)
     }
 
-    /// Returns nil for a display without a notch unless `allowVirtual` is set.
-    init?(screen: NSScreen, allowVirtual: Bool, nowPlaying: NowPlaying) {
+    /// Returns nil for an external display unless `onExternal` is set; the Mac's own always has one.
+    init?(screen: NSScreen, onExternal: Bool, nowPlaying: NowPlaying) {
         let frame = screen.frame
         let resting = Self.resting(on: screen)
-        guard resting.camera || allowVirtual else { return nil }
+        guard screen.isBuiltIn || onExternal else { return nil }
         let closedSize = resting.size
         centerX = resting.centerX
         self.screen = screen
         self.nowPlaying = nowPlaying
         topY = frame.maxY
         // Open, the player fills the notch; its artwork sits up beside the camera.
-        model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera, island: resting.island)
+        model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera)
 
         // Room for the largest layout with the lyrics open, and for the tray at its widest, so
         // switching layouts or the tray growing never resizes it.
@@ -421,8 +392,7 @@ final class NotchController {
     }
 
     /// Taken off screen: softly, or, as the notch is turned off, into the camera housing on a display
-    /// that has one, up into the top edge on one that doesn't, or, an island, into a dot that shrinks
-    /// away.
+    /// that has one, or up into the top edge on one that doesn't.
     func tearDown(collapsing: Bool = false) {
         giveBackKeys()
         Tray.shared.hold(false, for: self)
@@ -450,13 +420,7 @@ final class NotchController {
             model.stretch = 0
         }
         Task { @MainActor in
-            if model.island {
-                try? await Task.sleep(for: .seconds(0.3))
-                withAnimation(.spring(response: 0.3, dampingFraction: 1)) { model.squeeze = 1 }
-                try? await Task.sleep(for: .seconds(0.22))
-                withAnimation(.easeIn(duration: 0.22)) { model.vanish = 1 }
-                try? await Task.sleep(for: .seconds(0.24))
-            } else if !model.hasCamera {
+            if !model.hasCamera {
                 try? await Task.sleep(for: .seconds(0.3))
                 withAnimation(.easeIn(duration: 0.24)) { model.vanish = 1 }
                 try? await Task.sleep(for: .seconds(0.26))
@@ -468,30 +432,19 @@ final class NotchController {
         }
     }
 
-    /// The way it went, backwards: an island's dot grows and stretches into the island, a notch on a
-    /// display without one unfolds down from the top edge, and then, as when music starts, the
-    /// wings come out.
+    /// The way it went, backwards: a notch on a display without one unfolds down from the top edge,
+    /// and then, as when music starts, the wings come out.
     private func expand() {
-        // Drawn first as it was left: no wings, and an island as a dot too small to see.
+        // Drawn first as it was left: no wings.
         activityTask?.cancel()
         model.activity = false
-        if model.island {
-            model.squeeze = 1
-            model.vanish = 1
-        } else if !model.hasCamera {
-            model.vanish = 1
-        }
+        if !model.hasCamera { model.vanish = 1 }
         panel.alphaValue = 1
         panel.orderFrontRegardless()
         let model = model
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(60))
-            if model.island {
-                withAnimation(.easeOut(duration: 0.24)) { model.vanish = 0 }
-                try? await Task.sleep(for: .seconds(0.24))
-                withAnimation(.spring(response: 0.3, dampingFraction: 1)) { model.squeeze = 0 }
-                try? await Task.sleep(for: .seconds(0.24))
-            } else if !model.hasCamera {
+            if !model.hasCamera {
                 withAnimation(.easeOut(duration: 0.26)) { model.vanish = 0 }
                 try? await Task.sleep(for: .seconds(0.28))
             }
@@ -584,7 +537,7 @@ final class NotchController {
             return
         }
         let wing = SystemActivityView.wing(
-            for: alert, restingHeight: model.closedSize.height, island: model.island, closedWidth: model.closedSize.width)
+            for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
         func announce() {
             withAnimation(open) {
                 model.switching = false
@@ -672,7 +625,7 @@ final class NotchController {
     /// plays.
     private func fitTimerWing() {
         guard let clock = model.firstClock else { return }
-        model.timerWing = SystemActivityView.wing(for: clock, restingHeight: model.closedSize.height, island: model.island)
+        model.timerWing = SystemActivityView.wing(for: clock, restingHeight: model.closedSize.height)
     }
 
     /// A new song: the closed notch's wings widen for a few seconds to show its title and artist.
@@ -691,7 +644,7 @@ final class NotchController {
             withAnimation(IslandMotion.open) {
                 model.popWing = LiveActivityView.popWing(
                     title: nowPlaying.title, artist: nowPlaying.artist,
-                    restingHeight: model.closedSize.height, island: model.island)
+                    restingHeight: model.closedSize.height)
                 model.activity = true
                 model.pop = true
             }
@@ -1732,24 +1685,23 @@ final class NotchController {
 
     // MARK: Geometry (screen coordinates)
 
-    /// An island's floats a little below the top of the screen.
     private var restingRect: CGRect {
         let width = model.restingWidth, height = model.restingHeight
-        return CGRect(x: centerX - width / 2, y: topY - model.gap - height, width: width, height: height)
+        return CGRect(x: centerX - width / 2, y: topY - height, width: width, height: height)
     }
 
     private func rect(for state: NotchState) -> CGRect {
         let m = model.metrics(for: state)
-        return CGRect(x: centerX - m.totalWidth / 2, y: topY - model.gap - m.height, width: m.totalWidth, height: m.height)
+        return CGRect(x: centerX - m.totalWidth / 2, y: topY - m.height, width: m.totalWidth, height: m.height)
     }
 
     /// Where the pointer counts as "on" the notch, or the bubbles beside it. Reaches slightly past
     /// the top edge.
     private var interactiveZone: CGRect {
-        // Up to the top edge, over an island's gap too, so pushing the pointer to the top finds it.
+        // Up to the top edge, so pushing the pointer to the top finds it.
         var resting = CGRect(
             x: restingRect.minX - 4, y: restingRect.minY - 4,
-            width: restingRect.width + 8, height: restingRect.height + model.gap + 6)
+            width: restingRect.width + 8, height: restingRect.height + 6)
         for side in [NotchModel.Side.trailing, .leading] {
             if let zone = bubbleZone(side) { resting = resting.union(zone) }
         }
@@ -1769,7 +1721,7 @@ final class NotchController {
         let h = model.closedSize.height
         let off = model.metrics(for: .closed).bodyWidth / 2 + h * IslandBubble.gap
         let left = side == .trailing ? centerX + off : centerX - off - h
-        return CGRect(x: left - 4, y: topY - model.gap - h - 4, width: h + 8, height: h + model.gap + 6)
+        return CGRect(x: left - 4, y: topY - h - 4, width: h + 8, height: h + 6)
     }
 
     /// The bubble at a point on the screen, if any.

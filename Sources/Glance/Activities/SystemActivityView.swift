@@ -22,7 +22,6 @@ struct SystemActivityView: View {
     let restingHeight: CGFloat
     /// The notch's width at rest, between the wings.
     var closedWidth: CGFloat = 0
-    let island: Bool
     let wing: CGFloat
     let alert: NotchAlert?
     /// Clock's timer or stopwatch, when it has the notch.
@@ -48,13 +47,13 @@ struct SystemActivityView: View {
     @State private var changes = (alert: 0, clock: 0, route: 0, airdrop: 0)
 
     var body: some View {
-        let side = Self.side(restingHeight, island)
+        let side = Self.side(restingHeight)
         let size = LiveActivityView.textSize(for: restingHeight)
         let shownAlert = alert ?? leaving
         let shownClock = shownAlert == nil ? clock ?? leavingClock : nil
         let shownAirDrop = shownAlert == nil && shownClock == nil ? airdrop ?? leavingAirDrop : nil
         let shownRoute = shownAlert == nil && shownClock == nil && shownAirDrop == nil ? route ?? leavingRoute : nil
-        let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight, island: island)
+        let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight)
         ZStack {
             if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
                 TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
@@ -147,13 +146,13 @@ struct SystemActivityView: View {
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
             } else if let shownAirDrop {
-                AirDropMark(shown: shownAirDrop, restingHeight: restingHeight, island: island)
+                AirDropMark(shown: shownAirDrop, restingHeight: restingHeight)
                     .islandFade(airdrop != nil)
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction(.default, open)
             } else if let shownRoute {
-                AirPlayMark(route: shownRoute, restingHeight: restingHeight, island: island)
+                AirPlayMark(route: shownRoute, restingHeight: restingHeight)
                     .islandFade(route != nil)
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
@@ -296,8 +295,8 @@ struct SystemActivityView: View {
 
     /// In from each end, as far as from the top and bottom: words by their line, a battery's level
     /// too, which its battery is no taller than; a symbol by its square, as the cover is.
-    static func insets(for content: NotchAlert.Content?, restingHeight h: CGFloat, island: Bool) -> (CGFloat, CGFloat) {
-        let edge = LiveActivityView.edgeInset(island: island, restingHeight: h)
+    static func insets(for content: NotchAlert.Content?, restingHeight h: CGFloat) -> (CGFloat, CGFloat) {
+        let edge = LiveActivityView.inset
         let words = LiveActivityView.textEdge(restingHeight: h)
         switch content {
         case .battery: return (words, words)
@@ -311,8 +310,8 @@ struct SystemActivityView: View {
     static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * TimerLayout.ring, in: h) }
 
     /// A symbol's square, as the cover's beside the camera.
-    static func side(_ restingHeight: CGFloat, _ island: Bool) -> CGFloat {
-        restingHeight - LiveActivityView.inset(island: island) * 2
+    static func side(_ restingHeight: CGFloat) -> CGFloat {
+        restingHeight - LiveActivityView.inset * 2
     }
 
     /// How wide each wing must be for an announcement, up to a limit, so it covers little of the menu
@@ -320,9 +319,9 @@ struct SystemActivityView: View {
     /// wider than at rest, so it's seen to arrive. The notch stays centered, so both wings take the
     /// wider one. Low Battery's row has a width of its own, which the notch at rest takes part of.
     @MainActor
-    static func wing(for alert: NotchAlert, restingHeight: CGFloat, island: Bool, closedWidth: CGFloat) -> CGFloat {
+    static func wing(for alert: NotchAlert, restingHeight: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let size = LiveActivityView.textSize(for: restingHeight)
-        let side = side(restingHeight, island)
+        let side = side(restingHeight)
         let gap = LiveActivityView.cameraGap
         // A device's wings as wide as it turns, against the camera, with none of it going under the
         // camera; or as its ring or its word needs.
@@ -339,7 +338,7 @@ struct SystemActivityView: View {
         }
         // As tall as the Alarm, as wide as its words or its buttons.
         if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
-        let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight, island: island)
+        let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
             case .device, .timerDone, .lowBattery:
@@ -382,7 +381,7 @@ struct SystemActivityView: View {
     /// As wide as the ring and the time need, each from its end, the time as it reads now, its
     /// digits all as wide as each other; paused, with the pause symbol too. The notch refits as the
     /// time gains or loses a digit (see `widthChange(after:)`).
-    static func wing(for clock: ClockShown, restingHeight h: CGFloat, island: Bool, at date: Date = .now) -> CGFloat {
+    static func wing(for clock: ClockShown, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
         let size = LiveActivityView.textSize(for: h)
         let gap = LiveActivityView.cameraGap
         let time: CGFloat

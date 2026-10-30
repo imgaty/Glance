@@ -100,8 +100,8 @@ left or right with three fingers on the player, to open it.
 
 ### And more
 
-Animated album covers, a notch or a Dynamic Island on displays without one,
-customizable controls and backgrounds, and more. See
+Animated album covers, a notch on every display, customizable controls and
+backgrounds, and more. See
 [Features](https://github.com/imgaty/Glance/blob/main/docs/FEATURES.md) for the
 full list.
 
