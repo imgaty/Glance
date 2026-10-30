@@ -126,6 +126,12 @@
 - Changed the waveform to move more softly, as the iPhone's does: each bar
   eases toward its level over a tenth of a second or so, rather than leaping
   to every hit.
+- Changed the lyrics to fade at their top as they do at their bottom.
+- Changed the cover, the colors behind the player and the lyrics to dim by the
+  same amount while the song is paused. The dots in a pause in the singing stop
+  breathing too.
+- Fixed lyrics taking a very long time to show when LRCLIB was slow: they're now
+  looked for several ways at once, for a few seconds at most.
 - Fixed the waveform moving ahead of the music on AirPods and other wireless
   headphones, which play a moment late: it now waits for the sound, as the
   colors' pulse does.

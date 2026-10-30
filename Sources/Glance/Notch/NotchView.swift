@@ -800,7 +800,7 @@ struct NotchView: View {
         CGSize(width: model.openSize.width + model.lyricsWidth + 160, height: model.openSize.height + 80)
     }
 
-    /// Faded to 30% while paused.
+    /// Dimmed while paused (see `PausedLook`).
     private var lightOpacity: Double {
         let full: Double =
             switch background {
@@ -809,7 +809,7 @@ struct NotchView: View {
             case .spotlight: 0.9
             case .none: 0
             }
-        return full * (nowPlaying.isPlaying ? 1 : 0.3)
+        return full * (nowPlaying.isPlaying ? 1 : PausedLook.kept)
     }
 
     /// The background spreads out from the middle slowly enough to be seen, once the notch has

@@ -80,8 +80,9 @@ struct HeroArtwork: View {
                         .animation(.easeInOut(duration: 0.5), value: motionReady)
                 }
             }
-            // Like Music's mini player: the artwork dims, and settles back a little, while paused.
-            .overlay(Color.black.opacity(nowPlaying.hasMedia && !nowPlaying.isPlaying ? 0.4 : 0))
+            // Like Music's mini player: the artwork dims (see `PausedLook`), and settles back a
+            // little, while paused.
+            .overlay(Color.black.opacity(nowPlaying.hasMedia && !nowPlaying.isPlaying ? 1 - PausedLook.kept : 0))
             .overlay(Color.white.opacity(light))
             .clipShape(
                 ArtworkShape(

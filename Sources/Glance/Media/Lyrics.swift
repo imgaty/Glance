@@ -389,6 +389,8 @@ struct LyricsView: View {
         let request = isVisible ? [nowPlaying.title, nowPlaying.artist] : []
         // Spotify marks a break in the singing with a note; elsewhere it's Apple Music's dots.
         let notes = nowPlaying.appBundleID == PlayerScripting.spotify
+        // Dimmed while the song's paused, whichever way it's shown (see `PausedLook`).
+        let kept = nowPlaying.hasMedia && !nowPlaying.isPlaying ? PausedLook.kept : 1
         GeometryReader { proxy in
             Group {
                 switch store.content {
@@ -413,6 +415,8 @@ struct LyricsView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
+        .opacity(kept)
+        .animation(.easeInOut(duration: 0.4), value: kept)
         // A little apart from the player, the padding in from the notch's edge.
         .padding(.leading, 12)
         .padding(.trailing, PlayerLayout.padding)
@@ -452,17 +456,18 @@ private enum LyricsStyle {
     static let spacing: CGFloat = 16
     /// How bright lines are that aren't being sung.
     static let dim = 0.36
-    /// Lines fade out softly toward the bottom edge, over its last quarter. Above the top it stays
-    /// open, so a sung line can be seen fading as it goes, and past the sides, so a blurred letter's
-    /// soft edge is never cut off.
+    /// Lines fade in and out softly at the top and bottom edges, over a quarter of the height at
+    /// each, and it stays open past the sides, so a blurred letter's soft edge is never cut off.
     static func edges(fadingBottom: Bool) -> some View {
-        let stops = (0...12).map { i -> Gradient.Stop in
-            let t = CGFloat(i) / 12
-            return .init(color: .black.opacity(fadingBottom ? 1 - t * t * (3 - 2 * t) : 1), location: 0.75 + 0.25 * t)
+        let stops = (0...12).flatMap { i -> [Gradient.Stop] in
+            let t = CGFloat(i) / 12, eased = t * t * (3 - 2 * t)
+            return [
+                .init(color: .black.opacity(eased), location: 0.25 * t),
+                .init(color: .black.opacity(fadingBottom ? 1 - eased : 1), location: 0.75 + 0.25 * t),
+            ]
         }
-        return LinearGradient(stops: [.init(color: .black, location: 0)] + stops, startPoint: .top, endPoint: .bottom)
+        return LinearGradient(stops: stops.sorted { $0.location < $1.location }, startPoint: .top, endPoint: .bottom)
             .padding(.horizontal, -16)
-            .padding(.top, -40)
     }
 
     /// The lines move with a soft spring, each a moment after the one above it.
@@ -638,8 +643,8 @@ private struct LoadingNote: View {
     }
 }
 
-/// Three dots that fill one by one through a pause in the singing, breathing gently, then fold away
-/// just before the next line.
+/// Three dots that fill one by one through a pause in the singing, breathing gently while the song
+/// plays, then fold away just before the next line.
 private struct InterludeDots: View {
     static let height: CGFloat = 18
     let progress: Double
@@ -650,7 +655,9 @@ private struct InterludeDots: View {
     var body: some View {
         TimelineView(.animation(paused: !(breathing && isCurrent))) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            let breath = 1 + 0.08 * sin(t * 2 * .pi / 2.4)
+            // Still while paused: what's around it redraws all the time, so pausing the timeline
+            // alone wouldn't hold it.
+            let breath = breathing ? 1 + 0.08 * sin(t * 2 * .pi / 2.4) : 1
             let folding = min(max(fold / 0.4, 0), 1)
             HStack(spacing: 7) {
                 ForEach(0..<3, id: \.self) { dot in
@@ -661,6 +668,7 @@ private struct InterludeDots: View {
                 }
             }
             .scaleEffect(isCurrent ? breath * folding : 0.4, anchor: .leading)
+            .animation(.easeOut(duration: 0.3), value: breathing)
             .opacity(isCurrent ? 1 : 0)
             .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height, alignment: .leading)
         }

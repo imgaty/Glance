@@ -192,8 +192,9 @@ one battery. Click one to play there. **Sound Settings…** opens
 
 Click the waveform to show the song's words beside the player, and click it
 again to hide them. The line being sung is large and bright; the next one fades
-in below it. Lyrics come from [LRCLIB](https://lrclib.net), and show only when a
-record matches the song's title, artist and length.
+in below it. While the song is paused they dim, as the cover and the colors
+behind the player do. Lyrics come from [LRCLIB](https://lrclib.net), and show
+only when a record matches the song's title, artist and length.
 
 <br>
 

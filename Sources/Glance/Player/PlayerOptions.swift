@@ -219,6 +219,13 @@ enum AccentWash {
     }
 }
 
+/// What dims while the song is paused, the cover, the colors behind the player and the lyrics, dims
+/// by the same amount, whatever is playing.
+enum PausedLook {
+    /// How much of its brightness each keeps.
+    static let kept = 0.6
+}
+
 /// What the buttons on either side of the transport controls do, or that there's none.
 enum PlayerSlot: String, CaseIterable, Identifiable {
     case favorite, shuffle, repeatMode = "repeat", output, lyrics, empty = "none"
