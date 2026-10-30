@@ -129,7 +129,8 @@
 - Changed the waveform to move more softly, as the iPhone's does: each bar
   eases toward its level over a tenth of a second or so, rather than leaping
   to every hit.
-- Changed the lyrics to fade at their top as they do at their bottom.
+- Changed the lyrics to fade at their top as they do at their bottom, above the
+  line being sung, so its first words are never dimmed.
 - Changed the cover, the colors behind the player and the lyrics to dim by the
   same amount while the song is paused. The dots in a pause in the singing stop
   breathing too.

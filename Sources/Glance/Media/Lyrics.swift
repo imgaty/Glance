@@ -388,6 +388,10 @@ struct LyricsView: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject var store: LyricsStore
 
+    /// Kept below the camera and above the notch's bottom edge. The lines fade away through the one
+    /// at the top, rather than over the line being sung.
+    static let gap: CGFloat = 12
+
     let isVisible: Bool
     /// Where the line being sung is centered, from this view's top: level with the notch's middle.
     let middle: CGFloat
@@ -466,18 +470,27 @@ private enum LyricsStyle {
     static let spacing: CGFloat = 16
     /// How bright lines are that aren't being sung.
     static let dim = 0.36
-    /// Lines fade in and out softly at the top and bottom edges, over a quarter of the height at
-    /// each, and it stays open past the sides, so a blurred letter's soft edge is never cut off.
+    /// Lines fade in and out softly at the top and bottom edges: at the top through the gap above
+    /// them, so a long line being sung, which reaches right up to that edge, stays whole, and at the
+    /// bottom over a quarter of the height. It stays open past the sides, so a blurred letter's soft
+    /// edge is never cut off.
     static func edges(fadingBottom: Bool) -> some View {
-        let stops = (0...12).flatMap { i -> [Gradient.Stop] in
-            let t = CGFloat(i) / 12, eased = t * t * (3 - 2 * t)
-            return [
-                .init(color: .black.opacity(eased), location: 0.25 * t),
-                .init(color: .black.opacity(fadingBottom ? 1 - eased : 1), location: 0.75 + 0.25 * t),
-            ]
+        let steps = (0...12).map { i -> (t: CGFloat, eased: CGFloat) in
+            let t = CGFloat(i) / 12
+            return (t, t * t * (3 - 2 * t))
         }
-        return LinearGradient(stops: stops.sorted { $0.location < $1.location }, startPoint: .top, endPoint: .bottom)
-            .padding(.horizontal, -16)
+        return VStack(spacing: 0) {
+            LinearGradient(
+                stops: steps.map { .init(color: .black.opacity($0.eased), location: $0.t) },
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: LyricsView.gap)
+            LinearGradient(
+                stops: steps.map { .init(color: .black.opacity(fadingBottom ? 1 - $0.eased : 1), location: 0.75 + 0.25 * $0.t) },
+                startPoint: .top, endPoint: .bottom)
+        }
+        .padding(.top, -LyricsView.gap)
+        .padding(.horizontal, -16)
     }
 
     /// The lines move with a soft spring, each a moment after the one above it.
@@ -730,7 +743,10 @@ private struct PlainLyricsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 16)
+            .padding(.top, LyricsView.gap)
         }
+        // Up into the gap, for the lines to fade away through it as they're scrolled.
+        .padding(.top, -LyricsView.gap)
         .mask { LyricsStyle.edges(fadingBottom: true) }
         .notchControl(enabled: isVisible)
     }

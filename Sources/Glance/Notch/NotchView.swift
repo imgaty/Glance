@@ -788,8 +788,7 @@ struct NotchView: View {
     }
 
     /// The lyrics keep the same space below the camera as above the notch's bottom edge.
-    private static let lyricsGap: CGFloat = 12
-    private var lyricsTop: CGFloat { model.closedSize.height + Self.lyricsGap }
+    private var lyricsTop: CGFloat { model.closedSize.height + LyricsView.gap }
 
     /// Laid out once at the largest the open notch gets, centered, reaching past its sides (the top
     /// corners flare out beyond the body) and below it, so no edge of it ever shows.
