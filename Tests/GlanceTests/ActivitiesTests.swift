@@ -659,3 +659,16 @@ struct ActivitiesTests {
         #expect(late.height < early.height)
     }
 }
+
+/// macOS's own banners, taken away only where the notch says the same.
+@Suite("System banners")
+struct SystemBannersTests {
+    @Test("AirPods connecting or running low show their level; a device's name or an offer doesn't count")
+    func showsBattery() {
+        #expect(SystemNotices.showsBattery(["Airpods Pro", "88", "Connected"]))
+        #expect(SystemNotices.showsBattery(["AirPods 4", "9%", "Low Battery"]))
+        #expect(!SystemNotices.showsBattery(["AirPods 4", "Moved to iPhone"]))
+        #expect(!SystemNotices.showsBattery(["", "Airpods Pro"]))
+        #expect(!SystemNotices.showsBattery([]))
+    }
+}

@@ -317,8 +317,9 @@ Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 If macOS doesn't turn Low Power Mode on from the notch,
 **System Settings > Battery** opens, where you can. macOS's own banner at the
 top of the screen for a device connecting or running low is hidden while the
-notch says the same, and, with `Accessibility` allowed, AirPods' own
-notification that they need charging is taken away.
+notch says the same. With `Accessibility` allowed, so is its banner under the
+menu bar for AirPods connecting or running low, and AirPods' own notification
+that they need charging is taken away.
 With `Accessibility` allowed, macOS's own Low Battery notification is taken away
 as it shows, since the notch says so.
 
@@ -537,7 +538,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; taking macOS's own timer out of the menu bar while the notch shows it; and switching to the tab that's playing in other browsers |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; and switching to the tab that's playing in other browsers |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>

@@ -49,6 +49,7 @@ final class DeviceWatch {
         let now = AudioOutput.outputs()
         let arrived = now.filter { !outputs.contains($0.id) && Self.isBluetooth($0.transport) }
         outputs = Set(now.map(\.id))
+        if !arrived.isEmpty { SystemNotices.followMenuBar() }
         for device in arrived {
             Task { [weak self] in
                 // Its battery, which AirPods tell a moment after they connect.
@@ -256,6 +257,7 @@ final class DeviceWatch {
             guard app?.bundleIdentifier == SystemNotices.bluetoothBanners else { return }
             MainActor.assumeIsolated { self?.readBatteries() }
         }
+        SystemNotices.watchBanners { [weak self] in self?.readBatteries() }
         readBatteries()
     }
 

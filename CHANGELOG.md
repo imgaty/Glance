@@ -25,7 +25,9 @@
   battery as a ring. A device that doesn't tell its battery isn't announced.
   One whose battery runs down past 20% or 10% is announced the same way, its
   ring red with its level in numbers inside, in place of macOS's own banner,
-  which is hidden, and AirPods' own notification, which is taken away.
+  which is hidden, and AirPods' own notification, which is taken away. With
+  `Accessibility` allowed, macOS's banner under the menu bar for AirPods
+  connecting or running low is hidden too.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the
