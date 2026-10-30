@@ -909,13 +909,14 @@ struct NotchView: View {
     }
 
     /// Eased in perceived brightness rather than opacity, and flat at both ends, so the fade has no
-    /// visible line where it starts or ends. Inverted, it's clear where the black is, and rises a
-    /// little ahead of the black clearing, so the colors are there to see by the notch's middle.
+    /// visible line where it starts or ends. Inverted, it's clear exactly where the black is, so
+    /// what shows through it stands just where the glass does.
     private static func shadeStops(start: CGFloat, inverted: Bool) -> [Gradient.Stop] {
         let fade = (0...48).map { i -> Gradient.Stop in
             let t = CGFloat(i) / 48
             let perceived = t * t * (3 - 2 * t)
-            return .init(color: .black.opacity(inverted ? pow(perceived, 0.65) : 1 - pow(perceived, 1.2)), location: start + (1 - start) * t)
+            let black = 1 - pow(perceived, 1.2)
+            return .init(color: .black.opacity(inverted ? 1 - black : black), location: start + (1 - start) * t)
         }
         return [.init(color: .black.opacity(inverted ? 0 : 1), location: 0)] + fade
     }
