@@ -6,7 +6,6 @@
 //
 
 import AppKit
-import CoreImage
 import SwiftUI
 
 /// Whatever the system is playing, from any app, read through NowPlayingHelper running inside perl.
@@ -463,8 +462,6 @@ final class NowPlaying: ObservableObject {
         shownArtwork = encoded
         artwork = image
         accent = image.flatMap(Self.accent(of:)) ?? .white
-        wash = image.flatMap(Self.wash(of:))
-        waveformGradient = image.flatMap(WaveformGradient.colors(of:))
     }
 
     // MARK: Following Music and Spotify directly
@@ -585,20 +582,6 @@ final class NowPlaying: ObservableObject {
             total += weight
         }
         return NSColor(red: red / total, green: green / total, blue: blue / total, alpha: 1)
-    }
-
-    private static let imageContext = CIContext()
-
-    private static func wash(of image: NSImage) -> NSImage? {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        let input = CIImage(cgImage: cgImage)
-        let scale = 64 / max(input.extent.width, input.extent.height, 1)
-        let small = input.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        let soft = small.clampedToExtent()
-            .applyingGaussianBlur(sigma: 5)
-            .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1.5])
-        guard let output = imageContext.createCGImage(soft, from: small.extent.integral) else { return nil }
-        return NSImage(cgImage: output, size: NSSize(width: output.width, height: output.height))
     }
 
     /// Inside the app bundle, or next to the executable for `swift build` runs.

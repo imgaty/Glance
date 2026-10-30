@@ -216,9 +216,9 @@ struct ArtworkShape: Shape {
     }
 }
 
-/// The artwork's light behind the open player: the artwork itself, hugely blurred and slowly
-/// turning, as in Apple Music, or the accent color, darkened by `dim`. The notch gives it its shape:
-/// across the whole bottom, or a round glow in a corner.
+/// The artwork's light behind the open player: its colors flowing, as in Apple Music, or the accent
+/// color's, darkened by `dim`. The notch gives it its shape: across the whole bottom, or a round
+/// glow in a corner.
 struct ArtworkLight: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
@@ -226,38 +226,28 @@ struct ArtworkLight: View {
     let active: Bool
 
     var body: some View {
+        let flow = nowPlaying.flow(from: accentSource)
         ZStack {
-            if accentSource == .artwork, let image = nowPlaying.wash {
-                ArtworkSwirl(image: image, active: active && nowPlaying.isPlaying, demo: nowPlaying.isDemo)
+            if let flow {
+                ArtworkSwirl(flow: flow, active: active && nowPlaying.isPlaying, demo: nowPlaying.isDemo)
                     .transition(.opacity)
-                    .id(ObjectIdentifier(image))
-            } else if let color = accentSource.nsColor, let image = AccentWash.image(for: color) {
-                // A color moves through its own shades, as the artwork's colors do.
-                ArtworkSwirl(image: image, active: active && nowPlaying.isPlaying, demo: nowPlaying.isDemo)
-                    .transition(.opacity)
-                    .id(ObjectIdentifier(image))
+                    .id(ObjectIdentifier(flow))
             } else {
                 nowPlaying.accent(from: accentSource)
                     .transition(.opacity)
             }
         }
         .overlay(Color.black.opacity(dim))
-        .animation(.easeInOut(duration: 0.8), value: nowPlaying.wash.map(ObjectIdentifier.init))
+        .animation(.easeInOut(duration: 0.8), value: flow.map(ObjectIdentifier.init))
         .animation(.easeInOut(duration: 0.5), value: dim)
         .animation(.easeInOut(duration: 0.5), value: accentSource)
     }
 }
 
-/// Four copies of the already blurred artwork, as the iPhone draws behind its player: one larger
-/// than the whole background and one most of its size, each turning slowly in place, and one half
-/// and one a quarter of its size, each turning as it circles. A turn takes the best part of a
-/// minute, so the colors drift calmly through one another, a little more vivid and contrasted
-/// than the artwork, as the iPhone's are. Each is as blurred as the largest, as the iPhone blurs
-/// them all together, so even the smallest is a soft patch of color rather than a little cover;
-/// the smaller three fade out toward their edges, so no edge ever shows. On each beat of the music,
-/// as it's heard, they swell and brighten just a little and ease back.
+/// The flowing colors (see `ArtworkFlow`), filling the background. On each beat of the music, as
+/// it's heard, they swell and brighten just a little and ease back.
 struct ArtworkSwirl: View {
-    let image: NSImage
+    let flow: ArtworkFlow
     let active: Bool
     /// The welcome tour's made-up song, whose beat is made up too.
     var demo = false
@@ -266,50 +256,20 @@ struct ArtworkSwirl: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let width = proxy.size.width, height = proxy.size.height
-            let side = max(width, height)
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
+                let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
                 let beat = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) : Double(AudioLevels.shared.beat)) : 0
-                ZStack {
-                    layer(side * 1.41, turn: t / 48, drift: .zero, soft: false)
-                    layer(side * 0.8, turn: -t / 24, drift: CGSize(width: -width * 0.1, height: -height * 0.1))
-                        .blur(radius: side * 0.05)
-                    layer(side * 0.5, turn: t / 48, drift: Self.circling(t / 64, radius: width / 4))
-                        .blur(radius: side * 0.07)
-                    layer(side * 0.25, turn: -t / 36, drift: Self.circling(-t / 40 + 0.4, radius: width / 8))
-                        .blur(radius: side * 0.08)
+                if let frame = flow.frame(at: t) {
+                    Image(decorative: frame.background, scale: 1)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .scaleEffect(1 + 0.025 * beat)
+                        .brightness(0.04 * beat)
                 }
-                .frame(width: width, height: height)
-                .scaleEffect(1 + 0.025 * beat)
-                .brightness(0.04 * beat)
-                .saturation(1.2)
-                .contrast(1.2)
             }
         }
         .clipped()
-    }
-
-    /// Where a copy is on its circle round the middle, `turns` of the way round.
-    private static func circling(_ turns: Double, radius: CGFloat) -> CGSize {
-        CGSize(width: cos(turns * 2 * .pi) * radius, height: sin(turns * 2 * .pi) * radius)
-    }
-
-    private func layer(_ size: CGFloat, turn: Double, drift: CGSize, soft: Bool = true) -> some View {
-        Image(nsImage: image)
-            .resizable()
-            .interpolation(.high)
-            .frame(width: size, height: size)
-            .mask {
-                if soft {
-                    RadialGradient(
-                        colors: [.black, .black.opacity(0.8), .clear], center: .center,
-                        startRadius: 0, endRadius: size / 2)
-                } else {
-                    Color.black
-                }
-            }
-            .rotationEffect(.radians(turn * 2 * .pi))
-            .offset(drift)
     }
 }

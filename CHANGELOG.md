@@ -111,13 +111,15 @@
   accent color, with the Mac's own speakers first, and **Sound Settings…** at
   the bottom. AirPods show each earbud's battery and the case's, and other
   headphones their one battery.
-- Changed the cover's colors behind the player to move as the iPhone's do:
-  softer patches of color, a little more vivid, drifting slowly through one
-  another, two turning in place and two circling as they turn.
-- Changed the waveform to show a gradient made from the cover's colors, as the
-  iPhone's waveform does, each part of the cover's color in its part of the
-  gradient, lighter and softer, in place of one color fading to gray.
-- Added the cover's colors pulsing gently on the music's beat, as you hear it.
+- Changed the cover's colors behind the player to flow as the iPhone's do: the
+  cover's own colors drawn out into long ribbons that bend slowly through one
+  another.
+- Changed the waveform to show those same colors, lifted so they read on black,
+  in place of one color fading to gray.
+- Changed the waveform's bars to keep round ends however tall they grow, a
+  little wider, as the iPhone's are.
+- Added the cover's colors pulsing gently on the music's beat, as you hear it,
+  with the waveform's bass bar rising on the same beat.
 - Changed the waveform to move more softly, as the iPhone's does: each bar
   eases toward its level over a tenth of a second or so, rather than leaping
   to every hit.

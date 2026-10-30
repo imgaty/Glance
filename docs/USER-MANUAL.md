@@ -145,11 +145,11 @@ Spotify plays it from, or the song in the playlist Music plays it from. Other
 browsers switch to the tab with `Accessibility` allowed, in the windows on the
 current desktop. Otherwise, it switches to the app.
 
-Behind the player, the cover's colors drift slowly through one another and
-pulse on the music's beat, as you hear it: on AirPods and other wireless
-headphones, which play a moment late, the pulse and the waveform wait for the
-sound. The beat needs the `Audio from apps` permission. With Reduce Motion on,
-the colors hold still.
+Behind the player, the cover's colors flow slowly through one another in long
+ribbons and pulse on the music's beat, as you hear it: on AirPods and other
+wireless headphones, which play a moment late, the pulse and the waveform wait
+for the sound. The beat needs the `Audio from apps` permission. With Reduce
+Motion on, the colors hold still.
 
 <img src="../assets/screenshots/player.png"
      width="450"
@@ -270,8 +270,8 @@ with two fingers, or scroll a mouse's wheel, to see the rest.
 ## Live Activities
 
 While something plays, the closed notch shows the cover on its left and a
-waveform on its right, filled with a gradient made from the cover's colors, as
-on the iPhone. When something new starts playing, its name and artist appear
+waveform on its right, filled with the same colors that flow behind the player,
+as on the iPhone. When something new starts playing, its name and artist appear
 beside the notch for a moment. Everything here comes and goes as on the iPhone's
 Dynamic Island: the notch widens and folds, and what it shows rides in and out
 with its ends, fading in out of a blur and away into one. A new song's cover

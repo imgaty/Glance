@@ -33,7 +33,7 @@ struct HeroWaveform: View {
             Button(action: toggleLyrics) {
                 WaveformGlyph(
                     color: nowPlaying.accent(from: accentSource),
-                    gradient: accentSource == .artwork ? nowPlaying.waveformGradient : accentSource.nsColor.flatMap(WaveformGradient.colors),
+                    flow: nowPlaying.flow(from: accentSource),
                     isPlaying: nowPlaying.isPlaying && !paused,
                     folded: button && (hovering || contact.holds(demoPointer)), filled: lyricsShown, demo: nowPlaying.isDemo
                 )
@@ -55,16 +55,15 @@ struct HeroWaveform: View {
 
 /// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
 /// 1.6 times as wide as the gaps, with round ends however tall it grows, and dots when nothing
-/// plays. As the iPhone fills its waveform,
-/// the bars show a gradient made from the cover's colors (see `WaveformGradient`), or from the
-/// chosen color's shades, across all six at once. Folded, it becomes Apple's lyrics symbol, the way
-/// Apple swaps one symbol for another: the bars draw together into a point and are gone, and the
-/// symbol springs out of it.
+/// plays. As the iPhone fills its waveform, the bars show the same colors that flow behind the
+/// player (see `ArtworkFlow`), across all six at once. Folded, it becomes Apple's lyrics symbol, the
+/// way Apple swaps one symbol for another: the bars draw together into a point and are gone, and
+/// the symbol springs out of it.
 struct WaveformGlyph: View {
     @ObservedObject private var audio = AudioLevels.shared
     let color: Color
-    /// The nine colors of the gradient the bars show; without them, the color alone.
-    var gradient: [Color]? = nil
+    /// The colors the bars show; without them, the color alone.
+    var flow: ArtworkFlow? = nil
     let isPlaying: Bool
     var folded = false
     /// The lyrics are open: the bubble is filled, as Apple's is when lyrics show.
@@ -129,10 +128,10 @@ struct WaveformGlyph: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
     }
 
-    /// The gradient, or the color alone.
+    /// The flowing colors, or the color alone.
     @ViewBuilder private var paint: some View {
-        if let gradient, gradient.count == WaveformGradient.points.count {
-            MeshGradient(width: 3, height: 3, points: WaveformGradient.points, colors: gradient)
+        if let flow {
+            FlowingPaint(flow: flow, moving: isPlaying)
         } else {
             color
         }
@@ -172,5 +171,22 @@ struct WaveformGlyph: View {
     /// Where the bars draw together: a dot in the middle, where the symbol springs from.
     private func gathered(in size: CGSize, dot: CGFloat) -> CGRect {
         CGRect(x: size.width / 2 - dot / 2, y: size.height / 2 - dot / 2, width: dot, height: dot)
+    }
+}
+
+/// The bars' colors, moving at the pace they're drawn at, apart from the bars' own movement.
+private struct FlowingPaint: View {
+    let flow: ArtworkFlow
+    let moving: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 15, paused: !moving || reduceMotion)) { context in
+            if let frame = flow.frame(at: reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate) {
+                Image(decorative: frame.bars, scale: 1)
+                    .resizable()
+                    .interpolation(.high)
+            }
+        }
     }
 }
