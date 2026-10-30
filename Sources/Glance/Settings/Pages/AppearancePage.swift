@@ -19,9 +19,6 @@ struct AppearancePage: View {
 
     var body: some View {
         Form {
-            Section {
-                PageIntro(.appearance)
-            }
             if screens.count > 1 {
                 Section {
                     Toggle("Use the same appearance on all displays", isOn: Binding(get: { sameLook }, set: setSameLook))
@@ -107,9 +104,12 @@ private struct LookEditor: View {
                 Text("Use artwork colors")
                 Text("Tints the notch with the cover's colors, instead of your Mac's accent color.")
             }
-            VStack(alignment: .leading, spacing: 10) {
+            CenteredRow(alignment: .top) {
+                // Level with the tops of the pictures, inside their rings.
                 Text("Background")
-                ThumbnailPicker(selection: $background, options: MusicBackground.allCases.map { ($0, $0.title) }) { background in
+                    .padding(.top, 3)
+            } trailing: {
+                ThumbnailPicker(selection: $background, options: MusicBackground.allCases.map { ($0, $0.title) }, columns: 3) { background in
                     NotchThumbnail(layout: layout, display: display, background: background)
                 }
             }

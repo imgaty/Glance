@@ -242,19 +242,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         }
     }
 
-    /// How it works, in a line or two, at the top of the page.
-    var summary: String {
-        switch self {
-        case .general: "Choose whether Glance starts when you log in, and review what it's allowed to do. New versions can install themselves."
-        case .appearance: "Choose how clear or dark the notch's glass is, and what shows behind the player while music plays."
-        case .player: "Open the notch to see what almost any app is playing, with its cover, its controls and the lyrics."
-        case .tray: "Keeps files you drop on the notch, what you copy, and your screenshots. Drag anything back out when you need it."
-        case .activities: "Shows what's going on beside the camera while the notch is closed, as the iPhone's Dynamic Island does."
-        case .opening: "Choose how the notch opens under the pointer, and what your fingers do on the trackpad. Try it in the picture above."
-        case .displays: "Choose which displays show the notch, and whether it hides when an app is in full screen."
-        }
-    }
-
     /// The pages about how the notch looks and works show it, live, at the top.
     var showsPreview: Bool { [.appearance, .player, .tray, .opening].contains(self) }
 
@@ -276,11 +263,11 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "login launch startup permissions about build version source"
         case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight display preview"
         case .player:
-            "music apps sources apple spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics animated art announce songs keyboard shortcut hotkey"
-        case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look keyboard shortcut hotkey"
+            "music apps sources apple spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics animated art announce songs"
+        case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look"
         case .activities:
             "live activity activities dynamic island music cover waveform closed battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay timer countdown"
-        case .opening: "hover click delay hold haptic feedback gestures swipe trackpad"
+        case .opening: "hover click delay hold haptic feedback gestures swipe slide tool trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }
     }
@@ -309,25 +296,30 @@ private struct PaneIcon: View {
     }
 }
 
-/// The top of a page, as System Settings' Siri page has it: the page's icon, its name, and how it
-/// works in a line or two. A page that's one feature has that feature's switch beside them, as Wi-Fi
-/// and Bluetooth do.
+/// The top of a feature's page, as System Settings' Siri page has it: the page's icon, its name, and
+/// how it works in a line or two, with the same room on every side of the icon and beside it. A
+/// page that's one feature has that feature's switch beside them, as Wi-Fi and Bluetooth do.
 struct PageIntro<Control: View>: View {
     let pane: SettingsPane
+    let text: String
     @ViewBuilder let control: Control
 
-    init(_ pane: SettingsPane, @ViewBuilder control: () -> Control = { EmptyView() }) {
+    /// Around the icon and between it and the words, measured from the Siri page.
+    private let room: CGFloat = 15
+
+    init(_ pane: SettingsPane, _ text: String, @ViewBuilder control: () -> Control = { EmptyView() }) {
         self.pane = pane
+        self.text = text
         self.control = control()
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            PaneIcon(pane: pane, size: 44)
+        HStack(spacing: room) {
+            PaneIcon(pane: pane, size: 49)
             VStack(alignment: .leading, spacing: 2) {
                 Text(pane.title)
                     .font(.system(size: 13, weight: .semibold))
-                Text(pane.summary)
+                Text(text)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -335,7 +327,9 @@ struct PageIntro<Control: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             control
         }
-        .padding(.vertical, 4)
+        // The rest of it comes from the form's row.
+        .padding(.leading, room - GroupMetrics.inset)
+        .padding(.vertical, room - GroupMetrics.inset)
     }
 }
 

@@ -22,9 +22,6 @@ struct OpeningPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.opening)
-            }
-            Section {
                 Picker("Open with", selection: $openTrigger.animation(.easeInOut(duration: 0.25))) {
                     ForEach(OpenTrigger.allCases) { Text($0.title).tag($0) }
                 }
@@ -48,16 +45,21 @@ struct OpeningPage: View {
                 }
                 if trayOn {
                     Toggle(isOn: $swipeToSwitch) {
-                        Text("Switch to the tray")
+                        Text("Slide to the next tool")
                         Text("Swipe left or right with three fingers on the open notch, or scroll holding Shift.")
                     }
                     if swipeToSwitch {
                         Toggle(isOn: $switchReversed) {
                             Text("Reverse direction")
-                            Text("Swipe and scroll the other way to reach the tray.")
+                            Text("Swipe and scroll the other way.")
                         }
                     }
                 }
+            }
+            Section {
+                ShortcutRow(action: .music)
+                ShortcutRow(action: .tray)
+                    .disabled(!trayOn)
             }
         }
     }

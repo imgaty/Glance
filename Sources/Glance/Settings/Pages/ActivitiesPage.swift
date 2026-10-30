@@ -25,7 +25,7 @@ struct ActivitiesPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.activities)
+                PageIntro(.activities, "Shows what's going on beside the camera while the notch is closed, as the iPhone's Dynamic Island does.")
             }
             Section {
                 Toggle(isOn: $liveActivity) {

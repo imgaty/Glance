@@ -25,7 +25,7 @@ struct PlayerPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.player)
+                PageIntro(.player, "Open the notch to see what almost any app is playing, with its cover, its controls and the lyrics.")
             }
             Section {
                 CenteredRow(alignment: .top) {
@@ -57,9 +57,6 @@ struct PlayerPage: View {
                 Toggle("Show app icon on artwork", isOn: $appBadge)
                 Toggle("Announce new audio", isOn: $trackPop)
                     .disabled(!liveActivity)
-            }
-            Section {
-                ShortcutRow(action: .music)
             }
             Section {
                 // Follows the stored list, so an app that has just played appears at once.

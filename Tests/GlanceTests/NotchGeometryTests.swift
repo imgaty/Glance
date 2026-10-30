@@ -287,12 +287,6 @@ struct SettingsPaneTests {
         #expect(SettingsPane.allCases.map(\.title) == ["General", "Appearance", "Player", "Tray", "Live Activities", "Opening", "Displays"])
     }
 
-    @Test("Each page says how it works, in a line or two", arguments: SettingsPane.allCases)
-    func summaries(pane: SettingsPane) {
-        #expect(!pane.summary.isEmpty)
-        #expect(pane.summary.count < 130)
-    }
-
     @Test("Each page has its own icon", arguments: SettingsPane.allCases)
     func symbols(pane: SettingsPane) {
         #expect(NSImage(systemSymbolName: pane.symbol, accessibilityDescription: nil) != nil)

@@ -24,7 +24,7 @@ struct TrayPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.tray) {
+                PageIntro(.tray, "Keeps files you drop on the notch, what you copy, and your screenshots. Drag anything back out when you need it.") {
                     Toggle("Tray", isOn: $trayOn)
                         .toggleStyle(.switch)
                         .labelsHidden()
@@ -53,10 +53,6 @@ struct TrayPage: View {
                         }
                     }
                 }
-            }
-            .disabled(!trayOn)
-            Section {
-                ShortcutRow(action: .tray)
             }
             .disabled(!trayOn)
             Section {

@@ -15,9 +15,6 @@ struct GeneralPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.general)
-            }
-            Section {
                 LaunchAtLoginToggle()
                 CenteredRow {
                     Text("Permissions")
