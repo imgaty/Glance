@@ -8,6 +8,18 @@
 	<string>Glance</string>
 	<key>CFBundleIdentifier</key>
 	<string>dev.vibe.Glance</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>ISGraphicIconConfiguration</key>
+		<dict>
+			<key>ISEnclosureColor</key>
+			<string>Black</string>
+			<key>ISSymbolColor</key>
+			<string>White</string>
+			<key>ISSymbolName</key>
+			<string>rectangle.topthird.inset.filled</string>
+		</dict>
+	</dict>
 	<key>CFBundleName</key>
 	<string>Glance</string>
 	<key>CFBundlePackageType</key>
