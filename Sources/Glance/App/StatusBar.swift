@@ -33,8 +33,9 @@ final class StatusBarController: NSObject {
     let menu = NSMenu()
     var onOpenSettings: (() -> Void)?
 
-    /// With room either side of the icon: macOS makes it 44 points wide, and its pill with it.
-    private let statusItem = NSStatusBar.system.statusItem(withLength: 42)
+    /// Square, as an icon in the menu bar is: macOS's pill around it comes out the size of the
+    /// system's own icons', and the icons beside it as far away. Any wider, the pill is wider still.
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let updatesItem = NSMenuItem(title: "Check for Updates…", action: #selector(updatesFromMenu), keyEquivalent: "")
     private let rebuildItem = NSMenuItem(title: "Rebuild", action: #selector(rebuildFromMenu), keyEquivalent: "")
     private var canCheckWatch: AnyCancellable?
