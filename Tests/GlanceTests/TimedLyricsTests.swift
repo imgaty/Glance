@@ -159,8 +159,16 @@ struct TimedLyricsTests {
     func leadingInterlude() throws {
         let lyrics = try #require(TimedLyrics(lrc: "[00:10.00]Hello", duration: 100))
         #expect(lyrics.entries.count == 2)
-        #expect(lyrics.entries[0] == TimedLyrics.Entry(start: 0.5, end: 10, item: .interlude))
+        #expect(lyrics.entries[0] == TimedLyrics.Entry(start: 0, end: 10, item: .interlude))
         #expect(lyrics.entries[1].item == .line("Hello"))
+    }
+
+    @Test("The pause before the first line holds from the first moment, however the clock moves as the song loads")
+    func leadingInterludeHolds() throws {
+        let lyrics = try #require(TimedLyrics(lrc: "[00:10.00]Hello", duration: 100))
+        for position in [0, 0.3, 0.6, 0, 0.5, 0.1, 0, 0.9] {
+            #expect(lyrics.entries.lastIndex { $0.start <= position } == 0)
+        }
     }
 
     @Test("A first line just at 4 s gets the pause")

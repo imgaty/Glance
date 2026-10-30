@@ -8,8 +8,8 @@
 import SwiftUI
 
 /// A song's lyrics, timed line by line.
-struct TimedLyrics: Equatable {
-    enum Item: Equatable {
+struct TimedLyrics: Hashable {
+    enum Item: Hashable {
         /// A line, lit all at once while it's sung.
         case line(String)
         /// A pause in the singing, shown as three dots that fill.
@@ -18,7 +18,7 @@ struct TimedLyrics: Equatable {
         case credits
     }
 
-    struct Entry: Equatable {
+    struct Entry: Hashable {
         let start: Double
         /// When the line has been sung, or the pause ends.
         let end: Double
@@ -56,8 +56,10 @@ struct TimedLyrics: Equatable {
             let end = line.time + min((next - line.time) * 0.9, natural * 1.5)
 
             let nextSung = lines[(index + 1)...].first { !$0.text.isEmpty }?.time
+            // From the very start: while a song loads, its clock runs on a moment and is put back to
+            // 0:00, again and again, and with a pause starting just after that, it would come and go.
             if entries.isEmpty, line.time >= 4 {
-                entries.append(Entry(start: 0.5, end: line.time, item: .interlude))
+                entries.append(Entry(start: 0, end: line.time, item: .interlude))
             }
             entries.append(Entry(start: line.time, end: end, item: .line(line.text)))
             if let nextSung, nextSung - end >= 5 {
@@ -402,7 +404,10 @@ struct LyricsView: View {
                 case .timed(let lyrics):
                     TimedLyricsView(
                         lyrics: lyrics, credits: store.credits, isVisible: isVisible, width: proxy.size.width,
-                        height: proxy.size.height, anchor: middle, notes: notes)
+                        height: proxy.size.height, anchor: middle, notes: notes
+                    )
+                    // Each song's own: the heights it keeps of its lines aren't the next song's.
+                    .id(lyrics)
                 case .plain(let lines):
                     PlainLyricsView(lines: lines, credits: store.credits, isVisible: isVisible)
                 case .loading where notes:
