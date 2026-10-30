@@ -63,6 +63,24 @@ struct AudioLevelsTests {
         }
     }
 
+    @Test("The bass's bar is the beat the colors pulse on, and rests low between beats")
+    func beatBar() {
+        let samples = Self.song(seconds: 6, bpm: 120, kicks: true).samples
+        let analyzer = Analyzer(sampleRate: Self.rate)
+        var rested = false
+        for end in stride(from: Analyzer.size, through: samples.count, by: Self.hop) {
+            let reading = analyzer.reading(Array(samples[(end - Analyzer.size)..<end]))
+            let bar = reading.levels[Analyzer.beatBar]
+            #expect(bar >= reading.beat)
+            if reading.beat > 0.3 { #expect(bar == reading.beat) }
+            if reading.beat < 0.05, Double(end) / Self.rate > 1 {
+                rested = true
+                #expect(bar > 0 && bar <= 0.2)
+            }
+        }
+        #expect(rested)
+    }
+
     @Test("A bass line with no kicks has no beat")
     func noKicks() {
         let song = Self.song(seconds: 6, bpm: 120, kicks: false)

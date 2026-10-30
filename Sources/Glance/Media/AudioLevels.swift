@@ -320,16 +320,21 @@ private final class SampleRing: @unchecked Sendable {
 /// Turns 1024 samples into six bar heights, each bar its own part of the sound, as on iOS. How
 /// loud the music really is sets how tall the bars can grow, so a quiet song stays low. Within
 /// that, six separate slices of the spectrum each move against their own slow-moving average, with
-/// what they all share taken out, so a kick, a voice and a hi-hat each move their own bar; bass
-/// swells slowly, treble flickers. The beat is the bass rising more sharply than it has been
-/// lately, to well above its usual level, as a kick or a bass note starts; no sooner than a fifth
-/// of a second after the last.
+/// what they all share taken out, so a voice and a hi-hat each move their own bar; treble flickers.
+/// The bass's bar is the beat itself, the same signal the colors behind the player pulse on: the
+/// bass rising more sharply than it has been lately, to well above its usual level, as a kick or a
+/// bass note starts; no sooner than a fifth of a second after the last.
 final class Analyzer {
     static let size = 1024
     /// Bass, low mids, mids, upper mids, presence and air, in hertz.
     private static let bands: [(Double, Double)] = [(45, 90), (150, 260), (400, 700), (1_100, 1_800), (3_000, 5_000), (7_000, 12_000)]
     /// Bands to bars: bass sits right of center, as in the iPhone's waveform.
     private static let order = [4, 5, 3, 1, 0, 2]
+    /// The bar that's the bass.
+    static let beatBar = order.firstIndex(of: 0)!
+    /// How high the bass's bar rests between beats, for how loud the music is, so it stays a low
+    /// dash rather than going out.
+    private static let beatBarRest: Float = 0.2
     /// How far each bar moves toward its level at each reading, rising and falling: softly, over a
     /// tenth of a second or so, as the iPhone's bars move, rather than leaping to every hit.
     private static let attack: [Float] = [0.4, 0.42, 0.45, 0.48, 0.5, 0.52]
@@ -446,6 +451,7 @@ final class Analyzer {
             smoothed[band] += (level - smoothed[band]) * rate
             bars[Self.order.firstIndex(of: band)!] = smoothed[band]
         }
+        bars[Self.beatBar] = max(beat, Self.beatBarRest * volume)
         return AudioReading(levels: bars, beat: beat)
     }
 }

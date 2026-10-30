@@ -151,14 +151,14 @@ struct WaveformGlyph: View {
     /// How much wider a bar is than the gap beside it.
     private static let barToGap: CGFloat = 1.6
 
-    /// A made-up beat, for the welcome tour: every bar at its own pace, with a kick on the bass a
-    /// little under twice a second.
+    /// A made-up beat, for the welcome tour: every bar at its own pace, and the bass's bar the kick,
+    /// a little under twice a second.
     static func demoLevels(at t: Double) -> [Float] {
         let kick = demoKick(at: t)
         let paces: [Double] = [5.3, 6.1, 3.7, 2.9, 2.3, 4.4]
         return paces.enumerated().map { bar, pace in
-            let bass = bar == 3 || bar == 4 ? 0.35 * kick : 0
-            let level = 0.42 + 0.22 * sin(t * pace + Double(bar) * 1.7) + 0.14 * sin(t * pace * 2.3 + Double(bar)) + bass
+            if bar == Analyzer.beatBar { return Float(max(kick, 0.2)) }
+            let level = 0.42 + 0.22 * sin(t * pace + Double(bar) * 1.7) + 0.14 * sin(t * pace * 2.3 + Double(bar))
             return Float(min(max(level, 0.1), 1))
         }
     }
