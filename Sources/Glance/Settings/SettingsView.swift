@@ -74,6 +74,7 @@ struct SettingsView: View {
                     .mask { PageTopFade(fades: shown.showsPreview) }
             }
             .formStyle(.grouped)
+            .modifier(PictureSong())
             .environmentObject(preview)
             .environment(\.shownPage, shownPage)
             .environment(\.showPermissions, ShowPermissions(action: onShowPermissions))
@@ -179,6 +180,17 @@ private struct PageContent: View {
         case .opening: OpeningPage()
         case .displays: DisplaysPage()
         }
+    }
+}
+
+/// What the pictures of the notch play: what's playing, or with nothing playing, a song of their own
+/// (see `NowPlaying.fallback`), so there's always something to show. Only that one is made, and only
+/// if it's needed.
+private struct PictureSong: ViewModifier {
+    @EnvironmentObject private var nowPlaying: NowPlaying
+
+    func body(content: Content) -> some View {
+        content.environmentObject(nowPlaying.hasMedia ? nowPlaying : NowPlaying.fallback)
     }
 }
 

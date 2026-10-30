@@ -225,6 +225,9 @@ final class NowPlaying: ObservableObject {
 
     // MARK: The welcome tour's song
 
+    /// The song Settings' pictures of the notch play while nothing else is playing.
+    static let fallback = NowPlaying.demo(.tour)
+
     /// A song for the welcome tour's pictures, always playing, round and round its first verse: the
     /// tour's song, whose cover and words come from Apple Music and LRCLIB as any song's do. If
     /// either can't be had, offline say, it becomes the made-up song.

@@ -97,6 +97,48 @@ final class SettingsPreview: ObservableObject {
         }
     }
 
+    // MARK: Announcing
+
+    private var announcement: Task<Void, Never>?
+
+    /// What a new song gets on screen, for what's playing: the notch closes, its wings widen for the
+    /// name for a few seconds, and it opens again.
+    func announce(_ song: NowPlaying) {
+        announcement?.cancel()
+        let model = model
+        let playing = model.activity
+        announcement = Task { [weak self] in
+            // Paused, there are no wings to widen, until it's over.
+            model.activity = true
+            if model.state != .closed {
+                model.close()
+                try? await Task.sleep(for: .seconds(0.45))
+            }
+            guard !Task.isCancelled else { return }
+            // No wider than the picture: a longer title or artist scrolls, as it does on screen.
+            let room = (PreviewHeader.width / NotchPreview.scale(for: PreviewHeader.width, model: model) - model.closedSize.width) / 2 - 12
+            let wing = LiveActivityView.popWing(title: song.title, artist: song.artist, restingHeight: model.closedSize.height)
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                model.popWing = min(wing, room)
+                model.pop = true
+            }
+            try? await Task.sleep(for: .seconds(3.5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false }
+            try? await Task.sleep(for: .seconds(0.6))
+            guard !Task.isCancelled else { return }
+            model.activity = playing
+            if self?.interactive == false { model.open() }
+        }
+    }
+
+    /// Left before it's over, it's over.
+    func stopAnnouncing() {
+        announcement?.cancel()
+        announcement = nil
+        if model.pop { model.pop = false }
+    }
+
     /// Where the notch is in the preview, for each of its states.
     struct Geometry {
         let rect: (NotchState) -> CGRect
@@ -349,6 +391,7 @@ struct PreviewHeader: View {
 
     /// As this page wants it.
     private func settle(animated: Bool) {
+        preview.stopAnnouncing()
         preview.setInteractive(pane == .opening, animated: animated)
         let page: NotchPage = onTray ? .tray : .player
         withAnimation(animated ? .spring(response: 0.4, dampingFraction: 1) : nil) { preview.model.page = page }

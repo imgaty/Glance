@@ -10,6 +10,9 @@ import SwiftUI
 
 struct PlayerPage: View {
     @EnvironmentObject private var preview: SettingsPreview
+    /// What the picture plays, for its announcement.
+    @EnvironmentObject private var nowPlaying: NowPlaying
+    @Environment(\.shownPage) private var shownPage
     @State private var customizing = false
     @AppStorage(Preferences.lyrics) private var lyrics = true
     @AppStorage(Preferences.musicHiddenApps) private var hiddenApps = ""
@@ -96,6 +99,10 @@ struct PlayerPage: View {
         }
         .sheet(isPresented: $customizing) {
             ControlsSheet(display: preview.display, top: preview.top)
+        }
+        // Turned on, the picture shows what it does.
+        .onChange(of: trackPop) {
+            if trackPop, shownPage?.page == .player { preview.announce(nowPlaying) }
         }
     }
 }
