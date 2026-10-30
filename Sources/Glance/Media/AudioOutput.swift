@@ -69,12 +69,6 @@ final class AudioOutput: NSObject, ObservableObject {
         settings.view = SoundMenuRow(title: settings.title)
         views.append(settings.view!)
         menu.addItem(settings)
-        // A menu pads the top of its first item, but not the bottom of a last one that's a view.
-        let padding = NSMenuItem()
-        padding.view = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: SoundMenu.highlightInset))
-        padding.isEnabled = false
-        views.append(padding.view!)
-        menu.addItem(padding)
         // As wide as the longest name needs, and every row as wide, so the slider is centered.
         let width = max(Self.menuWidth, rows.map(\.fittingWidth).max() ?? 0)
         for view in views + rows { view.setFrameSize(NSSize(width: width, height: view.frame.height)) }
