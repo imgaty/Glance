@@ -114,8 +114,9 @@ final class Tray: ObservableObject {
 
     private var screenshots: NSMetadataQuery?
 
-    /// Screenshots, wherever they're saved, as Spotlight finds them: each new one joins the tray as
-    /// it's saved. Those taken before aren't added.
+    /// Screenshots and screen recordings, wherever they're saved, as Spotlight finds them: each new
+    /// one joins the tray as it's saved. Those taken before aren't added. Spotlight marks the two
+    /// apart.
     private func followScreenshots() {
         guard Self.keepsScreenshots != (screenshots != nil) else { return }
         guard Self.keepsScreenshots else {
@@ -124,7 +125,7 @@ final class Tray: ObservableObject {
             return
         }
         let query = NSMetadataQuery()
-        query.predicate = NSPredicate(format: "kMDItemIsScreenCapture == 1")
+        query.predicate = NSPredicate(format: "kMDItemIsScreenCapture == 1 || kMDItemIsScreenRecording == 1")
         query.searchScopes = [NSMetadataQueryUserHomeScope]
         NotificationCenter.default.addObserver(forName: .NSMetadataQueryDidUpdate, object: query, queue: .main) { [weak self] note in
             let added = note.userInfo?[NSMetadataQueryUpdateAddedItemsKey] as? [NSMetadataItem] ?? []

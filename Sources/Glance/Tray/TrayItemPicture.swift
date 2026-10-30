@@ -147,7 +147,8 @@ struct TrayItemPicture: View {
         case .copied:
             return item.app.flatMap(InstalledApps.name).map { "Copied from \($0)" } ?? "Copied"
         case .screenshot:
-            return "Screenshot"
+            let isMovie = item.names.first.flatMap { UTType(filenameExtension: ($0 as NSString).pathExtension) }?.conforms(to: .movie) == true
+            return isMovie ? "Screen Recording" : "Screenshot"
         case .dropped:
             // As last looked, away from the notch (see Tray.checkFiles): never looked for here, as
             // the tray is drawn.

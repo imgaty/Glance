@@ -8,8 +8,8 @@
 import AppKit
 import SwiftUI
 
-/// The tray's settings, as Spotlight's for its clipboard history: whether copies and screenshots are
-/// kept, for how long, apps whose copies never are, and a way to clear it all.
+/// The tray's settings, as Spotlight's for its clipboard history: whether copies, screenshots and
+/// screen recordings are kept, for how long, apps whose copies never are, and a way to clear it all.
 struct TrayPage: View {
     @AppStorage(Preferences.tray) private var trayOn = true
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
@@ -24,7 +24,7 @@ struct TrayPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.tray, "Keeps files you drop on the notch, what you copy, and your screenshots. Drag anything back out when you need it.") {
+                PageIntro(.tray, "Keeps files you drop on the notch, what you copy, and your screenshots and screen recordings.") {
                     Toggle("Tray", isOn: $trayOn)
                         .toggleStyle(.switch)
                         .labelsHidden()
@@ -35,11 +35,8 @@ struct TrayPage: View {
                     Text("Keep what you copy")
                     Text("Passwords and other private items are never kept.")
                 }
-                Toggle(isOn: $keepsScreenshots) {
-                    Text("Keep screenshots")
-                    Text("Each screenshot joins the tray as soon as it's saved.")
-                }
-                Picker("Keep copies and screenshots for", selection: $keep) {
+                Toggle("Keep screenshots and screen recordings", isOn: $keepsScreenshots)
+                Picker("Keep them for", selection: $keep) {
                     ForEach(ClipboardKeep.allCases) { Text($0.title).tag($0) }
                 }
                 .disabled(!keepsCopies && !keepsScreenshots)
