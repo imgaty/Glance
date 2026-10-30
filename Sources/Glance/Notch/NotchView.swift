@@ -533,7 +533,7 @@ struct NotchView: View {
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
             // black at the top, just where the glass shows; as a spotlight, it's a soft circle around
             // the cover. Choosing between them morphs one into another.
-            ArtworkLight(active: isOpen && !paused)
+            ArtworkLight(dim: background == .spotlight ? 0 : Self.colorsDim, active: isOpen && !paused, spread: lightSpread)
                 .frame(width: lightSize.width, height: lightSize.height)
                 .mask {
                     // It comes in as it's turned on or the notch opens: the background washing out of
@@ -597,6 +597,7 @@ struct NotchView: View {
             // slides off to the left as the tray comes in from the right, and back. The tray stays
             // here turned off, to slide away: not showing, it costs nothing (see `TrayView`).
             NowPlayingView(isVisible: playerShown && !paused, hero: hero)
+                .environment(\.playerOnLight, lit && background == .replaceGlass && nowPlaying.flow(from: accentSource)?.isLight == true)
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
@@ -802,11 +803,22 @@ struct NotchView: View {
         CGSize(width: model.openSize.width + model.lyricsWidth + 160, height: model.openSize.height + 80)
     }
 
+    /// All of the colors, across the open notch and a little past its corners, as wide as it is
+    /// with the lyrics or without.
+    private var lightSpread: CGSize {
+        CGSize(width: model.openSize.width + (model.showsLyrics ? model.lyricsWidth : 0) + 60, height: model.openSize.height + 40)
+    }
+
+    /// In place of the glass, as Apple Music dims its own, measured from it: evenly, whatever the
+    /// color, so white is a soft gray, and a red a deep one. With the colors' own dimming, a little
+    /// over half of their brightness is left.
+    private static let colorsDim = 0.38
+
     /// Dimmed while paused (see `PausedLook`).
     private var lightOpacity: Double {
         let full: Double =
             switch background {
-            case .replaceGlass: 0.92 + 0.08 * darkness
+            case .replaceGlass: 1
             case .spotlight: 0.9
             case .none: 0
             }

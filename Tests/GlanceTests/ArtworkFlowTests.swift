@@ -91,8 +91,8 @@ struct ArtworkFlowTests {
         }
     }
 
-    @Test("Behind the player, white is held back for the buttons, and a deep color keeps its strength")
-    func backgroundCeiling() throws {
+    @Test("Behind the player every color is dimmed evenly, so white stays white and a red stays red")
+    func backgroundEven() throws {
         func solid(_ color: NSColor) -> NSImage {
             NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
                 color.setFill()
@@ -102,8 +102,16 @@ struct ArtworkFlowTests {
         }
         let white = Self.channels(of: try #require(ArtworkFlow.of(solid(.white))?.frame(at: 100)).background)
         let red = Self.channels(of: try #require(ArtworkFlow.of(solid(NSColor(srgbRed: 0.8, green: 0.1, blue: 0.15, alpha: 1)))?.frame(at: 100)).background)
-        #expect((white.map(\.g).max() ?? 1) < 0.56)
-        #expect((red.map(\.r).max() ?? 0) > 0.7)
+        // Apple Music's white, measured, once the notch's dim is on it.
+        #expect((white.map(\.g).min() ?? 0) * 0.62 > 0.5)
+        #expect((red.map(\.r).max() ?? 0) > 0.6)
+        #expect((red.map(\.g).max() ?? 1) < 0.25)
+    }
+
+    @Test("A light cover is told from a dark one, for what's drawn over its colors")
+    func light() throws {
+        #expect(try #require(ArtworkFlow.of(Self.ball())).isLight)
+        #expect(try !#require(ArtworkFlow.of(Self.cover())).isLight)
     }
 
     @Test("A moment later than the last is drawn away from the main thread, and shows when it's ready")

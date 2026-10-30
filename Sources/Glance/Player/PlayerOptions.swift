@@ -102,6 +102,8 @@ extension EnvironmentValues {
     /// Settings' small pictures of the notch, drawn whole at their own size: the glass as it looks,
     /// and the cover still.
     @Entry var notchThumbnail = false
+    /// A light cover's colors are behind the player, so its grays have to be lighter.
+    @Entry var playerOnLight = false
     @Entry var lyricsControl = LyricsControl()
     /// Where the welcome tour's pointer is, in the notch's own points from its top left
     /// (`NotchView.bodySpace`), so what's in the notch answers it as it answers the real one.

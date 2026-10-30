@@ -27,6 +27,7 @@ struct NowPlayingView: View {
     @Environment(\.controlPlaces) private var places
     @Environment(\.lyricsControl) private var lyricsControl
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.playerOnLight) private var onLight
     /// The clock and the scrolling titles only move, and options are only read, while it shows.
     let isVisible: Bool
     /// The artwork and the waveform are drawn by the notch, flying in from the closed notch; the
@@ -187,7 +188,7 @@ struct NowPlayingView: View {
                     .frame(minWidth: 30, alignment: .trailing)
             }
             .font(.system(size: PlayerLayout.timeSize, weight: .semibold).monospacedDigit())
-            .foregroundStyle(PlayerLayout.secondary)
+            .foregroundStyle(buttonGray)
         }
         .frame(height: PlayerLayout.timelineHeight)
     }
@@ -324,15 +325,16 @@ struct NowPlayingView: View {
     private func optionColor(_ on: Bool?) -> Color {
         switch on {
         case true?: buttonGray
-        case false?: colorScheme == .light ? Color(white: 0.78) : PlayerLayout.optionOff
+        case false?: colorScheme == .light || onLight ? Color(white: 0.78) : PlayerLayout.optionOff
         case nil: buttonGray.opacity(0.4)
         }
     }
 
-    /// In light mode the glass at the bottom of the notch shows light windows through it, which the
-    /// artist's gray would vanish into, so the side buttons are lighter there.
+    /// In light mode the glass at the bottom of the notch shows light windows through it, and a light
+    /// cover's colors are light too. The artist's gray would vanish into either, so the times and
+    /// the side buttons are lighter there.
     private var buttonGray: Color {
-        colorScheme == .light ? Color(white: 0.88) : PlayerLayout.secondary
+        colorScheme == .light || onLight ? Color(white: 0.88) : PlayerLayout.secondary
     }
 
     private static func time(_ seconds: Double) -> String {

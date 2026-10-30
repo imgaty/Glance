@@ -221,17 +221,21 @@ struct ArtworkShape: Shape {
 }
 
 /// The artwork's light behind the open player: its colors flowing, as in Apple Music, or the accent
-/// color's. The notch gives it its shape: across the whole bottom, or a round glow in a corner.
+/// color's, darkened by `dim`. The notch gives it its shape: across the whole bottom, or a round
+/// glow in a corner.
 struct ArtworkLight: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
+    let dim: Double
     let active: Bool
+    /// How much room the colors spread across.
+    let spread: CGSize
 
     var body: some View {
         let flow = nowPlaying.flow(from: accentSource)
         ZStack {
             if let flow {
-                ArtworkSwirl(flow: flow, active: active && nowPlaying.isPlaying, demo: nowPlaying.isDemo)
+                ArtworkSwirl(flow: flow, active: active && nowPlaying.isPlaying, spread: spread, demo: nowPlaying.isDemo)
                     .transition(.opacity)
                     .id(ObjectIdentifier(flow))
             } else {
@@ -239,16 +243,21 @@ struct ArtworkLight: View {
                     .transition(.opacity)
             }
         }
+        .overlay(Color.black.opacity(dim))
         .animation(.easeInOut(duration: 0.8), value: flow.map(ObjectIdentifier.init))
+        .animation(.easeInOut(duration: 0.5), value: dim)
         .animation(.easeInOut(duration: 0.5), value: accentSource)
     }
 }
 
-/// The flowing colors (see `ArtworkFlow`), filling the background. On each beat of the music, as
-/// it's heard, they swell and brighten just a little and ease back.
+/// The flowing colors (see `ArtworkFlow`), all of them spread across the room given, rather than
+/// the middle of them filling it: on a shape as wide as the notch, that would be a band, and a color
+/// off to one side of the cover would never show. On each beat of the music, as it's heard, they
+/// swell and brighten just a little and ease back.
 struct ArtworkSwirl: View {
     let flow: ArtworkFlow
     let active: Bool
+    let spread: CGSize
     /// The welcome tour's made-up song, whose beat is made up too.
     var demo = false
     /// With Reduce Motion on, the colors stay where they are.
@@ -263,10 +272,10 @@ struct ArtworkSwirl: View {
                     Image(decorative: frame.background, scale: 1)
                         .resizable()
                         .interpolation(.high)
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .frame(width: spread.width, height: spread.height)
                         .scaleEffect(1 + 0.015 * pulse)
                         .brightness(0.03 * pulse)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
                 }
             }
         }
