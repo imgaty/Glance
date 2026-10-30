@@ -39,6 +39,7 @@ final class StatusBarController: NSObject {
     private var canCheckWatch: AnyCancellable?
     private var buildProcess: Process?
     private var enabledWatch: NSKeyValueObservation?
+    private var pressWatch: Any?
     private var icon: StatusIcon?
     private let panel = StatusPanel()
     private let state = StatusMenuState()
@@ -49,6 +50,13 @@ final class StatusBarController: NSObject {
         statusItem.button?.target = self
         statusItem.button?.action = #selector(clicked)
         if let button = statusItem.button { icon = StatusIcon(button: button, symbol: Self.notchIcon) }
+        // Opened on the press, as a menu opens, and the press goes no further: held down, the button
+        // would light up in a gray pill of its own, over macOS's.
+        pressWatch = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, event.window === statusItem.button?.window else { return event }
+            MainActor.assumeIsolated { self.clicked() }
+            return nil
+        }
 
         let settings = NSMenuItem(title: "Glance Settings…", action: #selector(settingsFromMenu), keyEquivalent: "")
         settings.target = self
