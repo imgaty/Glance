@@ -139,6 +139,7 @@
   looked for several ways at once, for a few seconds at most.
 - Fixed the lyrics jumping back as a song paused, and the dots in a pause in the
   singing disappearing with them.
+- Changed the waveform to take far less of the Mac's power while music plays.
 - Fixed the dots before a song's first line coming and going, and the first line
   jumping up and down, while the song loaded.
 - Fixed the waveform moving ahead of the music on AirPods and other wireless
@@ -169,7 +170,9 @@
   in the picture of the notch. With nothing playing, the pictures play a song of
   their own.
 - Changed the Music page's name to Player.
-- Changed `Switch to the tray` to `Slide to the next tool`.
+- Changed `Switch to the tray` to `Slide to the next tool`, and `Reverse
+  direction` to `Natural scrolling`, which is on when the tools follow your
+  fingers.
 - Changed `Background` to sit beside its name, as `Layout` does.
 - Changed the Displays page to show the display first, with `Hide in full screen`
   and, on an external display, `Show the notch` for that display alone.
@@ -178,6 +181,11 @@
   rather than being cut off at its edge.
 - Fixed the player's size in the Tray page's picture with the tray off, and the
   tray and the player not sliding as the tray is turned on and off.
+
+### Tray
+
+- Added screen recordings to the tray, which join as soon as they're saved, as
+  screenshots do.
 
 ### Additional
 

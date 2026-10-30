@@ -202,12 +202,12 @@ record matches the song's title, artist and length.
 ## The tray
 
 The tray keeps the files you drop on the notch, what you copy, and your
-screenshots, newest first, as Finder shows files: each item's icon, with its
-name under it. Copied text shows as a page of its first words, and a link as
-its site's icon, with where on the site it goes under the site's name. Open it
-with ⇧⌘2, or switch to it from the player. Dragging a file, or anything else
-the tray takes, near the notch and holding it there a moment opens it too, ready
-for the drop, without reaching the top edge.
+screenshots and screen recordings, newest first, as Finder shows files: each
+item's icon, with its name under it. Copied text shows as a page of its first
+words, and a link as its site's icon, with where on the site it goes under the
+site's name. Open it with ⇧⌘2, or switch to it from the player. Dragging a file,
+or anything else the tray takes, near the notch and holding it there a moment
+opens it too, ready for the drop, without reaching the top edge.
 
 <img src="../assets/screenshots/tray.png"
      width="450"
@@ -255,11 +255,12 @@ before its name. Choose Don't Keep to let it go again, after the usual time from
 then. To never keep what you copy in an app, add the app under
 **Settings > Tray > Never keep copies from**.
 
-### Screenshots
+### Screenshots and screen recordings
 
-Each screenshot joins the tray as soon as it's saved, wherever you save them,
-and stays as long as copies do, or until you remove it if you choose Keep. Turn
-this off with **Settings > Tray > Keep screenshots**.
+Each screenshot and screen recording joins the tray as soon as it's saved,
+wherever you save them, and stays as long as copies do, or until you remove it
+if you choose Keep. Turn this off with
+**Settings > Tray > Keep screenshots and screen recordings**.
 
 ### Seeing everything
 
@@ -467,6 +468,7 @@ ellipsis instead of scrolling.
 | `Announce new audio` | Briefly shows what starts playing |
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
+| `Other apps` | **Add App…** adds an app to the list |
 
 ### Tray
 
@@ -474,8 +476,8 @@ ellipsis instead of scrolling.
 | --- | --- |
 | `Tray` | Turns the tray on or off, with its shortcut and its gestures |
 | `Keep what you copy` | Keeps what you copy in the tray |
-| `Keep screenshots` | Adds each screenshot to the tray |
-| `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
+| `Keep screenshots and screen recordings` | Adds each one to the tray |
+| `Keep them for` | `30 Minutes`, `8 Hours`, or `7 Days` |
 | `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
 | `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
@@ -506,7 +508,7 @@ ellipsis instead of scrolling.
 | `Open and close` | Two-finger swipes down and up, and dragging down and up on the display |
 | `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
 | `Slide to the next tool` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
-| `Reverse direction` | Swiping and scrolling the other way |
+| `Natural scrolling` | The tools follow your fingers; off, swiping and scrolling go the other way |
 | `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 
