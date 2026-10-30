@@ -49,10 +49,8 @@ struct OpeningPage: View {
                         Text("Swipe left or right with three fingers on the open notch, or scroll holding Shift.")
                     }
                     if swipeToSwitch {
-                        Toggle(isOn: $switchReversed) {
-                            Text("Reverse direction")
-                            Text("Swipe and scroll the other way.")
-                        }
+                        // Stored the other way around, as it was when it turned the direction around.
+                        Toggle("Natural scrolling", isOn: Binding(get: { !switchReversed }, set: { switchReversed = !$0 }))
                     }
                 }
             }

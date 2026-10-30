@@ -81,6 +81,10 @@ struct PlayerPage: View {
                         }
                     }
                 }
+                Toggle(isOn: $showsNewApps) {
+                    Text("Show new apps")
+                    Text("Apps that start playing are added turned on.")
+                }
                 CenteredRow {
                     Text("Other apps")
                     Text("Add apps to show or hide them.")
@@ -88,10 +92,6 @@ struct PlayerPage: View {
                     Button("Add App…") {
                         InstalledApps.choose(message: "Choose apps to show in the notch.") { $0.forEach(MusicApps.add) }
                     }
-                }
-                Toggle(isOn: $showsNewApps) {
-                    Text("Show new apps")
-                    Text("Apps that start playing are added turned on.")
                 }
             } header: {
                 SectionTitle("Apps")
