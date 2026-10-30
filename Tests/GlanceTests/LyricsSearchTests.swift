@@ -57,6 +57,16 @@ struct LyricsSearchTests {
         #expect(Self.isFound(late, ["Other"]))
     }
 
+    @Test("Paused, a song stays where it's shown, unless the report says it was moved")
+    func pausedPosition() {
+        // Players report where they were a moment ago: the lyrics don't step back for it.
+        #expect(NowPlaying.pausedPosition(reported: 41.2, shown: 42) == 42)
+        #expect(NowPlaying.pausedPosition(reported: 42.6, shown: 42) == 42)
+        // Moved while paused.
+        #expect(NowPlaying.pausedPosition(reported: 90, shown: 42) == 90)
+        #expect(NowPlaying.pausedPosition(reported: 0, shown: 42) == 0)
+    }
+
     @Test("Nothing found is told from LRCLIB not answering")
     func nothing() async {
         if case .nothing = await LyricsStore.firstAnswer([Self.after(0, .unreachable), Self.after(0, .nothing)], patience: 5) {} else {

@@ -663,7 +663,8 @@ private struct InterludeDots: View {
             // Still while paused: what's around it redraws all the time, so pausing the timeline
             // alone wouldn't hold it.
             let breath = breathing ? 1 + 0.08 * sin(t * 2 * .pi / 2.4) : 1
-            let folding = min(max(fold / 0.4, 0), 1)
+            // Paused just as they fold, they stay whole until the song goes on.
+            let folding = breathing ? min(max(fold / 0.4, 0), 1) : 1
             HStack(spacing: 7) {
                 ForEach(0..<3, id: \.self) { dot in
                     let fill = min(max(progress * 3 - Double(dot), 0), 1)

@@ -130,8 +130,12 @@
 - Changed the cover, the colors behind the player and the lyrics to dim by the
   same amount while the song is paused. The dots in a pause in the singing stop
   breathing too.
+- Changed lyrics to be found as each song starts, so they're there the moment
+  you ask for them.
 - Fixed lyrics taking a very long time to show when LRCLIB was slow: they're now
   looked for several ways at once, for a few seconds at most.
+- Fixed the lyrics jumping back as a song paused, and the dots in a pause in the
+  singing disappearing with them.
 - Fixed the waveform moving ahead of the music on AirPods and other wireless
   headphones, which play a moment late: it now waits for the sound, as the
   colors' pulse does.

@@ -87,6 +87,15 @@ final class NowPlaying: ObservableObject {
     /// The song, as the lookups made for it are kept.
     private var track: String { title + "\u{1F}" + artist }
 
+    /// How far from where a paused song shows a player's report may be and still be the same place:
+    /// players report where they were a moment ago, not where they stopped. Further, it was moved.
+    private nonisolated static let pausedSlip = 5.0
+
+    /// Where a paused song stays: where it's shown, unless the report says it was moved.
+    nonisolated static func pausedPosition(reported: Double, shown: Double) -> Double {
+        abs(reported - shown) < pausedSlip ? shown : reported
+    }
+
     func position(at date: Date) -> Double {
         let position = isPlaying ? elapsed + date.timeIntervalSince(reportedAt) * rate : elapsed
         return duration > 0 ? min(max(position, 0), duration) : max(position, 0)
@@ -378,6 +387,7 @@ final class NowPlaying: ObservableObject {
         guard MusicApps.shows(report["app"] as? String) else { return followDirectly() }
         if report["direct"] == nil { stopFollowingDirectly() }
         lastShownApp = report["app"] as? String
+        let shown = position(at: .now)
         title = report["title"] as? String ?? ""
         artist = report["artist"] as? String ?? ""
         album = report["album"] as? String ?? ""
@@ -393,9 +403,16 @@ final class NowPlaying: ObservableObject {
             isPlaying = playing
             heldPlaying = nil
         }
-        elapsed = report["elapsed"] as? Double ?? 0
+        let reported = report["elapsed"] as? Double ?? 0
         rate = (report["rate"] as? Double).flatMap { $0 > 0 ? $0 : nil } ?? 1
-        reportedAt = (report["timestamp"] as? Double).map(Date.init(timeIntervalSince1970:)) ?? .now
+        if isPlaying {
+            elapsed = reported
+            reportedAt = (report["timestamp"] as? Double).map(Date.init(timeIntervalSince1970:)) ?? .now
+        } else {
+            // The clock and the lyrics stay where the song stopped, rather than stepping back.
+            elapsed = Self.pausedPosition(reported: reported, shown: shown)
+            reportedAt = .now
+        }
         if let encoded = report["artwork"] as? String ?? latestArtwork, encoded != shownArtwork {
             show(artwork: Data(base64Encoded: encoded).flatMap(NSImage.init(data:)), encoded: encoded)
         }
