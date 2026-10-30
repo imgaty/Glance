@@ -97,6 +97,8 @@ extension EnvironmentValues {
     @Entry var playerLayout = PlayerLayout.top
     /// In Settings' picture of the player, its controls' places are marked, and say where they are.
     @Entry var controlPlaces: ControlPlaces? = nil
+    /// The notch itself on the screen, rather than a picture of it.
+    @Entry var notchOnScreen = false
     /// Settings' pictures of the notch on pages not shown: nothing in them moves.
     @Entry var notchPaused = false
     /// Settings' small pictures of the notch, drawn whole at their own size: the glass as it looks,

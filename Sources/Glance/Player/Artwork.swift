@@ -269,7 +269,7 @@ struct ArtworkSwirl: View {
                 let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
                 let pulse = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) * 0.5 : Double(AudioLevels.shared.pulse)) : 0
                 if let frame = flow.frame(at: t) {
-                    Image(decorative: frame.background, scale: 1)
+                    Image(decorative: frame, scale: 1)
                         .resizable()
                         .interpolation(.high)
                         .frame(width: spread.width, height: spread.height)

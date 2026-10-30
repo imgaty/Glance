@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import SwiftUI
 
 /// The one waveform that flies between the closed notch and the player. In the player, pointing at
@@ -60,7 +61,6 @@ struct HeroWaveform: View {
 /// way Apple swaps one symbol for another: the bars draw together into a point and are gone, and
 /// the symbol springs out of it.
 struct WaveformGlyph: View {
-    @ObservedObject private var audio = AudioLevels.shared
     let color: Color
     /// The colors the bars show; without them, the color alone.
     var flow: ArtworkFlow? = nil
@@ -70,27 +70,40 @@ struct WaveformGlyph: View {
     var filled = false
     /// The welcome tour's made-up song, which moves the bars by itself.
     var demo = false
+    @Environment(\.notchOnScreen) private var onScreen
 
     var body: some View {
         if demo {
             TimelineView(.animation(minimumInterval: 1.0 / 20, paused: !isPlaying)) { context in
                 glyph(levels: Self.demoLevels(at: context.date.timeIntervalSinceReferenceDate))
             }
+        } else if onScreen {
+            // The bars go as the rest of the glyph does, without drawing together one by one.
+            ZStack {
+                LiveBars(color: NSColor(color), flow: flow, isPlaying: isPlaying)
+                    .scaleEffect(folded ? 0.2 : 1)
+                    .opacity(folded ? 0 : 1)
+                    .animation(.spring(response: 0.26, dampingFraction: 0.9), value: folded)
+                GeometryReader { lyricsSymbol(in: $0.size) }
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
         } else {
-            glyph(levels: audio.levels)
+            HeardLevels { glyph(levels: $0) }
         }
     }
 
     private func glyph(levels: [Float]) -> some View {
         GeometryReader { proxy in
             let size = proxy.size
-            let bar = size.width / (6 + 5 / Self.barToGap)
+            let bar = Self.barWidth(in: size.width)
             ZStack(alignment: .topLeading) {
-                paint
+                paint(moving: isPlaying)
                     .mask {
                         ZStack(alignment: .topLeading) {
                             ForEach(0..<AudioLevels.bands, id: \.self) { index in
-                                let rect = folded ? gathered(in: size, dot: bar) : self.bar(index, level: levels[index], in: size, width: bar)
+                                let rect =
+                                    folded
+                                    ? gathered(in: size, dot: bar) : Self.bar(index, level: levels[index], playing: isPlaying, in: size, width: bar)
                                 // Circular: a continuous curve stretches along a tall bar, so
                                 // its ends would grow pointed as it grows.
                                 Capsule(style: .circular)
@@ -102,23 +115,7 @@ struct WaveformGlyph: View {
                         }
                         .frame(width: size.width, height: size.height, alignment: .topLeading)
                     }
-                // Apple's lyrics symbol, in the waveform's colors. Its tail hangs below the bubble, so
-                // it's lowered until the bubble itself sits where the bars do, its sides on theirs.
-                paint
-                    .mask {
-                        Image(systemName: filled ? "quote.bubble.fill" : "quote.bubble")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: .infinity, alignment: .center)
-                            .offset(y: size.height * 0.09)
-                    }
-                    .scaleEffect(folded ? 1 : 0.2)
-                    .blur(radius: folded ? 0 : 2)
-                    .opacity(folded ? 1 : 0)
-                    .animation(
-                        folded
-                            ? .spring(response: 0.36, dampingFraction: 0.6).delay(0.06)
-                            : .spring(response: 0.24, dampingFraction: 0.95), value: folded)
+                lyricsSymbol(in: size)
             }
             .frame(width: size.width, height: size.height)
         }
@@ -128,10 +125,31 @@ struct WaveformGlyph: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
     }
 
+    /// Apple's lyrics symbol, in the waveform's colors. Its tail hangs below the bubble, so it's
+    /// lowered until the bubble itself sits where the bars do, its sides on theirs. Its colors only
+    /// move while it shows.
+    private func lyricsSymbol(in size: CGSize) -> some View {
+        paint(moving: isPlaying && folded)
+            .mask {
+                Image(systemName: filled ? "quote.bubble.fill" : "quote.bubble")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: .infinity, alignment: .center)
+                    .offset(y: size.height * 0.09)
+            }
+            .scaleEffect(folded ? 1 : 0.2)
+            .blur(radius: folded ? 0 : 2)
+            .opacity(folded ? 1 : 0)
+            .animation(
+                folded
+                    ? .spring(response: 0.36, dampingFraction: 0.6).delay(0.06)
+                    : .spring(response: 0.24, dampingFraction: 0.95), value: folded)
+    }
+
     /// The flowing colors, or the color alone.
-    @ViewBuilder private var paint: some View {
+    @ViewBuilder private func paint(moving: Bool) -> some View {
         if let flow {
-            FlowingPaint(flow: flow, moving: isPlaying)
+            FlowingPaint(flow: flow, moving: moving)
         } else {
             color
         }
@@ -139,13 +157,16 @@ struct WaveformGlyph: View {
 
     /// A dot when nothing plays or nothing can be heard; a short dash when quiet; full height on the
     /// loudest beats.
-    private func bar(_ index: Int, level: Float, in size: CGSize, width: CGFloat) -> CGRect {
+    static func bar(_ index: Int, level: Float, playing: Bool, in size: CGSize, width: CGFloat) -> CGRect {
         let level = CGFloat(level)
         let sounding = max(width, size.height * (0.3 + 0.7 * level))
         // Settling into a dot as the sound fades out, rather than stopping at a dash.
-        let height = isPlaying ? width + (sounding - width) * min(level / 0.05, 1) : width
-        return CGRect(x: CGFloat(index) * width * (1 + 1 / Self.barToGap), y: (size.height - height) / 2, width: width, height: height)
+        let height = playing ? width + (sounding - width) * min(level / 0.05, 1) : width
+        return CGRect(x: CGFloat(index) * width * (1 + 1 / barToGap), y: (size.height - height) / 2, width: width, height: height)
     }
+
+    /// How wide a bar is, for how wide the waveform is.
+    static func barWidth(in width: CGFloat) -> CGFloat { width / (6 + 5 / barToGap) }
 
     /// How much wider a bar is than the gap beside it.
     private static let barToGap: CGFloat = 1.6
@@ -174,7 +195,15 @@ struct WaveformGlyph: View {
     }
 }
 
-/// The bars' colors, moving at the pace they're drawn at, apart from the bars' own movement.
+/// The music's levels, for the waveform in Settings' pictures of the notch.
+private struct HeardLevels<Content: View>: View {
+    @ObservedObject private var audio = AudioLevels.shared
+    @ViewBuilder let content: ([Float]) -> Content
+
+    var body: some View { content(audio.levels) }
+}
+
+/// The bars' colors, the palette turning slowly, apart from the bars' own movement.
 private struct FlowingPaint: View {
     let flow: ArtworkFlow
     let moving: Bool
@@ -182,11 +211,118 @@ private struct FlowingPaint: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 15, paused: !moving || reduceMotion)) { context in
-            if let frame = flow.frame(at: reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate) {
-                Image(decorative: frame.bars, scale: 1)
-                    .resizable()
-                    .interpolation(.high)
-            }
+            let turn = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate / ArtworkFlow.barsTurn
+            Image(decorative: flow.bars, scale: 1)
+                .resizable()
+                .interpolation(.high)
+                .scaleEffect(sqrt(2) / ArtworkFlow.barsZoom)
+                .rotationEffect(.radians(turn.truncatingRemainder(dividingBy: 1) * 2 * .pi))
         }
+    }
+}
+
+/// The bars in the notch on the screen, drawn by Core Animation. The levels come 45 times a second,
+/// and through SwiftUI each one would redraw the whole notch, which took about half of a core with
+/// the notch closed. Here each only reshapes one layer, and turns the colors under it.
+private struct LiveBars: NSViewRepresentable {
+    let color: NSColor
+    let flow: ArtworkFlow?
+    let isPlaying: Bool
+
+    func makeNSView(context: Context) -> LiveBarsView { LiveBarsView() }
+
+    func updateNSView(_ view: LiveBarsView, context: Context) {
+        view.show(color: color, colors: flow?.bars)
+        view.isPlaying = isPlaying
+    }
+}
+
+final class LiveBarsView: NSView {
+    private let clip = CALayer()
+    private let shape = CAShapeLayer()
+    private let colors = CALayer()
+    private var hearing: AnyCancellable?
+    private var levels = [Float](repeating: 0, count: AudioLevels.bands)
+
+    var isPlaying = false {
+        didSet {
+            if isPlaying != oldValue { redraw(animated: true) }
+        }
+    }
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        colors.contentsGravity = .resize
+        clip.mask = shape
+        clip.addSublayer(colors)
+        layer?.addSublayer(clip)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    /// The button around it takes the clicks.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func show(color: NSColor, colors picture: CGImage?) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        colors.contents = picture
+        colors.backgroundColor = picture == nil ? color.cgColor : nil
+        CATransaction.commit()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        let scale = window?.backingScaleFactor ?? 2
+        shape.contentsScale = scale
+        hearing =
+            window == nil
+            ? nil
+            : AudioLevels.shared.$levels.sink { [weak self] levels in
+                MainActor.assumeIsolated {
+                    self?.levels = levels
+                    self?.redraw()
+                }
+            }
+    }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        clip.frame = bounds
+        shape.frame = bounds
+        // Large enough to cover the bars however it's turned.
+        let side = hypot(bounds.width, bounds.height) / ArtworkFlow.barsZoom
+        colors.bounds = CGRect(x: 0, y: 0, width: side, height: side)
+        colors.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        CATransaction.commit()
+        redraw()
+    }
+
+    private func redraw(animated: Bool = false) {
+        let width = WaveformGlyph.barWidth(in: bounds.width)
+        guard width > 0 else { return }
+        let path = CGMutablePath()
+        for (index, level) in levels.enumerated() {
+            let bar = WaveformGlyph.bar(index, level: level, playing: isPlaying, in: bounds.size, width: width)
+            path.addRoundedRect(in: bar, cornerWidth: bar.width / 2, cornerHeight: min(bar.width, bar.height) / 2)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if animated, let shown = shape.path {
+            let change = CABasicAnimation(keyPath: "path")
+            change.fromValue = shown
+            change.duration = 0.3
+            change.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            shape.add(change, forKey: "path")
+        }
+        shape.path = path
+        if isPlaying, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            let turn = (Date.now.timeIntervalSinceReferenceDate / ArtworkFlow.barsTurn).truncatingRemainder(dividingBy: 1)
+            colors.setAffineTransform(CGAffineTransform(rotationAngle: turn * 2 * .pi))
+        }
+        CATransaction.commit()
     }
 }

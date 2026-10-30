@@ -51,9 +51,9 @@ struct ArtworkFlowTests {
     func firstFrame() throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
         let frame = try #require(flow.frame(at: 100))
-        #expect(frame.background.width > frame.bars.width)
-        #expect(Self.brightness(of: frame.background).colors.count > 100)
-        #expect(Self.brightness(of: frame.bars).lowest >= 0.25)
+        #expect(frame.width > flow.bars.width)
+        #expect(Self.brightness(of: frame).colors.count > 100)
+        #expect(Self.brightness(of: flow.bars).lowest >= 0.25)
     }
 
     /// White with a black ball in the middle, the harshest a cover gets.
@@ -81,9 +81,9 @@ struct ArtworkFlowTests {
     @Test("A hard cover makes a soft waveform: no hole in it, and no hard edge across it")
     func softBars() throws {
         let flow = try #require(ArtworkFlow.of(Self.ball()))
-        let bars = try #require(flow.frame(at: 100)).bars
+        let bars = flow.bars
         let levels = Self.channels(of: bars).map(\.r)
-        #expect((levels.max() ?? 0) - (levels.min() ?? 0) < 0.3)
+        #expect((levels.min() ?? 0) > 0.3)
         for y in 0..<bars.height {
             for x in 1..<bars.width {
                 #expect(abs(levels[y * bars.width + x] - levels[y * bars.width + x - 1]) < 0.04)
@@ -100,8 +100,8 @@ struct ArtworkFlowTests {
                 return true
             }
         }
-        let white = Self.channels(of: try #require(ArtworkFlow.of(solid(.white))?.frame(at: 100)).background)
-        let red = Self.channels(of: try #require(ArtworkFlow.of(solid(NSColor(srgbRed: 0.8, green: 0.1, blue: 0.15, alpha: 1)))?.frame(at: 100)).background)
+        let white = Self.channels(of: try #require(ArtworkFlow.of(solid(.white))?.frame(at: 100)))
+        let red = Self.channels(of: try #require(ArtworkFlow.of(solid(NSColor(srgbRed: 0.8, green: 0.1, blue: 0.15, alpha: 1)))?.frame(at: 100)))
         // Apple Music's white, measured, once the notch's dim is on it.
         #expect((white.map(\.g).min() ?? 0) * 0.62 > 0.5)
         #expect((red.map(\.r).max() ?? 0) > 0.6)
@@ -146,7 +146,7 @@ struct ArtworkFlowTests {
             rect.fill()
             return true
         }
-        let bars = Self.channels(of: try #require(ArtworkFlow.of(red)?.frame(at: 100)).bars)
+        let bars = Self.channels(of: try #require(ArtworkFlow.of(red)).bars)
         for pixel in bars { #expect(pixel.r > pixel.g && pixel.r > pixel.b) }
     }
 
@@ -155,10 +155,10 @@ struct ArtworkFlowTests {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
         let first = try #require(flow.frame(at: 100))
         _ = flow.frame(at: 130)
-        #expect(flow.frame(at: 130)?.background === first.background)
-        for _ in 0..<100 where flow.frame(at: 130)?.background === first.background {
+        #expect(flow.frame(at: 130) === first)
+        for _ in 0..<100 where flow.frame(at: 130) === first {
             try await Task.sleep(for: .milliseconds(20))
         }
-        #expect(flow.frame(at: 130)?.background !== first.background)
+        #expect(flow.frame(at: 130) !== first)
     }
 }

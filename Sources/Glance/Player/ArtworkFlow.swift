@@ -14,16 +14,10 @@ import CoreImage.CIFilterBuiltins
 /// a point off to one side, which draws its shapes out into long ribbons, laid over one another and
 /// blurred together. The cover's palette (see `ArtworkPalette`) runs through them, and is what the
 /// waveform shows, so the two agree with each other and with the progress bar. One picture of it is
-/// drawn at a time, away from the main thread and only while something asks.
+/// drawn at a time, away from the main thread and only while something asks: nothing does while the
+/// notch is closed, the waveform turning one still picture of the palette instead.
 @MainActor
 final class ArtworkFlow {
-    /// A moment of it: for the background, and, the palette drifting with its shadows lifted so it
-    /// reads on black as the iPhone's waveform does, for the waveform's bars.
-    struct Frame {
-        let background: CGImage
-        let bars: CGImage
-    }
-
     /// One for each picture, kept only as long as the picture is.
     private static let flows = NSMapTable<NSImage, ArtworkFlow>.weakToStrongObjects()
     private static let queue = DispatchQueue(label: "Glance.ArtworkFlow", qos: .userInitiated)
@@ -36,7 +30,6 @@ final class ArtworkFlow {
     /// its asks is missed. At half that, they'd be seen to step.
     private static let interval = 1.0 / 40
     private nonisolated static let side: CGFloat = 200
-    private nonisolated static let barsSide: CGFloat = 40
     /// The cover, small: the copies are blurred away, so nothing of its detail would show.
     private static let coverSide: CGFloat = 128
 
@@ -51,9 +44,11 @@ final class ArtworkFlow {
     private nonisolated static let blur = 0.055
     /// How far the bars' darkest color is from black, as the iPhone's is.
     private nonisolated static let shadowLift: CGFloat = 0.3
-    /// The bars show this share of the palette's picture across, its middle, so soft shades of it
-    /// pass through them rather than patches.
-    private nonisolated static let barsZoom: CGFloat = 0.6
+    /// How much of the palette's picture the waveform shows across, its middle, so soft shades of it
+    /// pass through the bars rather than patches.
+    static let barsZoom: CGFloat = 0.6
+    /// A turn of it there, in seconds.
+    static let barsTurn = 20.0
     /// How strongly the palette shows through the colors, as light: all the way in the dark, none
     /// in white, so a dark cover takes on its colors and a white one stays white.
     private nonisolated static let paletteTint: CGFloat = 0.4
@@ -67,10 +62,12 @@ final class ArtworkFlow {
 
     /// The cover is light overall: what's drawn over its colors has to be lighter too.
     let isLight: Bool
+    /// The palette, its shadows lifted so it reads on black, as the iPhone's waveform does.
+    let bars: CGImage
     private let cover: CIImage
     /// The palette's picture, which turns slowly.
     private let wash: CIImage
-    private var latest: Frame?
+    private var latest: CGImage?
     private var drawing = false
     private var drawnAt = 0.0
 
@@ -85,6 +82,15 @@ final class ArtworkFlow {
         else { return nil }
         cover = CIImage(cgImage: small)
         self.wash = CIImage(cgImage: wash)
+        let lift = Self.shadowLift
+        let lifted = self.wash.applyingFilter(
+            "CIColorMatrix",
+            parameters: [
+                "inputRVector": CIVector(x: 1 - lift, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - lift, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: 1 - lift, w: 0), "inputBiasVector": CIVector(x: lift, y: lift, z: lift, w: 0),
+            ])
+        guard let bars = Self.context.createCGImage(lifted, from: self.wash.extent) else { return nil }
+        self.bars = bars
         isLight = Self.brightness(of: cover) > 0.55
     }
 
@@ -100,7 +106,7 @@ final class ArtworkFlow {
 
     /// The latest picture there is for `time`, in seconds. The first is drawn on the spot; after
     /// that, a new one is on its way whenever the last is old enough, and it shows when it's ready.
-    func frame(at time: Double) -> Frame? {
+    func frame(at time: Double) -> CGImage? {
         guard latest != nil else {
             drawnAt = time
             latest = Self.draw(cover, wash, at: time)
@@ -123,7 +129,7 @@ final class ArtworkFlow {
         return latest
     }
 
-    private nonisolated static func draw(_ cover: CIImage, _ wash: CIImage, at time: Double) -> Frame? {
+    private nonisolated static func draw(_ cover: CIImage, _ wash: CIImage, at time: Double) -> CGImage? {
         let side = Self.side
         let canvas = CGRect(x: 0, y: 0, width: side, height: side)
         var layers = CIImage(color: .black).cropped(to: canvas)
@@ -145,20 +151,7 @@ final class ArtworkFlow {
                 ])
         let dimmed = tint.applyingFilter("CIScreenBlendMode", parameters: [kCIInputBackgroundImageKey: colors])
             .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: -0.15])
-        let lifted = spun(wash, turn: time / 20, across: barsSide / barsZoom, into: CGRect(x: 0, y: 0, width: barsSide, height: barsSide))
-            .applyingFilter(
-                "CIColorMatrix",
-                parameters: [
-                    "inputRVector": CIVector(x: 1 - shadowLift, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - shadowLift, z: 0, w: 0),
-                    "inputBVector": CIVector(x: 0, y: 0, z: 1 - shadowLift, w: 0),
-                    "inputBiasVector": CIVector(x: shadowLift, y: shadowLift, z: shadowLift, w: 0),
-                ])
-        let space = CGColorSpace(name: CGColorSpace.sRGB)
-        guard let background = context.createCGImage(dimmed, from: canvas, format: .RGBA8, colorSpace: space),
-            let bars = context.createCGImage(
-                lifted, from: CGRect(x: 0, y: 0, width: barsSide, height: barsSide), format: .RGBA8, colorSpace: space)
-        else { return nil }
-        return Frame(background: background, bars: bars)
+        return context.createCGImage(dimmed, from: canvas, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     }
 
     /// The picture turned a share of the way around its middle, this wide, in the middle of a place.

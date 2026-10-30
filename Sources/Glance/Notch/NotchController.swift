@@ -225,7 +225,8 @@ final class NotchController {
             touchTarget = nil
         }
 
-        let host = NotchHostingView(rootView: NotchView(model: model, display: screen.notchID).environmentObject(nowPlaying))
+        let host = NotchHostingView(
+            rootView: NotchView(model: model, display: screen.notchID).environmentObject(nowPlaying).environment(\.notchOnScreen, true))
         host.sizingOptions = []
         eventView.frame = CGRect(origin: .zero, size: panel.frame.size)
         // The notch is drawn from the top of the screen; the window's strip above it is empty.
