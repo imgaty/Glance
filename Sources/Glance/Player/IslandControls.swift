@@ -18,6 +18,9 @@ struct IslandButton: View {
     /// Counts saves: each new value plays the save effect once.
     var burst = 0
     var burstColor: Color = .white
+    /// Swaps its symbol at once, for a button whose own motion carries the change: the star comes
+    /// back up from a press already filled.
+    var swapsAtOnce = false
     /// What VoiceOver and Voice Control call it, and its state, when the symbol's own name isn't
     /// what it does.
     var label: String? = nil
@@ -30,7 +33,7 @@ struct IslandButton: View {
             Image(systemName: symbol)
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(color)
-                .contentTransition(.symbolEffect(.replace))
+                .contentTransition(swapsAtOnce ? .identity : .symbolEffect(.replace))
                 .modifier(Slashed(progress: slashed ? 1 : 0, color: color, weight: size * 0.075))
                 .animation(.spring(response: 0.32, dampingFraction: 0.9), value: slashed)
                 // Saving: the star swells once, slowly and smoothly, with a soft glow in the accent

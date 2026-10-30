@@ -267,7 +267,7 @@ struct NowPlayingView: View {
         case .favorite:
             IslandButton(
                 symbol: symbol(for: .favorite), size: size,
-                color: optionColor(options.favorite), burst: favoriteBursts, burstColor: burstColor,
+                color: optionColor(options.favorite), burst: favoriteBursts, burstColor: burstColor, swapsAtOnce: true,
                 label: slot.title, value: Self.spoken(options.favorite)
             ) {
                 if options.favorite == false { favoriteBursts += 1 }
