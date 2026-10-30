@@ -30,6 +30,8 @@ struct NotchPreview: View {
     /// A scene it plays by itself, round after round; while it plays, the pointer leaves the notch
     /// be.
     var demo: NotchDemo?
+    /// Told when the pointer comes and goes, even over a scene, for one that gives way to it.
+    var pointerOver: Binding<Bool>?
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.liveActivity) private var liveActivity = true
     @AppStorage(Preferences.openTrigger) private var trigger = OpenTrigger.both
@@ -80,6 +82,7 @@ struct NotchPreview: View {
             // gets the pointer and the clicks.
             .contentShape(Rectangle())
             .onContinuousHover { phase in
+                if case .active = phase { pointerOver?.wrappedValue = true } else { pointerOver?.wrappedValue = false }
                 guard demo == nil else { return }
                 switch phase {
                 case .active(let p):

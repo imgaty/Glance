@@ -5,6 +5,7 @@
 //  Created by Gaty on 10/10/2026.
 //
 
+import AppKit
 import Foundation
 import Testing
 
@@ -34,6 +35,58 @@ struct PreviewPointerTests {
             try? await Task.sleep(for: .milliseconds(50))
         }
         return condition()
+    }
+
+    /// A scroll as the trackpad sends it: `phase` as Core Graphics numbers them, 1 for fingers down,
+    /// 2 moving, 4 lifted; or a mouse's wheel, with none.
+    private func scroll(_ delta: Int32, phase: Int64 = 0) throws -> NSEvent {
+        let event = try #require(CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: 0, wheel2: delta, wheel3: 0))
+        event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
+        event.setIntegerValueField(.scrollWheelEventScrollPhase, value: phase)
+        return try #require(NSEvent(cgEvent: event))
+    }
+
+    /// A picture open on the tray, showing more than fits.
+    private func onTray() -> SettingsPreview {
+        let preview = SettingsPreview()
+        preview.model.state = .open
+        preview.model.page = .tray
+        return preview
+    }
+
+    @Test("The tray's row follows two fingers, and past its end gives way and comes back")
+    func slidesRow() throws {
+        let preview = onTray()
+        #expect(preview.slide(try scroll(0, phase: 1), count: 20))
+        #expect(preview.slide(try scroll(-100, phase: 2), count: 20))
+        #expect(isClose(preview.model.trayScroll, 100))
+        #expect(preview.slide(try scroll(100, phase: 2), count: 20))
+        #expect(isClose(preview.model.trayScroll, 0))
+        #expect(preview.slide(try scroll(100, phase: 2), count: 20))
+        #expect(preview.model.trayScroll < 0 && preview.model.trayScroll >= -48)
+        #expect(preview.slide(try scroll(0, phase: 4), count: 20))
+        #expect(isClose(preview.model.trayScroll, 0))
+    }
+
+    @Test("A wheel steps along the tray's row and stops at its ends")
+    func wheelsRow() throws {
+        let preview = onTray()
+        #expect(preview.slide(try scroll(-5000), count: 20))
+        #expect(isClose(preview.model.trayScroll, Shelf.reach(count: 20, in: preview.model.trayWidth)))
+        #expect(preview.slide(try scroll(5000), count: 20))
+        #expect(isClose(preview.model.trayScroll, 0))
+    }
+
+    @Test("Scrolling is left alone with nothing to slide: all of it fits, the notch is closed, or it's on the player")
+    func leavesScrolling() throws {
+        let preview = onTray()
+        #expect(!preview.slide(try scroll(-100, phase: 2), count: 1))
+        preview.model.page = .player
+        #expect(!preview.slide(try scroll(-100, phase: 2), count: 20))
+        preview.model.page = .tray
+        preview.model.state = .closed
+        #expect(!preview.slide(try scroll(-100, phase: 2), count: 20))
+        #expect(preview.model.trayScroll == 0)
     }
 
     @Test("Resting open, it closes when the pointer moves off it, and opens again once the pointer leaves")

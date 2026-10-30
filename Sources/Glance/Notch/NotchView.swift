@@ -164,6 +164,22 @@ final class NotchModel: ObservableObject {
         return min(max(Shelf.width(count: trayItems), least), max(trayMaxWidth, least))
     }
 
+    /// The tray's row follows the fingers, giving way past either end.
+    func slideTray(by delta: CGFloat, reach: CGFloat) {
+        var next = trayScroll - delta
+        if next < 0 || next > reach { next = trayScroll - delta * 0.3 }
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) { trayScroll = min(max(next, -48), reach + 48) }
+    }
+
+    /// Back within the row's ends, springing.
+    func settleTray(reach: CGFloat) {
+        let target = min(max(trayScroll, 0), reach)
+        guard target != trayScroll else { return }
+        withAnimation(.smooth(duration: 0.35)) { trayScroll = target }
+    }
+
     /// Its row just below the camera, as the player's column below it starts, and the padding under it.
     var trayHeight: CGFloat { Self.trayHeight(closed: closedSize) }
 

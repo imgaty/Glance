@@ -1618,14 +1618,8 @@ final class NotchController {
     /// Turned around in Settings: the other way reaches the tray.
     private var switchReversed: Bool { UserDefaults.standard.bool(forKey: Preferences.swipeToSwitchReversed) }
 
-    /// The tray's row follows the fingers, giving way past either end.
     private func scrollTray(by delta: CGFloat) {
-        let reach = trayReach
-        var next = model.trayScroll - delta
-        if next < 0 || next > reach { next = model.trayScroll - delta * 0.3 }
-        var still = Transaction()
-        still.disablesAnimations = true
-        withTransaction(still) { model.trayScroll = min(max(next, -48), reach + 48) }
+        model.slideTray(by: delta, reach: trayReach)
     }
 
     /// A wheel's notch: the row glides there, never past its ends. With Shift held, scrolling on
@@ -1653,11 +1647,8 @@ final class NotchController {
     /// How long a wheel rests at the row's end before scrolling on turns the page.
     private static let edgePause = 0.25
 
-    /// Back within the row's ends, springing.
     private func settleTray() {
-        let target = min(max(model.trayScroll, 0), trayReach)
-        guard target != model.trayScroll else { return }
-        withAnimation(.smooth(duration: 0.35)) { model.trayScroll = target }
+        model.settleTray(reach: trayReach)
     }
 
     private var trayReach: CGFloat {

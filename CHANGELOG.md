@@ -166,7 +166,9 @@
 
 - Added a few words on how it works, beside its icon, at the top of the Player,
   Tray and Live Activities pages.
-- Added a picture of a file being dragged to the tray on the Tray page.
+- Added a picture of a file being dragged to the tray on the Tray page. With the
+  pointer over it, the drag gives way and the tray is there to touch: slide its
+  row with two fingers or a mouse's wheel.
 - Added a preview of `Announce new audio`: turning it on announces what's playing
   in the picture of the notch. With nothing playing, the pictures play a song of
   their own.

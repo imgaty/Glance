@@ -219,6 +219,43 @@ final class SettingsPreview: ObservableObject {
 
     private var homeTask: Task<Void, Never>?
 
+    // MARK: Sliding the tray's row, as on the notch
+
+    private var scrollWatch: Any?
+
+    /// While the pointer is over the Tray page's picture, two fingers slide its row and a wheel steps
+    /// along it. Nil stops watching.
+    func slidesTray(_ tray: Tray?) {
+        if let scrollWatch { NSEvent.removeMonitor(scrollWatch) }
+        scrollWatch = nil
+        guard let tray else { return }
+        scrollWatch = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            guard let self else { return event }
+            return MainActor.assumeIsolated { self.slide(event, count: tray.items.count) } ? nil : event
+        }
+    }
+
+    /// Whether it was the row's to take: with more in the row than fits, on the tray, open.
+    func slide(_ event: NSEvent, count: Int) -> Bool {
+        let reach = Shelf.reach(count: count, in: model.trayWidth)
+        guard model.state == .open, model.page == .tray, reach > 0 else { return false }
+        // A wheel, a notch at a time, gliding there.
+        if event.phase.isEmpty, event.momentumPhase.isEmpty {
+            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+            let target = min(max(model.trayScroll - along * (event.hasPreciseScrollingDeltas ? 1 : 24), 0), reach)
+            withAnimation(.smooth(duration: 0.2)) { model.trayScroll = target }
+            return true
+        }
+        // Let go, the row glides on, and stops at its ends rather than giving way.
+        guard event.momentumPhase.isEmpty else {
+            model.trayScroll = min(max(model.trayScroll - event.scrollingDeltaX, 0), reach)
+            return true
+        }
+        model.slideTray(by: event.scrollingDeltaX, reach: reach)
+        if event.phase == .ended || event.phase == .cancelled { model.settleTray(reach: reach) }
+        return true
+    }
+
     /// Pressing the closed notch squeezes it, and letting go opens it (or holding, with a hold time).
     func press(at p: CGPoint, _ g: Geometry) {
         pressBeganClosed = model.state != .open && zone(g).contains(p)
@@ -341,6 +378,8 @@ struct PreviewHeader: View {
     @AppStorage(Preferences.tray) private var trayOn = true
     /// A moment after the tray shows, it's shown how something's dragged there, round after round.
     @State private var showsDrop = false
+    /// The pointer is over the picture: the drag gives way, and the tray is there to touch.
+    @State private var pointerOver = false
 
     private var onTray: Bool { pane == .tray && trayOn }
 
@@ -350,7 +389,8 @@ struct PreviewHeader: View {
             // the new one in once it has settled.
             NotchPreview(
                 model: preview.model, display: preview.display, top: preview.top,
-                interactive: pane == .opening, still: !pane.showsPreview, demo: onTray && showsDrop ? .dropInTray : nil
+                interactive: pane == .opening, still: !pane.showsPreview, demo: onTray && showsDrop ? .dropInTray : nil,
+                pointerOver: $pointerOver
             )
             .environment(\.notchPaused, !pane.showsPreview)
             // The made-up tray the welcome tour shows: what's really in yours stays out of the picture.
@@ -381,12 +421,17 @@ struct PreviewHeader: View {
         .onChange(of: trayOn) { settle(animated: true) }
         // Opened the first time it shows.
         .onChange(of: pane.showsPreview, initial: true) { if pane.showsPreview { preview.reveal() } }
-        .task(id: onTray) {
+        .task(id: "\(onTray) \(pointerOver)") {
             showsDrop = false
+            preview.slidesTray(onTray && pointerOver ? .demo : nil)
             guard onTray else { return }
+            if pointerOver { return preview.model.open() }
             try? await Task.sleep(for: .seconds(1.6))
-            if !Task.isCancelled { showsDrop = true }
+            guard !Task.isCancelled else { return }
+            withAnimation(.smooth(duration: 0.3)) { preview.model.trayScroll = 0 }
+            showsDrop = true
         }
+        .onDisappear { preview.slidesTray(nil) }
     }
 
     /// As this page wants it.
