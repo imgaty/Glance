@@ -9,6 +9,22 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
+/// A shortcut's row, on the page of what it opens. It works from any app; click it to type another,
+/// as in Keyboard Shortcuts settings.
+struct ShortcutRow: View {
+    let action: Shortcuts.Action
+    @ObservedObject private var shortcuts = Shortcuts.shared
+
+    var body: some View {
+        LabeledContent {
+            ShortcutRecorder(action: action)
+        } label: {
+            Text(action.title)
+            if shortcuts.taken.contains(action) { Text("Another app is using this shortcut.") }
+        }
+    }
+}
+
 /// A shortcut, as System Settings' Keyboard Shortcuts shows one: its keys, and, clicked, ready for
 /// a new one to be typed. Escape, a click anywhere else, or leaving the page or the window leaves it
 /// as it was; a shortcut without Command, Option or Control, or one another of Glance's shortcuts

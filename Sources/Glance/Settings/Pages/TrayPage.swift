@@ -24,9 +24,10 @@ struct TrayPage: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $trayOn) {
-                    Text("Tray")
-                    Text("Keeps files you drop on the notch, what you copy, and your screenshots.")
+                PageIntro(.tray) {
+                    Toggle("Tray", isOn: $trayOn)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
                 }
             }
             Section {
@@ -52,6 +53,10 @@ struct TrayPage: View {
                         }
                     }
                 }
+            }
+            .disabled(!trayOn)
+            Section {
+                ShortcutRow(action: .tray)
             }
             .disabled(!trayOn)
             Section {
@@ -109,7 +114,7 @@ struct TrayPage: View {
         .confirmationDialog("Clear the tray?", isPresented: $confirmingClear) {
             Button("Clear Tray", role: .destructive) { tray.clear() }
         } message: {
-            Text("Everything in the tray is removed. Files stay where they are.")
+            Text("Everything in the tray is removed.")
         }
     }
 

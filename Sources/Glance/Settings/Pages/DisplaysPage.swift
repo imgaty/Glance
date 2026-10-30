@@ -19,6 +19,9 @@ struct DisplaysPage: View {
     var body: some View {
         let screen = screens.first { $0.notchID == chosen } ?? screens.first
         Form {
+            Section {
+                PageIntro(.displays)
+            }
             // These are for every display, so they come first, before the display is chosen, as in
             // Sound and Notifications settings. The app rebuilds its notches when either changes.
             Section {

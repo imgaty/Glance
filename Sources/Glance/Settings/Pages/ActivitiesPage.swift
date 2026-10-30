@@ -8,10 +8,11 @@
 import AppKit
 import SwiftUI
 
-/// What the Mac announces beside the camera, each turned on or off, as the iPhone's Dynamic Island
-/// shows them; and Clock's timer and stopwatch. The battery's choices show only on a Mac with one.
-/// Music's own, with the rest of Music, are a click away.
+/// What shows beside the camera, each turned on or off, as the iPhone's Dynamic Island shows them:
+/// what's playing, what the Mac announces, and Clock's timer and stopwatch. The battery's choices
+/// show only on a Mac with one.
 struct ActivitiesPage: View {
+    @AppStorage(Preferences.liveActivity) private var liveActivity = true
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
@@ -19,17 +20,17 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityClockTimers) private var timers = true
     @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
     @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = true
-    @Environment(\.showPane) private var showPane
     private let hasBattery = BatteryWatch.hasBattery
 
     var body: some View {
         Form {
             Section {
-                CenteredRow {
-                    Text("Music")
-                    Text("The cover and waveform beside the camera, and new songs as they start, are in Music settings.")
-                } trailing: {
-                    Button("Music Settings") { showPane.action(.music) }
+                PageIntro(.activities)
+            }
+            Section {
+                Toggle(isOn: $liveActivity) {
+                    Text("Cover and waveform")
+                    Text("Shows what's playing beside the camera while the notch is closed.")
                 }
             }
             if hasBattery {

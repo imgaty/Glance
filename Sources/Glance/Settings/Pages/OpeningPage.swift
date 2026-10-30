@@ -18,10 +18,12 @@ struct OpeningPage: View {
     @AppStorage(Preferences.swipeToSwitch) private var swipeToSwitch = true
     @AppStorage(Preferences.swipeToSwitchReversed) private var switchReversed = false
     @AppStorage(Preferences.tray) private var trayOn = true
-    @ObservedObject private var shortcuts = Shortcuts.shared
 
     var body: some View {
         Form {
+            Section {
+                PageIntro(.opening)
+            }
             Section {
                 Picker("Open with", selection: $openTrigger.animation(.easeInOut(duration: 0.25))) {
                     ForEach(OpenTrigger.allCases) { Text($0.title).tag($0) }
@@ -54,17 +56,6 @@ struct OpeningPage: View {
                             Text("Reverse direction")
                             Text("Swipe and scroll the other way to reach the tray.")
                         }
-                    }
-                }
-            }
-            // Works from any app; click it to type another, as in Keyboard Shortcuts settings.
-            Section {
-                ForEach(Shortcuts.Action.allCases.filter { $0 != .tray || trayOn }, id: \.self) { action in
-                    LabeledContent {
-                        ShortcutRecorder(action: action)
-                    } label: {
-                        Text(action.title)
-                        if shortcuts.taken.contains(action) { Text("Another app is using this shortcut.") }
                     }
                 }
             }

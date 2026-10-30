@@ -69,12 +69,14 @@ struct SettingsView: View {
                     .accessibilityHidden(!shown.showsPreview)
                 Pages(built: built.union([shown]))
                     .equatable()
+                    // What scrolls fades away on its way under the preview, in the margin above the
+                    // first group, rather than being cut off at its edge.
+                    .mask { PageTopFade(fades: shown.showsPreview) }
             }
             .formStyle(.grouped)
             .environmentObject(preview)
             .environment(\.shownPage, shownPage)
             .environment(\.showPermissions, ShowPermissions(action: onShowPermissions))
-            .environment(\.showPane, ShowPane { pane = $0 })
             .task {
                 built.insert(shown)
                 // After the preview has opened, so building them never catches its animation.
@@ -171,11 +173,32 @@ private struct PageContent: View {
         switch page {
         case .general: GeneralPage()
         case .appearance: AppearancePage()
-        case .music: MusicPage()
+        case .player: PlayerPage()
         case .tray: TrayPage()
         case .activities: ActivitiesPage()
         case .opening: OpeningPage()
         case .displays: DisplaysPage()
+        }
+    }
+}
+
+/// Clear across the top of the pages, up to where the first group rests, so nothing at rest fades.
+private struct PageTopFade: View {
+    let fades: Bool
+    /// The margin above a form's first group.
+    private static let height: CGFloat = 20
+
+    var body: some View {
+        VStack(spacing: 0) {
+            LinearGradient(
+                stops: (0...12).map { i in
+                    let t = CGFloat(i) / 12
+                    return .init(color: .black.opacity(fades ? t * t * (3 - 2 * t) : 1), location: t)
+                },
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: Self.height)
+            Color.black
         }
     }
 }
@@ -185,25 +208,19 @@ struct ShowPermissions {
     var action: () -> Void = {}
 }
 
-/// Going to another page from a button on one, as System Settings' pages send you to each other.
-struct ShowPane {
-    var action: (SettingsPane) -> Void = { _ in }
-}
-
 extension EnvironmentValues {
     @Entry var showPermissions = ShowPermissions()
-    @Entry var showPane = ShowPane()
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, appearance, music, tray, activities, opening, displays
+    case general, appearance, player, tray, activities, opening, displays
 
     var id: Self { self }
     var title: String {
         switch self {
         case .general: "General"
         case .appearance: "Appearance"
-        case .music: "Music"
+        case .player: "Player"
         case .tray: "Tray"
         case .activities: "Live Activities"
         case .opening: "Opening"
@@ -216,7 +233,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape.fill"
         case .appearance: "circle.lefthalf.filled"
-        case .music: "music.note"
+        case .player: "music.note"
         case .tray: "tray.full.fill"
         // The Dynamic Island's own shape.
         case .activities: "capsule.fill"
@@ -225,14 +242,27 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         }
     }
 
+    /// How it works, in a line or two, at the top of the page.
+    var summary: String {
+        switch self {
+        case .general: "Choose whether Glance starts when you log in, and review what it's allowed to do. New versions can install themselves."
+        case .appearance: "Choose how clear or dark the notch's glass is, and what shows behind the player while music plays."
+        case .player: "Open the notch to see what almost any app is playing, with its cover, its controls and the lyrics."
+        case .tray: "Keeps files you drop on the notch, what you copy, and your screenshots. Drag anything back out when you need it."
+        case .activities: "Shows what's going on beside the camera while the notch is closed, as the iPhone's Dynamic Island does."
+        case .opening: "Choose how the notch opens under the pointer, and what your fingers do on the trackpad. Try it in the picture above."
+        case .displays: "Choose which displays show the notch, and whether it hides when an app is in full screen."
+        }
+    }
+
     /// The pages about how the notch looks and works show it, live, at the top.
-    var showsPreview: Bool { [.appearance, .music, .tray, .opening].contains(self) }
+    var showsPreview: Bool { [.appearance, .player, .tray, .opening].contains(self) }
 
     var color: Color {
         switch self {
         case .general: .gray
         case .appearance: Color(white: 0.15)
-        case .music: .pink
+        case .player: .pink
         case .tray: .indigo
         case .activities: .green
         case .opening: .orange
@@ -244,13 +274,13 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var keywords: String {
         switch self {
         case .general: "login launch startup permissions about build version source"
-        case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight fullscreen display preview"
-        case .music:
-            "player apps sources apple music spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics waveform animated art live activity announce songs closed"
-        case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look"
+        case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight display preview"
+        case .player:
+            "music apps sources apple spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics animated art announce songs keyboard shortcut hotkey"
+        case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look keyboard shortcut hotkey"
         case .activities:
-            "live activity activities dynamic island music battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay timer countdown"
-        case .opening: "hover click delay hold haptic feedback gestures swipe trackpad keyboard shortcut hotkey"
+            "live activity activities dynamic island music cover waveform closed battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay timer countdown"
+        case .opening: "hover click delay hold haptic feedback gestures swipe trackpad"
         case .displays: "monitor external virtual notch full screen menu bar"
         }
     }
@@ -261,19 +291,51 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 /// others are described the same way and drawn by macOS just the same.
 private struct PaneIcon: View {
     let pane: SettingsPane
+    /// The tile's side: 20 points in the sidebar, like System Settings'.
+    var size: CGFloat = 20
     /// Drawn again when another icon style, or light or dark, is chosen.
     @ObservedObject private var style = IconStyle.shared
 
     var body: some View {
         if let image = SystemIcons.image(for: pane) {
-            // The tile fills four fifths of the picture: 20 points, like System Settings'.
+            // The tile fills four fifths of the picture.
             Image(nsImage: image)
                 .resizable()
-                .frame(width: 25, height: 25)
-                .frame(width: 20, height: 20)
+                .frame(width: size / 0.8, height: size / 0.8)
+                .frame(width: size, height: size)
         } else {
-            SettingsIcon(symbol: pane.symbol, color: pane.color)
+            SettingsIcon(symbol: pane.symbol, color: pane.color, size: size)
         }
+    }
+}
+
+/// The top of a page, as System Settings' Siri page has it: the page's icon, its name, and how it
+/// works in a line or two. A page that's one feature has that feature's switch beside them, as Wi-Fi
+/// and Bluetooth do.
+struct PageIntro<Control: View>: View {
+    let pane: SettingsPane
+    @ViewBuilder let control: Control
+
+    init(_ pane: SettingsPane, @ViewBuilder control: () -> Control = { EmptyView() }) {
+        self.pane = pane
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            PaneIcon(pane: pane, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(pane.title)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(pane.summary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            control
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -326,7 +388,7 @@ private enum SystemIcons {
         case .general: existing(settings.appending(path: "GeneralSettings.appex"))
         case .appearance: existing(settings.appending(path: "Appearance.appex"))
         case .displays: existing(settings.appending(path: "DisplaysExt.appex"))
-        case .music: described(pane, symbol: "music.note", color: "Red")
+        case .player: described(pane, symbol: "music.note", color: "Red")
         case .tray: described(pane, symbol: "tray.full.fill", color: "Indigo")
         case .activities: described(pane, symbol: "capsule.fill", color: "Green")
         case .opening: described(pane, symbol: "cursorarrow.click.2", color: "Orange")
@@ -362,7 +424,7 @@ private enum SystemIcons {
 private struct SettingsIcon: View {
     let symbol: String
     let color: Color
-    private let size: CGFloat = 20
+    var size: CGFloat = 20
 
     private enum Style {
         case regular, dark, clear, tinted

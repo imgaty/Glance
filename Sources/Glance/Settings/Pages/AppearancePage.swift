@@ -19,6 +19,9 @@ struct AppearancePage: View {
 
     var body: some View {
         Form {
+            Section {
+                PageIntro(.appearance)
+            }
             if screens.count > 1 {
                 Section {
                     Toggle("Use the same appearance on all displays", isOn: Binding(get: { sameLook }, set: setSameLook))

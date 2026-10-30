@@ -1,5 +1,5 @@
 //
-//  MusicPage.swift
+//  PlayerPage.swift
 //  Glance
 //
 //  Created by Gaty on 07/10/2026.
@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-struct MusicPage: View {
+struct PlayerPage: View {
     @EnvironmentObject private var preview: SettingsPreview
     @State private var customizing = false
     @AppStorage(Preferences.lyrics) private var lyrics = true
@@ -24,6 +24,9 @@ struct MusicPage: View {
 
     var body: some View {
         Form {
+            Section {
+                PageIntro(.player)
+            }
             Section {
                 CenteredRow(alignment: .top) {
                     // Level with the tops of the pictures, inside their rings.
@@ -52,17 +55,11 @@ struct MusicPage: View {
                     Text("Plays the album cover's animated version, if it has one.")
                 }
                 Toggle("Show app icon on artwork", isOn: $appBadge)
+                Toggle("Announce new audio", isOn: $trackPop)
+                    .disabled(!liveActivity)
             }
             Section {
-                Toggle(isOn: $liveActivity) {
-                    Text("Cover and waveform")
-                    Text("Shows what's playing beside the camera while the notch is closed.")
-                }
-                Toggle(isOn: $trackPop) {
-                    Text("Announce new audio")
-                    Text("Briefly shows what starts playing.")
-                }
-                .disabled(!liveActivity)
+                ShortcutRow(action: .music)
             }
             Section {
                 // Follows the stored list, so an app that has just played appears at once.
