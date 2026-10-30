@@ -68,7 +68,7 @@ final class StatusBarController: NSObject {
         }
 
         canCheckWatch = Updater.shared.$canCheck.sink { [weak self] can in self?.updatesItem.isEnabled = can }
-        panel.onClose = { [weak self] in self?.statusItem.button?.highlight(false) }
+        panel.onClose = { [weak self] window in self?.statusItem.endSelection(of: window) }
 
         // A slash across the icon while the notch is off.
         enabledWatch = UserDefaults.standard.observe(\.notchEnabled, options: [.initial]) { [weak self] defaults, _ in
@@ -80,7 +80,6 @@ final class StatusBarController: NSObject {
     @objc private func clicked() {
         guard let button = statusItem.button else { return }
         if panel.isShown { return panel.close() }
-        button.highlight(true)
         panel.show(
             below: button,
             content: StatusMenu(state: state) { [weak self] action in
@@ -93,6 +92,9 @@ final class StatusBarController: NSObject {
                 case .quit: NSApp.terminate(nil)
                 }
             })
+        if let window = panel.window {
+            statusItem.beginSelection(of: window) { [weak self] in self?.panel.close() }
+        }
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
@@ -222,6 +224,32 @@ extension StatusBarController: NSMenuDelegate {
 
     /// Marks the timer's items in the menu, to take them out before it's made again.
     private static let timerItem = 7_000
+}
+
+extension NSStatusItem {
+    private static let willPresent = NSSelectorFromString("_willPresentContent:cancellationHandler:")
+    private static let didPresent = NSSelectorFromString("_didPresentContent:")
+
+    /// Lights the icon as a menu of its own does, with macOS's soft pill, for a window that isn't a
+    /// menu: macOS draws the pill itself, wider than the icon, and only for what it knows the item
+    /// is showing, and a highlighted button is a gray pill of its own. Private AppKit hooks, with
+    /// the highlight for when they're gone. `cancelled` is macOS asking for the window to go.
+    func beginSelection(of window: NSWindow, cancelled: @escaping @MainActor () -> Void) {
+        guard responds(to: Self.willPresent), responds(to: Self.didPresent) else {
+            button?.highlight(true)
+            return
+        }
+        let handler: @convention(block) () -> Void = { MainActor.assumeIsolated { cancelled() } }
+        perform(Self.willPresent, with: window, with: unsafeBitCast(handler, to: AnyObject.self))
+    }
+
+    func endSelection(of window: NSWindow) {
+        guard responds(to: Self.didPresent) else {
+            button?.highlight(false)
+            return
+        }
+        perform(Self.didPresent, with: window)
+    }
 }
 
 /// The menu bar icon, drawn a frame at a time so macOS still colors it as it does every menu bar
@@ -445,7 +473,8 @@ private struct StatusMenuRow: View {
 /// and its glass is whole. It goes away on a click anywhere else, on Escape, or on the icon again.
 @MainActor
 final class StatusPanel {
-    var onClose: (() -> Void)?
+    /// With the window it was, now fading.
+    var onClose: ((NSWindow) -> Void)?
     private var panel: MenuPanel?
     private var monitors: [Any] = []
     /// Glance's window that had the keys before the menu took them (Settings, say), given them back.
@@ -455,6 +484,7 @@ final class StatusPanel {
     private var resignWatch: NSObjectProtocol?
 
     var isShown: Bool { panel?.isVisible == true }
+    var window: NSWindow? { panel }
 
     func show(below button: NSStatusBarButton, content: some View) {
         close()
@@ -529,7 +559,7 @@ final class StatusPanel {
                 }
             }
         }
-        onClose?()
+        onClose?(panel)
     }
 }
 
