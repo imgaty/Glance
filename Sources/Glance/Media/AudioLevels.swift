@@ -24,6 +24,15 @@ final class AudioLevels: ObservableObject {
     /// 0...1: 1 on a kick or a bass note's attack, easing off over a fraction of a second. Not
     /// published: the colors read it as they're drawn, frame by frame.
     private(set) var beat: Float = 0
+    /// The same beat as the colors behind the player show it: swelling in and easing away gently,
+    /// so it's felt more than seen. Read as they're drawn, as the beat is.
+    private(set) var pulse: Float = 0
+
+    /// A reading's step of the pulse toward the beat: slower to rise than the beat, slower still to
+    /// fall.
+    nonisolated static func eased(_ pulse: Float, toward beat: Float) -> Float {
+        pulse + (beat - pulse) * (beat > pulse ? 0.16 : 0.06)
+    }
 
     private var pipeline: TapPipeline?
     private var permissionProbe: TapPipeline?
@@ -71,8 +80,10 @@ final class AudioLevels: ObservableObject {
         pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    self?.levels = reading.levels
-                    self?.beat = reading.beat
+                    guard let self else { return }
+                    self.levels = reading.levels
+                    self.beat = reading.beat
+                    self.pulse = Self.eased(self.pulse, toward: reading.beat)
                 }
             }
         }
@@ -91,6 +102,7 @@ final class AudioLevels: ObservableObject {
         tappedPID = 0
         levels = [Float](repeating: 0, count: Self.bands)
         beat = 0
+        pulse = 0
     }
 }
 

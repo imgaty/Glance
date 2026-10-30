@@ -81,6 +81,18 @@ struct AudioLevelsTests {
         #expect(rested)
     }
 
+    @Test("The colors' pulse rises and falls more gently than the beat, and follows it")
+    func pulse() {
+        var pulse: Float = 0
+        let rise = AudioLevels.eased(pulse, toward: 1)
+        #expect(rise > 0 && rise < 0.2)
+        for _ in 0..<20 { pulse = AudioLevels.eased(pulse, toward: 1) }
+        #expect(pulse > 0.9)
+        let top = pulse
+        pulse = AudioLevels.eased(pulse, toward: 0)
+        #expect(pulse < top && top - pulse < 0.1)
+    }
+
     @Test("A bass line with no kicks has no beat")
     func noKicks() {
         let song = Self.song(seconds: 6, bpm: 120, kicks: false)

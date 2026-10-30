@@ -258,15 +258,15 @@ struct ArtworkSwirl: View {
         GeometryReader { proxy in
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
                 let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
-                let beat = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) : Double(AudioLevels.shared.beat)) : 0
+                let pulse = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) * 0.5 : Double(AudioLevels.shared.pulse)) : 0
                 if let frame = flow.frame(at: t) {
                     Image(decorative: frame.background, scale: 1)
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fill)
                         .frame(width: proxy.size.width, height: proxy.size.height)
-                        .scaleEffect(1 + 0.025 * beat)
-                        .brightness(0.04 * beat)
+                        .scaleEffect(1 + 0.015 * pulse)
+                        .brightness(0.03 * pulse)
                 }
             }
         }
