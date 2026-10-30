@@ -114,10 +114,11 @@
 - Changed the cover's colors behind the player to flow as the iPhone's do: the
   cover's own colors drawn out into long ribbons that bend slowly through one
   another.
-- Changed the waveform to show those same colors, lifted so they read on black
-  and softly blurred, in place of one color fading to gray.
-- Changed `Replace glass` to show all of the cover's colors, more strongly and
-  higher up the notch, so a white cover looks white and its red shows too. The
+- Changed the progress bar, the waveform and the colors behind the player to
+  share one palette: the cover's strongest colors, each one it really has,
+  lifted in the waveform so they read on black.
+- Changed `Replace glass` to show all of the cover's colors, more strongly, just
+  where the glass shows, so a white cover looks white and its red shows too. The
   times and side buttons turn lighter over a light cover.
 - Removed the `Fullscreen` background. If it was chosen, the notch goes back to
   `Replace glass`.
@@ -182,6 +183,7 @@
 
 - Added Glance's icon in the Dock and in Finder, in layers, so it takes on each
   icon style chosen in Appearance settings, clear included.
+- Changed the menu bar icon to the app icon's shapes.
 - Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
   it while its menu is open.
 
