@@ -189,9 +189,23 @@ final class StatusBarController: NSObject {
 
     // MARK: Icon
 
-    /// A screen with its top filled in, the SF Symbol the welcome window shows Glance with. Symbols
-    /// follow the menu bar's appearance on their own.
-    private static let notchIcon = symbol("rectangle.topthird.inset.filled", "Glance")
+    /// A screen with its top filled in, the app icon's own shapes, as far apart as they are there,
+    /// on whole and half points so they stay sharp. A template, so it follows the menu bar's
+    /// appearance, as symbols do.
+    private static let notchIcon: NSImage = {
+        let image = NSImage(size: NSSize(width: 17, height: 15), flipped: false) { rect in
+            NSColor.black.setFill()
+            let screen = NSBezierPath(roundedRect: rect, xRadius: 3.25, yRadius: 3.25)
+            screen.append(NSBezierPath(roundedRect: rect.insetBy(dx: 2, dy: 2), xRadius: 1.25, yRadius: 1.25))
+            screen.windingRule = .evenOdd
+            screen.fill()
+            NSBezierPath(roundedRect: NSRect(x: 3.5, y: 8, width: 10, height: 3.5), xRadius: 1, yRadius: 1).fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Glance"
+        return image
+    }()
     private static let hammerIcon = symbol("hammer", "Rebuilding")
 
     private static func symbol(_ name: String, _ description: String) -> NSImage {
