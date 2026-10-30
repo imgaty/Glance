@@ -1,6 +1,6 @@
 # Contributing
 
-`Created: 11 October 2026` | `Last updated: 15 October 2026`
+`Created: 11 October 2026` | `Last updated: 30 October 2026`
 
 A guide to contributing to the Glance project.
 
@@ -27,6 +27,7 @@ from macOS.
 ├── assets/screenshots/       # Documentation screenshots
 ├── docs/                     # Features and user manual
 ├── Resources/
+│   ├── AppIcon.icon/         # The app icon's layers, for Icon Composer
 │   ├── Info.plist            # Info.plist, with the update feed and key
 │   └── GlanceShare-*         # The Share extension's Info.plist and sandbox
 ├── Sources/

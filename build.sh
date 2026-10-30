@@ -34,6 +34,10 @@ cp Resources/Info.plist "$PLIST"
 # beside the camera as they connect.
 mkdir -p "$APP/Contents/Resources"
 cp -R Resources/Headphones "$APP/Contents/Resources/"
+# The app icon's layers, which macOS lights as glass and redraws in each icon style.
+xcrun actool Resources/AppIcon.icon --compile "$APP/Contents/Resources" --platform macosx \
+    --target-device mac --minimum-deployment-target 26.0 --app-icon AppIcon \
+    --output-partial-info-plist build/AppIcon-Info.plist >/dev/null
 # Glance Tray in the Share menu, an app extension, at the app's own version.
 cp .build/release/GlanceShare "$SHARE/Contents/MacOS/GlanceShare"
 cp Resources/GlanceShare-Info.plist "$SHARE/Contents/Info.plist"
