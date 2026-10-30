@@ -258,9 +258,12 @@ private final class VolumeMenuSlider: NSView {
     /// Where the menu starts and ends its headings, rows and separators, in from its sides.
     private static let column = (leading: SoundMenu.inset, trailing: SoundMenu.inset)
 
+    /// The quiet and loud speakers at the slider's ends, as large and as light as the Mac's.
     private static func speaker(_ symbol: String) -> NSImageView {
-        let image = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage())
-        image.contentTintColor = .secondaryLabelColor
+        let image = NSImageView(
+            image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)) ?? NSImage())
+        image.contentTintColor = SoundMenu.speakerGray
         image.imageScaling = .scaleProportionallyDown
         image.setContentHuggingPriority(.required, for: .horizontal)
         image.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -301,6 +304,13 @@ private enum SoundMenu {
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 1, alpha: 0.22) : NSColor(white: 0, alpha: 0.08)
     }
     static var circlePlaying: NSColor { NSColor.controlAccentColor.blended(withFraction: 0.15, of: .white) ?? .controlAccentColor }
+    /// The slider's speakers, and an AirPods' batteries, as light as the Mac's draw them.
+    static let speakerGray = NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 1, alpha: 0.62) : NSColor(white: 0, alpha: 0.5)
+    }
+    static let batteryGray = NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 1, alpha: 0.5) : NSColor(white: 0, alpha: 0.45)
+    }
 }
 
 /// A line between the sound output menu's parts, as far in from both sides as everything else.
@@ -357,7 +367,7 @@ private final class SoundMenuHeading: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 300, height: main ? 26.5 : 24.25))
         autoresizingMask = [.width]
         let label = NSTextField(labelWithString: title)
-        label.font = main ? .systemFont(ofSize: 13, weight: .bold) : .systemFont(ofSize: 12, weight: .semibold)
+        label.font = main ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 12, weight: .semibold)
         label.textColor = main ? .labelColor : .secondaryLabelColor
         label.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)
@@ -373,16 +383,14 @@ private final class SoundMenuHeading: NSView {
 /// An output in the sound output menu, as the Mac's Sound menu shows it: its symbol in a circle,
 /// light gray with the symbol gray, or the accent color with the symbol white for the one playing,
 /// beside its name, and under it, for AirPods, each earbud's battery and the case's, or the one
-/// battery of other headphones; Bluetooth headphones with a chevron at the right, which goes to
-/// their settings. Highlighted under the pointer; clicking it chooses it.
+/// battery of other headphones. AirPods are drawn as the Mac draws them there, their two earbuds
+/// side by side. Highlighted under the pointer; clicking it chooses it.
 private final class OutputRow: NSView {
     let device: AudioOutput.Device
     private let playing: Bool
     private let symbol = NSImageView()
     private let name = NSTextField(labelWithString: "")
     private let battery = NSTextField(labelWithString: "")
-    /// Bluetooth headphones' way to their settings.
-    private let chevron = NSImageView()
 
     var levels: DeviceWatch.Levels? {
         didSet {
@@ -397,21 +405,15 @@ private final class OutputRow: NSView {
         self.playing = playing
         super.init(frame: NSRect(x: 0, y: 0, width: 300, height: SoundMenu.rowHeight))
         autoresizingMask = [.width]
-        let configuration = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-        symbol.image = (NSImage(systemSymbolName: device.pictured, accessibilityDescription: nil)
-            ?? NSImage(systemSymbolName: "speaker.wave.2", accessibilityDescription: nil))?.withSymbolConfiguration(configuration)
+        symbol.image = Self.picture(device.pictured, color: playing ? .white : .secondaryLabelColor)
         symbol.contentTintColor = playing ? .white : .secondaryLabelColor
-        chevron.image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Settings")?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold))
-        chevron.contentTintColor = .secondaryLabelColor
-        chevron.isHidden = !DeviceWatch.isBluetooth(device.transport)
         name.stringValue = device.name
         name.font = .systemFont(ofSize: 13)
         name.textColor = .labelColor
         name.lineBreakMode = .byTruncatingTail
-        battery.font = .systemFont(ofSize: 11.5)
-        battery.textColor = .secondaryLabelColor
-        for view in [symbol, name, battery, chevron] { addSubview(view) }
+        battery.font = .systemFont(ofSize: 11, weight: .medium)
+        battery.textColor = SoundMenu.batteryGray
+        for view in [symbol, name, battery] { addSubview(view) }
         defer { self.levels = levels }
         setAccessibilityElement(false)
     }
@@ -422,7 +424,7 @@ private final class OutputRow: NSView {
     var fittingWidth: CGFloat {
         let widest = Self.text(DeviceWatch.Levels(left: 100, right: 100, chargingCase: 100), pro: true)
         let text = max(name.intrinsicContentSize.width, widest.size().width)
-        return SoundMenu.inset + SoundMenu.circle + SoundMenu.gap + ceil(text) + Self.chevronRoom + 4
+        return SoundMenu.inset + SoundMenu.circle + SoundMenu.gap + ceil(text) + SoundMenu.inset + 4
     }
 
     override var isFlipped: Bool { true }
@@ -431,11 +433,8 @@ private final class OutputRow: NSView {
         super.layout()
         let circle = SoundMenu.circle
         let textX = SoundMenu.inset + circle + SoundMenu.gap
-        let textWidth = bounds.width - textX - (chevron.isHidden ? SoundMenu.inset : Self.chevronRoom)
+        let textWidth = bounds.width - textX - SoundMenu.inset
         symbol.frame = NSRect(x: SoundMenu.inset, y: (bounds.height - circle) / 2, width: circle, height: circle)
-        let size = chevron.intrinsicContentSize
-        chevron.frame = NSRect(
-            x: bounds.width - Self.chevronEdge - size.width, y: (bounds.height - size.height) / 2, width: size.width, height: size.height)
         let nameHeight = name.intrinsicContentSize.height, batteryHeight = battery.intrinsicContentSize.height
         if battery.isHidden {
             name.frame = NSRect(x: textX, y: (bounds.height - nameHeight) / 2, width: textWidth, height: nameHeight)
@@ -453,21 +452,42 @@ private final class OutputRow: NSView {
         NSBezierPath(ovalIn: symbol.frame).fill()
     }
 
-    /// The chevron's right edge in from the menu's, and the room kept for it beside the words.
-    private static let chevronEdge: CGFloat = 18.5
-    private static let chevronRoom: CGFloat = 36
-
-    /// Chooses it, as the menu's own items are chosen: the menu closes, then it plays there. On the
-    /// chevron, it goes to the headphones' settings instead.
+    /// Chooses it, as the menu's own items are chosen: the menu closes, then it plays there.
     override func mouseUp(with event: NSEvent) {
         guard let item = enclosingMenuItem, let menu = item.menu else { return }
         menu.cancelTracking()
-        let point = convert(event.locationInWindow, from: nil)
-        if !chevron.isHidden, point.x > chevron.frame.minX - 10 {
-            if let url = URL(string: "x-apple.systempreferences:com.apple.BluetoothSettings") { NSWorkspace.shared.open(url) }
-            return
-        }
         menu.performActionForItem(at: menu.index(of: item))
+    }
+
+    /// The device's picture in its circle, sized as the Mac's Sound menu sizes them: AirPods as their
+    /// two earbuds side by side, a little apart, each tip outward and a lighter shade, in `color`;
+    /// anything else as its own symbol, tinted by the circle's view.
+    private static func picture(_ symbol: String, color: NSColor) -> NSImage? {
+        // The right earbud's symbol is the one whose tip points left, so it goes on the left.
+        let buds: (String, String)? =
+            switch symbol {
+            case "airpods.pro": ("airpodpro.right", "airpodpro.left")
+            case "airpods", "airpods.gen3", "airpods.gen4": ("airpod.right", "airpod.left")
+            default: nil
+            }
+        guard let buds else {
+            return (NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+                ?? NSImage(systemSymbolName: "speaker.wave.2", accessibilityDescription: nil))?
+                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .regular))
+        }
+        let configuration = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium).applying(.init(hierarchicalColor: color))
+        guard let left = NSImage(systemSymbolName: buds.0, accessibilityDescription: nil)?.withSymbolConfiguration(configuration),
+            let right = NSImage(systemSymbolName: buds.1, accessibilityDescription: nil)?.withSymbolConfiguration(configuration)
+        else { return nil }
+        let apart: CGFloat = -2
+        let size = NSSize(width: left.size.width + apart + right.size.width, height: max(left.size.height, right.size.height))
+        return NSImage(size: size, flipped: false) { _ in
+            left.draw(in: NSRect(x: 0, y: (size.height - left.size.height) / 2, width: left.size.width, height: left.size.height))
+            right.draw(
+                in: NSRect(
+                    x: left.size.width + apart, y: (size.height - right.size.height) / 2, width: right.size.width, height: right.size.height))
+            return true
+        }
     }
 
     /// Each earbud's level and the case's, AirPods Pro's in their own shapes, or the one battery's,
@@ -482,21 +502,25 @@ private final class OutputRow: NSView {
                 [(Self.batterySymbol(levels.main ?? 0), levels.main)]
             }
         let text = NSMutableAttributedString()
-        let font = NSFont.systemFont(ofSize: 11.5)
+        let font = NSFont.systemFont(ofSize: 11, weight: .medium)
         for (symbol, level) in parts {
             guard let level else { continue }
             if text.length > 0 { text.append(NSAttributedString(string: "   ", attributes: [.font: font])) }
+            // Each earbud and the case with its tip or lid a lighter shade, as the Mac draws them.
+            let size: CGFloat = symbol.contains("chargingcase") ? 10.5 : 11
             if let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
-                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 10.5, weight: .regular))
+                .withSymbolConfiguration(
+                    NSImage.SymbolConfiguration(pointSize: size, weight: .medium).applying(.init(hierarchicalColor: SoundMenu.batteryGray)))
             {
                 let attachment = NSTextAttachment()
                 attachment.image = image
                 text.append(NSAttributedString(attachment: attachment))
-                text.append(NSAttributedString(string: " ", attributes: [.font: font]))
+                // As far from its level as the Mac's.
+                text.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: 2]))
             }
             text.append(NSAttributedString(string: "\(level)%", attributes: [.font: font]))
         }
-        text.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: NSRange(location: 0, length: text.length))
+        text.addAttribute(.foregroundColor, value: SoundMenu.batteryGray, range: NSRange(location: 0, length: text.length))
         return text
     }
 

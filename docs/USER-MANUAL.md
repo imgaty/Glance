@@ -185,8 +185,7 @@ app's. For `Music` and `Spotify` it uses their own volume; other apps need the
 `Audio from apps` permission. Below it, under **Output**, each speaker and pair
 of headphones is in a circle, the one playing filled in your accent color.
 AirPods show each earbud's battery and the case's, and other headphones their
-one battery. Click one to play there, or the chevron beside Bluetooth
-headphones to open their settings. **Sound Settings…** opens
+one battery. Click one to play there. **Sound Settings…** opens
 **System Settings > Sound**.
 
 ### Lyrics
