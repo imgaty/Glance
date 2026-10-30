@@ -57,7 +57,7 @@ final class DeviceWatch {
                     try? await Task.sleep(for: .seconds(1.5))
                     info = await Self.bluetooth(named: device.name) ?? info
                 }
-                let symbol = info?.product.flatMap(Self.symbol(product:)) ?? device.symbol
+                let symbol = info?.modelSymbols?.symbol ?? device.symbol
                 let pictures = info?.product.map(DevicePictures.names(product:)) ?? []
                 // AirPods and Beats turn in 3D, from a clip read once, before they're shown.
                 let model = info?.product.flatMap(Headphones.init(product:))
@@ -116,14 +116,17 @@ final class DeviceWatch {
         }
         guard let transport: String = property(kIOHIDTransportKey), transport.hasPrefix("Bluetooth"),
             let name: String = property(kIOHIDProductKey), !name.isEmpty,
-            let symbol = symbol(product: name, usagePage: property(kIOHIDPrimaryUsagePageKey) ?? 0, usage: property(kIOHIDPrimaryUsageKey) ?? 0)
+            let symbol = symbol(
+                vendor: property(kIOHIDVendorIDKey), productID: property(kIOHIDProductIDKey), product: name,
+                usagePage: property(kIOHIDPrimaryUsagePageKey) ?? 0, usage: property(kIOHIDPrimaryUsageKey) ?? 0)
         else { return nil }
         return (name, symbol)
     }
 
-    /// By its name, then by what it says it is; none for anything else, such as headphones' own
-    /// buttons, which arrive as sound devices too.
-    static func symbol(product: String, usagePage: Int, usage: Int) -> String? {
+    /// As macOS pictures the model, if it does; otherwise by its name, then by what it says it is;
+    /// none for anything else, such as headphones' own buttons, which arrive as sound devices too.
+    static func symbol(vendor: Int? = nil, productID: Int? = nil, product: String, usagePage: Int, usage: Int) -> String? {
+        if let vendor, let productID, let symbol = SystemDevices.symbols(vendor: vendor, product: productID)?.symbol { return symbol }
         let name = product.lowercased()
         if name.contains("trackpad") { return "rectangle.and.hand.point.up.left" }
         if name.contains("magic mouse") { return "magicmouse" }
@@ -173,9 +176,26 @@ final class DeviceWatch {
     struct BluetoothInfo: Equatable, Sendable {
         var battery: Int?
         var product: Int?
+        /// Who made it, as its Bluetooth company ID: only Apple's and Beats' models are macOS's to
+        /// picture.
+        var vendor: Int?
+        /// What it is, as it tells the Mac: all there is to go by for another maker's.
+        var kind: String?
         /// Each part's level, as the Sound menu shows AirPods': each earbud's and the case's, or
         /// the one battery of headphones that have one.
         var levels = Levels()
+
+        /// How macOS pictures this model, or for another maker's, what it is.
+        var modelSymbols: DeviceSymbols? {
+            let model = vendor == nil || vendor == 0x4C ? product.flatMap(SystemDevices.symbols(product:)) : nil
+            return model ?? kind.flatMap { Self.kinds[$0] }.map { DeviceSymbols(symbol: $0) }
+        }
+
+        /// What System Information calls each kind of device.
+        private static let kinds = [
+            "Headphones": "headphones", "Headset": "headphones", "Speaker": "hifispeaker", "Portable Audio": "hifispeaker",
+            "Hi-Fi Audio": "hifispeaker", "Keyboard": "keyboard", "Mouse": "computermouse", "Gamepad": "gamecontroller",
+        ]
     }
 
     struct Levels: Equatable, Sendable {
@@ -201,7 +221,10 @@ final class DeviceWatch {
                     let main = percent("device_batteryLevelMain"), chargingCase = percent("device_batteryLevelCase")
                     let buds = [left, right].compactMap { $0 }
                     let battery = buds.min() ?? main ?? chargingCase
-                    let product = (info["device_productID"] as? String).flatMap { Int($0.replacingOccurrences(of: "0x", with: ""), radix: 16) }
+                    func identifier(_ key: String) -> Int? {
+                        (info[key] as? String).flatMap { Int($0.replacingOccurrences(of: "0x", with: ""), radix: 16) }
+                    }
+                    let product = identifier("device_productID")
                     // AirPods are listed twice, the second time for their case alone: what the first
                     // told stays, the earbuds' battery and the model.
                     let earlier = found[name.lowercased()]
@@ -209,38 +232,13 @@ final class DeviceWatch {
                         left: left ?? earlier?.levels.left, right: right ?? earlier?.levels.right,
                         chargingCase: chargingCase ?? earlier?.levels.chargingCase, main: main ?? earlier?.levels.main)
                     found[name.lowercased()] = BluetoothInfo(
-                        battery: buds.isEmpty ? earlier?.battery ?? battery : battery, product: product ?? earlier?.product, levels: levels)
+                        battery: buds.isEmpty ? earlier?.battery ?? battery : battery, product: product ?? earlier?.product,
+                        vendor: identifier("device_vendorID") ?? earlier?.vendor,
+                        kind: info["device_minorType"] as? String ?? earlier?.kind, levels: levels)
                 }
             }
         }
         return found
-    }
-
-    /// An Apple or Beats model's own symbol, by its product ID, as macOS names the model.
-    static func symbol(product: Int) -> String? {
-        let tag = UTTagClass(rawValue: "com.apple.device-model-code")
-        guard let model = UTType(tag: "Device1,\(product)", tagClass: tag, conformingTo: nil)?.identifier else { return nil }
-        let candidates: [String] =
-            if model.contains("airpods-max") {
-                ["airpods.max"]
-            } else if model.contains("airpods-pro") {
-                ["airpods.pro"]
-            } else if model.contains("airpods-gen4") || model.contains("airpods-gen5") {
-                ["airpods.gen4", "airpods"]
-            } else if model.contains("airpods-gen3") {
-                ["airpods.gen3", "airpods"]
-            } else if model.contains("airpods") {
-                ["airpods"]
-            } else if model.contains("beats-studio-pro") || model.contains("beats-solo") {
-                ["beats.headphones"]
-            } else if model.contains("beats-pill") {
-                ["beats.pill", "hifispeaker"]
-            } else if model.contains("beats") {
-                ["beats.earphones", "beats.headphones"]
-            } else {
-                []
-            }
-        return candidates.first { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil }
     }
 
     // MARK: Running low
@@ -290,7 +288,7 @@ final class DeviceWatch {
                 let report = await Self.bluetoothReport()
                 for device in headphones {
                     guard let info = report[device.name.lowercased()], let percent = info.battery else { continue }
-                    let symbol = info.product.flatMap(Self.symbol(product:)) ?? device.symbol
+                    let symbol = info.modelSymbols?.symbol ?? device.symbol
                     found[device.name] = Battery(symbol: symbol, product: info.product, percent: percent)
                 }
             }

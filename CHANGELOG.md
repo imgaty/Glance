@@ -111,6 +111,9 @@
   accent color, with the Mac's own speakers first, and **Sound Settings…** at
   the bottom. AirPods show each earbud's battery and the case's, and other
   headphones their one battery.
+- Changed every device's picture to the one macOS gives that model, so each
+  MacBook, AirPods and Beats generation shows as itself, along with a newer
+  model than Glance knows of. Other makers' devices show as what they are.
 - Changed the cover's colors behind the player to flow as the iPhone's do: the
   cover's own colors drawn out into long ribbons that bend slowly through one
   another.

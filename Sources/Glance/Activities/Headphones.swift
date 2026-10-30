@@ -8,7 +8,6 @@
 import AVFoundation
 import AppKit
 import CoreImage
-import UniformTypeIdentifiers
 
 /// AirPods and Beats that Glance shows turning as they connect, as the Dynamic Island shows AirPods:
 /// each from its maker's own 3D model, drawn once into a clip among Glance's resources (see
@@ -31,44 +30,22 @@ enum Headphones: String, CaseIterable {
     case beats360 = "beats-360"
     case beatsPill = "beats-pill"
 
-    /// By the model's product ID, or the model macOS names for it, a newer one as the newest of its
-    /// kind; none for AirPods 1 and 2, which Apple never modelled, AirPods Max, older Beats and the
-    /// rest.
+    /// The model macOS knows a product ID as, or the nearest it's a kind of that has a clip; none
+    /// for AirPods 1 and 2, which Apple never modelled, AirPods Max, older Beats and the rest.
     init?(product: Int) {
-        switch product {
-        case 0x200E: self = .airpodsPro
-        case 0x2014, 0x2024: self = .airpodsPro2
-        case 0x2027: self = .airpodsPro3
-        case 0x2013: self = .airpods3
-        case 0x2019, 0x201B, 0x201C, 0x201E, 0x2020, 0x2030, 0x2036: self = .airpods4
-        case 0x2010: self = .beatsFlex
-        case 0x2011, 0x2016: self = .beatsStudioBudsPlus
-        case 0x2017: self = .beatsStudioPro
-        case 0x201A: self = .beatsPill
-        case 0x201D: self = .powerbeatsPro2
-        case 0x2025: self = .beatsSolo4
-        case 0x2026: self = .beatsSoloBuds
-        case 0x202F: self = .powerbeatsFit
-        case 0x2038: self = .beats360
-        default:
-            let tag = UTTagClass(rawValue: "com.apple.device-model-code")
-            guard let model = UTType(tag: "Device1,\(product)", tagClass: tag, conformingTo: nil)?.identifier,
-                let found = Self.newest(named: model)
-            else { return nil }
-            self = found
-        }
+        guard let found = SystemDevices.lineage(product: product).lazy.compactMap({ Self.clips[$0] }).first else { return nil }
+        self = found
     }
 
-    /// The newest of a kind, by the model's name as macOS gives it.
-    private static func newest(named model: String) -> Headphones? {
-        // In order: a more particular name before one it contains.
-        let kinds: [(String, Headphones)] = [
-            ("airpods-pro", .airpodsPro3), ("airpods-gen", .airpods4), ("studio-buds", .beatsStudioBudsPlus), ("studio-pro", .beatsStudioPro),
-            ("solo-buds", .beatsSoloBuds), ("beats-solo", .beatsSolo4), ("beats-pill", .beatsPill), ("power-beats-pro", .powerbeatsPro2),
-            ("fit-pro", .powerbeatsFit), ("beats-flex", .beatsFlex), ("beats-360", .beats360),
-        ]
-        return kinds.first { model.contains($0.0) }?.1
-    }
+    /// Each clip by the type macOS declares for the model.
+    private static let clips: [String: Headphones] = [
+        "com.apple.airpods-pro": .airpodsPro, "com.apple.airpods-pro-gen2": .airpodsPro2, "com.apple.airpods-pro-2025": .airpodsPro3,
+        "com.apple.airpods-gen3": .airpods3, "com.apple.airpods-gen4": .airpods4, "com.apple.airpods-gen5": .airpods4,
+        "com.apple.beats-flex": .beatsFlex, "com.apple.beats-studio-buds": .beatsStudioBudsPlus,
+        "com.apple.beats-studio-buds-plus": .beatsStudioBudsPlus, "com.apple.beats-studio-pro": .beatsStudioPro,
+        "com.apple.beats-pill": .beatsPill, "com.apple.power-beats-pro-gen2": .powerbeatsPro2, "com.apple.beats-solo-4": .beatsSolo4,
+        "com.apple.beats-solo-buds": .beatsSoloBuds, "com.apple.beats-fit-pro-2025": .powerbeatsFit, "com.apple.beats-360": .beats360,
+    ]
 
     /// Its clip, among Glance's resources.
     var url: URL? { Bundle.main.url(forResource: rawValue, withExtension: "mov", subdirectory: "Headphones") }

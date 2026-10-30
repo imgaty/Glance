@@ -125,7 +125,8 @@ struct ActivitiesTests {
         let connected = DeviceWatch.connected(in: report)
         #expect(
             connected["airpods pro"]
-                == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024, levels: .init(left: 31, right: 39, chargingCase: 42)))
+                == DeviceWatch.BluetoothInfo(
+                    battery: 31, product: 0x2024, vendor: 0x4C, kind: "Headphones", levels: .init(left: 31, right: 39, chargingCase: 42)))
         // Listed again for the case alone, they keep their earbuds' battery and model.
         let twice = DeviceWatch.connected(
             in: Data(
@@ -140,13 +141,17 @@ struct ActivitiesTests {
         #expect(DevicePictures.names(product: 0x2024) == ["airpod_left", "airpod_right"])
         #expect(DevicePictures.names(product: 0x201F) == ["B515d-Default"])
         #expect(DevicePictures.names(product: 0x2019).isEmpty)
-        #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil, levels: .init(main: 80)))
+        #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil, kind: "Keyboard", levels: .init(main: 80)))
         #expect(connected["ipad"] == nil)
         #expect(DeviceWatch.connected(in: Data("not json".utf8)).isEmpty)
         // As macOS names the models.
-        #expect(DeviceWatch.symbol(product: 0x2024) == "airpods.pro")
-        #expect(DeviceWatch.symbol(product: 8223) == "airpods.max")
-        #expect(DeviceWatch.symbol(product: 0x0001) == nil)
+        #expect(DeviceWatch.BluetoothInfo(product: 0x2024).modelSymbols?.symbol == "airpods.pro.gen1")
+        #expect(DeviceWatch.BluetoothInfo(product: 8223).modelSymbols?.symbol == "airpodsmax")
+        #expect(DeviceWatch.BluetoothInfo(product: 0x0001).modelSymbols == nil)
+        // Another maker's product number means nothing to macOS, even if it's the same.
+        #expect(DeviceWatch.BluetoothInfo(product: 0x2024, vendor: 0x0A12).modelSymbols == nil)
+        // It's pictured as what it says it is.
+        #expect(DeviceWatch.BluetoothInfo(vendor: 0x0A12, kind: "Speaker").modelSymbols?.symbol == "hifispeaker")
     }
 
     @Test("Clock's stopwatch is read from what macOS keeps: running from when it started less what was on it, stopped, or reset")

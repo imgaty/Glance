@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.servicesProvider = trayService
         NSUpdateDynamicServices()
         trayService.start()
+        SystemDevices.prepare()
         Activities.shared.start()
         NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
         NotchSwipes.shared.start()

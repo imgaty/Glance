@@ -55,7 +55,7 @@ final class AudioOutput: NSObject, ObservableObject {
         let outputs = Self.outputs()
         let builtIn = outputs.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn }
         for device in builtIn + outputs.filter({ $0.transport != kAudioDeviceTransportTypeBuiltIn }) {
-            let row = OutputRow(device: device, playing: device.id == current, levels: Self.levels[device.name.lowercased()])
+            let row = OutputRow(device: device, playing: device.id == current)
             let item = NSMenuItem(title: device.name, action: #selector(choose(_:)), keyEquivalent: "")
             item.target = self
             item.tag = Int(device.id)
@@ -78,12 +78,11 @@ final class AudioOutput: NSObject, ObservableObject {
         // As wide as the longest name needs, and every row as wide, so the slider is centered.
         let width = max(Self.menuWidth, rows.map(\.fittingWidth).max() ?? 0)
         for view in views + rows { view.setFrameSize(NSSize(width: width, height: view.frame.height)) }
-        // The batteries, which System Information takes a moment to tell; kept for next time.
+        // The models and batteries, which System Information takes a moment to tell; kept for next time.
         Task { [weak self] in
-            let report = await DeviceWatch.bluetoothReport()
-            Self.levels = report.mapValues(\.levels)
+            await Self.readBluetooth()
             guard self != nil else { return }
-            for row in rows { row.levels = Self.levels[row.device.name.lowercased()] }
+            for row in rows { row.reload() }
         }
         return menu
     }
@@ -103,8 +102,12 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// As wide as the Mac's Sound menu.
     private static let menuWidth: CGFloat = 308
-    /// Each Bluetooth device's battery levels as last read, by its name in lowercase.
-    private static var levels: [String: DeviceWatch.Levels] = [:]
+    /// Each Bluetooth device as last read, by its name in lowercase.
+    fileprivate static var bluetooth: [String: DeviceWatch.BluetoothInfo] = [:]
+
+    private static func readBluetooth() async {
+        bluetooth.merge(await DeviceWatch.bluetoothReport()) { _, new in new }
+    }
 
     @objc private func choose(_ item: NSMenuItem) {
         var id = AudioDeviceID(item.tag)
@@ -114,7 +117,14 @@ final class AudioOutput: NSObject, ObservableObject {
 
     private func refresh() {
         let current = Self.defaultOutput
-        symbol = Self.outputs().first { $0.id == current }?.symbol ?? "speaker.wave.2.fill"
+        let device = Self.outputs().first { $0.id == current }
+        symbol = device?.model?.symbol ?? device?.symbol ?? "speaker.wave.2.fill"
+        // Bluetooth headphones are pictured as their model once System Information has told it.
+        guard let device, DeviceWatch.isBluetooth(device.transport), Self.bluetooth[device.name.lowercased()] == nil else { return }
+        Task { [weak self] in
+            await Self.readBluetooth()
+            if Self.bluetooth[device.name.lowercased()] != nil { self?.refresh() }
+        }
     }
 
     // MARK: Core Audio
@@ -126,29 +136,27 @@ final class AudioOutput: NSObject, ObservableObject {
         let symbol: String
         let transport: UInt32
 
-        /// As the Mac's Sound menu pictures it: the Mac itself for its own speakers, a display or a
-        /// TV for one, AirPods Pro as a pair with their earbuds apart, otherwise the device's own
-        /// symbol, outlined.
+        /// How macOS pictures this very model, once it's known: Bluetooth headphones by what System
+        /// Information reports of them, anything else that names its model by that.
+        @MainActor var model: DeviceSymbols? {
+            if DeviceWatch.isBluetooth(transport) {
+                return AudioOutput.bluetooth[name.lowercased()]?.modelSymbols
+            }
+            return AudioProperty.modelUID(of: id).flatMap(SystemDevices.symbols(model:))
+        }
+
+        /// As the Mac's Sound menu pictures it: the Mac itself for its own speakers, the model
+        /// macOS knows it as, a display or a TV for one, otherwise what it is, outlined.
         @MainActor var pictured: String {
             let builtIn = transport == kAudioDeviceTransportTypeBuiltIn && !name.lowercased().contains("headphone")
-            if builtIn { return AudioOutput.ownPicture }
+            if builtIn { return SystemDevices.thisMac.symbol }
+            if let model { return model.symbol }
             switch transport {
             case kAudioDeviceTransportTypeHDMI: return "tv"
             case kAudioDeviceTransportTypeDisplayPort: return "display"
-            default:
-                let outlined = symbol.replacingOccurrences(of: ".fill", with: "")
-                return outlined == "airpods.pro" ? "airpods.pro.gen1" : outlined
+            default: return symbol.replacingOccurrences(of: ".fill", with: "")
             }
         }
-    }
-
-    /// A MacBook, with a battery: its speakers are pictured as a laptop.
-    static let isLaptop = BatteryWatch.hasBattery
-
-    /// This Mac, notch and all.
-    @MainActor static var ownPicture: String {
-        guard isLaptop else { return "desktopcomputer" }
-        return NSScreen.screens.contains { $0.safeAreaInsets.top > 0 } ? "macbook.gen2" : "macbook.gen1"
     }
 
     static var defaultOutput: AudioDeviceID {
@@ -171,13 +179,9 @@ final class AudioOutput: NSObject, ObservableObject {
             }
     }
 
+    /// What it is, until macOS says which model (see `Device.model`).
     static func symbol(name: String, transport: UInt32) -> String {
-        let name = name.lowercased()
-        if name.contains("airpods max") { return "airpods.max" }
-        if name.contains("airpods pro") { return "airpods.pro" }
-        if name.contains("airpods") { return "airpods" }
-        if name.contains("beats") { return "beats.headphones" }
-        if name.contains("headphone") { return "headphones" }
+        if name.lowercased().contains("headphone") { return "headphones" }
         switch transport {
         case kAudioDeviceTransportTypeBuiltIn: return "speaker.wave.2.fill"
         case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: return "headphones"
@@ -429,20 +433,21 @@ private final class OutputRow: NSView {
     private let name = NSTextField(labelWithString: "")
     private let battery = NSTextField(labelWithString: "")
 
-    var levels: DeviceWatch.Levels? {
-        didSet {
-            battery.attributedStringValue = levels.map { Self.text($0, pro: device.symbol == "airpods.pro") } ?? NSAttributedString()
-            battery.isHidden = battery.attributedStringValue.length == 0
-            needsLayout = true
-        }
+    /// Pictures it and tells its batteries as they're known now.
+    func reload() {
+        let color: NSColor = playing ? .white : .secondaryLabelColor
+        symbol.image = Self.picture(device.pictured, color: color)
+        let levels = AudioOutput.bluetooth[device.name.lowercased()]?.levels
+        battery.attributedStringValue = levels.map { Self.text($0, symbols: device.model) } ?? NSAttributedString()
+        battery.isHidden = battery.attributedStringValue.length == 0
+        needsLayout = true
     }
 
-    init(device: AudioOutput.Device, playing: Bool, levels: DeviceWatch.Levels?) {
+    init(device: AudioOutput.Device, playing: Bool) {
         self.device = device
         self.playing = playing
         super.init(frame: NSRect(x: 0, y: 0, width: 300, height: SoundMenu.rowHeight))
         autoresizingMask = [.width]
-        symbol.image = Self.picture(device.pictured, color: playing ? .white : .secondaryLabelColor)
         symbol.contentTintColor = playing ? .white : .secondaryLabelColor
         name.stringValue = device.name
         name.font = .systemFont(ofSize: 13)
@@ -451,7 +456,7 @@ private final class OutputRow: NSView {
         battery.font = .systemFont(ofSize: 11, weight: .medium)
         battery.textColor = SoundMenu.batteryGray
         for view in [symbol, name, battery] { addSubview(view) }
-        defer { self.levels = levels }
+        defer { reload() }
         setAccessibilityElement(false)
     }
 
@@ -459,7 +464,7 @@ private final class OutputRow: NSView {
 
     /// Wide enough for its name and its batteries in full.
     var fittingWidth: CGFloat {
-        let widest = Self.text(DeviceWatch.Levels(left: 100, right: 100, chargingCase: 100), pro: true)
+        let widest = Self.text(DeviceWatch.Levels(left: 100, right: 100, chargingCase: 100), symbols: device.model)
         let text = max(name.intrinsicContentSize.width, widest.size().width)
         return SoundMenu.inset + SoundMenu.circle + SoundMenu.gap + ceil(text) + SoundMenu.inset + 4
     }
@@ -511,17 +516,15 @@ private final class OutputRow: NSView {
                 NSImage.SymbolConfiguration(pointSize: 14, weight: .regular).applying(.init(hierarchicalColor: color)))
     }
 
-    /// Each earbud's level and the case's, AirPods Pro's in their own shapes, or the one battery's,
-    /// each after its symbol.
-    private static func text(_ levels: DeviceWatch.Levels, pro: Bool) -> NSAttributedString {
+    /// Each earbud's level and the case's, in the shapes macOS gives this model, or the one
+    /// battery's, each after its symbol.
+    private static func text(_ levels: DeviceWatch.Levels, symbols: DeviceSymbols?) -> NSAttributedString {
         let parts: [(String, Int?)] =
             if levels.left != nil || levels.right != nil {
-                pro
-                    ? [
-                        ("airpods.pro.gen1.left", levels.left), ("airpods.pro.gen1.right", levels.right),
-                        ("airpods.pro.gen1.chargingcase.wireless.fill", levels.chargingCase),
-                    ]
-                    : [("airpod.left", levels.left), ("airpod.right", levels.right), ("airpods.chargingcase.fill", levels.chargingCase)]
+                [
+                    (symbols?.left ?? "airpod.left", levels.left), (symbols?.right ?? "airpod.right", levels.right),
+                    (symbols?.chargingCase ?? "airpods.chargingcase.fill", levels.chargingCase),
+                ]
             } else {
                 [(Self.batterySymbol(levels.main ?? 0), levels.main)]
             }
@@ -571,6 +574,13 @@ enum AudioProperty {
     static func uid(of device: AudioObjectID) -> String? {
         var uid: Unmanaged<CFString>?
         guard read(device, kAudioDevicePropertyDeviceUID, &uid) else { return nil }
+        return uid?.takeRetainedValue() as String?
+    }
+
+    /// The model a device says it is, for those that say.
+    static func modelUID(of device: AudioObjectID) -> String? {
+        var uid: Unmanaged<CFString>?
+        guard read(device, kAudioDevicePropertyModelUID, &uid) else { return nil }
         return uid?.takeRetainedValue() as String?
     }
 

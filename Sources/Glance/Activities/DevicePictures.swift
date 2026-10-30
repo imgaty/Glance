@@ -16,20 +16,20 @@ enum DevicePictures {
     private static let bundle = Bundle(path: "/System/Library/PrivateFrameworks/HeadphoneAssets.framework")
     private static var cache: [String: NSImage] = [:]
 
-    /// The pictures of a model, by its product ID: the left and right earbuds, or the headphones.
+    /// The pictures of a model, by its product ID: the left and right earbuds, or the headphones,
+    /// of the model macOS knows it as, or the nearest it's a kind of.
     static func names(product: Int) -> [String] {
-        switch product {
-        // AirPods Pro, and AirPods Pro 2 with Lightning or USB-C, which look alike.
-        case 0x200E, 0x2014, 0x2024: ["airpod_left", "airpod_right"]
-        // AirPods Pro 3.
-        case 0x2027: ["B788_airpod_left", "B788_airpod_right"]
-        // AirPods Max, with Lightning or USB-C.
-        case 0x200A, 0x201F: ["B515d-Default"]
-        // AirPods Max 2.
-        case 0x202D: ["B518-Default"]
-        default: []
-        }
+        SystemDevices.lineage(product: product).lazy.compactMap { pictures[$0] }.first ?? []
     }
+
+    /// Each set of pictures by the type macOS declares for the model. AirPods Pro 2 are a kind of
+    /// AirPods Pro, and look alike; AirPods Max 2024 a kind of AirPods Max.
+    private static let pictures: [String: [String]] = [
+        "com.apple.airpods-pro": ["airpod_left", "airpod_right"],
+        "com.apple.airpods-pro-2025": ["B788_airpod_left", "B788_airpod_right"],
+        "com.apple.airpods-max": ["B515d-Default"],
+        "com.apple.airpods-max-2": ["B518-Default"],
+    ]
 
     static func image(_ name: String) -> NSImage? {
         if let image = cache[name] { return image }

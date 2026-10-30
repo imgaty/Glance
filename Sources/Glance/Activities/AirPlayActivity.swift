@@ -15,8 +15,12 @@ struct AirPlayRoute: Equatable {
     let name: String
     let symbol: String
 
-    /// What the device is, by its name, as the iPhone draws it: a MacBook, another Mac, a TV, a
-    /// HomePod, or a speaker.
+    /// What the device is: as macOS pictures its model, if it says which; otherwise, by its name,
+    /// as the iPhone draws it: a MacBook, another Mac, a TV, a HomePod, or a speaker.
+    @MainActor static func symbol(for device: AudioOutput.Device) -> String {
+        device.model?.symbol ?? symbol(for: device.name)
+    }
+
     static func symbol(for name: String) -> String {
         let name = name.lowercased()
         let candidates: [String] =
@@ -39,7 +43,7 @@ struct AirPlayRoute: Equatable {
     }
 
     /// A screen's own symbol draws its screen in gray inside the white, as the iPhone's does.
-    var hasScreen: Bool { ["macbook", "laptopcomputer", "tv", "desktopcomputer"].contains(symbol) }
+    var hasScreen: Bool { ["macbook", "laptopcomputer", "tv", "desktopcomputer", "imac"].contains { symbol.hasPrefix($0) } }
 }
 
 /// The Mac's sound going to AirPlay, as the iPhone's Dynamic Island shows Screen Mirroring: beside
@@ -83,7 +87,7 @@ final class AirPlayWatch: ObservableObject {
         let device = AudioOutput.outputs().first { $0.id == id }
         let airPlay = device.map { $0.transport == kAudioDeviceTransportTypeAirPlay } ?? false
         if !airPlay, device != nil { lastLocal = id }
-        let next = airPlay && enabled ? device.map { AirPlayRoute(name: $0.name, symbol: AirPlayRoute.symbol(for: $0.name)) } : nil
+        let next = airPlay && enabled ? device.map { AirPlayRoute(name: $0.name, symbol: AirPlayRoute.symbol(for: $0)) } : nil
         if next != route { route = next }
     }
 
