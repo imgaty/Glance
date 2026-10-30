@@ -41,9 +41,7 @@
   follows the end's roundness, and on the taller views both ends alike; any
   room to spare is beside the camera. The notch widens or narrows as a timer
   or the stopwatch gains or loses a digit, as from hours to minutes.
-- Changed the player, the tray and the lyrics to come and go with the same
-  fade and blur as the notch opens, closes or turns its page, and a new song's
-  cover to come in the same way as the last one goes.
+- Changed a new song's cover to come in the same way as the last one goes.
 - Added Clock's timer, from the Clock app, Control Center or Siri, counting down
   beside the camera as the iPhone's Timer does: a ring emptying beside the time
   left, in minutes from ten minutes up and in minutes and seconds under ten,
@@ -132,10 +130,6 @@
 - Fixed the closed notch swelling under the pointer twice as much at its ends
   as at its bottom, with music's cover and waveform crowding its ends. It now
   swells as much all round, and they keep the same padding on every side.
-- Fixed the player's words and buttons, the tray and the opened activities
-  being cut off by the notch's edges, or pressed against them, while it opened
-  and closed. They show only once the notch has room for them and their
-  padding, as the cover and the waveform fly in.
 - Fixed the cover swinging out under the camera as the notch closed, its middle
   rushing back with the notch's end ahead of its size. It flies straight back
   to its place now, inside the notch all the way.

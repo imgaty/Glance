@@ -609,17 +609,14 @@ struct NotchView: View {
                 .padding(.leading, model.openSize.width)
                 .padding(.top, lyricsTop)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
-                .withinNotch(playerSize, model: model)
                 .mask { awayFromCamera }
-                .islandFade(lyricsShown)
+                .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
                 .allowsHitTesting(places == nil)
             // The player and the tray side by side, as pages are: going to the tray, the player
             // slides off to the left as the tray comes in from the right, and back.
             NowPlayingView(isVisible: playerShown && !paused, hero: hero)
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
-                // Its own size: the lyrics coming or going beside it never fade it.
-                .withinNotch(model.openSize, model: model)
                 .environment(\.notchControls, playerShown)
                 .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
                 .modifier(PageFade(hidden: !playerShown))
@@ -629,7 +626,6 @@ struct NotchView: View {
                     airDropTargeted: model.airDropTargeted
                 )
                 .frame(width: model.trayWidth, height: model.trayHeight)
-                .withinNotch(CGSize(width: model.trayWidth, height: model.trayHeight), model: model)
                 .environment(\.notchControls, trayShown)
                 .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
                 .modifier(PageFade(hidden: !trayShown))
@@ -756,7 +752,6 @@ struct NotchView: View {
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
             ExpandedTimerView(shown: clock, name: name, restingHeight: h, camera: model.camera, width: width)
                 .frame(width: width, height: TimerLayout.tallHeight(h))
-                .withinNotch(CGSize(width: width, height: TimerLayout.tallHeight(h)), model: model)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -768,7 +763,6 @@ struct NotchView: View {
             let h = model.closedSize.height
             let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
             ExpandedAirPlayView(route: route, restingHeight: h, width: width)
-                .withinNotch(CGSize(width: width, height: AirPlayLayout.height(h)), model: model)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -780,7 +774,6 @@ struct NotchView: View {
             let h = model.closedSize.height
             let width = AirDropLayout.width(for: transfer, restingHeight: h, camera: model.camera)
             ExpandedAirDropView(shown: transfer, restingHeight: h, camera: model.camera, width: width)
-                .withinNotch(CGSize(width: width, height: TimerLayout.tallHeight(h)), model: model)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
@@ -825,11 +818,6 @@ struct NotchView: View {
     /// the waveform or a lyrics button.
     private func toggleLyrics() {
         withAnimation(NotchMotion.expand) { model.lyrics.toggle() }
-    }
-
-    /// The open player's size with the lyrics beside it while they show, which they show in.
-    private var playerSize: CGSize {
-        CGSize(width: model.openSize.width + (model.showsLyrics ? model.lyricsWidth : 0), height: model.openSize.height)
     }
 
     /// The lyrics keep the same space below the camera as above the notch's bottom edge.
@@ -895,6 +883,12 @@ struct NotchView: View {
             .frame(width: lightSize.width, height: lightSize.height)
     }
 
+    /// Content fades in once the notch has begun to grow, and out quickly as it shrinks, so it is
+    /// never squeezed into the closing shape.
+    fileprivate static func fade(in showing: Bool) -> Animation {
+        showing ? .easeOut(duration: 0.3).delay(0.08) : .easeOut(duration: 0.12)
+    }
+
     /// Everything but the camera housing, on displays that have one: nothing is drawn under it.
     /// Cut exactly to its size, with no soft edge, so nothing shows around it either.
     private var awayFromCamera: some View {
@@ -951,13 +945,13 @@ struct NotchView: View {
 }
 
 /// How everything on a page comes and goes as the notch opens, closes, or turns to the other page:
-/// the player's words and buttons, its cover and its waveform, and the tray, as the Dynamic Island's
-/// activities come and go, so nothing lingers or leaves ahead of the rest.
+/// the player's words and buttons, its cover and its waveform, and the tray, all with one fade and
+/// one blur, so nothing lingers or leaves ahead of the rest.
 private struct PageFade: ViewModifier {
     let hidden: Bool
 
     func body(content: Content) -> some View {
-        content.islandFade(!hidden)
+        content.animation(NotchView.fade(in: !hidden)) { $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0) }
     }
 }
 
@@ -1084,13 +1078,13 @@ private struct SteppedFrame: ViewModifier, Animatable {
 
     func body(content: Content) -> some View {
         content.frame(width: width, height: height, alignment: .top)
-            .environment(\.notchStep, CGSize(width: width, height: height))
+            .environment(\.notchStep, width)
     }
 }
 
 extension EnvironmentValues {
-    /// The notch's size at this step as it animates, flares and all (see `SteppedFrame`).
-    @Entry var notchStep: CGSize?
+    /// The notch's width at this step as it animates, flares and all (see `SteppedFrame`).
+    @Entry var notchStep: CGFloat?
 }
 
 extension View {
@@ -1108,35 +1102,7 @@ private struct AtNotchStep: ViewModifier {
     let width: CGFloat
 
     func body(content: Content) -> some View {
-        content.frame(width: step.map { max($0.width - flare * 2, 0) } ?? width, height: height)
-    }
-}
-
-extension View {
-    /// Laid out at the open notch's size, `size`, flares aside, it shows only as the notch has room
-    /// for it and its padding all round: fading in as the padding comes in while the notch opens,
-    /// and out as it goes while it closes, so none of it is ever cut off by the notch's edges or
-    /// pressed against them. Squeezed while pressed, the notch keeps it.
-    fileprivate func withinNotch(_ size: CGSize, model: NotchModel) -> some View {
-        modifier(WithinNotch(size: model.pressed ? CGSize(width: size.width * 0.975, height: size.height * 0.975) : size, corners: model.corners))
-    }
-}
-
-private struct WithinNotch: ViewModifier {
-    @Environment(\.notchStep) private var step
-    let size: CGSize
-    let corners: NotchCorners
-
-    func body(content: Content) -> some View {
-        let room =
-            step.map { step in
-                let flare = NotchShape(corners: corners).flare(in: CGRect(origin: .zero, size: step))
-                let padding = PlayerLayout.padding
-                let across = (step.width - flare * 2 - (size.width - padding * 2)) / (padding * 2)
-                let down = (step.height - (size.height - padding)) / padding
-                return min(max(min(across, down), 0), 1)
-            } ?? 1
-        content.opacity(room * room * (3 - 2 * room))
+        content.frame(width: step.map { max($0 - flare * 2, 0) } ?? width, height: height)
     }
 }
 
