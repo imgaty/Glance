@@ -84,6 +84,8 @@ struct NotchMetrics {
     var height: CGFloat
     /// How far the top corners flare out on each side.
     var flare: CGFloat
+    /// How much of the trailing wing is folded away, back to the camera (see `NotchModel.detached`).
+    var fold: CGFloat = 0
 
     var totalWidth: CGFloat { bodyWidth + flare * 2 }
 }
@@ -224,29 +226,20 @@ final class NotchModel: ObservableObject {
     var notchClock: ClockShown? { activities.first.flatMap(clock(of:)) }
     var firstClock: ClockShown? { timer.map(ClockShown.timer) ?? stopwatch.map(ClockShown.stopwatch) }
 
-    /// The activities after the first, each in a bubble of its own beside the notch, as the Dynamic
-    /// Island shows them (see `IslandBubble`): the second off its right end, the third off its left.
-    /// None while the notch is open, something else is announced, or a new song's name shows: they
-    /// run back into it while it does.
-    var bubbles: [Activity] {
-        guard state != .open, alert == nil, !switching, !(activity && pop) else { return [] }
-        return Array(activities.dropFirst().prefix(2))
+    /// The Dynamic Island's minimal presentation. One activity has both sides of the camera; with
+    /// more, two show: the first attached to the notch, by its leading side alone, and this one
+    /// detached off its trailing side (see `IslandBubble`). Any others wait their turn. None while
+    /// the notch is open, something else is announced, or a new song's name shows: it runs back into
+    /// the notch while it does.
+    var detached: Activity? {
+        guard state != .open, alert == nil, !switching, !(activity && pop) else { return nil }
+        return activities.dropFirst().first
     }
 
-    /// Off the notch's right end, or its left.
-    enum Side: Equatable {
-        case trailing, leading
-    }
-
-    func bubble(_ side: Side) -> Activity? {
-        let bubbles = bubbles
-        return side == .trailing ? bubbles.first : bubbles.dropFirst().first
-    }
-
-    /// What opening shows, as the Dynamic Island expands what was clicked: a bubble's own activity,
+    /// What opening shows, as the Dynamic Island expands what was clicked: the detached activity,
     /// or the notch's. Nil for music, which opens to the player.
-    func expansion(fromBubble side: Side?) -> Activity? {
-        let activity = side.flatMap(bubble) ?? activities.first
+    func expansion(fromBubble onBubble: Bool) -> Activity? {
+        let activity = (onBubble ? detached : nil) ?? activities.first
         return activity == .music ? nil : activity
     }
 
@@ -275,12 +268,12 @@ final class NotchModel: ObservableObject {
     }
     var camera: CGFloat { closedSize.width }
 
-    /// The bubble the pointer is on, which swells a little, and the one pressed, which squeezes.
-    @Published var bubbleHovered: Side?
-    @Published var bubblePressed: Side?
-    /// Opens a bubble, or the notch's own activity, as a click on it does, for VoiceOver (set by the
-    /// notch's controller).
-    var openBubble: (Side) -> Void = { _ in }
+    /// The pointer is on the detached activity, which swells a little, or pressing it, which squeezes.
+    @Published var bubbleHovered = false
+    @Published var bubblePressed = false
+    /// Opens the detached activity, or the notch's own, as a click on it does, for VoiceOver (set by
+    /// the notch's controller).
+    var openBubble: () -> Void = {}
     var openNotch: () -> Void = {}
 
     /// Turning the notch off and on, 0 to 1: a notch on a display without one folds up into the top
@@ -314,8 +307,10 @@ final class NotchModel: ObservableObject {
         if switching { return 0 }
         if alert != nil { return max(alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
-        // A timer or the stopwatch with the notch; behind music, in a bubble of its own (see
-        // `bubbles`). AirPlay's symbols take the cover's squares.
+        // With another detached, the first has the leading side alone, as wide as the notch is tall,
+        // the Dynamic Island's minimal presentation.
+        if detached != nil { return closedSize.height }
+        // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares.
         if notchClock != nil { return max(timerWing, resting) }
         return activities.isEmpty ? 0 : resting
     }
@@ -383,7 +378,7 @@ final class NotchModel: ObservableObject {
         // As tall as the Dynamic Island's expanded activities, it keeps the notch's small flares.
         let tall = state == .open ? expanded != nil : restingTall
         let flare = tall ? NotchCorners.restingFlare : corners.radii(forHeight: height * press).flare
-        return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare)
+        return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare, fold: state == .open || detached == nil ? 0 : wing)
     }
 }
 
@@ -510,7 +505,7 @@ struct NotchView: View {
         // As tall as the Dynamic Island's expanded activities, it's black all through, as they are.
         let tall = isOpen ? model.expanded != nil : model.restingTall
         // With wings out, their ends round as the Dynamic Island's do.
-        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0)
+        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0, fold: m.fold)
         let onTray = model.page == .tray
         // Open on the player, rather than on the tray.
         let heroOpen = isOpen && !expandedShown
@@ -654,10 +649,9 @@ struct NotchView: View {
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
-        // The other activities, each in a bubble of its own off one of the notch's ends. Behind the
-        // notch, so in its end, all of it is hidden there, under what the notch shows.
-        .background(alignment: .topTrailing) { bubble(.trailing, m) }
-        .background(alignment: .topLeading) { bubble(.leading, m) }
+        // The second activity, detached off the notch's trailing end. Behind the notch, so in its
+        // end, all of it is hidden there, under what the notch shows.
+        .background(alignment: .topTrailing) { bubble(m) }
         .background {
             ZStack {
                 if thumbnail {
@@ -706,20 +700,20 @@ struct NotchView: View {
     /// The music's wings make way for what's announced, blurring away as the notch folds.
     private var musicAway: Bool { model.alert != nil || model.switching }
     /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist
-    /// takes its place. A timer beside it goes in a bubble of its own.
+    /// takes its place, or another activity is detached, which leaves music the leading side alone.
     private var liveShown: Bool { model.activity && !musicAway && model.state != .open }
     private var artworkShown: Bool { model.activity && !musicAway }
-    private var waveformShown: Bool { model.activity && !model.pop && !musicAway }
+    private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.detached == nil }
 
-    private func bubble(_ side: NotchModel.Side, _ m: NotchMetrics) -> some View {
-        let activity = model.bubble(side)
+    private func bubble(_ m: NotchMetrics) -> some View {
+        let activity = model.detached
         return IslandBubble(
-            side: side, shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
+            shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
-            name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble(side) },
-            restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
-            hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side)
+            name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble() },
+            restingHeight: model.closedSize.height, flare: m.flare, fold: m.fold, hidden: model.state == .open,
+            hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
     /// Opened to the timer or the stopwatch: its own view, laid out at its open size, as the player
@@ -983,10 +977,13 @@ struct NotchShape: Shape {
     /// 1 for what's as tall as the Dynamic Island's expanded activities, more than twice the notch:
     /// its ends round right across, half its height, and its top keeps the notch's small flares.
     var tall: CGFloat = 0
+    /// How much of the trailing wing is folded away, back to the camera, with another activity
+    /// detached (see `NotchModel.detached`). What's left is laid out as it always is, only cut short.
+    var fold: CGFloat = 0
 
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(wingEnds, tall) }
-        set { (wingEnds, tall) = (newValue.first, newValue.second) }
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(wingEnds, tall), fold) }
+        set { (wingEnds, tall, fold) = (newValue.first.first, newValue.first.second, newValue.second) }
     }
 
     private func radii(in rect: CGRect) -> NotchCorners.Radii {
@@ -1010,7 +1007,8 @@ struct NotchShape: Shape {
         max(0, min(radii(in: rect).flare, rect.width / 4, rect.height / 2))
     }
 
-    func path(in rect: CGRect) -> Path {
+    func path(in full: CGRect) -> Path {
+        let rect = CGRect(x: full.minX, y: full.minY, width: max(full.width - fold, 0), height: full.height)
         let radii = radii(in: rect)
         let flare = flare(in: rect)
         let body = rect.insetBy(dx: flare, dy: 0)

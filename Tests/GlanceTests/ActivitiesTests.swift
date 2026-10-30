@@ -195,9 +195,10 @@ struct ActivitiesTests {
         let rings = folder.appendingPathComponent("Ringtones"), alerts = folder.appendingPathComponent("AlertTones/Modern")
         try FileManager.default.createDirectory(at: rings, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: alerts, withIntermediateDirectories: true)
-        for file in [rings.appendingPathComponent("Radial-EncoreInfinitum.m4r"), rings.appendingPathComponent("Night Owl.m4r"),
-            alerts.appendingPathComponent("Chord.m4r")]
-        {
+        for file in [
+            rings.appendingPathComponent("Radial-EncoreInfinitum.m4r"), rings.appendingPathComponent("Night Owl.m4r"),
+            alerts.appendingPathComponent("Chord.m4r"),
+        ] {
             FileManager.default.createFile(atPath: file.path, contents: Data())
         }
         #expect(TimerChime.file(for: "system:Radial", in: folder)?.lastPathComponent == "Radial-EncoreInfinitum.m4r")
@@ -324,9 +325,9 @@ struct ActivitiesTests {
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: resting)
         #expect(model.wing == model.timerWing)
-        // With music, the timer goes in a bubble, and the notch has music's wings.
+        // With music, the timer is detached, and music has the leading side alone.
         model.activity = true
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: resting))
+        #expect(model.wing == resting)
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
@@ -454,46 +455,57 @@ struct ActivitiesTests {
         #expect(SystemActivityView.widthChange(after: now, of: .stopwatch(.stopped(elapsed: 595))) == nil)
     }
 
-    @Test("Activities after the first go in bubbles of their own, right then left; each opens to its own")
-    func bubbles() {
+    @Test("With more than one, the first keeps the leading side and the second is detached, two at most")
+    func detached() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.activity = true
-        #expect(model.bubbles.isEmpty)
-        #expect(model.expansion(fromBubble: nil) == nil)
+        #expect(model.detached == nil)
+        #expect(model.metrics.fold == 0)
+        #expect(model.expansion(fromBubble: false) == nil)
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = 60
-        // Music keeps the notch, and its wings; the timer goes off its right end.
-        #expect(model.bubbles == [.timer])
-        #expect(model.bubble(.trailing) == .timer)
-        #expect(model.bubble(.leading) == nil)
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
+        // Music keeps the leading side, as wide as the notch is tall; its trailing side folds away,
+        // and the timer is detached off that end.
+        #expect(model.detached == .timer)
+        #expect(model.wing == 32)
+        #expect(model.metrics.fold == 32)
         #expect(model.notchClock == nil)
-        // The stopwatch goes off its left end.
+        // A third waits its turn: nothing's ever detached at the leading side.
         model.stopwatch = .stopped(elapsed: 12)
-        #expect(model.bubbles == [.timer, .stopwatch])
-        #expect(model.bubble(.leading) == .stopwatch)
-        // Each opens to its own; the notch, to the player.
-        #expect(model.expansion(fromBubble: .trailing) == .timer)
-        #expect(model.expansion(fromBubble: .leading) == .stopwatch)
-        #expect(model.expansion(fromBubble: nil) == nil)
-        // While a new song's name shows, something else is announced, or the notch is open, they run
-        // back into it.
+        #expect(model.detached == .timer)
+        // It opens to its own; the notch, to the player.
+        #expect(model.expansion(fromBubble: true) == .timer)
+        #expect(model.expansion(fromBubble: false) == nil)
+        // While a new song's name shows, something else is announced, or the notch is open, it runs
+        // back in, and the trailing side comes back.
         model.pop = true
-        #expect(model.bubbles.isEmpty)
+        #expect(model.detached == nil)
+        #expect(model.metrics.fold == 0)
         model.pop = false
         model.alert = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
-        #expect(model.bubbles.isEmpty)
+        #expect(model.detached == nil)
         model.alert = nil
         model.state = .open
-        #expect(model.bubbles.isEmpty)
-        // Nothing playing, the timer has the notch, and the stopwatch a bubble.
+        #expect(model.detached == nil)
+        #expect(model.metrics.fold == 0)
+        // Nothing playing, the timer has the leading side, and the stopwatch is detached.
         model.state = .closed
         model.activity = false
         #expect(model.notchClock == .timer(model.timer!))
-        #expect(model.wing == 60)
-        #expect(model.bubbles == [.stopwatch])
-        #expect(model.expansion(fromBubble: nil) == .timer)
-        #expect(model.expansion(fromBubble: .trailing) == .stopwatch)
+        #expect(model.wing == 32)
+        #expect(model.detached == .stopwatch)
+        #expect(model.expansion(fromBubble: false) == .timer)
+        #expect(model.expansion(fromBubble: true) == .stopwatch)
+    }
+
+    @Test("Folded, the notch's trailing end comes back and its leading end stays")
+    func foldedShape() {
+        let corners = NotchCorners(restingHeight: 32, openHeight: 200, openRadius: 29)
+        let rect = CGRect(x: 0, y: 0, width: 300, height: 32)
+        let whole = NotchShape(corners: corners, wingEnds: 1).path(in: rect).boundingRect
+        let folded = NotchShape(corners: corners, wingEnds: 1, fold: 32).path(in: rect).boundingRect
+        #expect(isClose(folded.minX, whole.minX))
+        #expect(isClose(folded.maxX, whole.maxX - 32))
     }
 
     @Test("Low Battery is as tall as the Alarm, its level and its capsule against the camera, its offer under it")
@@ -528,7 +540,7 @@ struct ActivitiesTests {
         #expect(DeviceLayout(height: h, low: true).ring > DeviceLayout(height: h).ring)
     }
 
-    @Test("AirDrop comes right after music: the notch's once nothing plays, otherwise a bubble that opens to it")
+    @Test("AirDrop comes right after music: the notch's once nothing plays, otherwise detached, and it opens to it")
     func airDrop() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         let transfer = AirDropShown(id: "1", sender: "iPhone", preview: nil, fraction: 0.4)
@@ -537,23 +549,24 @@ struct ActivitiesTests {
         model.airdrop = transfer
         #expect(model.activities == [.airdrop, .timer, .airplay])
         #expect(model.notchClock == nil)
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
-        #expect(model.expansion(fromBubble: nil) == .airdrop)
+        #expect(model.wing == 32)
+        #expect(model.expansion(fromBubble: false) == .airdrop)
         model.activity = true
-        #expect(model.bubbles == [.airdrop, .timer])
-        #expect(model.expansion(fromBubble: .trailing) == .airdrop)
+        #expect(model.detached == .airdrop)
+        #expect(model.expansion(fromBubble: true) == .airdrop)
         model.expanded = .airdrop
         model.airdrop = nil
         #expect(model.expandedGone)
         // Opened, as tall as the Alarm, the picture and the words at one end, the ring at the other,
         // the camera between them.
-        let left = AirDropLayout.thumbEdge(32) + 32 * (AirDropLayout.thumb + AirDropLayout.gap) + AirDropLayout.words(for: transfer, 32)
+        let left =
+            AirDropLayout.thumbEdge(32) + 32 * (AirDropLayout.thumb + AirDropLayout.gap) + AirDropLayout.words(for: transfer, 32)
             + LiveActivityView.cameraGap
         #expect(AirDropLayout.width(for: transfer, restingHeight: 32, camera: 185) == 185 + left * 2)
         #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
     }
 
-    @Test("One swiped away leaves the notch to the next, and its bubble with it")
+    @Test("One swiped away leaves the notch to the next, and the one after is detached")
     func swipedAway() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.timer = .running(until: .now + 300, total: 300)
@@ -563,7 +576,7 @@ struct ActivitiesTests {
         model.dismissed.insert(.timer)
         #expect(model.activities == [.stopwatch, .airplay])
         #expect(model.notchClock == .stopwatch(.stopped(elapsed: 12)))
-        #expect(model.bubbles == [.airplay])
+        #expect(model.detached == .airplay)
         model.dismissed = [.timer, .stopwatch, .airplay]
         #expect(model.activities.isEmpty)
         #expect(model.wing == 0)
@@ -576,11 +589,11 @@ struct ActivitiesTests {
         model.airplay = route
         #expect(model.activities == [.airplay])
         #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
-        #expect(model.expansion(fromBubble: nil) == .airplay)
-        // Behind music, in a bubble that opens to it.
+        #expect(model.expansion(fromBubble: false) == .airplay)
+        // Behind music, detached, and it opens to it.
         model.activity = true
-        #expect(model.bubbles == [.airplay])
-        #expect(model.expansion(fromBubble: .trailing) == .airplay)
+        #expect(model.detached == .airplay)
+        #expect(model.expansion(fromBubble: true) == .airplay)
         // Opened to it, it's gone once the sound leaves AirPlay.
         model.expanded = .airplay
         #expect(!model.expandedGone)

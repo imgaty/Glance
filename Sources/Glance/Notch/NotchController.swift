@@ -245,16 +245,16 @@ final class NotchController {
         }
         // Opened without the pointer, as VoiceOver opens a bubble: it stays open with the keyboard, as
         // when opened with a shortcut, until Escape, or the pointer has been on it and gone.
-        model.openBubble = { [weak self] side in
-            guard let self, self.model.bubble(side) != nil, !self.tucked else { return }
-            self.model.bubbleHovered = side
+        model.openBubble = { [weak self] in
+            guard let self, self.model.detached != nil, !self.tucked else { return }
+            self.model.bubbleHovered = true
             self.open()
             self.holds.insert(.keyboard)
             self.takeKeys()
         }
         model.openNotch = { [weak self] in
             guard let self, !self.tucked else { return }
-            self.model.bubbleHovered = nil
+            self.model.bubbleHovered = false
             self.open()
             self.holds.insert(.keyboard)
             self.takeKeys()
@@ -743,12 +743,12 @@ final class NotchController {
         if model.hoveredButton != button { model.hoveredButton = button }
         switch model.state {
         case .closed, .peek:
-            let onBubble = button == nil ? bubble(at: p) : nil
+            let onBubble = button == nil && bubbleZone?.contains(p) == true
             if onBubble != model.bubbleHovered { hoverBubble(onBubble, at: p) }
             if button != nil {
                 // On a done timer's button the notch stays as it is, so a click there is the button's.
                 openTask?.cancel()
-            } else if onBubble != nil {
+            } else if onBubble {
                 // The bubble's own: the notch beside it stays as it is.
             } else if interactiveZone.contains(p) {
                 if model.state == .closed, !holdUntilExit { peek() }
@@ -779,11 +779,11 @@ final class NotchController {
 
     /// The pointer onto a bubble beside the notch, or off it: it swells a little, as the notch does.
     /// Only a click opens it, to what it shows.
-    private func hoverBubble(_ side: NotchModel.Side?, at p: CGPoint) {
-        if side != nil, model.state == .peek { settle(at: p) }
+    private func hoverBubble(_ on: Bool, at p: CGPoint) {
+        if on, model.state == .peek { settle(at: p) }
         openTask?.cancel()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = side }
-        if side != nil {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
+        if on {
             startPolling()
         } else if model.state == .closed {
             stopPolling()
@@ -816,9 +816,9 @@ final class NotchController {
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
         guard pressBeganClosed else { return }
-        if let side = model.bubbleHovered {
+        if model.bubbleHovered {
             // A bubble opens with a plain click, as it's let go.
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = side }
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
             return
         }
         model.press(true)
@@ -836,9 +836,9 @@ final class NotchController {
             return
         }
         guard pressBeganClosed else { return }
-        if let side = model.bubblePressed {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = nil }
-            if bubble(at: p) == side { open() }
+        if model.bubblePressed {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
+            if bubbleZone?.contains(p) == true { open() }
             return
         }
         model.press(false)
@@ -879,7 +879,7 @@ final class NotchController {
             return
         }
         guard !tucked else { return }
-        model.bubbleHovered = bubble(at: p)
+        model.bubbleHovered = bubbleZone?.contains(p) == true
         open()
     }
 
@@ -1015,8 +1015,8 @@ final class NotchController {
                 relayoutTask?.cancel()
                 model.use(PlayerLayout.current)
             }
-            model.bubbleHovered = nil
-            model.bubblePressed = nil
+            model.bubbleHovered = false
+            model.bubblePressed = false
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
             model.page = page
             model.pageNudge = 0
@@ -1687,12 +1687,12 @@ final class NotchController {
 
     private var restingRect: CGRect {
         let width = model.restingWidth, height = model.restingHeight
-        return CGRect(x: centerX - width / 2, y: topY - height, width: width, height: height)
+        return CGRect(x: centerX - width / 2, y: topY - height, width: width - model.metrics(for: .closed).fold, height: height)
     }
 
     private func rect(for state: NotchState) -> CGRect {
         let m = model.metrics(for: state)
-        return CGRect(x: centerX - m.totalWidth / 2, y: topY - m.height, width: m.totalWidth, height: m.height)
+        return CGRect(x: centerX - m.totalWidth / 2, y: topY - m.height, width: m.totalWidth - m.fold, height: m.height)
     }
 
     /// Where the pointer counts as "on" the notch, or the bubbles beside it. Reaches slightly past
@@ -1702,9 +1702,7 @@ final class NotchController {
         var resting = CGRect(
             x: restingRect.minX - 4, y: restingRect.minY - 4,
             width: restingRect.width + 8, height: restingRect.height + 6)
-        for side in [NotchModel.Side.trailing, .leading] {
-            if let zone = bubbleZone(side) { resting = resting.union(zone) }
-        }
+        if let bubbleZone { resting = resting.union(bubbleZone) }
         switch model.state {
         case .closed: return resting
         case .peek: return resting.union(rect(for: .peek))
@@ -1714,19 +1712,14 @@ final class NotchController {
         }
     }
 
-    /// Where a bubble beside the notch is, while there's one (see `IslandBubble`), with the same
-    /// margin as the notch's, up to the top edge.
-    private func bubbleZone(_ side: NotchModel.Side) -> CGRect? {
-        guard model.bubble(side) != nil else { return nil }
+    /// Where the detached activity is, while there's one (see `IslandBubble`), with the same margin
+    /// as the notch's, up to the top edge.
+    private var bubbleZone: CGRect? {
+        guard model.detached != nil else { return nil }
         let h = model.closedSize.height
-        let off = model.metrics(for: .closed).bodyWidth / 2 + h * IslandBubble.gap
-        let left = side == .trailing ? centerX + off : centerX - off - h
+        let m = model.metrics(for: .closed)
+        let left = centerX + m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
         return CGRect(x: left - 4, y: topY - h - 4, width: h + 8, height: h + 6)
-    }
-
-    /// The bubble at a point on the screen, if any.
-    private func bubble(at p: CGPoint) -> NotchModel.Side? {
-        [NotchModel.Side.trailing, .leading].first { bubbleZone($0)?.contains(p) == true }
     }
 
     /// A little forgiving margin before an open notch decides the pointer has left.

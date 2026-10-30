@@ -8,16 +8,14 @@
 import AppKit
 import SwiftUI
 
-/// An activity in a bubble of its own beside the notch, as the Dynamic Island shows one beside
-/// another: the second off the notch's right end, the third off its left. Measured from the iPhone,
-/// by the island's height: a circle as wide as the island is tall, level with it, 0.175 of that off
-/// its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's symbol in it as beside
-/// the camera. It buds off the
-/// notch's end as it comes, joined to it for a moment as two drops are, and runs back into it as it
-/// goes, or as the notch opens; with Reduce Motion on, it fades in and out where it rests. VoiceOver
-/// names it, and opens it as a click does.
+/// The second activity, detached, as the Dynamic Island's minimal presentation shows one beside
+/// another: only ever off the notch's trailing end, the first staying attached at its leading end.
+/// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
+/// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's
+/// symbol in it as beside the camera. It buds off the notch's end as it comes, joined to it for a
+/// moment as two drops are, and runs back into it as it goes, or as the notch opens; with Reduce
+/// Motion on, it fades in and out where it rests. VoiceOver names it, and opens it as a click does.
 struct IslandBubble: View {
-    let side: NotchModel.Side
     /// Out of the notch; in it, it's hidden in its end.
     let shown: Bool
     /// The timer or stopwatch it shows, and the timer's name, as VoiceOver says it.
@@ -31,6 +29,8 @@ struct IslandBubble: View {
     let restingHeight: CGFloat
     /// How far the notch's top corners flare out past its body.
     let flare: CGFloat
+    /// How much of the notch's trailing wing is folded away, which the bubble sits off the end of.
+    let fold: CGFloat
     /// The notch is open: nothing of the bubble shows over its glass.
     let hidden: Bool
     let hovered: Bool
@@ -51,13 +51,9 @@ struct IslandBubble: View {
         let h = restingHeight
         // With Reduce Motion on, it stays where it rests, and only fades.
         let out: CGFloat = shown || reduceMotion ? 1 : 0
-        let trailing = side == .trailing
-        // Away from the notch: right off its right end, left off its left.
-        let away: CGFloat = trailing ? 1 : -1
-        ZStack(alignment: trailing ? .leading : .trailing) {
+        ZStack(alignment: .leading) {
             if !reduceMotion {
                 BubbleNeck(out: out).fill(.black)
-                    .scaleEffect(x: away)
             }
             ZStack {
                 Circle().fill(.black)
@@ -104,11 +100,11 @@ struct IslandBubble: View {
             }
             .scaleEffect(reduceMotion ? 1 : pressed ? 0.94 : hovered ? 1.06 : 1)
             .animation(.easeInOut(duration: 0.25)) { $0.opacity(reduceMotion && !shown ? 0 : 1) }
-            .offset(x: away * h * (1 + Self.gap) * out)
+            .offset(x: h * (1 + Self.gap) * out)
         }
         // From inside the notch's end, where it comes out of, to where it rests.
-        .frame(width: h * (2 + Self.gap), height: h, alignment: trailing ? .leading : .trailing)
-        .offset(x: away * (h * (1 + Self.gap) - flare))
+        .frame(width: h * (2 + Self.gap), height: h, alignment: .leading)
+        .offset(x: h * (1 + Self.gap) - flare - fold)
         // Gone at once as the notch opens; back once it has all but closed, as its black is.
         .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
         .allowsHitTesting(false)
@@ -146,7 +142,7 @@ struct IslandBubble: View {
 /// running together or apart: between two circles as tall as the notch, one in the notch's end and
 /// the bubble, curves that pinch in as they part, until it breaks a little before the bubble rests.
 /// Drawn as metaballs are, with the curves drawn in to the line between the circles' middles as
-/// they part, so it thins away rather than snapping. Drawn for the right end; mirrored for the left.
+/// they part, so it thins away rather than snapping.
 struct BubbleNeck: Shape {
     /// 0 with the bubble in the notch's end, 1 where it rests.
     var out: CGFloat
