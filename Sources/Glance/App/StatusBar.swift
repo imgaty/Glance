@@ -40,6 +40,7 @@ final class StatusBarController: NSObject {
     private var buildProcess: Process?
     private var enabledWatch: NSKeyValueObservation?
     private var pressWatch: Any?
+    private let pill = IconPill()
     private var icon: StatusIcon?
     private let panel = StatusPanel()
     private let state = StatusMenuState()
@@ -51,7 +52,7 @@ final class StatusBarController: NSObject {
         statusItem.button?.action = #selector(clicked)
         if let button = statusItem.button { icon = StatusIcon(button: button, symbol: Self.notchIcon) }
         // Opened on the press, as a menu opens, and the press goes no further: held down, the button
-        // would light up in a gray pill of its own, over macOS's.
+        // would light up in a gray pill of its own.
         pressWatch = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             guard let self, event.window === statusItem.button?.window else { return event }
             MainActor.assumeIsolated { self.clicked() }
@@ -76,7 +77,7 @@ final class StatusBarController: NSObject {
         }
 
         canCheckWatch = Updater.shared.$canCheck.sink { [weak self] can in self?.updatesItem.isEnabled = can }
-        panel.onClose = { [weak self] window in self?.statusItem.endSelection(of: window) }
+        panel.onClose = { [weak self] in self?.pill.hide() }
 
         // A slash across the icon while the notch is off.
         enabledWatch = UserDefaults.standard.observe(\.notchEnabled, options: [.initial]) { [weak self] defaults, _ in
@@ -100,9 +101,7 @@ final class StatusBarController: NSObject {
                 case .quit: NSApp.terminate(nil)
                 }
             })
-        if let window = panel.window {
-            statusItem.beginSelection(of: window) { [weak self] in self?.panel.close() }
-        }
+        pill.show(over: button)
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
@@ -234,29 +233,48 @@ extension StatusBarController: NSMenuDelegate {
     private static let timerItem = 7_000
 }
 
-extension NSStatusItem {
-    private static let willPresent = NSSelectorFromString("_willPresentContent:cancellationHandler:")
-    private static let didPresent = NSSelectorFromString("_didPresentContent:")
+/// The soft pill behind the menu bar icon while its menu is open, as Control Center's own icons
+/// have: a faint tint the menu bar shows through, as large as theirs. macOS's for other apps' icons,
+/// which a real menu or a popover gets, is a flat gray whatever's behind it.
+@MainActor
+final class IconPill {
+    private static let size = CGSize(width: 42, height: 24)
+    private let window: NSPanel
+    private let tint = NSView()
 
-    /// Lights the icon as a menu of its own does, with macOS's soft pill, for a window that isn't a
-    /// menu: macOS draws the pill itself, wider than the icon, and only for what it knows the item
-    /// is showing, and a highlighted button is a gray pill of its own. Private AppKit hooks, with
-    /// the highlight for when they're gone. `cancelled` is macOS asking for the window to go.
-    func beginSelection(of window: NSWindow, cancelled: @escaping @MainActor () -> Void) {
-        guard responds(to: Self.willPresent), responds(to: Self.didPresent) else {
-            button?.highlight(true)
-            return
-        }
-        let handler: @convention(block) () -> Void = { MainActor.assumeIsolated { cancelled() } }
-        perform(Self.willPresent, with: window, with: unsafeBitCast(handler, to: AnyObject.self))
+    init() {
+        window = NSPanel(contentRect: NSRect(origin: .zero, size: Self.size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = false
+        window.ignoresMouseEvents = true
+        window.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        tint.wantsLayer = true
+        tint.layer?.cornerRadius = Self.size.height / 2
+        tint.layer?.cornerCurve = .continuous
+        window.contentView = tint
     }
 
-    func endSelection(of window: NSWindow) {
-        guard responds(to: Self.didPresent) else {
-            button?.highlight(false)
-            return
+    func show(over button: NSStatusBarButton) {
+        guard let bar = button.window else { return }
+        let dark = button.effectiveAppearance.bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight]).map { $0 == .darkAqua || $0 == .vibrantDark } ?? true
+        tint.layer?.backgroundColor = NSColor(white: dark ? 1 : 0, alpha: dark ? 0.09 : 0.06).cgColor
+        window.setFrameOrigin(NSPoint(x: bar.frame.midX - Self.size.width / 2, y: bar.frame.midY - Self.size.height / 2))
+        window.alphaValue = 0
+        window.orderFrontRegardless()
+        fade(to: 1, duration: 0.12)
+    }
+
+    func hide() {
+        fade(to: 0, duration: 0.15)
+    }
+
+    private func fade(to alpha: CGFloat, duration: TimeInterval) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            window.animator().alphaValue = alpha
         }
-        perform(Self.didPresent, with: window)
     }
 }
 
@@ -481,8 +499,7 @@ private struct StatusMenuRow: View {
 /// and its glass is whole. It goes away on a click anywhere else, on Escape, or on the icon again.
 @MainActor
 final class StatusPanel {
-    /// With the window it was, now fading.
-    var onClose: ((NSWindow) -> Void)?
+    var onClose: (() -> Void)?
     private var panel: MenuPanel?
     private var monitors: [Any] = []
     /// Glance's window that had the keys before the menu took them (Settings, say), given them back.
@@ -492,7 +509,6 @@ final class StatusPanel {
     private var resignWatch: NSObjectProtocol?
 
     var isShown: Bool { panel?.isVisible == true }
-    var window: NSWindow? { panel }
 
     func show(below button: NSStatusBarButton, content: some View) {
         close()
@@ -567,7 +583,7 @@ final class StatusPanel {
                 }
             }
         }
-        onClose?(panel)
+        onClose?()
     }
 }
 
