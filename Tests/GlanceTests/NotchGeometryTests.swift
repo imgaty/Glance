@@ -272,10 +272,10 @@ struct PlayerOptionsTests {
     @Test("An accent color's wash is a small picture, made once")
     @MainActor
     func accentWash() throws {
-        let image = try #require(AccentWash.image(for: .systemBlue))
+        let image = try #require(AccentWash.image(for: [.systemBlue]))
         #expect(image.size == NSSize(width: 64, height: 64))
-        #expect(AccentWash.image(for: .systemBlue) === image)
-        #expect(AccentWash.image(for: .systemRed) !== image)
+        #expect(AccentWash.image(for: [.systemBlue]) === image)
+        #expect(AccentWash.image(for: [.systemRed]) !== image)
     }
 }
 

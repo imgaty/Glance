@@ -114,6 +114,42 @@ struct ArtworkFlowTests {
         #expect(try !#require(ArtworkFlow.of(Self.cover())).isLight)
     }
 
+    @Test("A cover's palette is its own colors, the strongest first, and none for black and white")
+    func palette() throws {
+        let colors = ArtworkPalette.colors(of: Self.cover())
+        #expect(colors.count == 2)
+        #expect(colors[0].redComponent > 0.9)
+        #expect(colors[1].blueComponent > 0.9)
+        #expect(ArtworkPalette.colors(of: Self.ball()).isEmpty)
+    }
+
+    @Test("A many-colored cover's color is one it has, not all of them mixed")
+    func manyColors() throws {
+        let stripes = NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
+            let colors: [(NSColor, CGFloat)] = [(.red, 34), (.green, 15), (.blue, 15)]
+            var x: CGFloat = 0
+            for (color, width) in colors {
+                color.setFill()
+                NSRect(x: x, y: 0, width: width, height: rect.height).fill()
+                x += width
+            }
+            return true
+        }
+        let first = try #require(ArtworkPalette.colors(of: stripes).first)
+        #expect(first.redComponent > 0.9 && first.greenComponent < 0.2 && first.blueComponent < 0.2)
+    }
+
+    @Test("The waveform takes the cover's strongest color, as the progress bar does")
+    func barsTakeThePalette() throws {
+        let red = NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
+            NSColor(srgbRed: 0.85, green: 0.1, blue: 0.15, alpha: 1).setFill()
+            rect.fill()
+            return true
+        }
+        let bars = Self.channels(of: try #require(ArtworkFlow.of(red)?.frame(at: 100)).bars)
+        for pixel in bars { #expect(pixel.r > pixel.g && pixel.r > pixel.b) }
+    }
+
     @Test("A moment later than the last is drawn away from the main thread, and shows when it's ready")
     func moves() async throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))

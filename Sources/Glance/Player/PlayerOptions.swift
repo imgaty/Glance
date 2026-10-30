@@ -166,32 +166,35 @@ enum AccentSource: String, CaseIterable, Identifiable {
     }
 }
 
-/// A color's own wash for the background, as the artwork's is: patches of it, lighter, deeper, and
-/// a touch warmer and cooler, softly blurred together, so the swirl has shades to move through.
+/// A palette's own wash, as the artwork's colors are: patches of its colors, lighter, deeper, and a
+/// touch warmer and cooler, softly blurred together, so the swirl has shades to move through. Without
+/// a color, as for a cover in black and white, a soft white's.
 @MainActor
 enum AccentWash {
     private static var made: [String: NSImage] = [:]
     private static let context = CIContext()
 
-    static func image(for color: NSColor) -> NSImage? {
-        guard let rgb = color.usingColorSpace(.sRGB) else { return nil }
-        let key = "\(rgb.redComponent) \(rgb.greenComponent) \(rgb.blueComponent)"
+    static func image(for palette: [NSColor]) -> NSImage? {
+        let colors = (palette.isEmpty ? [NSColor(white: 0.92, alpha: 1)] : palette).compactMap { $0.usingColorSpace(.sRGB) }
+        guard let first = colors.first else { return nil }
+        let key = colors.map { "\($0.redComponent) \($0.greenComponent) \($0.blueComponent)" }.joined(separator: " ")
         if let image = made[key] { return image }
-        let hue = rgb.hueComponent, saturation = rgb.saturationComponent, brightness = rgb.brightnessComponent
-        func shade(hue shift: CGFloat, saturation s: CGFloat, brightness b: CGFloat) -> CGColor {
+        // The first color most, the others taking their turns.
+        let second = colors.count > 1 ? colors[1] : first, third = colors.count > 2 ? colors[2] : second
+        func shade(_ color: NSColor, hue shift: CGFloat, saturation s: CGFloat, brightness b: CGFloat) -> CGColor {
             NSColor(
-                hue: (hue + shift + 1).truncatingRemainder(dividingBy: 1), saturation: min(max(saturation * s, 0), 1),
-                brightness: min(max(brightness * b, 0), 1), alpha: 1
+                hue: (color.hueComponent + shift + 1).truncatingRemainder(dividingBy: 1), saturation: min(max(color.saturationComponent * s, 0), 1),
+                brightness: min(max(color.brightnessComponent * b, 0), 1), alpha: 1
             ).cgColor
         }
         // Where each patch is, how big, and which shade.
         let patches: [(x: CGFloat, y: CGFloat, radius: CGFloat, color: CGColor)] = [
-            (0.22, 0.28, 0.5, shade(hue: 0, saturation: 1, brightness: 1)),
-            (0.78, 0.22, 0.45, shade(hue: 0.06, saturation: 1.1, brightness: 0.72)),
-            (0.62, 0.74, 0.55, shade(hue: -0.06, saturation: 0.9, brightness: 1.05)),
-            (0.16, 0.82, 0.42, shade(hue: 0, saturation: 0.45, brightness: 1.25)),
-            (0.88, 0.86, 0.42, shade(hue: 0, saturation: 1.15, brightness: 0.4)),
-            (0.48, 0.46, 0.3, shade(hue: 0.03, saturation: 0.65, brightness: 1.2)),
+            (0.22, 0.28, 0.5, shade(first, hue: 0, saturation: 1, brightness: 1)),
+            (0.78, 0.22, 0.45, shade(second, hue: 0.06, saturation: 1.1, brightness: 0.72)),
+            (0.62, 0.74, 0.55, shade(third, hue: -0.06, saturation: 0.9, brightness: 1.05)),
+            (0.16, 0.82, 0.42, shade(first, hue: 0, saturation: 0.45, brightness: 1.25)),
+            (0.88, 0.86, 0.42, shade(second, hue: 0, saturation: 1.15, brightness: 0.4)),
+            (0.48, 0.46, 0.3, shade(first, hue: 0.03, saturation: 0.65, brightness: 1.2)),
         ]
         let side = 64
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
@@ -199,7 +202,7 @@ enum AccentWash {
                 data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0, space: space,
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
-        bitmap.setFillColor(shade(hue: 0, saturation: 1, brightness: 0.7))
+        bitmap.setFillColor(shade(first, hue: 0, saturation: 1, brightness: 0.7))
         bitmap.fill(CGRect(x: 0, y: 0, width: side, height: side))
         for patch in patches {
             let center = CGPoint(x: patch.x * CGFloat(side), y: patch.y * CGFloat(side))

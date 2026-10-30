@@ -569,41 +569,14 @@ final class NowPlaying: ObservableObject {
         AppVolume.shared.follow(app: nil, pid: 0)
     }
 
-    /// The artwork's color, lifted to read on the dark notch. Gray artwork gets a soft white.
+    /// The artwork's strongest color (see `ArtworkPalette`), lifted to read on the dark notch. Artwork
+    /// in black, white and gray gets a soft white.
     private static func accent(of image: NSImage) -> Color? {
-        guard let mixed = mixedColor(of: image) else { return nil }
-        guard mixed.saturationComponent > 0.12 else { return Color(white: 0.92) }
+        guard image.cgImage(forProposedRect: nil, context: nil, hints: nil) != nil else { return nil }
+        guard let color = ArtworkPalette.colors(of: image).first else { return Color(white: 0.92) }
         return Color(
-            hue: mixed.hueComponent, saturation: min(max(mixed.saturationComponent, 0.45), 0.85),
-            brightness: max(mixed.brightnessComponent, 0.9))
-    }
-
-    /// Mixes the artwork's colors, weighting vivid pixels, so a white or black border doesn't wash
-    /// the color out.
-    private static func mixedColor(of image: NSImage) -> NSColor? {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        let side = 12
-        var pixels = [UInt8](repeating: 0, count: side * side * 4)
-        guard
-            let context = CGContext(
-                data: &pixels, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-        else { return nil }
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
-
-        var red = 0.0, green = 0.0, blue = 0.0, total = 0.0
-        for i in stride(from: 0, to: pixels.count, by: 4) {
-            let pixel = NSColor(
-                red: CGFloat(pixels[i]) / 255, green: CGFloat(pixels[i + 1]) / 255,
-                blue: CGFloat(pixels[i + 2]) / 255, alpha: 1)
-            let weight = Double(pixel.saturationComponent * pixel.saturationComponent * pixel.brightnessComponent) + 0.01
-            red += Double(pixel.redComponent) * weight
-            green += Double(pixel.greenComponent) * weight
-            blue += Double(pixel.blueComponent) * weight
-            total += weight
-        }
-        return NSColor(red: red / total, green: green / total, blue: blue / total, alpha: 1)
+            hue: color.hueComponent, saturation: min(max(color.saturationComponent, 0.45), 0.85),
+            brightness: max(color.brightnessComponent, 0.9))
     }
 
     /// Inside the app bundle, or next to the executable for `swift build` runs.
