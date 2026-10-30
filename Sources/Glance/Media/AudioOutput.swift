@@ -657,12 +657,10 @@ private final class NeutralSliderCell: NSSliderCell {
         Self.trackColor.setFill()
         NSBezierPath(roundedRect: track, xRadius: 3, yRadius: 3).fill()
         var filled = track
-        // Up to the knob while it shows; with it hidden, in proportion to the whole track, so the
-        // loudest fills it to the end.
-        let opacity = (controlView as? NeutralSlider)?.knobOpacity ?? 1
+        // In proportion to the whole track, so the loudest fills it to the end. The same with the
+        // knob showing or not: its end is always under the knob, which only fades in over it.
         let fraction = maxValue > minValue ? (doubleValue - minValue) / (maxValue - minValue) : 0
-        let toKnob = knobRect(flipped: flipped).midX - track.minX, toValue = track.width * fraction
-        filled.size.width = max(toKnob * opacity + toValue * (1 - opacity), track.height)
+        filled.size.width = max(track.width * fraction, track.height)
         Self.fillColor.setFill()
         NSBezierPath(roundedRect: filled, xRadius: 3, yRadius: 3).fill()
     }
