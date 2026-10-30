@@ -50,6 +50,16 @@ final class ArtworkFlow {
     private nonisolated static let blur = 0.055
     /// How far the bars' darkest color is from black, as the iPhone's is.
     private nonisolated static let shadowLift: CGFloat = 0.3
+    /// The bars show only the middle of the picture, this share of it across, blurred this much
+    /// more, as a share of the picture: on bars this small, the ribbons would be hard patches of
+    /// color, and a cover's dark shape a hole in them.
+    private nonisolated static let barsZoom: CGFloat = 0.45
+    private nonisolated static let barsBlur = 0.16
+    /// How much more vivid the background is than the colors themselves, and the brightest it gets,
+    /// by how bright a color looks, not how strong it is: a deep red keeps all of its strength, while
+    /// white, which the player's gray buttons would vanish into, is held back.
+    private nonisolated static let backgroundVividness = 1.3
+    private nonisolated static let backgroundCeiling: CGFloat = 0.5
 
     static func of(_ image: NSImage) -> ArtworkFlow? {
         if let flow = flows.object(forKey: image) { return flow }
@@ -110,22 +120,46 @@ final class ArtworkFlow {
             .cropped(to: canvas)
             .applyingFilter(
                 "CIColorControls", parameters: [kCIInputSaturationKey: 1.05, kCIInputContrastKey: 1.05])
-        let dimmed = colors.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: -0.15])
-        let scale = barsSide / side
-        let lifted = colors.applyingFilter(
-            "CIColorMatrix",
-            parameters: [
-                "inputRVector": CIVector(x: 1 - shadowLift, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - shadowLift, z: 0, w: 0),
-                "inputBVector": CIVector(x: 0, y: 0, z: 1 - shadowLift, w: 0),
-                "inputBiasVector": CIVector(x: shadowLift, y: shadowLift, z: shadowLift, w: 0),
-            ]
-        ).transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        let across = barsZoom * side
+        let middle = CGRect(x: (side - across) / 2, y: (side - across) / 2, width: across, height: across)
+        let scale = barsSide / across
+        let lifted = colors.clampedToExtent()
+            .applyingGaussianBlur(sigma: barsBlur * side)
+            .cropped(to: middle)
+            .applyingFilter(
+                "CIColorMatrix",
+                parameters: [
+                    "inputRVector": CIVector(x: 1 - shadowLift, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - shadowLift, z: 0, w: 0),
+                    "inputBVector": CIVector(x: 0, y: 0, z: 1 - shadowLift, w: 0),
+                    "inputBiasVector": CIVector(x: shadowLift, y: shadowLift, z: shadowLift, w: 0),
+                ]
+            )
+            .transformed(by: CGAffineTransform(translationX: -middle.minX, y: -middle.minY).concatenating(CGAffineTransform(scaleX: scale, y: scale)))
         let space = CGColorSpace(name: CGColorSpace.sRGB)
-        guard let background = context.createCGImage(dimmed, from: canvas, format: .RGBA8, colorSpace: space),
+        guard let background = context.createCGImage(forBackground(colors), from: canvas, format: .RGBA8, colorSpace: space),
             let bars = context.createCGImage(
                 lifted, from: CGRect(x: 0, y: 0, width: barsSide, height: barsSide), format: .RGBA8, colorSpace: space)
         else { return nil }
         return Frame(background: background, bars: bars)
+    }
+
+    /// The colors for behind the player: more vivid, and each one darkened as much as it looks bright
+    /// past the ceiling. That's a picture of how bright each color looks, multiplied in.
+    private nonisolated static func forBackground(_ colors: CIImage) -> CIImage {
+        let vivid = colors.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: backgroundVividness])
+        let looks = CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0)
+        let ceiling = backgroundCeiling
+        let held = vivid.applyingFilter(
+            "CIColorMatrix", parameters: ["inputRVector": looks, "inputGVector": looks, "inputBVector": looks]
+        )
+        .applyingFilter(
+            "CIToneCurve",
+            parameters: [
+                "inputPoint0": CIVector(x: 0, y: 1), "inputPoint1": CIVector(x: ceiling * 0.7, y: 1),
+                "inputPoint2": CIVector(x: ceiling, y: 0.92), "inputPoint3": CIVector(x: 0.75, y: ceiling / 0.75),
+                "inputPoint4": CIVector(x: 1, y: ceiling),
+            ])
+        return vivid.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: held]).cropped(to: colors.extent)
     }
 
     /// One copy of the cover, where it is at a moment, in shares of the picture.

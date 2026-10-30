@@ -531,10 +531,9 @@ struct NotchView: View {
             Color.black
                 .animation(.easeOut(duration: 0.2)) { $0.opacity(tall ? 1 : 0) }
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
-            // black at the top, just where the glass shows; full screen, it covers the whole notch;
-            // as a spotlight, it's a soft circle around the cover. Choosing between them morphs one
-            // into another.
-            ArtworkLight(dim: background == .spotlight ? 0 : 0.3, active: isOpen && !paused)
+            // black at the top, just where the glass shows; as a spotlight, it's a soft circle around
+            // the cover. Choosing between them morphs one into another.
+            ArtworkLight(active: isOpen && !paused)
                 .frame(width: lightSize.width, height: lightSize.height)
                 .mask {
                     // It comes in as it's turned on or the notch opens: the background washing out of
@@ -804,8 +803,7 @@ struct NotchView: View {
     private var lightOpacity: Double {
         let full: Double =
             switch background {
-            case .replaceGlass: 0.6 + 0.4 * darkness
-            case .fullscreen: 0.85
+            case .replaceGlass: 0.92 + 0.08 * darkness
             case .spotlight: 0.9
             case .none: 0
             }
@@ -874,8 +872,8 @@ struct NotchView: View {
         .compositingGroup()
     }
 
-    /// In place of the glass: visible exactly where the black at the top lets the glass show, as if
-    /// it were under it. Full screen and the spotlight shine over the black, so this lifts away.
+    /// In place of the glass: visible where the black at the top lets the glass show, as if it were
+    /// under it. The spotlight shines over the black, so this lifts away.
     private func belowTheBlack(lifted lights: Bool) -> some View {
         VStack(spacing: 0) {
             ZStack {
@@ -902,13 +900,13 @@ struct NotchView: View {
     }
 
     /// Eased in perceived brightness rather than opacity, and flat at both ends, so the fade has no
-    /// visible line where it starts or ends. Inverted, it's clear where the black is.
+    /// visible line where it starts or ends. Inverted, it's clear where the black is, and rises a
+    /// little ahead of the black clearing, so the colors are there to see by the notch's middle.
     private static func shadeStops(start: CGFloat, inverted: Bool) -> [Gradient.Stop] {
         let fade = (0...48).map { i -> Gradient.Stop in
             let t = CGFloat(i) / 48
             let perceived = t * t * (3 - 2 * t)
-            let black = 1 - pow(perceived, 1.2)
-            return .init(color: .black.opacity(inverted ? 1 - black : black), location: start + (1 - start) * t)
+            return .init(color: .black.opacity(inverted ? pow(perceived, 0.65) : 1 - pow(perceived, 1.2)), location: start + (1 - start) * t)
         }
         return [.init(color: .black.opacity(inverted ? 0 : 1), location: 0)] + fade
     }

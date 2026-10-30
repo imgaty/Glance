@@ -241,7 +241,7 @@ struct PlayerOptionsTests {
 
     @Test("Backgrounds have names for Settings")
     func backgroundTitles() {
-        #expect(MusicBackground.allCases.map(\.title) == ["Replace glass", "Fullscreen", "Spotlight", "None"])
+        #expect(MusicBackground.allCases.map(\.title) == ["Replace glass", "Spotlight", "None"])
     }
 
     @Test("Accent colors are named as System Settings names them")

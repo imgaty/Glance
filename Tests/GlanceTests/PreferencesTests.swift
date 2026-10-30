@@ -130,7 +130,6 @@ struct PreferencesTests {
         "Backgrounds keep the names earlier versions stored",
         arguments: [
             (MusicBackground.replaceGlass, "artwork"),
-            (.fullscreen, "spotlight"),
             (.spotlight, "cover"),
             (.none, "none"),
         ])

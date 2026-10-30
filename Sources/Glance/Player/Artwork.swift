@@ -144,7 +144,10 @@ struct HeroArtwork: View {
             .animation(CoverMotion.hover, value: coverHovered)
             .animation(coverPressed ? CoverMotion.press : CoverMotion.release, value: coverPressed)
             .onChange(of: isOpen) { _, open in
-                if !open { coverHovered = false; coverPressed = false }
+                if !open {
+                    coverHovered = false
+                    coverPressed = false
+                }
             }
     }
 
@@ -218,12 +221,10 @@ struct ArtworkShape: Shape {
 }
 
 /// The artwork's light behind the open player: its colors flowing, as in Apple Music, or the accent
-/// color's, darkened by `dim`. The notch gives it its shape: across the whole bottom, or a round
-/// glow in a corner.
+/// color's. The notch gives it its shape: across the whole bottom, or a round glow in a corner.
 struct ArtworkLight: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
-    let dim: Double
     let active: Bool
 
     var body: some View {
@@ -238,9 +239,7 @@ struct ArtworkLight: View {
                     .transition(.opacity)
             }
         }
-        .overlay(Color.black.opacity(dim))
         .animation(.easeInOut(duration: 0.8), value: flow.map(ObjectIdentifier.init))
-        .animation(.easeInOut(duration: 0.5), value: dim)
         .animation(.easeInOut(duration: 0.5), value: accentSource)
     }
 }

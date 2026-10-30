@@ -114,11 +114,10 @@ extension CGRect {
 }
 
 /// The artwork's colors behind the open player: in place of the glass (under the black at the
-/// top), across the whole notch, as a spotlight around the cover, or not at all. The raw values
-/// keep earlier choices: what was "spotlight" is now full screen.
+/// top), as a spotlight around the cover, or not at all. The raw values keep earlier choices;
+/// "spotlight" was Fullscreen, which is gone, and goes back to the first of these.
 enum MusicBackground: String, CaseIterable, Identifiable {
     case replaceGlass = "artwork"
-    case fullscreen = "spotlight"
     case spotlight = "cover"
     case none
 
@@ -126,7 +125,6 @@ enum MusicBackground: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .replaceGlass: "Replace glass"
-        case .fullscreen: "Fullscreen"
         case .spotlight: "Spotlight"
         case .none: "None"
         }
