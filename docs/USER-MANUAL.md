@@ -180,12 +180,14 @@ doesn't offer them with the DJ or a podcast.
 ### Sound output and volume
 
 The `Sound Output` button opens a menu laid out like the Mac's Sound menu. At
-its top, beside the playing app's name and icon, a slider sets that app's
-volume without touching any other app's. For `Music` and `Spotify` it uses
-their own volume; other apps need the `Audio from apps` permission. Below it,
-under **Output**, each speaker and pair of headphones is in a circle, the one
-playing filled in your accent color. AirPods show each earbud's battery and
-the case's, and other headphones their one battery. Click one to play there.
+its top, a slider sets the playing app's volume without touching any other
+app's. For `Music` and `Spotify` it uses their own volume; other apps need the
+`Audio from apps` permission. Below it, under **Output**, each speaker and pair
+of headphones is in a circle, the one playing filled in your accent color.
+AirPods show each earbud's battery and the case's, and other headphones their
+one battery. Click one to play there, or the chevron beside Bluetooth
+headphones to open their settings. **Sound Settings…** opens
+**System Settings > Sound**.
 
 ### Lyrics
 
