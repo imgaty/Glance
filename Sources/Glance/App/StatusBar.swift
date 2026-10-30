@@ -33,14 +33,14 @@ final class StatusBarController: NSObject {
     let menu = NSMenu()
     var onOpenSettings: (() -> Void)?
 
-    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    /// With room either side of the icon: macOS makes it 44 points wide, and its pill with it.
+    private let statusItem = NSStatusBar.system.statusItem(withLength: 42)
     private let updatesItem = NSMenuItem(title: "Check for Updates…", action: #selector(updatesFromMenu), keyEquivalent: "")
     private let rebuildItem = NSMenuItem(title: "Rebuild", action: #selector(rebuildFromMenu), keyEquivalent: "")
     private var canCheckWatch: AnyCancellable?
     private var buildProcess: Process?
     private var enabledWatch: NSKeyValueObservation?
     private var pressWatch: Any?
-    private let pill = IconPill()
     private var icon: StatusIcon?
     private let panel = StatusPanel()
     private let state = StatusMenuState()
@@ -77,7 +77,7 @@ final class StatusBarController: NSObject {
         }
 
         canCheckWatch = Updater.shared.$canCheck.sink { [weak self] can in self?.updatesItem.isEnabled = can }
-        panel.onClose = { [weak self] in self?.pill.hide() }
+        panel.onClose = { [weak self] window in self?.statusItem.endPresenting(window) }
 
         // A slash across the icon while the notch is off.
         enabledWatch = UserDefaults.standard.observe(\.notchEnabled, options: [.initial]) { [weak self] defaults, _ in
@@ -101,7 +101,9 @@ final class StatusBarController: NSObject {
                 case .quit: NSApp.terminate(nil)
                 }
             })
-        pill.show(over: button)
+        if let window = panel.window {
+            statusItem.beginPresenting(window) { [weak self] in self?.panel.close() }
+        }
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
@@ -233,48 +235,22 @@ extension StatusBarController: NSMenuDelegate {
     private static let timerItem = 7_000
 }
 
-/// The soft pill behind the menu bar icon while its menu is open, as Control Center's own icons
-/// have: a faint tint the menu bar shows through, as large as theirs. macOS's for other apps' icons,
-/// which a real menu or a popover gets, is a flat gray whatever's behind it.
-@MainActor
-final class IconPill {
-    private static let size = CGSize(width: 42, height: 24)
-    private let window: NSPanel
-    private let tint = NSView()
+extension NSStatusItem {
+    private static let willPresent = NSSelectorFromString("_willPresentContent:cancellationHandler:")
+    private static let didPresent = NSSelectorFromString("_didPresentContent:")
 
-    init() {
-        window = NSPanel(contentRect: NSRect(origin: .zero, size: Self.size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = false
-        window.ignoresMouseEvents = true
-        window.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        tint.wantsLayer = true
-        tint.layer?.cornerRadius = Self.size.height / 2
-        tint.layer?.cornerCurve = .continuous
-        window.contentView = tint
+    /// Lights the icon with macOS's own pill for a window that isn't a menu or a popover, which macOS
+    /// only draws for what it knows the item is showing, and keeps the menu bar up meanwhile.
+    /// Private AppKit hooks. `cancelled` is macOS asking for the window to go.
+    func beginPresenting(_ window: NSWindow, cancelled: @escaping @MainActor () -> Void) {
+        guard responds(to: Self.willPresent), responds(to: Self.didPresent) else { return }
+        let handler: @convention(block) () -> Void = { MainActor.assumeIsolated { cancelled() } }
+        perform(Self.willPresent, with: window, with: unsafeBitCast(handler, to: AnyObject.self))
     }
 
-    func show(over button: NSStatusBarButton) {
-        guard let bar = button.window else { return }
-        let dark = button.effectiveAppearance.bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight]).map { $0 == .darkAqua || $0 == .vibrantDark } ?? true
-        tint.layer?.backgroundColor = NSColor(white: dark ? 1 : 0, alpha: dark ? 0.09 : 0.06).cgColor
-        window.setFrameOrigin(NSPoint(x: bar.frame.midX - Self.size.width / 2, y: bar.frame.midY - Self.size.height / 2))
-        window.alphaValue = 0
-        window.orderFrontRegardless()
-        fade(to: 1, duration: 0.12)
-    }
-
-    func hide() {
-        fade(to: 0, duration: 0.15)
-    }
-
-    private func fade(to alpha: CGFloat, duration: TimeInterval) {
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
-            window.animator().alphaValue = alpha
-        }
+    func endPresenting(_ window: NSWindow) {
+        guard responds(to: Self.didPresent) else { return }
+        perform(Self.didPresent, with: window)
     }
 }
 
@@ -499,7 +475,8 @@ private struct StatusMenuRow: View {
 /// and its glass is whole. It goes away on a click anywhere else, on Escape, or on the icon again.
 @MainActor
 final class StatusPanel {
-    var onClose: (() -> Void)?
+    /// With the window it was, now fading.
+    var onClose: ((NSWindow) -> Void)?
     private var panel: MenuPanel?
     private var monitors: [Any] = []
     /// Glance's window that had the keys before the menu took them (Settings, say), given them back.
@@ -509,6 +486,7 @@ final class StatusPanel {
     private var resignWatch: NSObjectProtocol?
 
     var isShown: Bool { panel?.isVisible == true }
+    var window: NSWindow? { panel }
 
     func show(below button: NSStatusBarButton, content: some View) {
         close()
@@ -583,7 +561,7 @@ final class StatusPanel {
                 }
             }
         }
-        onClose?()
+        onClose?(panel)
     }
 }
 
