@@ -365,10 +365,13 @@ final class NotchManager {
         }
 
         // Entering full screen makes a new Space; apps that fill the screen without one are caught
-        // by a slow check, which costs a window list every second and a half.
+        // by a slow check, which costs a window list every second and a half. A Space is told at
+        // once, so the notch's ring comes and goes with full screen, and again a moment later, once
+        // the windows have settled.
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
             workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.updateFullScreen() }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     MainActor.assumeIsolated { self?.updateFullScreen() }
                 }

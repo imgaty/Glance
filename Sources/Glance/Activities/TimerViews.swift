@@ -519,16 +519,21 @@ struct CrossGlyph: View {
 /// The thin ring in an activity's color that the Dynamic Island draws around itself over a dark
 /// background, so its edge shows. Drawn in full screen, all black around the notch, around the
 /// notch as it is, its shape and size unchanged: a capsule just clear of its sides and bottom, so
-/// its bottom runs below the camera housing, where the display has pixels, and it fades out
-/// toward the top, the screen's edge, leaving the top open.
+/// its bottom runs below the camera housing, where the display has pixels. It's whole round every
+/// corner and fades out only near the top, the screen's edge, and nothing of it is drawn where the
+/// camera housing is.
 struct KeyLine: Shape {
     var notch: NotchShape
+    /// The camera housing, at the middle of the top, where there's nothing to draw on.
+    var camera: CGSize?
     /// How thick, by the notch's height.
-    static let width: CGFloat = 0.045
+    static let width: CGFloat = 0.038
     /// How far clear of the notch's edge it runs.
     static let gap: CGFloat = 1
-    /// How strongly the activity's color shows in it: enough to see over a light window too.
-    static let opacity = 0.6
+    /// How strongly the activity's color shows in it: softly, as the Dynamic Island's does.
+    static let opacity = 0.38
+    /// How far down from the top, by the height of what it rings, it has faded in.
+    static let fade: CGFloat = 0.3
     var width: CGFloat
 
     var animatableData: NotchShape.AnimatableData {
@@ -539,7 +544,10 @@ struct KeyLine: Shape {
     func path(in rect: CGRect) -> Path {
         let flare = notch.flare(in: rect)
         let body = rect.insetBy(dx: flare, dy: 0)
-        return Self.ring(around: body, width: width)
+        let ring = Self.ring(around: body, width: width)
+        guard let camera else { return ring }
+        let housing = CGRect(x: rect.midX - camera.width / 2, y: rect.minY - width * 4, width: camera.width, height: camera.height + width * 4)
+        return ring.subtracting(Path(housing))
     }
 
     /// A capsule just clear of a shape that fills `bounds`, as a band `width` thick.
@@ -548,13 +556,13 @@ struct KeyLine: Shape {
             .strokedPath(StrokeStyle(lineWidth: width))
     }
 
-    /// The ring's color, clear at the top, the screen's edge, and whole from below the middle of
-    /// what it rings down, eased so the fade has no line where it starts or ends. Over `height`,
-    /// the height of what it rings.
+    /// The ring's color, clear at the top, the screen's edge, and whole from a little way down, so
+    /// it's whole round every corner, eased so the fade has no line where it starts or ends. Over
+    /// `height`, the height of what it rings.
     static func color(_ tint: Color, height: CGFloat, in frame: CGFloat) -> LinearGradient {
         let stops = (0...12).map { i -> Gradient.Stop in
             let t = CGFloat(i) / 12
-            return .init(color: tint.opacity(opacity * Double(t * t * (3 - 2 * t))), location: t * height * 0.7 / max(frame, 1))
+            return .init(color: tint.opacity(opacity * Double(t * t * (3 - 2 * t))), location: t * height * fade / max(frame, 1))
         }
         return LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom)
     }

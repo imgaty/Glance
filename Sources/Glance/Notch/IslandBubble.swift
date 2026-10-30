@@ -88,7 +88,7 @@ struct IslandBubble: View {
                 KeyLine.ring(around: CGRect(x: 0, y: 0, width: h, height: h), width: line)
                     .fill(KeyLine.color(tint, height: h, in: h))
                     .frame(width: h, height: h)
-                    .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && shown ? 1 : 0) }
+                    .animation(fullScreen && shown ? .easeOut(duration: 0.3) : .easeOut(duration: 0.12)) { $0.opacity(fullScreen && shown ? 1 : 0) }
             }
             // What it shows, in words, and a click's opening.
             .overlay {

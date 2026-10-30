@@ -800,9 +800,10 @@ struct NotchView: View {
         let tint = keyTint
         let shown = tint != nil && model.ringed
         let h = model.closedSize.height
-        return KeyLine(notch: shape, width: h * KeyLine.width)
+        return KeyLine(notch: shape, camera: model.hasCamera ? model.closedSize : nil, width: h * KeyLine.width)
             .fill(KeyLine.color(tint ?? .clear, height: h, in: model.metrics.height))
-            .animation(.easeOut(duration: 0.3)) { $0.opacity(shown ? 1 : 0) }
+            // Gone at once as full screen ends or the notch opens.
+            .animation(shown ? .easeOut(duration: 0.3) : .easeOut(duration: 0.12)) { $0.opacity(shown ? 1 : 0) }
             .allowsHitTesting(false)
     }
 
