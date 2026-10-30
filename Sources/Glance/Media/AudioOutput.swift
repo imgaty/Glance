@@ -44,7 +44,7 @@ final class AudioOutput: NSObject, ObservableObject {
             item.view = view
             menu.addItem(item)
         }
-        views.append(Self.addDivider(to: menu, height: 7, inset: SoundMenu.inset))
+        views.append(Self.addDivider(to: menu, height: 7))
         let heading = NSMenuItem.sectionHeader(title: "Output")
         heading.view = SoundMenuHeading(title: "Output", main: false)
         views.append(heading.view!)
@@ -63,7 +63,7 @@ final class AudioOutput: NSObject, ObservableObject {
             menu.addItem(item)
             rows.append(row)
         }
-        views.append(Self.addDivider(to: menu, height: 11, inset: SoundMenu.highlightInset))
+        views.append(Self.addDivider(to: menu, height: 11))
         let settings = NSMenuItem(title: "Sound Settings…", action: #selector(openSoundSettings), keyEquivalent: "")
         settings.target = self
         settings.view = SoundMenuRow(title: settings.title)
@@ -82,9 +82,9 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 
     /// A line between the menu's parts, as the Mac's Sound menu draws one, in the middle of `height`.
-    private static func addDivider(to menu: NSMenu, height: CGFloat, inset: CGFloat) -> NSView {
+    private static func addDivider(to menu: NSMenu, height: CGFloat) -> NSView {
         let item = NSMenuItem()
-        item.view = SoundMenuDivider(height: height, inset: inset)
+        item.view = SoundMenuDivider(height: height)
         item.isEnabled = false
         menu.addItem(item)
         return item.view!
@@ -307,9 +307,8 @@ private enum SoundMenu {
     static let highlightInset: CGFloat = 5
     static let highlightRadius = radius - highlightInset
 
-    /// An output is lit more than a plain row.
-    static func drawHighlight(in bounds: NSRect, output: Bool) {
-        (output ? outputHighlight : rowHighlight).setFill()
+    static func drawHighlight(in bounds: NSRect) {
+        highlightColor.setFill()
         NSBezierPath(roundedRect: bounds.insetBy(dx: highlightInset, dy: 0), xRadius: highlightRadius, yRadius: highlightRadius).fill()
     }
 
@@ -320,8 +319,7 @@ private enum SoundMenu {
         }
     }
 
-    private static let outputHighlight = shade(dark: 0.18, light: 0.1)
-    private static let rowHighlight = shade(dark: 0.14, light: 0.08)
+    private static let highlightColor = shade(dark: 0.1, light: 0.055)
     /// An output's circle: light gray, or for the one playing, the accent color made a little
     /// lighter, as the Mac's Sound menu has them.
     static let circleGray = shade(dark: 0.22, light: 0.08)
@@ -333,13 +331,9 @@ private enum SoundMenu {
     static let batteryGray = shade(dark: 0.5, light: 0.45)
 }
 
-/// A line between the sound output menu's parts, `inset` in from both sides: as far as the slider
-/// above the outputs, as far as the rows' highlight below them.
+/// A line between the sound output menu's parts, as far in from both sides as everything else.
 private final class SoundMenuDivider: NSView {
-    private let inset: CGFloat
-
-    init(height: CGFloat, inset: CGFloat) {
-        self.inset = inset
+    init(height: CGFloat) {
         super.init(frame: NSRect(x: 0, y: 0, width: 300, height: height))
         autoresizingMask = [.width]
     }
@@ -348,7 +342,7 @@ private final class SoundMenuDivider: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.separatorColor.setFill()
-        NSRect(x: inset, y: (bounds.height - 1) / 2, width: bounds.width - inset * 2, height: 1).fill()
+        NSRect(x: SoundMenu.inset, y: (bounds.height - 1) / 2, width: bounds.width - SoundMenu.inset * 2, height: 1).fill()
     }
 }
 
@@ -374,7 +368,7 @@ private final class SoundMenuRow: NSView {
     required init?(coder: NSCoder) { nil }
 
     override func draw(_ dirtyRect: NSRect) {
-        if enclosingMenuItem?.isHighlighted == true { SoundMenu.drawHighlight(in: bounds, output: false) }
+        if enclosingMenuItem?.isHighlighted == true { SoundMenu.drawHighlight(in: bounds) }
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -484,7 +478,7 @@ private final class OutputRow: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        if enclosingMenuItem?.isHighlighted == true { SoundMenu.drawHighlight(in: bounds, output: true) }
+        if enclosingMenuItem?.isHighlighted == true { SoundMenu.drawHighlight(in: bounds) }
         (playing ? SoundMenu.circlePlaying : SoundMenu.circleGray).setFill()
         NSBezierPath(ovalIn: circleRect).fill()
     }
@@ -510,11 +504,13 @@ private final class OutputRow: NSView {
                 NSImage.SymbolConfiguration(pointSize: 14, weight: .regular).applying(.init(hierarchicalColor: color)))
     }
 
-    /// Each earbud's level and the case's, in the shapes macOS gives this model, or the one
-    /// battery's, each after its symbol.
+    /// Each earbud's level and the case's, in the shapes macOS gives this model, the earbuds as one
+    /// pair when they're level, or the one battery's, each after its symbol.
     private static func text(_ levels: DeviceWatch.Levels, symbols: DeviceSymbols?) -> NSAttributedString {
         let parts: [(String, Int?)] =
-            if levels.left != nil || levels.right != nil {
+            if let left = levels.left, left == levels.right {
+                [(symbols?.symbol ?? "airpods", left), (symbols?.chargingCase ?? "airpods.chargingcase.fill", levels.chargingCase)]
+            } else if levels.left != nil || levels.right != nil {
                 [
                     (symbols?.left ?? "airpod.left", levels.left), (symbols?.right ?? "airpod.right", levels.right),
                     (symbols?.chargingCase ?? "airpods.chargingcase.fill", levels.chargingCase),

@@ -484,7 +484,7 @@ private struct StatusMenuRow: View {
                 // Wi-Fi menu's.
                 RoundedRectangle(cornerRadius: StatusMenu.radius - StatusMenu.inset, style: .continuous)
                     .fill(scheme == .dark ? Color.white : Color.black)
-                    .opacity(enabled && hovering ? (scheme == .dark ? 0.17 : 0.09) : 0)
+                    .opacity(enabled && hovering ? (scheme == .dark ? 0.1 : 0.055) : 0)
             }
             .contentShape(Rectangle())
             .onHover { hovering = $0 }
