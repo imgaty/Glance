@@ -250,13 +250,56 @@ final class LyricsStore: ObservableObject {
         var queries = [["track_name": title, "artist_name": artist]]
         if plain != title { queries.append(["track_name": plain, "artist_name": artist]) }
         queries.append(["q": [firstArtist(artist), plain].filter { !$0.isEmpty }.joined(separator: " ")])
-        var reached = false
-        for query in queries {
-            guard let results: [Record]? = await request("search", query) else { continue }
-            reached = true
-            if let content = best(of: results ?? [], title: title, artist: artist, album: album, duration: duration) { return content }
+        let answer = await firstAnswer(
+            queries.map { query in
+                { @Sendable in
+                    guard let results: [Record]? = await request("search", query) else { return .unreachable }
+                    return best(of: results ?? [], title: title, artist: artist, album: album, duration: duration).map(Answer.found) ?? .nothing
+                }
+            }, patience: patience)
+        switch answer {
+        case .found(let content): return content
+        case .nothing: return .unavailable
+        case .unreachable: return nil
         }
-        return reached ? .unavailable : nil
+    }
+
+    /// What one way of asking came back with.
+    enum Answer: Sendable {
+        case unreachable, nothing
+        case found(Content)
+    }
+
+    /// How long a song's lyrics are looked for, in seconds, however slow LRCLIB is.
+    private static let patience = 8.0
+
+    /// Asks every way at once, so one slow answer holds up nothing, and takes the first in order that
+    /// finds something, once those before it have come back with nothing. After `patience`, what's
+    /// been found so far, or nothing.
+    nonisolated static func firstAnswer(_ asks: [@Sendable () async -> Answer], patience: Double) async -> Answer {
+        await withTaskGroup(of: (index: Int, answer: Answer)?.self) { group in
+            for (index, ask) in asks.enumerated() {
+                group.addTask { (index, await ask()) }
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(patience))
+                return nil
+            }
+            var answers = [Answer?](repeating: nil, count: asks.count)
+            defer { group.cancelAll() }
+            for await reply in group {
+                guard let reply else { break }
+                answers[reply.index] = reply.answer
+                for answer in answers {
+                    guard let answer else { break }
+                    if case .found = answer { return answer }
+                }
+                if !answers.contains(where: { $0 == nil }) { break }
+            }
+            for case .found(let content)? in answers { return .found(content) }
+            let reached = answers.contains { if case .nothing? = $0 { true } else { false } }
+            return reached ? .nothing : .unreachable
+        }
     }
 
     /// Only records for this very song count (see `LyricsMatch`): never another song's lyrics, even
@@ -312,10 +355,10 @@ final class LyricsStore: ObservableObject {
         var components = URLComponents(string: "https://lrclib.net/api/" + endpoint)!
         components.queryItems = query.filter { !$0.value.isEmpty }.map { URLQueryItem(name: $0.key, value: $0.value) }
         guard let url = components.url else { return nil }
-        var request = URLRequest(url: url, timeoutInterval: 8)
+        var request = URLRequest(url: url, timeoutInterval: 5)
         // LRCLIB asks apps to say who they are.
         request.setValue("Glance for macOS", forHTTPHeaderField: "User-Agent")
-        for wait in [0, 0.6, 1.5, 3] {
+        for wait in [0, 0.6, 1.5] {
             if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
             if Task.isCancelled { return nil }
             guard let (data, response) = try? await URLSession.shared.data(for: request),
