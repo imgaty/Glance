@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         settingsWatch = [
             watch(\.showOnDisplaysWithoutNotch) { notches.reload() },
+            watch(\.notchHiddenDisplays) { notches.reload() },
             watch(\.hideInFullScreen) { notches.reload() },
             watch(\.sameLookEverywhere) { notches.reload() },
             // Turned off and on from the menu bar: the notches close away and come back.
@@ -191,6 +192,8 @@ enum Preferences {
 
     /// The key from when this meant every display without a notch, so the choice carries over.
     static let showOnExternalDisplays = "showOnDisplaysWithoutNotch"
+    /// External displays the notch is kept off, one by one, comma separated.
+    static let notchHiddenDisplays = "notchHiddenDisplays"
     /// Whether the notch's glass is the system's Liquid Glass, as set in Appearance settings,
     /// rather than the darkness and blur below.
     static let glassFollowsSystem = "glassFollowsSystem"
@@ -223,6 +226,13 @@ enum Preferences {
     /// No dots: key-value observing reads a dot as a path, so a change to a dotted key can go
     /// unseen by the notch.
     static func key(_ key: String, for display: String) -> String { key + ":" + display }
+
+    /// Whether the notch hides in full screen on a display: its own choice, or until it makes one,
+    /// the choice from when there was one for every display.
+    static func hidesInFullScreen(_ display: String) -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: key(hideInFullScreen, for: display)) as? Bool ?? defaults.bool(forKey: hideInFullScreen)
+    }
 
     /// Every display shares one look instead of keeping its own.
     static let sameLook = "sameLookEverywhere"
@@ -285,6 +295,7 @@ enum Preferences {
 /// The settings that are watched by their keys.
 extension UserDefaults {
     @objc dynamic var showOnDisplaysWithoutNotch: Bool { bool(forKey: Preferences.showOnExternalDisplays) }
+    @objc dynamic var notchHiddenDisplays: String? { string(forKey: Preferences.notchHiddenDisplays) }
     @objc dynamic var hideInFullScreen: Bool { bool(forKey: Preferences.hideInFullScreen) }
     @objc dynamic var sameLookEverywhere: Bool { bool(forKey: Preferences.sameLook) }
     @objc dynamic var musicLayout: String? { string(forKey: Preferences.musicLayout) }
@@ -410,7 +421,10 @@ final class NotchManager {
         }
         NSScreen.screens.forEach { Preferences.seed($0.notchID) }
         madeFor = Self.displays
-        controllers = NSScreen.screens.compactMap { NotchController(screen: $0, onExternal: onExternal, nowPlaying: nowPlaying) }
+        let hidden = (UserDefaults.standard.string(forKey: Preferences.notchHiddenDisplays) ?? "").split(separator: ",")
+        controllers = NSScreen.screens.compactMap { screen in
+            NotchController(screen: screen, onExternal: onExternal && !hidden.contains(Substring(screen.notchID)), nowPlaying: nowPlaying)
+        }
         // Never leave the user with no notch at all.
         if controllers.isEmpty, let main = NSScreen.main, let fallback = NotchController(screen: main, onExternal: true, nowPlaying: nowPlaying) {
             controllers = [fallback]
@@ -435,9 +449,8 @@ final class NotchManager {
     /// Hides each notch while a full-screen app covers its display, if the user chose that.
     private func updateFullScreen() {
         let covered = Self.fullScreenDisplays()
-        let hides = UserDefaults.standard.bool(forKey: Preferences.hideInFullScreen)
         for controller in controllers {
-            controller.fullScreen = hides && covered.contains(controller.screenFrame)
+            controller.fullScreen = controller.hidesInFullScreen && covered.contains(controller.screenFrame)
         }
     }
 

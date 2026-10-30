@@ -166,6 +166,7 @@ final class NotchController {
     private let restingOrigin: CGPoint
 
     var screenFrame: CGRect { screen.frame }
+    var hidesInFullScreen: Bool { Preferences.hidesInFullScreen(screen.notchID) }
 
     /// The notch at rest on a display: the camera housing's own size where there is one; otherwise a
     /// notch as tall as the menu bar.

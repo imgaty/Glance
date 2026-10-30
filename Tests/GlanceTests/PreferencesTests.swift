@@ -18,6 +18,7 @@ struct PreferencesTests {
         "Settings keys stay the same",
         arguments: [
             (Preferences.showOnExternalDisplays, "showOnDisplaysWithoutNotch"),
+            (Preferences.notchHiddenDisplays, "notchHiddenDisplays"),
             (Preferences.glassFollowsSystem, "glassFollowsSystem"),
             (Preferences.glassDarkness, "glassDarkness"),
             (Preferences.glassBlur, "glassBlur"),
@@ -136,6 +137,20 @@ struct PreferencesTests {
     func backgroundValues(background: MusicBackground, stored: String) {
         #expect(background.rawValue == stored)
         #expect(MusicBackground(rawValue: stored) == background)
+    }
+
+    @Test("A display keeps its own Hide in full screen, starting from the one every display had")
+    func fullScreenByDisplay() {
+        let own = Preferences.key(Preferences.hideInFullScreen, for: "display")
+        preservingDefaults([Preferences.hideInFullScreen, own]) {
+            let defaults = UserDefaults.standard
+            defaults.removeObject(forKey: own)
+            defaults.set(false, forKey: Preferences.hideInFullScreen)
+            #expect(!Preferences.hidesInFullScreen("display"))
+            defaults.set(true, forKey: own)
+            #expect(Preferences.hidesInFullScreen("display"))
+            #expect(!Preferences.hidesInFullScreen("another"))
+        }
     }
 
     @Test("Accent colors are stored by name")
