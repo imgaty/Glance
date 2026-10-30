@@ -35,8 +35,8 @@ struct IslandBubble: View {
     let hidden: Bool
     let hovered: Bool
     let pressed: Bool
-    /// A full-screen app covers the display: a thin line in its activity's color outlines it, as
-    /// it outlines the notch, just inside its edge and fading toward the top.
+    /// A full-screen app covers the display: a thin ring in its activity's color circles it, as it
+    /// rings the notch, just clear of its edge and fading toward the top.
     let fullScreen: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// What it showed, kept on as it runs back into the notch, so it fades as it goes rather than
@@ -82,12 +82,12 @@ struct IslandBubble: View {
                 .islandFade(shown)
             }
             .frame(width: h, height: h)
-            // Just inside it, fading toward the top, as around the notch.
+            // Ringed just clear of it, fading toward the top, as the notch is.
             .overlay {
-                Circle()
-                    .strokeBorder(
-                        (kept == nil && (keptRoute != nil || keptAirDrop != nil) ? Color.blue : .orange).opacity(KeyLine.opacity), lineWidth: line)
-                    .mask(alignment: .top) { KeyLine.fade(restingHeight: h) }
+                let tint = kept == nil && (keptRoute != nil || keptAirDrop != nil) ? Color.blue : .orange
+                KeyLine.ring(around: CGRect(x: 0, y: 0, width: h, height: h), width: line)
+                    .fill(KeyLine.color(tint, height: h, in: h))
+                    .frame(width: h, height: h)
                     .animation(.easeOut(duration: 0.3)) { $0.opacity(fullScreen && shown ? 1 : 0) }
             }
             // What it shows, in words, and a click's opening.

@@ -185,8 +185,7 @@ final class NotchController {
     var coveredByFullScreen = false {
         didSet {
             guard coveredByFullScreen != oldValue else { return }
-            // The notch rounds into the island's capsule, or back, as its outline comes or goes.
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { model.fullScreen = coveredByFullScreen }
+            model.fullScreen = coveredByFullScreen
         }
     }
 

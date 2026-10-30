@@ -34,11 +34,10 @@
   announcement shows as long as the iPhone shows AirPods arriving. Between two,
   it folds to rest before opening for the next, and the pointer on it folds it
   away at once, the notch opening once it has. With Reduce Motion on, the notch
-  widens without bouncing and nothing blurs. In full screen, the collapsed
-  notch rounds into the Dynamic Island's capsule, reaching a little below the
-  camera so its bottom edge shows, outlined just inside its edge by a thin line
-  in the activity's color, which fades out toward the top of the screen and as
-  the notch expands.
+  widens without bouncing and nothing blurs. In full screen, a thin ring in the
+  activity's color circles the collapsed notch just clear of its edge, as around
+  the Dynamic Island, fading out toward the top of the screen and as the notch
+  expands.
 - Changed every live activity, closed or opened, to keep the notch only as wide
   as the wider side needs, both sides alike, with nothing under the camera. Each
   side sits at its own end, as far in from it as from the top and bottom, so it
