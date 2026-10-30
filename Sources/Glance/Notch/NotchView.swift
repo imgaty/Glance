@@ -569,8 +569,7 @@ struct NotchView: View {
                 .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
             // As wide as the notch is at each step, so what the wings show rides in and out with their
             // ends, as the Dynamic Island's activities do.
-            LiveActivityView(
-                restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, swell: swell, hero: hero)
+            LiveActivityView(restingHeight: closed.height, island: model.island, wing: model.wing, pop: model.pop, swell: swell)
                 .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
                 .allowsHitTesting(places == nil)
                 .islandFade(liveShown)
@@ -636,6 +635,7 @@ struct NotchView: View {
                 .modifier(PageFade(hidden: !trayShown))
                 .allowsHitTesting(places == nil && trayShown)
             }
+            restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
             HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset(island: model.island) * 2) * swell)
                 .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
@@ -784,6 +784,28 @@ struct NotchView: View {
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
+    }
+
+    /// Where the cover and the waveform rest in the closed notch: at its ends, as far in from them as
+    /// from its top and bottom (see `LiveActivityView`). Laid out at the size the notch is going to,
+    /// rather than at each step of its animation, so closing, they fly straight there, shrinking as
+    /// the notch does, inside it all the way and never past the camera, rather than chasing its ends.
+    private func restingPlaces(_ m: NotchMetrics, swell: CGFloat) -> some View {
+        let h = model.closedSize.height
+        let side = (h - LiveActivityView.inset(island: model.island) * 2) * swell
+        let edge = LiveActivityView.edgeInset(island: model.island, restingHeight: h) * swell
+        return ZStack(alignment: .topLeading) {
+            Color.clear
+                .frame(width: side, height: side)
+                .matchedGeometryEffect(id: Hero.liveArtwork, in: hero)
+                .position(x: m.flare + edge + side / 2, y: m.height / 2)
+            Color.clear
+                .frame(width: side, height: side)
+                .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
+                .position(x: m.flare + m.bodyWidth - edge - side / 2, y: m.height / 2)
+        }
+        .frame(width: m.totalWidth, height: m.height)
+        .allowsHitTesting(false)
     }
 
     /// The closed notch's width without its wings, as it narrows to a dot while turning off.

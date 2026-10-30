@@ -136,6 +136,9 @@
   being cut off by the notch's edges, or pressed against them, while it opened
   and closed. They show only once the notch has room for them and their
   padding, as the cover and the waveform fly in.
+- Fixed the cover swinging out under the camera as the notch closed, its middle
+  rushing back with the notch's end ahead of its size. It flies straight back
+  to its place now, inside the notch all the way.
 
 <br>
 

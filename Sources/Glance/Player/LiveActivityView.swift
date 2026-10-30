@@ -11,9 +11,9 @@ import SwiftUI
 /// The closed notch while music plays, like the Dynamic Island's compact activity: the artwork on
 /// one side of the camera, the waveform on the other, each at its wing's end, as far in from it as
 /// from the top and bottom, so it sits concentric with the round end. The notch draws those two,
-/// flying them in and out of the open player; this marks their places, and shows a new song's
-/// title and artist when the wings widen to announce it, from the ends too, any room to spare
-/// beside the camera.
+/// flying them in and out of the open player, and marks where they rest; this keeps room for them,
+/// and shows a new song's title and artist when the wings widen to announce it, from the ends too,
+/// any room to spare beside the camera.
 struct LiveActivityView: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
@@ -29,7 +29,6 @@ struct LiveActivityView: View {
     /// much, and their padding with them, so they stay as far from its ends as from its top and
     /// bottom.
     var swell: CGFloat = 1
-    let hero: Namespace.ID
     /// Above and below the artwork and the waveform: a little less on an island, which is shorter
     /// than a notch, so they're about as big there. Both sit in squares of the same size.
     static func inset(island: Bool) -> CGFloat { island ? 3.5 : 6 }
@@ -108,9 +107,9 @@ struct LiveActivityView: View {
         // Each side kept to its own end, so it rides in and out with it.
         ZStack {
             HStack(spacing: Self.textGap) {
+                // The cover's room (see `NotchView.restingPlaces`).
                 Color.clear
                     .frame(width: side, height: side)
-                    .matchedGeometryEffect(id: Hero.liveArtwork, in: hero)
                 if words {
                     // In the cover's color, made light enough to read on the black notch.
                     MarqueeText(text: nowPlaying.title, font: .system(size: size, weight: .semibold), active: true)
@@ -124,9 +123,9 @@ struct LiveActivityView: View {
             .padding(.leading, edge)
             .frame(maxWidth: .infinity, alignment: .leading)
             ZStack(alignment: .trailing) {
+                // The waveform's room.
                 Color.clear
                     .frame(width: side, height: side)
-                    .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
                     .padding(.trailing, edge)
                 if words {
                     MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .trailing)
