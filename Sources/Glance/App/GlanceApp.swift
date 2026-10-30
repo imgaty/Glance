@@ -366,7 +366,7 @@ final class NotchManager {
 
         // Entering full screen makes a new Space; apps that fill the screen without one are caught
         // by a slow check, which costs a window list every second and a half. A Space is told at
-        // once, so the notch's ring comes and goes with full screen, and again a moment later, once
+        // once, so the notch hides and comes back with full screen, and again a moment later, once
         // the windows have settled.
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
@@ -442,15 +442,12 @@ final class NotchManager {
         .joined(separator: "; ")
     }
 
-    /// Tells each notch when a full-screen app covers its display, where it's drawn as the Dynamic
-    /// Island is, its outline showing; and hides it then, if the user chose that.
+    /// Hides each notch while a full-screen app covers its display, if the user chose that.
     private func updateFullScreen() {
         let covered = Self.fullScreenDisplays()
         let hides = UserDefaults.standard.bool(forKey: Preferences.hideInFullScreen)
         for controller in controllers {
-            let full = covered.contains(controller.screenFrame)
-            controller.coveredByFullScreen = full
-            controller.fullScreen = hides && full
+            controller.fullScreen = hides && covered.contains(controller.screenFrame)
         }
     }
 

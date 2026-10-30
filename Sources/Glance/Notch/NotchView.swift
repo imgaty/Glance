@@ -190,12 +190,6 @@ final class NotchModel: ObservableObject {
     /// pointer is on.
     var alertButtons: [AlertButton: CGRect] = [:]
     @Published var hoveredButton: AlertButton?
-    /// A full-screen app covers the display: around the notch it's all black.
-    @Published var fullScreen = false
-
-    /// Collapsed in full screen, all black around it, the notch is ringed as the Dynamic Island is
-    /// outlined.
-    var ringed: Bool { fullScreen && state != .open && !restingTall }
 
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
     /// player: AirDrop, the timer, the stopwatch, or AirPlay.
@@ -679,7 +673,6 @@ struct NotchView: View {
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
-        .overlay { keyLine(shape) }
         // The other activities, each in a bubble of its own off one of the notch's ends. Behind the
         // notch, so in its end, all of it is hidden there, under what the notch shows.
         .background(alignment: .topTrailing) { bubble(.trailing, m) }
@@ -751,7 +744,7 @@ struct NotchView: View {
             airdrop: activity == .airdrop ? model.airdrop : nil,
             name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble(side) },
             restingHeight: model.closedSize.height, flare: m.flare, hidden: model.state == .open,
-            hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side, fullScreen: model.fullScreen)
+            hovered: model.bubbleHovered == side, pressed: model.bubblePressed == side)
     }
 
     /// Opened to the timer or the stopwatch: its own view, laid out at its open size, as the player
@@ -791,31 +784,6 @@ struct NotchView: View {
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }
-    }
-
-    /// The ring in the activity's color around the notch in full screen, all black around it, as
-    /// the Dynamic Island draws one over a dark background; only while it's collapsed, fading out as
-    /// it expands.
-    private func keyLine(_ shape: NotchShape) -> some View {
-        let tint = keyTint
-        let shown = tint != nil && model.ringed
-        let h = model.closedSize.height
-        return KeyLine(notch: shape, camera: model.hasCamera ? model.closedSize : nil, width: h * KeyLine.width)
-            .fill(KeyLine.color(tint ?? .clear, height: h, in: model.metrics.height))
-            // Gone at once as full screen ends or the notch opens.
-            .animation(shown ? .easeOut(duration: 0.3) : .easeOut(duration: 0.12)) { $0.opacity(shown ? 1 : 0) }
-            .allowsHitTesting(false)
-    }
-
-    /// The color of what shows: what's announced, the music's, or a timer's.
-    private var keyTint: Color? {
-        if model.switching { return nil }
-        if let alert = model.alert { return alert.content.tint }
-        if model.activity { return nowPlaying.accent(from: accentSource) }
-        if model.notchClock != nil { return .orange }
-        if model.activities.first == .airplay { return AirPlayLayout.tint }
-        if model.activities.first == .airdrop { return AirDropLayout.tint }
-        return nil
     }
 
     /// The closed notch's width without its wings, as it narrows to a dot while turning off.

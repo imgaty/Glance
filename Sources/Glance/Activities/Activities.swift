@@ -33,20 +33,7 @@ struct NotchAlert: Identifiable, Equatable {
         /// A timer that's done, as the Alarm goes off: its symbol shaking, its length and its name, and
         /// buttons to start it again or stop it.
         case timerDone(length: TimeInterval, name: String)
-
-        var tint: Color {
-            switch self {
-            case .device(_, _, _, let battery): battery.map(BatteryRing.color(for:)) ?? .white
-            case .battery(_, let level): level.color
-            case .lowBattery: .red
-            case .status(_, let tint, _): tint
-            case .timerDone: .orange
-            }
-        }
     }
-
-    /// Its color, for the line the Dynamic Island draws around it over a dark background.
-    var tint: Color { content.tint }
 
     /// Taller than the notch, as the Dynamic Island's Alarm is, for what's to be acted on.
     var tall: Bool {

@@ -180,15 +180,6 @@ final class NotchController {
         }
     }
 
-    /// A full-screen app covers this display, around the notch all black, as around the Dynamic
-    /// Island: the notch's outline shows then.
-    var coveredByFullScreen = false {
-        didSet {
-            guard coveredByFullScreen != oldValue else { return }
-            model.fullScreen = coveredByFullScreen
-        }
-    }
-
     /// Slid up out of sight, while full screen.
     private var tucked = false
     private var revealTask: Task<Void, Never>?
