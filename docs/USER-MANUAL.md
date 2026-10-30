@@ -106,7 +106,7 @@ keyboard the same way:
 
 ⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
 replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
-shortcuts, change them in **Settings > Opening**.
+shortcuts, change them in **Settings > Player** and **Settings > Tray**.
 
 ### With a finger
 
@@ -161,7 +161,7 @@ Motion on, the colors hold still.
 ### Controls
 
 Beside the playback controls are two buttons of your choice. Choose them in
-**Settings > Music > Controls > Customize Controls**.
+**Settings > Player > Controls > Customize Controls**.
 
 | Control | Operation |
 | --- | --- |
@@ -294,8 +294,8 @@ ended, AirDrop with the next file, and AirPlay with the next speaker. Opened to
 a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the notch and
 swipes that away too.
 
-Turn these off with **Cover and waveform** and **Announce new audio** in
-**Settings > Music**.
+Turn these off with **Cover and waveform** in **Settings > Live Activities** and
+**Announce new audio** in **Settings > Player**.
 
 ### What the Mac announces
 
@@ -446,7 +446,7 @@ Glance's icon in the menu bar opens a menu:
 | `Liquid Glass` | From clear glass to black |
 | `Blur` | How much the glass blurs what's behind it |
 | `Use artwork colors` | Tints the notch with the cover's colors; off, with your Mac's accent color |
-| `Background` | `Replace glass`, `Fullscreen`, `Spotlight`, or `None` behind the player |
+| `Background` | `Replace glass`, `Spotlight`, or `None` behind the player |
 
 With **Reduce transparency** or **Increase contrast** on in **System Settings >
 Accessibility > Display**, the notch is opaque, and with **Increase contrast**
@@ -454,7 +454,7 @@ the player sits on plain black. With **Reduce motion** on, covers and their
 colors hold still, without pulsing on the beat, and long titles end in an
 ellipsis instead of scrolling.
 
-### Music
+### Player
 
 | Setting | Operation |
 | --- | --- |
@@ -464,8 +464,8 @@ ellipsis instead of scrolling.
 | `Tint progress bar` | Colors the progress bar with the accent color |
 | `Animated art` | Plays an album's animated cover, when it has one |
 | `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
-| `Cover and waveform` | What's playing beside the camera while the notch is closed |
 | `Announce new audio` | Briefly shows what starts playing |
+| `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
 
@@ -477,6 +477,7 @@ ellipsis instead of scrolling.
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
+| `Open the tray` | The tray's shortcut, ⇧⌘2 at first; click it and type another, or Control-click it to restore ⇧⌘2 |
 | `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
 | `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
@@ -485,7 +486,7 @@ ellipsis instead of scrolling.
 
 | Setting | Operation |
 | --- | --- |
-| `Music` | **Music Settings** goes to the cover and waveform, and new songs, in **Settings > Music** |
+| `Cover and waveform` | What's playing beside the camera while the notch is closed |
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay |
@@ -508,8 +509,6 @@ ellipsis instead of scrolling.
 | `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
 | `Switch to the tray` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
 | `Reverse direction` | Swiping and scrolling the other way to reach the tray |
-| `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
-| `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 
 ### Displays
 
@@ -571,7 +570,7 @@ their signature matches the one built into Glance.
    shows none rather than another song's.
 
 6. **Nothing shows for an app.** It may be turned off in
-   **Settings > Music > Apps**.
+   **Settings > Player > Apps**.
 
 7. **There's no notch on an external display.** Turn on
    **Settings > Displays > Show on external displays**.

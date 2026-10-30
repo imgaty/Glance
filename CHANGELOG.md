@@ -86,10 +86,8 @@
   is taken out of the menu bar. `Timers`, `Stopwatch` and `Hide in menu bar` in
   **Settings > Live Activities** turn each off, beside **Open Clock** and a way
   to Menu Bar settings to bring macOS's own timer back.
-- Added a Live Activities page to Settings, to turn each one off, with a way to
-  Music's own.
-- Changed Music's Live Activities setting to Cover and waveform, so it isn't
-  mistaken for the Live Activities page.
+- Added a Live Activities page to Settings, to turn each one off, music's cover
+  and waveform among them.
 
 ### Touch
 
@@ -117,8 +115,13 @@
 - Changed the cover's colors behind the player to flow as the iPhone's do: the
   cover's own colors drawn out into long ribbons that bend slowly through one
   another.
-- Changed the waveform to show those same colors, lifted so they read on black,
-  in place of one color fading to gray.
+- Changed the waveform to show those same colors, lifted so they read on black
+  and softly blurred, in place of one color fading to gray.
+- Changed `Replace glass` to show the cover's colors more strongly, reaching
+  higher up the notch. Bright covers are held back, so the player's buttons stay
+  easy to read.
+- Removed the `Fullscreen` background. If it was chosen, the notch goes back to
+  `Replace glass`.
 - Changed the waveform's bars to keep round ends however tall they grow, a
   little wider, as the iPhone's are.
 - Added the cover's colors pulsing gently on the music's beat, as you hear it,
@@ -136,6 +139,8 @@
   looked for several ways at once, for a few seconds at most.
 - Fixed the lyrics jumping back as a song paused, and the dots in a pause in the
   singing disappearing with them.
+- Fixed the dots before a song's first line coming and going, and the first line
+  jumping up and down, while the song loaded.
 - Fixed the waveform moving ahead of the music on AirPods and other wireless
   headphones, which play a moment late: it now waits for the sound, as the
   colors' pulse does.
@@ -154,6 +159,26 @@
 - Changed every display to show the notch. The Dynamic Island style is gone.
 - Changed `Show on displays without a notch` to `Show on external displays`:
   the Mac's own display always has a notch.
+
+### Settings
+
+- Added a few words at the top of every page on how it works, beside its icon.
+- Added a picture of a file being dragged to the tray on the Tray page.
+- Changed the Music page's name to Player.
+- Moved each keyboard shortcut to the page of what it opens: **Settings >
+  Player** and **Settings > Tray**.
+- Moved `Cover and waveform` to **Settings > Live Activities**.
+- Changed the pages to fade as they scroll under the picture of the notch,
+  rather than being cut off at its edge.
+- Fixed the player's size in the Tray page's picture with the tray off, and the
+  tray and the player not sliding as the tray is turned on and off.
+
+### Additional
+
+- Added Glance's icon in the Dock and in Finder, drawn by macOS in the icon
+  style chosen in Appearance settings.
+- Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
+  it while its menu is open.
 
 <br>
 
