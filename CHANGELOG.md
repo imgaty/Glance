@@ -72,13 +72,12 @@
   or until it plays again, a timer until it's started, paused or ended, AirDrop
   until the next file, AirPlay until the next speaker. An announcement folds
   away, and a timer that's ringing stops.
-- Added the activities after the first in bubbles of their own beside the
-  notch, as the Dynamic Island shows them: music keeps the notch, the next
-  activity goes in a round bubble as tall as the notch off its right end, and
-  the one after off its left. Each buds off the notch's end and runs back into
-  it, and into it while a new song's name shows. Clicking a bubble opens its
-  own activity. VoiceOver reads each as a button that opens it. With Reduce
-  Motion on, bubbles fade in and out where they rest.
+- Added two activities at once, as the Dynamic Island shows them: the first
+  keeps the left of the notch alone, and the second goes in a round bubble as
+  tall as the notch off its right end. A third waits its turn. The bubble buds
+  off the notch's end and runs back into it, and into it while a new song's name
+  shows. Clicking it opens its own activity. VoiceOver reads it as a button that
+  opens it. With Reduce Motion on, it fades in and out where it rests.
 - Added Clock's buttons for its timer and stopwatch to the notch and its
   right-click menu, which work as Clock's own do, at once, with Clock opened
   hidden and quit half a minute after the last press. Without `Accessibility`,
@@ -117,9 +116,9 @@
   another.
 - Changed the waveform to show those same colors, lifted so they read on black
   and softly blurred, in place of one color fading to gray.
-- Changed `Replace glass` to show the cover's colors more strongly, reaching
-  higher up the notch. Bright covers are held back, so the player's buttons stay
-  easy to read.
+- Changed `Replace glass` to show all of the cover's colors, more strongly and
+  higher up the notch, so a white cover looks white and its red shows too. The
+  times and side buttons turn lighter over a light cover.
 - Removed the `Fullscreen` background. If it was chosen, the notch goes back to
   `Replace glass`.
 - Changed the waveform's bars to keep round ends however tall they grow, a
@@ -162,11 +161,17 @@
 
 ### Settings
 
-- Added a few words at the top of every page on how it works, beside its icon.
+- Added a few words on how it works, beside its icon, at the top of the Player,
+  Tray and Live Activities pages.
 - Added a picture of a file being dragged to the tray on the Tray page.
+- Added a preview of `Announce new audio`: turning it on announces what's playing
+  in the picture of the notch. With nothing playing, the pictures play a song of
+  their own.
 - Changed the Music page's name to Player.
-- Moved each keyboard shortcut to the page of what it opens: **Settings >
-  Player** and **Settings > Tray**.
+- Changed `Switch to the tray` to `Slide to the next tool`.
+- Changed `Background` to sit beside its name, as `Layout` does.
+- Changed the Displays page to show the display first, with `Hide in full screen`
+  and, on an external display, `Show the notch` for that display alone.
 - Moved `Cover and waveform` to **Settings > Live Activities**.
 - Changed the pages to fade as they scroll under the picture of the notch,
   rather than being cut off at its edge.
@@ -175,8 +180,8 @@
 
 ### Additional
 
-- Added Glance's icon in the Dock and in Finder, drawn by macOS in the icon
-  style chosen in Appearance settings.
+- Added Glance's icon in the Dock and in Finder, in layers, so it takes on each
+  icon style chosen in Appearance settings, clear included.
 - Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
   it while its menu is open.
 

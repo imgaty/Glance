@@ -51,7 +51,8 @@ As on the iPhone, it also shows the battery charging or running low, headphones
 and accessories connecting, and files coming in over AirDrop and sound playing
 over AirPlay, both with a button to stop them. It counts Clock's timer down and
 its stopwatch up, with their buttons. With several at once, the first keeps the
-notch and the others go in bubbles of their own beside it, as on the iPhone.
+left of the notch and the second goes in a bubble of its own off the right, as
+on the iPhone.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics

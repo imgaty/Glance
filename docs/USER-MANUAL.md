@@ -106,7 +106,7 @@ keyboard the same way:
 
 ⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
 replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
-shortcuts, change them in **Settings > Player** and **Settings > Tray**.
+shortcuts, change them in **Settings > Opening**.
 
 ### With a finger
 
@@ -339,12 +339,12 @@ the label it was given in Clock, if any. The stopwatch counts up beside its
 symbol, whose hand goes round once a minute, its hundredths small after the
 seconds, with the pause symbol while it's stopped.
 
-While something plays, the music keeps the notch and the timer moves out of it
-into a round bubble of its own off the notch's right end, showing its ring, as
-the iPhone shows several activities at once. The stopwatch goes off the left
-end, or the right if there's no timer. While a new song's name shows, the
-bubbles run back into the notch, and come out again after it. With Reduce Motion
-on, they fade in and out where they rest.
+While something plays, the music keeps the left of the notch, showing its cover,
+and the timer moves out into a round bubble of its own off the notch's right end,
+showing its ring, as the iPhone shows two activities at once. A third waits its
+turn. While a new song's name shows, the bubble runs back into the notch, and
+comes out again after it. With Reduce Motion on, it fades in and out where it
+rests.
 
 Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or
@@ -465,7 +465,6 @@ ellipsis instead of scrolling.
 | `Animated art` | Plays an album's animated cover, when it has one |
 | `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
 | `Announce new audio` | Briefly shows what starts playing |
-| `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
 
@@ -477,7 +476,6 @@ ellipsis instead of scrolling.
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots` | Adds each screenshot to the tray |
 | `Keep copies and screenshots for` | `30 Minutes`, `8 Hours`, or `7 Days` |
-| `Open the tray` | The tray's shortcut, ⇧⌘2 at first; click it and type another, or Control-click it to restore ⇧⌘2 |
 | `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
 | `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
@@ -507,15 +505,21 @@ ellipsis instead of scrolling.
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
 | `Open and close` | Two-finger swipes down and up, and dragging down and up on the display |
 | `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
-| `Switch to the tray` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
-| `Reverse direction` | Swiping and scrolling the other way to reach the tray |
+| `Slide to the next tool` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
+| `Reverse direction` | Swiping and scrolling the other way |
+| `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
+| `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
 
 ### Displays
 
 | Setting | Operation |
 | --- | --- |
-| `Show on external displays` | Draws a notch on external displays too; the Mac's own display always has one |
-| `Hide in full screen` | Hides the notch with the menu bar in full-screen apps |
+| `Show the notch` | Whether the display shown has a notch (external displays only; the Mac's own always has one) |
+| `Hide in full screen` | Hides the notch with the menu bar in full-screen apps, on the display shown |
+| `Show on external displays` | Draws a notch on external displays too |
+
+With more than one display, choose one at the top of the page. `Show the notch`
+and `Hide in full screen` apply to that display.
 
 <br>
 
