@@ -140,8 +140,9 @@ enum LyricsMatch {
     }
 }
 
-/// Finds lyrics on LRCLIB (lrclib.net), a free, open lyrics database. Only the song's title, artist,
-/// album and length are sent, and only while the lyrics are on screen.
+/// Finds lyrics on LRCLIB (lrclib.net), a free, open lyrics database, as each song starts, so they're
+/// ready the moment they're shown. Only the song's title, artist, album and length are sent, and
+/// nothing with Lyrics turned off in Settings.
 @MainActor
 final class LyricsStore: ObservableObject {
     static let shared = LyricsStore()
@@ -183,6 +184,9 @@ final class LyricsStore: ObservableObject {
     private var creditsCache: [String: Credits] = [:]
     private var task: Task<Void, Never>?
     private var creditsTask: Task<Void, Never>?
+    /// A song LRCLIB didn't answer for, and when to ask again: every report of it would otherwise.
+    private var unanswered: (track: String, retry: Date)?
+    private static let retryAfter: TimeInterval = 20
 
     /// `composer` is who the playing app says wrote the song (Music says); otherwise Apple Music's
     /// page for the song is asked. Nothing is looked up without an artist: a title alone, like
@@ -191,8 +195,10 @@ final class LyricsStore: ObservableObject {
         guard !isDemo else { return }
         // Versions of a song differ in length, and in timing: each is its own.
         let track = [title, artist, String(Int(duration.rounded()))].joined(separator: "\u{1F}")
-        guard track != self.track else { return }
+        let due = unanswered.map { $0.track == track && Date.now >= $0.retry } ?? false
+        guard track != self.track || due else { return }
         self.track = track
+        unanswered = nil
         task?.cancel()
         creditsTask?.cancel()
         let identifiable = !title.isEmpty && !artist.isEmpty
@@ -226,8 +232,8 @@ final class LyricsStore: ObservableObject {
             guard !Task.isCancelled, self.track == track else { return }
             content = found ?? .unavailable
             // A song with no lyrics isn't asked about again; one LRCLIB was too busy to answer is,
-            // the next time its lyrics are shown.
-            if let found { cache[track] = found } else { self.track = "" }
+            // after a moment.
+            if let found { cache[track] = found } else { unanswered = (track, .now + Self.retryAfter) }
         }
     }
 
@@ -380,7 +386,6 @@ struct LyricsView: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject var store: LyricsStore
 
-    /// Lyrics are only looked up while they're on screen.
     let isVisible: Bool
     /// Where the line being sung is centered, from this view's top: level with the notch's middle.
     let middle: CGFloat

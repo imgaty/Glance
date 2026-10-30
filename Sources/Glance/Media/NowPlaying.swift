@@ -420,6 +420,8 @@ final class NowPlaying: ObservableObject {
         AppVolume.shared.follow(app: app, pid: pid)
         if artwork == nil, app == PlayerScripting.spotify, hasMedia { askSpotifyForArtwork() }
         if report["explicit"] == nil, isSong { lookUpExplicit() }
+        // Found as the song starts, so they're there the moment they're asked for.
+        if isSong, UserDefaults.standard.bool(forKey: Preferences.lyrics) { loadLyrics() }
     }
 
     /// Asked once for each song, for players that don't say: Spotify, of Spotify's own page for the

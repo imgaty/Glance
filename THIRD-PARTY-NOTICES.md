@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-`Created: 11 October 2026` | `Last updated: 17 October 2026`
+`Created: 11 October 2026` | `Last updated: 30 October 2026`
 
 Glance bundles one third-party library, Sparkle, for its updates. Its license,
 along with the licenses of the code Sparkle includes, is reproduced in full
@@ -174,8 +174,9 @@ included; `Tools/DeviceClips` downloads them to draw the clips again.
 
 ### [LRCLIB](https://lrclib.net)
 
-Timed lyrics. Glance sends the song's title, artist, album and length, and only
-while the lyrics are on screen.
+Timed lyrics. Glance sends the song's title, artist, album and length as each
+song starts, so its lyrics are ready when you ask for them, and nothing with
+**Lyrics** turned off in Settings.
 
 ### Apple
 
