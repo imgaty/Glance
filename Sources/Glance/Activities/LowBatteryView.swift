@@ -63,9 +63,12 @@ final class LowPowerMode: ObservableObject {
 /// and at the right end a capsule holding a large battery, a ripple running out of its level. Its colors are the iPhone's own, in Display P3: red, and yellow
 /// once Low Power Mode is on.
 enum LowBatteryLayout {
-    /// From the left end to the words, as on the iPhone: they're low enough to meet the corner, and
-    /// this leaves them the padding from its curve. And from them to the capsule, at the least.
-    static let wordsEdge: CGFloat = 0.88
+    /// The offer's baseline, from the top: as high as it goes under the level.
+    static let offerBaseline: CGFloat = 1.814
+    /// From the left end to the words: their letters as far from it as the offer's are from the
+    /// bottom.
+    static let wordsEdge: CGFloat = 0.545
+    /// From the words to the capsule, at the least.
     static let wordsGap: CGFloat = 0.33
     /// As tall as the padding leaves, and as wide for that as the iPhone's.
     static func capsule(_ h: CGFloat) -> CGSize {
@@ -74,10 +77,11 @@ enum LowBatteryLayout {
     /// The battery in the capsule, a little right of its middle, as the iPhone sets it.
     static let bodyLeft: CGFloat = 0.54
     static let body = CGSize(width: 1.2, height: 0.645)
-    static let bodyCorner: CGFloat = 0.19
-    /// The level inside the body.
-    static let levelInset: CGFloat = 0.105
-    static let levelHeight: CGFloat = 0.45
+    /// The level inside the body, the same gap on three sides.
+    static let levelInset: CGFloat = 0.1075
+    static let levelHeight: CGFloat = body.height - levelInset * 2
+    /// The body's corners, concentric with the level's at its widest, as the iPhone's are.
+    static let bodyCorner: CGFloat = levelInset + level(20) / 2
     static let capGap: CGFloat = 0.055
     static let cap = CGSize(width: 0.073, height: 0.22)
     /// The ripple's line.
@@ -157,7 +161,7 @@ enum LowBatteryLayout {
     /// Between the two lines' boxes, for their baselines to be as far apart as a device's.
     static func lineGap(_ h: CGFloat) -> CGFloat {
         let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
-        return h * (ExpandedDeviceLayout.nameBaseline - ExpandedDeviceLayout.saidBaseline) + font.descender - font.ascender
+        return h * (offerBaseline - ExpandedDeviceLayout.saidBaseline) + font.descender - font.ascender
     }
 
     @MainActor
