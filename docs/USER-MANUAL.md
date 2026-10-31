@@ -328,7 +328,9 @@ What's connected when Glance starts, or reconnects as the Mac wakes, isn't
 announced. With the pointer on the notch, an announcement stays, and the notch
 swells a little around it, opening once it's over. Sliding down on it, or
 clicking it if **Open with** allows that, puts it away and opens the notch at
-once. Turn each of these off in **Settings > Live Activities**.
+once. With the notch open, it closes to say what happened, and opens again
+after, if the pointer is still on it. Turn each of these off in
+**Settings > Live Activities**.
 
 ### Timer and stopwatch
 

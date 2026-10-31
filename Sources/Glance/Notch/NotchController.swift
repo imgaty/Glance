@@ -90,6 +90,9 @@ final class NotchController {
     private var popTask: Task<Void, Never>?
     /// Folding to rest before an announcement opens, or before what it covered comes back.
     private var switchTask: Task<Void, Never>?
+    /// Closed to announce something: the page it opens back to once that's said, if the pointer's
+    /// still on it.
+    private var reopening: NotchPage?
     /// What the Mac announces, and the timer, followed into the closed notch.
     private var alertWatch: AnyCancellable?
     private var timerWatch: AnyCancellable?
@@ -518,7 +521,8 @@ final class NotchController {
     /// Something the Mac announces: the wings widen to show it, and fold back once it's said, with
     /// the Dynamic Island's springs, measured from it: a touch of bounce opening, none folding. With
     /// music or a timer showing, the notch first folds to rest, what it shows blurring away, and
-    /// opens again from there; once it's said, it folds, and what was there opens again.
+    /// opens again from there; once it's said, it folds, and what was there opens again. Open, it
+    /// closes first, as nothing announced shows over the open notch, and opens again after.
     private func show(_ alert: NotchAlert?) {
         switchTask?.cancel()
         let fold = IslandMotion.fold, open = IslandMotion.open
@@ -527,6 +531,14 @@ final class NotchController {
             withAnimation(fold) {
                 model.alert = nil
                 model.switching = wingsShowing
+            }
+            if let page = reopening, Activities.shared.waiting.isEmpty {
+                reopening = nil
+                if openZone.contains(NSEvent.mouseLocation) {
+                    holdUntilExit = false
+                    foldingUntil = .now + Self.foldTime
+                    return self.open(on: page)
+                }
             }
             // The pointer stayed on it: the hover it held back opens the notch now.
             let opening = Opening.current
@@ -540,6 +552,22 @@ final class NotchController {
                 try? await Task.sleep(for: .seconds(Self.switchPause))
                 guard let self, !Task.isCancelled else { return }
                 withAnimation(open) { self.model.switching = false }
+            }
+            return
+        }
+        if model.state == .open, !alert.stays, holds.isEmpty, !model.dropping {
+            reopening = model.page
+            var still = Transaction()
+            still.disablesAnimations = true
+            // What the wings show waits, rather than coming back for a moment in between.
+            withTransaction(still) { model.switching = wingsShowing }
+            close(holdUntilExit: true)
+            switchTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(Self.closeTime))
+                guard let self, !Task.isCancelled else { return }
+                // For as long as it would have shown.
+                Activities.shared.keep(alert.kind, for: alert.seconds)
+                self.show(alert)
             }
             return
         }
@@ -960,6 +988,8 @@ final class NotchController {
 
     /// As long as an announcement takes to fold away.
     private static let foldTime = 0.32
+    /// As long as the open notch takes to close, near enough to open again from.
+    private static let closeTime = 0.34
 
     private func scheduleOpen(after delay: Double) {
         openTask?.cancel()
@@ -983,15 +1013,16 @@ final class NotchController {
     }
 
     /// Opens on the player, unless told otherwise; for something dragged to it, with its places to
-    /// drop.
-    private func open(on page: NotchPage = .player, forDrop: Bool = false) {
+    /// drop. An announcement folds away first, unless it's to go with the opening, for fingers
+    /// already pulling the notch down, which a wait would leave stretching it.
+    private func open(on page: NotchPage = .player, forDrop: Bool = false, atOnce: Bool = false) {
         guard model.state != .open else { return }
         // An announcement folds away first, from a click or a shortcut as from the pointer (see
         // `foldAnnouncement`); something dragged to the notch doesn't wait for it.
         if !forDrop {
             foldAnnouncement()
             let wait = foldingUntil.timeIntervalSinceNow
-            if wait > 0 {
+            if wait > 0, !atOnce {
                 openTask?.cancel()
                 openTask = Task { [weak self] in
                     try? await Task.sleep(for: .seconds(wait))
@@ -1508,7 +1539,7 @@ final class NotchController {
         if !pullFired, model.state != .open, pull > 40 {
             pullFired = true
             pull = 0
-            open()
+            open(atOnce: true)
         } else if !pullFired, pull < (model.state == .open ? -48 : -30) {
             pullFired = true
             pushedUp()
