@@ -24,20 +24,18 @@ enum TimerLayout {
     static let tall: CGFloat = 2.4
     static let button: CGFloat = 1.364
     static let buttonGap: CGFloat = 0.23
-    static let title: CGFloat = 0.464
-    static let time: CGFloat = 1.277
+    static let time: CGFloat = 0.9375
     static let titleGap: CGFloat = 0.228
     /// Digits sit low in their line and short of its end: how far up, and out, brings them level
     /// with the middle, and as far from the end as the buttons are from theirs.
-    static let timeLift: CGFloat = 0.03
-    static let timeBearing: CGFloat = 0.078
+    static let timeLift: CGFloat = 0.022
+    static let timeBearing: CGFloat = 0.057
     // The stopwatch opened, measured from the iPhone's: its buttons a little larger than the Timer's,
     // and its time smaller, for its hundredths, and below the middle, clear of the camera.
     static let stopwatchButton: CGFloat = 1.429
     static let stopwatchButtonGap: CGFloat = 0.286
     static let stopwatchPauseBar = CGSize(width: 0.171, height: 0.571)
     static let stopwatchPauseGap: CGFloat = 0.076
-    static let stopwatchTime: CGFloat = 0.9375
     static let stopwatchTracking: CGFloat = -0.018
     static let stopwatchDrop: CGFloat = 0.179
     /// From the right end to the time, which sits further in than the buttons do from theirs.
@@ -48,7 +46,6 @@ enum TimerLayout {
     /// How long a timer's name runs, once it's done, before it's cut short.
     static let titleLimit: CGFloat = 4
     // Done, as the iPhone's Timer: its name, large.
-    static let doneName: CGFloat = 0.71
     /// Opened and done, as tall as the iPhone's, for a notch this tall.
     static func tallHeight(_ h: CGFloat) -> CGFloat { (h * tall).rounded() }
     /// Opened and done, how far in from its end each side sits, buttons and words alike: as far as
@@ -282,13 +279,13 @@ struct ExpandedTimerView: View {
                 // Alone, to the hundredth, as Clock's own counts, while it runs.
                 TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !ticking)) { context in
                     Text(shown.reading(at: context.date))
-                        .font(Self.timeFont(shown, h))
+                        .font(NotchType.time(h))
                         .tracking(h * TimerLayout.stopwatchTracking)
                 }
             } else {
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     Text(shown.reading(at: context.date))
-                        .font(Self.timeFont(shown, h))
+                        .font(NotchType.time(h))
                         .contentTransition(.numericText(countsDown: true))
                         .animation(.snappy, value: shown.reading(at: context.date))
                 }
@@ -298,7 +295,7 @@ struct ExpandedTimerView: View {
             if case .timer = shown {
                 let label = max(min(Self.titleWidth(name, h), room), 0)
                 Text(name)
-                    .font(.system(size: h * TimerLayout.title, weight: .semibold))
+                    .font(NotchType.title)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(width: label, alignment: .trailing)
@@ -345,24 +342,17 @@ struct ExpandedTimerView: View {
         isStopwatch(shown) ? h * TimerLayout.stopwatchEnd : TimerLayout.buttonEdge(h) - h * TimerLayout.timeBearing
     }
 
-    /// The timer's time large, as the iPhone's Timer; the stopwatch's a little smaller, medium, as
-    /// its stopwatch.
-    private static func timeFont(_ shown: ClockShown, _ h: CGFloat) -> Font {
-        if case .stopwatch = shown { return .system(size: h * TimerLayout.stopwatchTime, weight: .semibold).monospacedDigit() }
-        return .system(size: h * TimerLayout.time).monospacedDigit()
-    }
-
     /// The time as it reads then, its digits all as wide as each other.
     @MainActor
     private static func timeWidth(_ shown: ClockShown, _ h: CGFloat, at date: Date = .now) -> CGFloat {
         let reading = shown.reading(at: date).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-        let font = NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .semibold)
         return ceil((reading as NSString).size(withAttributes: [.font: font]).width) + 2
     }
 
     @MainActor
     private static func titleWidth(_ name: String, _ h: CGFloat) -> CGFloat {
-        ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.title, weight: .semibold)]).width) + 1
+        ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 1
     }
 }
 
@@ -386,7 +376,7 @@ struct TimerDoneView: View {
         // Each from its end, as far as from the top and bottom; to spare, beside the camera.
         ZStack {
             Text(name)
-                .font(.system(size: h * TimerLayout.doneName, weight: .semibold))
+                .font(NotchType.title)
                 .foregroundStyle(.orange)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -419,7 +409,7 @@ struct TimerDoneView: View {
     static func wing(length: TimeInterval, name: String = "Timer", restingHeight h: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let words = min(
-            ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * TimerLayout.doneName, weight: .semibold)]).width) + 2,
+            ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 2,
             h * TimerLayout.titleLimit)
         let left = nameEdge(h) + words + gap
         let right = gap + h * (TimerLayout.button * 2 + TimerLayout.buttonGap) + TimerLayout.buttonEdge(h)

@@ -152,10 +152,10 @@ struct TrayView: View {
                 .foregroundStyle(PlayerLayout.secondary)
                 .padding(.bottom, 6)
             Text("Tray Is Empty")
-                .font(.system(size: 13, weight: .semibold))
+                .font(NotchType.title)
             Text(emptyLine)
-                .font(.system(size: 11))
-                .foregroundStyle(PlayerLayout.secondary)
+                .font(NotchType.detail)
+                .foregroundStyle(NotchType.detailColor)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 260)
         }
@@ -323,7 +323,7 @@ private struct DropZone<Glyph: View>: View {
                 .frame(height: 40)
                 .scaleEffect(lit && !reduceMotion ? 1.08 : 1)
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(NotchType.title)
         }
         .foregroundStyle(.white.opacity(lit ? 1 : 0.7))
         .frame(maxWidth: .infinity, maxHeight: .infinity)

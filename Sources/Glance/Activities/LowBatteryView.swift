@@ -67,11 +67,8 @@ final class LowPowerMode: ObservableObject {
 /// the iPhone's own, in Display P3: red, from a reddish yellow as it arrives, and green once Low
 /// Power Mode is on.
 enum LowBatteryLayout {
-    /// The level, and the offer a little smaller under it, their baselines as far apart as the
-    /// iPhone's.
-    static let words: CGFloat = 0.425
-    static let offerWords: CGFloat = 0.4
-    static let baselines: CGFloat = 0.564
+    /// How far apart the level's and the offer's baselines are.
+    static let baselines: CGFloat = 0.53
     /// Between the offer and the capsule, at the least.
     static let wordsGap: CGFloat = 0.34
     static let capsule = CGSize(width: 2.35, height: 1.56)
@@ -92,9 +89,6 @@ enum LowBatteryLayout {
     /// from its reddish yellow into red.
     static let pulse = 1.2
     static let warmUp = 2.4
-
-    /// The words under the level, as the iPhone's.
-    static let offerColor = Color(white: 0x6B / 255)
 
     /// Each part's color: the capsule, the battery's body and cap, the level, and the ring's line,
     /// which lets what's under it show through.
@@ -124,8 +118,8 @@ enum LowBatteryLayout {
     /// offer's letters otherwise come nearer the camera than the least gap.
     @MainActor
     static func wordsTop(_ h: CGFloat) -> CGFloat {
-        let level = NSFont.systemFont(ofSize: h * words, weight: .semibold)
-        let offerFont = NSFont.systemFont(ofSize: h * offerWords, weight: .semibold)
+        let level = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        let offerFont = NSFont.systemFont(ofSize: NotchType.size)
         let centered = TimerLayout.tallHeight(h) / 2 - (h * baselines - level.capHeight) / 2
         // How far the offer's letters rise above their baseline.
         let rise =
@@ -140,14 +134,14 @@ enum LowBatteryLayout {
 
     /// Between the two lines' boxes, for their baselines to be as far apart as the iPhone's.
     static func lineGap(_ h: CGFloat) -> CGFloat {
-        let level = NSFont.systemFont(ofSize: h * words, weight: .semibold)
-        let offerFont = NSFont.systemFont(ofSize: h * offerWords, weight: .semibold)
+        let level = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        let offerFont = NSFont.systemFont(ofSize: NotchType.size)
         return h * baselines + level.descender - offerFont.ascender
     }
 
     @MainActor
-    static func width(_ text: String, _ size: CGFloat) -> CGFloat {
-        ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: .semibold)]).width)
+    static func width(_ text: String) -> CGFloat {
+        ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
     }
 
     /// From where the words start to the camera: the level's width, against it; or further out,
@@ -155,8 +149,8 @@ enum LowBatteryLayout {
     @MainActor
     static func lead(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let offer = max(width(LowBatteryView.offer, h * offerWords), width(LowBatteryView.done, h * offerWords))
-        return max(width(LowBatteryView.title(percent), h * words) + gap, offer + h * wordsGap - closedWidth - gap)
+        let offer = max(width(LowBatteryView.offer), width(LowBatteryView.done))
+        return max(width(LowBatteryView.title(percent)) + gap, offer + h * wordsGap - closedWidth - gap)
     }
 
     /// Each wing: the wider side against the camera, the words as far in from their end as words
@@ -202,17 +196,17 @@ struct LowBatteryView: View {
         ZStack {
             VStack(alignment: .leading, spacing: LowBatteryLayout.lineGap(h)) {
                 Text(Self.title(percent))
-                    .font(.system(size: h * LowBatteryLayout.words, weight: .semibold))
+                    .font(NotchType.title)
                     .foregroundStyle(.white)
                 // One blurring into the other, as the island's words change.
                 Group {
                     if on {
                         Text(Self.done).foregroundStyle(LowBatteryLayout.green.level)
                     } else {
-                        Text(Self.offer).foregroundStyle(LowBatteryLayout.offerColor)
+                        Text(Self.offer).foregroundStyle(NotchType.detailColor)
                     }
                 }
-                .font(.system(size: h * LowBatteryLayout.offerWords, weight: .semibold))
+                .font(NotchType.detail)
                 .transition(.blurReplace)
             }
             .lineLimit(1)

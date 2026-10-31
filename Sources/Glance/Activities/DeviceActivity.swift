@@ -18,16 +18,13 @@ enum ExpandedDeviceLayout {
     static let picture: CGFloat = 0.97
     /// Where the words start, from the left end.
     static let wordsLeft: CGFloat = 2.667
-    /// What's happened, in gray, and the device's name under it, each by its size and its baseline.
-    static let said: CGFloat = 0.377
-    static let saidBaseline: CGFloat = 1.305
-    static let name: CGFloat = 0.461
-    static let nameBaseline: CGFloat = 1.855
+    /// What's happened, and the device's name under it, by their baselines: just under the camera.
+    static let saidBaseline: CGFloat = 1.35
+    static let nameBaseline: CGFloat = 1.88
     static let ring: CGFloat = 1.343
     static let ringLine: CGFloat = 0.113
     static let ringEdge: CGFloat = 0.505
     static let number: CGFloat = 0.45
-    static let saidColor = Color(.sRGB, red: 0x74 / 255, green: 0x73 / 255, blue: 0x78 / 255)
 
     /// Each wing: as wide as the device or the ring, the wider against the camera. The words run under
     /// the camera, so they need no room of their own.
@@ -122,8 +119,8 @@ struct DeviceActivityView: View {
         let wing = layout.wing(model: model, pictures: pictures, restingHeight: h)
         let width = closedWidth + wing * 2 - h * (layout.ring + layout.ringEdge) - LiveActivityView.cameraGap
         return ZStack(alignment: .topLeading) {
-            line(low ? "Low Battery" : "Connected", size: h * layout.said, baseline: h * layout.saidBaseline, color: layout.saidColor)
-            line(name, size: h * layout.name, baseline: h * layout.nameBaseline, color: .white)
+            line(low ? "Low Battery" : "Connected", font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
+            line(name, font: NotchType.title, baseline: h * layout.nameBaseline, color: .white)
         }
         .padding(.leading, h * layout.wordsLeft)
         .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)
@@ -131,12 +128,12 @@ struct DeviceActivityView: View {
     }
 
     /// A line of words, by where its baseline falls.
-    private func line(_ text: String, size: CGFloat, baseline: CGFloat, color: Color) -> some View {
+    private func line(_ text: String, font: Font, baseline: CGFloat, color: Color) -> some View {
         Text(text)
-            .font(.system(size: size, weight: .semibold))
+            .font(font)
             .foregroundStyle(color)
             .lineLimit(1)
             .truncationMode(.tail)
-            .padding(.top, baseline - NSFont.systemFont(ofSize: size, weight: .semibold).ascender)
+            .padding(.top, baseline - NSFont.systemFont(ofSize: NotchType.size, weight: .semibold).ascender)
     }
 }

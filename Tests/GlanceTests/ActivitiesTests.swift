@@ -530,12 +530,12 @@ struct ActivitiesTests {
         #expect(abs(edge * 2 + h * LowBatteryLayout.capsule.height - TimerLayout.tallHeight(h)) < 0.01)
         // Each wing as wide as the level or the capsule needs against the camera, whichever is wider.
         let gap = LiveActivityView.cameraGap
-        let level = LowBatteryLayout.width(LowBatteryView.title(10), h * LowBatteryLayout.words)
+        let level = LowBatteryLayout.width(LowBatteryView.title(10))
         let wing = SystemActivityView.wing(for: alert, restingHeight: h, closedWidth: 185)
         #expect(wing == max(LiveActivityView.textEdge(restingHeight: h) + level + gap, gap + h * LowBatteryLayout.capsule.width + edge))
         #expect(wing < h * 3)
         // The offer, under the camera, stays clear of the capsule.
-        let offer = LowBatteryLayout.width(LowBatteryView.offer, h * LowBatteryLayout.offerWords)
+        let offer = LowBatteryLayout.width(LowBatteryView.offer)
         let lead = LowBatteryLayout.lead(percent: 10, restingHeight: h, closedWidth: 185)
         #expect(-lead + offer + h * LowBatteryLayout.wordsGap <= 185 + gap)
         // Its letters start just below the camera.

@@ -118,7 +118,6 @@ enum AirPlayLayout {
     static let tint = Color.p3(0x3B, 0x69, 0xB4)
     static let buttonFill = Color.p3(0x12, 0x20, 0x3B)
     static let buttonWords = Color.p3(0x4B, 0x80, 0xF1)
-    static let secondary = Color.p3(0x93, 0x92, 0x98)
     // Beside the camera: the symbol and the device, each as far in from its end.
     static let symbol: CGFloat = 0.6
     static let symbolEdge: CGFloat = 0.144
@@ -131,15 +130,12 @@ enum AirPlayLayout {
     static let symbolGap: CGFloat = 0.53
     static let bigDevice: CGFloat = 0.67
     static let deviceInset: CGFloat = 0.68
-    static let title: CGFloat = 0.48
     /// The title and the name close together, as the iPhone sets them.
-    static let lineGap: CGFloat = -0.09
     static let header: CGFloat = 0.9
     static let buttonGap: CGFloat = 0.4
     static let button: CGFloat = 1.2
     static let buttonInset: CGFloat = 0.545
     static let buttonBottom: CGFloat = 0.47
-    static let buttonText: CGFloat = 0.48
 
     /// Opened, its header just below the camera, the button under it.
     static func height(_ h: CGFloat) -> CGFloat {
@@ -201,13 +197,14 @@ struct ExpandedAirPlayView: View {
                     .foregroundStyle(AirPlayLayout.tint)
                     .padding(.leading, h * AirPlayLayout.symbolInset)
                     .padding(.trailing, h * AirPlayLayout.symbolGap)
-                VStack(alignment: .leading, spacing: h * AirPlayLayout.lineGap) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text("AirPlay")
+                        .font(NotchType.title)
                         .foregroundStyle(.white)
                     Text(route.name)
-                        .foregroundStyle(AirPlayLayout.secondary)
+                        .font(NotchType.detail)
+                        .foregroundStyle(NotchType.detailColor)
                 }
-                .font(.system(size: h * AirPlayLayout.title, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 Spacer(minLength: h * 0.3)
@@ -219,7 +216,7 @@ struct ExpandedAirPlayView: View {
                 AirPlayWatch.shared.stop()
             } label: {
                 Text("Stop AirPlay")
-                    .font(.system(size: h * AirPlayLayout.buttonText, weight: .semibold))
+                    .font(NotchType.title)
                     .foregroundStyle(AirPlayLayout.buttonWords)
                     .frame(maxWidth: .infinity)
                     .frame(height: h * AirPlayLayout.button)
@@ -241,7 +238,7 @@ struct ExpandedAirPlayView: View {
     /// As wide as the iPhone's, or as AirPlay and the device's name need.
     @MainActor
     static func width(for route: AirPlayRoute, restingHeight h: CGFloat) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: h * AirPlayLayout.title, weight: .semibold)
+        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
         let name = ceil((route.name as NSString).size(withAttributes: [.font: font]).width)
         let needs =
             h

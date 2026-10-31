@@ -175,7 +175,6 @@ enum AirDropLayout {
     static let tint = Color.p3(0x45, 0x98, 0xF8)
     static let track = Color.p3(0x11, 0x31, 0x6A)
     static let badgeFill = Color.p3(0x1E, 0x1F, 0x1E)
-    static let secondary = Color.p3(0x85, 0x85, 0x85)
     // Beside the camera.
     static let symbol: CGFloat = 0.575
     static let symbolEdge: CGFloat = 0.148
@@ -188,9 +187,6 @@ enum AirDropLayout {
     static let badge: CGFloat = 0.55
     static let badgeOut: CGFloat = 0.065
     static let gap: CGFloat = 0.35
-    static let title: CGFloat = 0.455
-    static let subtitle: CGFloat = 0.42
-    static let lineGap: CGFloat = -0.055
     static let bigRing: CGFloat = 1.34
     static let bigRingLine: CGFloat = 0.127
     static let stop: CGFloat = 0.43
@@ -219,7 +215,7 @@ enum AirDropLayout {
 
     @MainActor
     private static func titleWidth(_ h: CGFloat) -> CGFloat {
-        ceil(("AirDrop" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * title, weight: .semibold)]).width)
+        ceil(("AirDrop" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
     }
 }
 
@@ -289,13 +285,13 @@ struct ExpandedAirDropView: View {
         let h = restingHeight
         let left = HStack(spacing: h * AirDropLayout.gap) {
             preview(h)
-            VStack(alignment: .leading, spacing: h * AirDropLayout.lineGap) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text("AirDrop")
-                    .font(.system(size: h * AirDropLayout.title, weight: .semibold))
+                    .font(NotchType.title)
                     .foregroundStyle(.white)
                 Text(Self.from(shown))
-                    .font(.system(size: h * AirDropLayout.subtitle, weight: .medium))
-                    .foregroundStyle(AirDropLayout.secondary)
+                    .font(NotchType.detail)
+                    .foregroundStyle(NotchType.detailColor)
             }
             .lineLimit(1)
             .truncationMode(.tail)

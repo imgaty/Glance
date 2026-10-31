@@ -33,6 +33,8 @@
   matching. Closed, the notch keeps the camera housing's own.
 - Changed what's tall in the notch to stand on its glass, as the player does:
   the taller it is, the more glass shows.
+- Changed everything open or tall in the notch to the player's type, with one
+  size for the title, one for the line under it, and one for a time.
 - Added every live activity coming and going as the Dynamic Island's do:
   announcements, music's cover and waveform, a new song's name and the timer.
   The notch widens and folds with its springs, its wings' ends round as the

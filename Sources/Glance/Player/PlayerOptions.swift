@@ -340,3 +340,15 @@ extension Color {
         return (luminance + 0.05) / 0.05
     }
 }
+
+/// The type of everything open in the notch, the same whatever's showing: a line and a quieter line
+/// under it, as the player's title and artist, and one size of time.
+enum NotchType {
+    static let size = PlayerLayout.titleSize
+    static let title = Font.system(size: size, weight: .semibold)
+    static let detail = Font.system(size: size)
+    static let detailColor = PlayerLayout.secondary
+
+    /// The time, by the notch's height, with its digits all as wide as each other.
+    static func time(_ h: CGFloat) -> Font { .system(size: h * TimerLayout.time, weight: .semibold).monospacedDigit() }
+}
