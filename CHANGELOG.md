@@ -20,9 +20,9 @@
   turns on Low Power Mode: it turns green, and it says `Low Power Mode On`.
 - Added AirPods and Beats announced as they connect, as the iPhone shows them:
   in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
-  AirPods Max as macOS pictures them, others as their symbol, beside their
-  battery as a ring. With the pointer on it, it extends to show its name and
-  its level in numbers.
+  AirPods Max as macOS pictures them and others as their symbol, both still,
+  beside their battery as a ring. With the pointer on it, it extends to show its
+  name and its level in numbers, the device and its ring growing into place.
   One whose battery runs down past 20% or 10% is announced the same way, its
   ring red with its level in numbers inside, in place of macOS's own banner,
   which is hidden, and AirPods' own notification, which is taken away. With

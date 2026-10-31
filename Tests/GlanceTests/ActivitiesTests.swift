@@ -247,6 +247,21 @@ struct ActivitiesTests {
         #expect(wing < layout.ring + layout.trailing + 60)
     }
 
+    @Test("A device extended is the iPhone's size under the pointer, with no swell on top, its device and ring grown")
+    func deviceExtended() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.alert = DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 50)
+        model.alertExtendedWing = 100
+        model.alertExtended = true
+        let peek = model.metrics(for: .peek)
+        #expect(peek.height == TimerLayout.tallHeight(32))
+        #expect(abs(peek.bodyWidth - 385) < 0.001)
+        let small = DeviceLayout(height: 32), large = DeviceLayout(height: 32, extended: true)
+        #expect(large.picture > small.picture)
+        #expect(large.ring > small.ring)
+        #expect(abs(large.trailing - 32 * ExpandedDeviceLayout.ringEdge) < 0.001)
+    }
+
     @Test("AirPods and Beats are known by their model, a newer one as the newest of its kind")
     func headphoneModels() {
         // AirPods Pro, the first, the second with Lightning and with USB-C, and the third.

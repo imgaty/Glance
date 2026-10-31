@@ -31,7 +31,8 @@ struct IslandBubble: View {
     let flare: CGFloat
     /// How much of the notch's trailing wing is folded away, which the bubble sits off the end of.
     let fold: CGFloat
-    /// The notch is open: nothing of the bubble shows over its glass.
+    /// The notch is open, as nothing of the bubble shows over its glass, or growing tall, as its ends
+    /// curve in past where the bubble rests hidden.
     let hidden: Bool
     let hovered: Bool
     let pressed: Bool

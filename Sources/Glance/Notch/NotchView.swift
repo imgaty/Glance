@@ -365,6 +365,8 @@ final class NotchModel: ObservableObject {
                     restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4,
                     resting + Self.nearSwell * proximity + pull
                 )
+            // Extended, it's as large as it gets under the pointer, and it's measured at that size.
+            case .peek where alertExtended: (restingWidth + pull * 0.4, resting + pull)
             case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4, resting + Self.peekSwell + pull)
             case .open where expanded == .airdrop:
                 (
@@ -581,9 +583,10 @@ struct NotchView: View {
             // shape over an activity coming or going: what rides in with the wings' ends as they fold
             // passes under it. Kept at the closed size while open, so closing it never shrinks from the
             // open notch's height over the glass, and back only once the notch has all but closed.
-            // Never taller than the notch itself, so what's announced below the camera shows.
+            // Never taller than the notch itself, so what's announced below the camera shows; a device
+            // extended, than the camera, as its words run just under it.
             let rest = isOpen ? model.metrics(for: .closed) : m
-            let restHeight = min(rest.height, model.metrics(for: isOpen ? .closed : model.state, short: true).height)
+            let restHeight = model.alertExtended ? closed.height : min(rest.height, model.metrics(for: isOpen ? .closed : model.state, short: true).height)
             NotchShape(corners: model.corners).fill(.black)
                 .frame(width: model.closedSize.width + rest.flare * 2, height: restHeight)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
@@ -728,7 +731,7 @@ struct NotchView: View {
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble() },
-            restingHeight: model.closedSize.height, flare: m.flare, fold: m.fold, hidden: model.state == .open,
+            restingHeight: model.closedSize.height, flare: m.flare, fold: m.fold, hidden: model.state == .open || model.restingTall,
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
@@ -877,7 +880,7 @@ struct NotchView: View {
 
     /// Content fades in once the notch has begun to grow, and out quickly as it shrinks, so it is
     /// never squeezed into the closing shape.
-    fileprivate static func fade(in showing: Bool) -> Animation {
+    static func fade(in showing: Bool) -> Animation {
         showing ? .easeOut(duration: 0.3).delay(0.08) : .easeOut(duration: 0.12)
     }
 
@@ -940,7 +943,7 @@ struct NotchView: View {
 /// How everything on a page comes and goes as the notch opens, closes, or turns to the other page:
 /// the player's words and buttons, its cover and its waveform, and the tray, all with one fade and
 /// one blur, so nothing lingers or leaves ahead of the rest.
-private struct PageFade: ViewModifier {
+struct PageFade: ViewModifier {
     let hidden: Bool
 
     func body(content: Content) -> some View {

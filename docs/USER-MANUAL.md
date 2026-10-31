@@ -309,7 +309,7 @@ sliding under the notch as it folds:
 | --- | --- |
 | Plugging in a MacBook | `Charging`, and the battery's level beside a battery, yellow in Low Power Mode |
 | A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | The notch grows taller: its level, as `10% Battery`, and the battery in a capsule, a ring pulsing around its level, pulsing from a reddish yellow into a soft red as it arrives. Click the capsule to turn on Low Power Mode: it turns green, and the notch says `Low Power Mode On` |
-| AirPods or Beats connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them; AirPods 1 and 2 and older Beats, their symbol), and their battery as a ring: the lower earbud's |
+| AirPods or Beats connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them, and AirPods 1 and 2 and older Beats as their symbol, both still), and their battery as a ring: the lower earbud's |
 | A device's battery at 20%, and again at 10% | The device as it shows connecting, its ring red, with its level in numbers inside |
 
 Nothing else is announced: not other makers' headphones and speakers, nor
@@ -326,12 +326,12 @@ as it shows, since the notch says so.
 
 What's connected when Glance starts, or reconnects as the Mac wakes, isn't
 announced. With the pointer on the notch, an announcement stays, and the notch
-swells a little around it, opening once it's over. A device extends, as tall as
-a timer, with its name and its level in numbers in its ring. Sliding down on it,
-or clicking it if **Open with** allows that, puts it away and opens the notch at
-once. With the notch open, it closes to say what happened, and opens again
-after, if the pointer is still on it. Turn each of these off in
-**Settings > Live Activities**.
+swells a little around it, opening once it's over. A device extends instead, as
+tall as a timer: the device and its ring grow with the notch, and its name and
+its level in numbers show. Sliding down on it, or clicking it if **Open with**
+allows that, puts it away and opens the notch at once. With the notch open, it
+closes to say what happened, and opens again after, if the pointer is still on
+it. Turn each of these off in **Settings > Live Activities**.
 
 ### Timer and stopwatch
 

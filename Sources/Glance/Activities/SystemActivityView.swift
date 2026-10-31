@@ -9,8 +9,8 @@ import AppKit
 import SwiftUI
 
 /// What the Mac announces, and Clock's timer or stopwatch, in the closed notch's wings, as the
-/// iPhone's Dynamic Island draws its own, the two sides read as one: a device's symbol turning in
-/// beside its battery's ring; the Mac's battery as a word beside its level; a state's symbol in its
+/// iPhone's Dynamic Island draws its own, the two sides read as one: a device beside its battery's
+/// ring; the Mac's battery as a word beside its level; a state's symbol in its
 /// color beside a word. A timer counts down on the right, its ring on the left; the stopwatch counts
 /// up beside its symbol; AirDrop shows its symbol and a ring filling as a file comes in; AirPlay shows
 /// its symbol and the device's; music playing beside them goes in a bubble of its own (see
@@ -75,20 +75,11 @@ struct SystemActivityView: View {
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
-                ZStack {
-                    device(
-                        symbol: symbol, model: model, pictures: pictures, battery: battery, low: alert.kind == .deviceBattery, size: size,
-                        leaving: self.alert == nil
-                    )
-                    .opacity(extended ? 0 : 1)
-                    if extended {
-                        ExpandedDeviceView(
-                            symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
-                            said: alert.kind == .deviceBattery ? "Low Battery" : "Connected", restingHeight: restingHeight
-                        )
-                        .transition(.opacity)
-                    }
-                }
+                DeviceActivityView(
+                    symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
+                    low: alert.kind == .deviceBattery, closedWidth: closedWidth, restingHeight: restingHeight, leaving: self.alert == nil,
+                    extended: extended, grown: extended ? 1 : 0
+                )
                 .islandFade(self.alert != nil)
                 .id(alert.id)
                 .transition(IslandMotion.fade)
@@ -248,44 +239,9 @@ struct SystemActivityView: View {
     static func pauseWidth(_ size: CGFloat) -> CGFloat { (size * 0.8).rounded() }
     static let pauseGap: CGFloat = 4
 
-    /// A device arriving, sized as the Dynamic Island shows AirPods, by the notch's height: the device
-    /// a little under half of it tall, its battery's ring a little over half of it across. Each is at
-    /// its end, as far in from it as from the top and bottom: the device as near as it comes as it
-    /// turns.
-    private func device(
-        symbol: String, model: Headphones?, pictures: [String], battery: Int?, low: Bool, size: CGFloat, leaving: Bool
-    ) -> some View {
-        let layout = DeviceLayout(height: restingHeight, low: low)
-        let axis = Self.deviceAxis(model: model, pictures: pictures, layout: layout)
-        let reach = Self.deviceReach(model: model, pictures: pictures, layout: layout)
-        return ZStack {
-            Group {
-                if let model, let turn = DeviceTurn.cached(model) {
-                    TurningDevice(turn: turn, height: layout.picture)
-                } else if let images = DevicePictures.images(pictures) {
-                    TurningPictures(images: images, height: layout.picture)
-                } else {
-                    TurningSymbol(symbol: symbol, side: layout.picture)
-                }
-            }
-            // Its middle as far in from the end as it reaches, turning.
-            .padding(.leading, layout.edge + max(reach - axis, 0))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
-            // announced (see `DeviceWatch`).
-            if let battery {
-                // Running low, its level in numbers in the middle.
-                BatteryRing(percent: battery, diameter: layout.ring, showsPercent: low)
-                    .modifier(RingArrival(leaving: leaving))
-                    .padding(.trailing, layout.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-        }
-    }
-
     @ViewBuilder private func leading(_ content: NotchAlert.Content, side: CGFloat, size: CGFloat) -> some View {
         switch content {
-        // Laid out on its own (see `device`).
+        // Laid out on its own (see `DeviceActivityView`).
         case .device:
             EmptyView()
         case .battery(let title, _):
@@ -388,7 +344,7 @@ struct SystemActivityView: View {
     @MainActor
     static func deviceWidth(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
         model.flatMap(DeviceTurn.cached).map { TurningDevice.width($0, height: layout.picture) }
-            ?? DevicePictures.images(pictures).map { TurningPictures.width($0, height: layout.picture) } ?? layout.picture
+            ?? DevicePictures.images(pictures).map { StillPictures.width($0, height: layout.picture) } ?? layout.picture
     }
 
     /// The furthest a device reaches from the middle it turns about, either side, all the way round.
@@ -465,10 +421,14 @@ struct DeviceLayout {
     /// Extended, as the iPhone's are (see `ExpandedDeviceLayout`).
     var extended = false
     var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture : 0.464) }
-    var ring: CGFloat { height * (low ? 0.68 : 0.54) }
+    var ring: CGFloat { height * (extended ? ExpandedDeviceLayout.ring : low ? 0.68 : 0.54) }
+    /// As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
+    var ringLine: CGFloat { extended ? height * ExpandedDeviceLayout.ringLine : max(ring * (low ? 0.1 : 0.12), 2) }
+    /// The level in numbers, inside the ring.
+    var number: CGFloat { extended ? height * ExpandedDeviceLayout.number : ring * 0.42 }
     /// From the left end to the device, as it reaches furthest turning.
     var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
-    var trailing: CGFloat { LiveActivityView.concentric(ring, in: height) }
+    var trailing: CGFloat { extended ? height * ExpandedDeviceLayout.ringEdge : LiveActivityView.concentric(ring, in: height) }
 }
 
 /// AirPods or Beats arriving, in 3D, facing you as they arrive and turning steadily about their
@@ -616,7 +576,7 @@ private struct IslandCurve: CustomAnimation {
 
 /// A battery's ring arriving a moment after its device, and leaving a little ahead of it, as the
 /// iPhone's does beside AirPods.
-private struct RingArrival: ViewModifier {
+struct RingArrival: ViewModifier {
     let leaving: Bool
     @State private var arrived = false
 
@@ -628,14 +588,10 @@ private struct RingArrival: ViewModifier {
     }
 }
 
-/// A device arriving, as AirPods arrive in the Dynamic Island: its symbol turning in, a full turn and
-/// a little past, then settling face on.
-struct TurningSymbol: View {
+/// A device with no 3D model, as its symbol: flat, so it stays still.
+struct StillSymbol: View {
     let symbol: String
     let side: CGFloat
-    @State private var turn: Double = -200
-    @State private var shown = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Image(systemName: symbol)
@@ -643,23 +599,14 @@ struct TurningSymbol: View {
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.white)
             .frame(width: side, height: side)
-            .rotation3DEffect(.degrees(reduceMotion ? 0 : turn), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-            .scaleEffect(shown || reduceMotion ? 1 : 0.6)
-            .opacity(shown ? 1 : 0)
-            .onAppear {
-                withAnimation(.easeOut(duration: 0.25).delay(0.15)) { shown = true }
-                withAnimation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15)) { turn = 0 }
-            }
     }
 }
 
-/// Headphones arriving as macOS pictures them, AirPods Max, or AirPods when their 3D model can't
-/// be drawn: turning in together as one, then settling face on.
-struct TurningPictures: View {
+/// Headphones as macOS pictures them, AirPods Max, or AirPods when their 3D model can't be drawn:
+/// flat, so they stay still.
+struct StillPictures: View {
     let images: [NSImage]
     let height: CGFloat
-    @State private var arrived = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The earbuds overlap a little, as they're pictured side by side.
     static func overlap(_ height: CGFloat) -> CGFloat { height * 0.1 }
@@ -679,11 +626,6 @@ struct TurningPictures: View {
                     .frame(height: height)
             }
         }
-        .rotation3DEffect(.degrees(arrived || reduceMotion ? 0 : -200), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
-        .scaleEffect(arrived || reduceMotion ? 1 : 0.6)
-        .opacity(arrived ? 1 : 0)
-        .animation(.spring(response: 1.1, dampingFraction: 0.72).delay(0.15), value: arrived)
-        .onAppear { arrived = true }
     }
 }
 
@@ -692,16 +634,17 @@ struct TurningPictures: View {
 struct BatteryRing: View {
     let percent: Int
     let diameter: CGFloat
-    /// Its level in numbers in its middle, as for a device running low.
-    var showsPercent = false
+    let line: CGFloat
+    /// Its level in numbers in its middle, how large and how much of it shows: all of it for a device
+    /// running low or extended.
+    var number: CGFloat = 0
+    var numberShown: CGFloat = 0
     /// The iPhone's, as it shows AirPods' battery.
-    static let green = Color(red: 68 / 255, green: 231 / 255, blue: 114 / 255)
+    static let green = Color(.sRGB, red: 0x45 / 255, green: 0xE2 / 255, blue: 0x74 / 255)
 
     static func color(for percent: Int) -> Color { percent <= 20 ? .red : green }
 
     var body: some View {
-        // As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
-        let line = max(diameter * (showsPercent ? 0.1 : 0.12), 2)
         let color = Self.color(for: percent)
         ZStack {
             Circle().stroke(color.opacity(0.3), lineWidth: line)
@@ -709,12 +652,10 @@ struct BatteryRing: View {
                 .trim(from: 0, to: CGFloat(percent) / 100)
                 .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-            if showsPercent {
-                Text("\(percent)")
-                    .font(.system(size: diameter * 0.42, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(color)
-                    .minimumScaleFactor(0.6)
-            }
+            Text("\(percent)")
+                .font(.system(size: number, weight: .heavy))
+                .foregroundStyle(color)
+                .opacity(numberShown)
         }
         .padding(line / 2)
         .frame(width: diameter, height: diameter)
