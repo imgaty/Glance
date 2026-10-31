@@ -573,7 +573,7 @@ final class NotchController {
             return
         }
         // The pointer resting on the notch doesn't open it over what's just been announced.
-        if !alert.tall, model.state == .peek { openTask?.cancel() }
+        if model.state == .peek { openTask?.cancel() }
         let wing = SystemActivityView.wing(
             for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
         func announce() {
@@ -902,8 +902,8 @@ final class NotchController {
         case .again: ClockActivity.shared.repeatTimer()
         case .stop: ClockActivity.shared.dismissRing()
         case .lowPower:
-            LowPowerMode.shared.turnOn()
-            // Long enough to see it come on.
+            LowPowerMode.shared.toggle()
+            // Long enough to see it change.
             Activities.shared.keep(.lowBattery, for: 2.5)
         }
         model.hoveredButton = nil
@@ -979,7 +979,7 @@ final class NotchController {
         startPolling()
         // On an announcement, it only swells around it, or a device extends, and it opens once that's
         // over (see `show`).
-        if model.alert?.tall == false { return }
+        if model.alert != nil { return }
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).

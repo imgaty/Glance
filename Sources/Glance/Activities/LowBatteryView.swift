@@ -8,9 +8,9 @@
 import AppKit
 import SwiftUI
 
-/// Low Power Mode, which Low Battery's button turns on, as the iPhone's does: through macOS's own
-/// switch, the one Control Center and Battery settings use, which has no public way in, and read
-/// back from macOS. Should macOS not turn it on, Battery settings open, where it can be.
+/// Low Power Mode, which Low Battery's button turns on and off: through macOS's own switch, the one
+/// Control Center and Battery settings use, which has no public way in, and read back from macOS.
+/// Should macOS not change it, Battery settings open, where it can be.
 @MainActor
 final class LowPowerMode: ObservableObject {
     static let shared = LowPowerMode()
@@ -30,13 +30,13 @@ final class LowPowerMode: ObservableObject {
         isOn = on
     }
 
-    func turnOn() {
-        guard ActivityBench.scene == nil else { return bench(true) }
-        guard !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
-        Self.setPowerMode(1)
+    func toggle() {
+        guard !ActivityBench.fakesPower else { return bench(!isOn) }
+        let on = !ProcessInfo.processInfo.isLowPowerModeEnabled
+        Self.setPowerMode(on ? 1 : 0)
         Task {
             try? await Task.sleep(for: .seconds(2))
-            guard !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
+            guard ProcessInfo.processInfo.isLowPowerModeEnabled != on else { return }
             NSWorkspace.shared.open(Self.settings)
         }
     }
@@ -172,7 +172,8 @@ enum LowBatteryLayout {
 /// an offer to turn on Low Power Mode under it, below the camera, and the battery, large, in a
 /// capsule against the camera at the right, a ring pulsing around its level, settling from a
 /// reddish yellow into red; clicked, Low Power Mode comes on, everything turns green and stops
-/// pulsing, and it says so. With Reduce Motion on, it's red at once and doesn't pulse.
+/// pulsing, and it says so; clicked again, it goes off. With Reduce Motion on, it's red at once and
+/// doesn't pulse.
 struct LowBatteryView: View {
     let percent: Int
     let restingHeight: CGFloat
@@ -218,11 +219,13 @@ struct LowBatteryView: View {
             .fixedSize()
             .padding(.top, LowBatteryLayout.wordsTop(h))
             .padding(.leading, max(wing - lead, 0))
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            // As tall as it stands at rest, in the middle, as the capsule is, when it swells.
+            .frame(height: TimerLayout.tallHeight(h), alignment: .top)
             .accessibilityElement(children: .combine)
             capsule(h, on: on)
                 .reportsFrame(.lowPower)
-                .spokenButton(on ? Self.done : "Turn on Low Power Mode") { LowPowerMode.shared.turnOn() }
+                .spokenButton(on ? "Turn off Low Power Mode" : "Turn on Low Power Mode") { LowPowerMode.shared.toggle() }
                 .padding(.trailing, max(wing - gap - h * LowBatteryLayout.capsule.width, 0))
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }

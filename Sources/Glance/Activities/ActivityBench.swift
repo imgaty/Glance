@@ -21,9 +21,11 @@ final class ActivityBench {
         case airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
+        /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
+        case lowBatteryReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .headphones, .deviceBattery].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery].contains(self) }
     }
 
     /// The scene and its round's seconds, from the arguments Glance was started with.
@@ -42,6 +44,8 @@ final class ActivityBench {
     nonisolated static var scene: Scene? { chosen?.scene }
     /// What's shown is made up, rather than only alone.
     nonisolated static var fakes: Bool { scene != nil && scene != .airdropReal }
+    /// Low Power Mode is only said, and the Mac's stays as it is.
+    nonisolated static var fakesPower: Bool { scene != nil && scene != .lowBatteryReal }
     private var length: Double { Self.chosen?.seconds ?? 300 }
 
     /// Between one round and the next.
@@ -101,7 +105,7 @@ final class ActivityBench {
         case .stopwatch: await stopwatch()
         case .airplay: await airPlay()
         case .charging: await announce(Self.charging(), every: 6)
-        case .lowBattery: await announce(Self.lowBatteries(), every: 10)
+        case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
         case .deviceBattery: await announce(Self.deviceBatteries(), every: 6)
         }
@@ -208,7 +212,7 @@ final class ActivityBench {
     private static func lowBatteries() -> [@MainActor () async -> NotchAlert] {
         [20, 10, 5].map { percent in
             {
-                LowPowerMode.shared.bench(false)
+                if fakesPower { LowPowerMode.shared.bench(false) }
                 return BatteryWatch.lowBattery(BatteryWatch.Reading(percent: percent, onPower: false, charging: false))
             }
         }

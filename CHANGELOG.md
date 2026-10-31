@@ -18,6 +18,7 @@
   right, the battery in a capsule, a ring pulsing around its level, pulsing
   from a reddish yellow into a soft red as it arrives. Clicking the capsule
   turns on Low Power Mode: it turns green, and it says `Low Power Mode On`.
+  Clicking it again turns it off.
 - Added AirPods and Beats announced as they connect, as the iPhone shows them:
   in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them and others as their symbol, both still,

@@ -72,9 +72,10 @@ open build/Glance.app --args --bench airdrop
 ```
 
 The scenes are `airdrop`, `airdropSend`, `airdropReal`, `timer`, `stopwatch`,
-`airplay`, `charging`, `lowBattery`, `headphones` and `deviceBattery`. A number
-after the name is how long each round lasts, in seconds, 300 unless said. Open
-Glance again without it to go back.
+`airplay`, `charging`, `lowBattery`, `lowBatteryReal`, `headphones` and
+`deviceBattery`. In `lowBatteryReal` the button changes the Mac's Low Power
+Mode. A number after the name is how long each round lasts, in seconds, 300
+unless said. Open Glance again without it to go back.
 
 Alternatively, right-click the notch and choose a scene from
 **Try a Live Activity**, or `None` to go back.
