@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 30 October 2026`
+`Created: 11 October 2026` | `Last updated: 31 October 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -396,7 +396,11 @@ once you accept it.
 
 Hover over or click the notch while AirDrop has it, or click its bubble, and it
 opens to a picture of the file, who it's from, and the ring around a button:
-click it to stop the transfer. Turn it off with `AirDrop` in
+click it to stop the transfer.
+
+A file you send shows the same way, once it's accepted, the ring filling as it
+goes out. Opened, it says who it's going to while macOS's AirDrop window is
+open, and otherwise the file's name. Turn both off with `AirDrop` in
 **Settings > Live Activities**.
 
 ### AirPlay
@@ -491,7 +495,7 @@ ellipsis instead of scrolling.
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay |
-| `AirDrop` | Shows files coming in over AirDrop, as they come |
+| `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
 | `Clock` | **Open Clock** opens the Clock app, where timers and the stopwatch start |
 | `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
 | `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |

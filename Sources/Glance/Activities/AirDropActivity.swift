@@ -8,13 +8,18 @@
 import AppKit
 import SwiftUI
 
-/// A file coming in over AirDrop: who sent it, a picture of it, and how far along it is.
+/// A file coming in or going out over AirDrop: who with, a picture of it, and how far along it is.
 struct AirDropShown: Equatable {
     let id: String
     /// The sender's name, or their device's when it's one of their own.
     let sender: String
-    let preview: NSImage?
+    var preview: NSImage?
     var fraction: Double
+    /// Going out from this Mac, rather than coming in.
+    var sending = false
+    /// Going out: the device it's going to, as far as that's known, and the file.
+    var recipient: String?
+    var file: String?
 
     var done: Bool { fraction >= 1 }
 }
@@ -36,8 +41,16 @@ final class AirDropWatch: NSObject, ObservableObject {
     private var previews: [String: NSImage] = [:]
     private var ticker: Timer?
     private var finishing: Task<Void, Never>?
+    private let sends = AirDropSendWatch()
+    /// What's going out, which shows when nothing's coming in.
+    private var outgoing: AirDropShown?
 
     func start() {
+        sends.changed = { [weak self] in
+            self?.outgoing = $0
+            self?.refresh()
+        }
+        sends.start()
         guard observer == nil,
             dlopen("/System/Library/PrivateFrameworks/Sharing.framework/Sharing", RTLD_LAZY) != nil,
             let type = NSClassFromString("SFAirDropTransferObserver") as? NSObject.Type
@@ -73,7 +86,8 @@ final class AirDropWatch: NSObject, ObservableObject {
 
     /// Stops the one showing, as its notice's Cancel does.
     func stop() {
-        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped() }
+        guard !ActivityBench.fakes else { return ActivityBench.shared.stopped() }
+        if transfer?.sending == true { return sends.stop() }
         guard let id = transfer?.id, let shown = transfers[id] else { return }
         if let cancel = shown.value(forKey: "cancelAction") as? NSObject, cancel.responds(to: NSSelectorFromString("triggerAction")) {
             cancel.perform(NSSelectorFromString("triggerAction"))
@@ -92,12 +106,12 @@ final class AirDropWatch: NSObject, ObservableObject {
     /// a moment full; gone once cancelled or failed.
     private func refresh() {
         let enabled = UserDefaults.standard.bool(forKey: Preferences.activityAirDrop)
-        let next = enabled ? transfers.values.lazy.compactMap(shown).first : nil
+        let next = enabled ? transfers.values.lazy.compactMap(shown).first ?? outgoing : nil
         if next?.id != transfer?.id {
             finishing?.cancel()
             finishing = nil
         }
-        if let next, next.done {
+        if let next, next.done, !next.sending {
             if transfer?.done != true { transfer = next }
             finishing =
                 finishing
@@ -113,11 +127,11 @@ final class AirDropWatch: NSObject, ObservableObject {
             transfer = next
         }
         // Its progress read a few times a second while it comes in; macOS says less often.
-        if transfer != nil, ticker == nil {
+        if let transfer, !transfer.sending, ticker == nil {
             let ticker = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.refresh() } }
             RunLoop.main.add(ticker, forMode: .common)
             self.ticker = ticker
-        } else if transfer == nil {
+        } else if transfer?.sending != false {
             ticker?.invalidate()
             ticker = nil
         }
@@ -260,9 +274,15 @@ struct ExpandedAirDropView: View {
     let width: CGFloat
     @State private var hovering = false
 
-    static func from(_ shown: AirDropShown) -> String { "From \(shown.sender)" }
+    /// Who it's with; going out, the file, until macOS's window says who it's going to.
+    static func from(_ shown: AirDropShown) -> String {
+        guard shown.sending else { return "From \(shown.sender)" }
+        return shown.recipient.map { "To \($0)" } ?? shown.file ?? "Sending"
+    }
+
     static func spoken(_ shown: AirDropShown) -> String {
-        "AirDrop from \(shown.sender), \(Int((shown.fraction * 100).rounded())) percent"
+        let who = shown.sending ? shown.recipient.map { "to \($0)" } ?? "sending" : "from \(shown.sender)"
+        return "AirDrop \(who), \(Int((shown.fraction * 100).rounded())) percent"
     }
 
     var body: some View {

@@ -18,7 +18,9 @@ final class ActivityBench {
     static let shared = ActivityBench()
 
     enum Scene: String, CaseIterable {
-        case airdrop, timer, stopwatch, airplay, charging, lowBattery, headphones, accessories, deviceBattery
+        case airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, accessories, deviceBattery
+        /// AirDrop alone, nothing made up: for real files, coming in or going out.
+        case airdropReal
     }
 
     /// The scene and its round's seconds, from the arguments Glance was started with.
@@ -35,6 +37,8 @@ final class ActivityBench {
         Bundle.main.object(forInfoDictionaryKey: "GlanceSourceDirectory") == nil ? nil : parse(CommandLine.arguments)
 
     nonisolated static var scene: Scene? { chosen?.scene }
+    /// What's shown is made up, rather than only alone.
+    nonisolated static var fakes: Bool { scene != nil && scene != .airdropReal }
     private var length: Double { Self.chosen?.seconds ?? 300 }
 
     /// Between one round and the next.
@@ -51,6 +55,7 @@ final class ActivityBench {
             Preferences.activityCharging, Preferences.activityLowBattery, Preferences.activityDevices, Preferences.activityAirDrop,
             Preferences.activityClockTimers, Preferences.activityStopwatch,
         ] { off[key] = false }
+        if Self.scene == .airdropReal { off[Preferences.activityAirDrop] = true }
         Self.keep(off)
     }
 
@@ -75,7 +80,9 @@ final class ActivityBench {
 
     private func play(_ scene: Scene) async {
         switch scene {
-        case .airdrop: await airDrop()
+        case .airdropReal: break
+        case .airdrop: await airDrop(sending: false)
+        case .airdropSend: await airDrop(sending: true)
         case .timer: await timer()
         case .stopwatch: await stopwatch()
         case .airplay: await airPlay()
@@ -100,8 +107,8 @@ final class ActivityBench {
 
     // MARK: Activities that stay
 
-    /// A file coming in, its ring filling over the round; stopped, the next one starts.
-    private func airDrop() async {
+    /// A file coming in or going out, its ring filling over the round; stopped, the next one starts.
+    private func airDrop(sending: Bool) async {
         let picture = Self.photo()
         let watch = AirDropWatch.shared
         while !Task.isCancelled {
@@ -110,7 +117,8 @@ final class ActivityBench {
             var fraction = 0.0
             while !ended, fraction < 1, !Task.isCancelled {
                 fraction = min(Date.now.timeIntervalSince(start) / length, 1)
-                watch.bench(AirDropShown(id: id, sender: "iPhone", preview: picture, fraction: fraction))
+                let recipient = sending ? "iPhone" : nil
+                watch.bench(AirDropShown(id: id, sender: "iPhone", preview: picture, fraction: fraction, sending: sending, recipient: recipient))
                 await wait(0.1)
             }
             // In, it shows a moment full.

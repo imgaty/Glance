@@ -690,3 +690,38 @@ struct ActivityBenchTests {
         #expect(ActivityBench.parse(["Glance", "--bench", "player"]) == nil)
     }
 }
+
+/// A file going out over AirDrop, as how far the service sending it has read.
+@Suite("AirDrop sending")
+struct AirDropSendingTests {
+    private func file(_ path: String, at offset: Int64, of size: Int64 = 1000, descriptor: Int32 = 7) -> AirDropSendWatch.OpenFile {
+        AirDropSendWatch.OpenFile(descriptor: descriptor, path: path, offset: offset, size: size)
+    }
+
+    @Test("What's sent is the file read on from a moment ago, not one that sat still or macOS's own")
+    func picksTheFile() {
+        let movie = "/Users/gaty/Downloads/movie.mov"
+        #expect(AirDropSendWatch.sent(in: [file(movie, at: 200)], before: [file(movie, at: 100)])?.path == movie)
+        #expect(AirDropSendWatch.sent(in: [file(movie, at: 100)], before: [file(movie, at: 100)]) == nil)
+        #expect(AirDropSendWatch.sent(in: [file(movie, at: 100)], before: []) == nil)
+        #expect(AirDropSendWatch.sent(in: [file("/System/Library/thing", at: 200)], before: [file("/System/Library/thing", at: 100)]) == nil)
+        #expect(AirDropSendWatch.sent(in: [file(movie, at: 200)], before: [file(movie, at: 100, descriptor: 8)]) == nil)
+    }
+
+    @Test("How far along is how far it's been read, between empty and full")
+    func fraction() {
+        #expect(AirDropSendWatch.fraction(of: file("/a", at: 250)) == 0.25)
+        #expect(AirDropSendWatch.fraction(of: file("/a", at: 2000)) == 1)
+        #expect(AirDropSendWatch.fraction(of: file("/a", at: 0, of: 0)) == 0)
+    }
+
+    @Test("It says who it's going to once that's known, and until then the file")
+    func words() {
+        var shown = AirDropShown(id: "1", sender: "", preview: nil, fraction: 0.4, sending: true, file: "movie.mov")
+        #expect(ExpandedAirDropView.from(shown) == "movie.mov")
+        #expect(ExpandedAirDropView.spoken(shown) == "AirDrop sending, 40 percent")
+        shown.recipient = "iCarly"
+        #expect(ExpandedAirDropView.from(shown) == "To iCarly")
+        #expect(ExpandedAirDropView.spoken(shown) == "AirDrop to iCarly, 40 percent")
+    }
+}
