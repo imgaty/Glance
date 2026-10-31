@@ -365,10 +365,7 @@ final class NotchModel: ObservableObject {
             case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4, resting + Self.peekSwell + pull)
             case .open where expanded == .airdrop:
                 (
-                    AirDropLayout.width(
-                        for: airdrop ?? AirDropShown(id: "", sender: "", preview: nil, fraction: 0), restingHeight: closedSize.height,
-                        camera: camera)
-                        + pull * 0.35,
+                    AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35,
                     TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where expanded == .airplay:
@@ -761,8 +758,8 @@ struct NotchView: View {
     @ViewBuilder private func expandedAirDrop(shown: Bool) -> some View {
         if model.expanded == .airdrop, let transfer = model.airdrop {
             let h = model.closedSize.height
-            let width = AirDropLayout.width(for: transfer, restingHeight: h, camera: model.camera)
-            ExpandedAirDropView(shown: transfer, restingHeight: h, camera: model.camera, width: width)
+            let width = AirDropLayout.width(restingHeight: h, camera: model.camera)
+            ExpandedAirDropView(shown: transfer, restingHeight: h, width: width)
                 .modifier(PageFade(hidden: !shown))
                 .allowsHitTesting(places == nil && shown)
         }

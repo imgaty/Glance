@@ -557,12 +557,11 @@ struct ActivitiesTests {
         model.expanded = .airdrop
         model.airdrop = nil
         #expect(model.expandedGone)
-        // Opened, as tall as the Alarm, the picture and the words at one end, the ring at the other,
-        // the camera between them.
-        let left =
-            AirDropLayout.thumbEdge(32) + 32 * (AirDropLayout.thumb + AirDropLayout.gap) + AirDropLayout.words(for: transfer, 32)
-            + LiveActivityView.cameraGap
-        #expect(AirDropLayout.width(for: transfer, restingHeight: 32, camera: 185) == 185 + left * 2)
+        // Opened, as tall as the Alarm, just wide enough for the picture and AirDrop's name beside the
+        // camera; who it's from runs on under the camera, up to the ring.
+        let width = AirDropLayout.width(restingHeight: 32, camera: 185)
+        #expect((width - 185) / 2 > AirDropLayout.wordsStart(32))
+        #expect(AirDropLayout.wordsStart(32) + AirDropLayout.wordsRoom(32, width: width) > (width + 185) / 2)
         #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
     }
 

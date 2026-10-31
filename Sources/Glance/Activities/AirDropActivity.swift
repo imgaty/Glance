@@ -180,29 +180,32 @@ enum AirDropLayout {
     static let bigRing: CGFloat = 1.34
     static let bigRingLine: CGFloat = 0.127
     static let stop: CGFloat = 0.43
-    /// Who it's from runs this far before it's cut short.
-    static let wordsLimit: CGFloat = 7
 
     /// The picture and the ring as far in from their ends as from the top and bottom.
     static func thumbEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * thumb, in: TimerLayout.tallHeight(h)) }
     static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * bigRing, in: TimerLayout.tallHeight(h)) }
 
-    /// Opened: the picture and the words at the left end, the ring at the right, the camera between
-    /// them, each side as wide as the wider.
+    /// Opened: just wide enough for the picture and AirDrop's name on one side of the camera, against
+    /// it, and the same room on the other for the ring.
     @MainActor
-    static func width(for shown: AirDropShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
+    static func width(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let left = thumbEdge(h) + h * (thumb + self.gap) + words(for: shown, h) + gap
+        let left = wordsStart(h) + titleWidth(h) + gap
         let right = gap + h * bigRing + ringEdge(h)
         return camera + max(left, right) * 2
     }
 
+    /// Where the words start, from the left end.
+    static func wordsStart(_ h: CGFloat) -> CGFloat { thumbEdge(h) + h * (thumb + gap) }
+
+    /// As far as who it's from can run, under the camera, before the ring.
+    static func wordsRoom(_ h: CGFloat, width: CGFloat) -> CGFloat {
+        max(width - wordsStart(h) - ringEdge(h) - h * (bigRing + gap), 0)
+    }
+
     @MainActor
-    static func words(for shown: AirDropShown, _ h: CGFloat) -> CGFloat {
-        func width(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
-            ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * size, weight: weight)]).width)
-        }
-        return min(max(width("AirDrop", title, .semibold), width(ExpandedAirDropView.from(shown), subtitle, .medium)), h * wordsLimit)
+    private static func titleWidth(_ h: CGFloat) -> CGFloat {
+        ceil(("AirDrop" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: h * title, weight: .semibold)]).width)
     }
 }
 
@@ -254,8 +257,6 @@ struct AirDropMark: View {
 struct ExpandedAirDropView: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
-    /// The camera housing's width, which the row goes either side of.
-    let camera: CGFloat
     let width: CGFloat
     @State private var hovering = false
 
@@ -278,15 +279,14 @@ struct ExpandedAirDropView: View {
             }
             .lineLimit(1)
             .truncationMode(.tail)
-            .frame(maxWidth: AirDropLayout.words(for: shown, h), alignment: .leading)
+            .frame(maxWidth: AirDropLayout.wordsRoom(h, width: width), alignment: .leading)
         }
         .padding(.leading, AirDropLayout.thumbEdge(h))
         let right = stopButton(h).padding(.trailing, AirDropLayout.ringEdge(h))
-        let side = max((width - camera) / 2, 0)
-        HStack(spacing: 0) {
-            left.frame(width: side, alignment: .leading)
-            Color.clear.frame(width: camera)
-            right.frame(width: side, alignment: .trailing)
+        // AirDrop's name stops at the camera; who it's from, below it, runs on underneath.
+        ZStack {
+            left.frame(maxWidth: .infinity, alignment: .leading)
+            right.frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(width: width, height: TimerLayout.tallHeight(h))
         .accessibilityElement(children: .contain)
