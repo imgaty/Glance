@@ -487,6 +487,7 @@ ellipsis instead of scrolling.
 | `Keep what you copy` | Keeps what you copy in the tray |
 | `Keep screenshots and screen recordings` | Adds each one to the tray |
 | `Keep them for` | `30 Minutes`, `8 Hours`, or `7 Days` |
+| `When dragged out` | `Keep in Tray`, or `Remove from Tray` once something takes the item; ⌘Z brings it back for a minute |
 | `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
 | `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |

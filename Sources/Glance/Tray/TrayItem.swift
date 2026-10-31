@@ -74,6 +74,24 @@ struct TrayItem: Codable, Identifiable, Equatable {
     }
 }
 
+/// What happens to an item dragged out of the tray and dropped somewhere that takes it. Taken out, ⌘Z
+/// brings it back for a minute, as for anything taken out of the tray.
+enum TrayDragOut: String, CaseIterable, Identifiable {
+    case keep, remove
+
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .keep: "Keep in Tray"
+        case .remove: "Remove from Tray"
+        }
+    }
+
+    static var current: TrayDragOut {
+        UserDefaults.standard.string(forKey: Preferences.trayDragOut).flatMap(TrayDragOut.init) ?? .keep
+    }
+}
+
 /// How long copies stay in the tray: Spotlight's own choices for its clipboard history.
 enum ClipboardKeep: String, CaseIterable, Identifiable {
     case halfHour, eightHours, week

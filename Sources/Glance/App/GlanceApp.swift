@@ -180,6 +180,7 @@ enum Preferences {
             tray: true,
             trayClipboard: true,
             trayClipboardKeep: ClipboardKeep.eightHours.rawValue,
+            trayDragOut: TrayDragOut.keep.rawValue,
             trayScreenshots: true,
             activityCharging: true,
             activityLowBattery: true,
@@ -273,6 +274,7 @@ enum Preferences {
     static let tray = "tray"
     static let trayClipboard = "trayClipboard"
     static let trayClipboardKeep = "trayClipboardKeep"
+    static let trayDragOut = "trayDragOut"
     static let trayScreenshots = "trayScreenshots"
     /// Apps whose copies are never kept, comma separated (see TrayApps).
     static let trayIgnoredApps = "trayIgnoredApps"

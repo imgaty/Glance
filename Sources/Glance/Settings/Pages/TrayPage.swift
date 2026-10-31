@@ -14,6 +14,7 @@ struct TrayPage: View {
     @AppStorage(Preferences.tray) private var trayOn = true
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
     @AppStorage(Preferences.trayClipboardKeep) private var keep = ClipboardKeep.eightHours
+    @AppStorage(Preferences.trayDragOut) private var dragOut = TrayDragOut.keep
     @AppStorage(Preferences.trayScreenshots) private var keepsScreenshots = true
     @AppStorage(Preferences.trayIgnoredApps) private var ignoredApps = ""
     @ObservedObject private var tray = Tray.shared
@@ -40,6 +41,9 @@ struct TrayPage: View {
                     ForEach(ClipboardKeep.allCases) { Text($0.title).tag($0) }
                 }
                 .disabled(!keepsCopies && !keepsScreenshots)
+                Picker("When dragged out", selection: $dragOut) {
+                    ForEach(TrayDragOut.allCases) { Text($0.title).tag($0) }
+                }
                 if keepsCopies, tray.pasteBlocked {
                     CenteredRow {
                         Text("Glance can't see what you copy")

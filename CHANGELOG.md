@@ -198,6 +198,8 @@
 
 ### Tray
 
+- Added `When dragged out` in **Settings > Tray**, to keep an item in the tray
+  or take it out once something takes it.
 - Added screen recordings to the tray, which join as soon as they're saved, as
   screenshots do.
 

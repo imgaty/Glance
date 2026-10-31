@@ -33,6 +33,8 @@ final class TileInteractionView: NSView, NSDraggingSource {
     var live = false
     private var downAt: NSPoint?
     private var dragged = false
+    /// What's on its way out, to take out of the tray once it lands, if that's what's chosen.
+    private var goingOut: Set<UUID> = []
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -54,6 +56,7 @@ final class TileInteractionView: NSView, NSDraggingSource {
         if !tray.selection.contains(item.id) { tray.deselect() }
         var items: [NSDraggingItem] = []
         let side = Shelf.icon
+        goingOut = Set(tray.targets(of: item).map(\.id))
         for target in tray.targets(of: item) {
             let picture = TrayThumbnails.cached(target) ?? TileDrag.picture(for: target, in: tray)
             for writer in TileDrag.writers(for: target, in: tray) {
@@ -99,6 +102,9 @@ final class TileInteractionView: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         tray?.draggingOut = false
+        // Only when something took it: let go anywhere else, it stays.
+        if !operation.isEmpty, TrayDragOut.current == .remove { tray?.remove(goingOut) }
+        goingOut = []
     }
 
     // MARK: The menu
