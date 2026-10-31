@@ -420,7 +420,9 @@ struct DeviceLayout {
     var low = false
     /// Extended, as the iPhone's are (see `ExpandedDeviceLayout`).
     var extended = false
-    var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture : 0.464) }
+    /// How much of its usual height a device takes, extended, to fit its place.
+    var fit: CGFloat = 1
+    var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture * fit : 0.464) }
     var ring: CGFloat { extended ? TimerLayout.content(height) : height * (low ? 0.68 : 0.54) }
     /// As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
     var ringLine: CGFloat { extended ? height * ExpandedDeviceLayout.ringLine : max(ring * (low ? 0.1 : 0.12), 2) }

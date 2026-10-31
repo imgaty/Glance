@@ -582,9 +582,8 @@ final class NotchController {
                 model.alertWing = wing
                 model.alert = alert
                 // Extended already, the next device takes its own width; anything else folds.
-                if case .device(_, let device, let pictures, _) = alert.content {
-                    model.alertExtendedWing = ExpandedDeviceLayout.wing(
-                        model: device, pictures: pictures, restingHeight: model.closedSize.height)
+                if case .device = alert.content {
+                    model.alertExtendedWing = ExpandedDeviceLayout.wing(restingHeight: model.closedSize.height)
                 } else {
                     model.alertExtended = false
                 }
@@ -989,8 +988,8 @@ final class NotchController {
     /// A device being announced extends to say what it is, as the iPhone's AirPods do, for as long
     /// again.
     private func extend(_ alert: NotchAlert) {
-        guard case .device(_, let device, let pictures, _) = alert.content else { return }
-        model.alertExtendedWing = ExpandedDeviceLayout.wing(model: device, pictures: pictures, restingHeight: model.closedSize.height)
+        guard case .device = alert.content else { return }
+        model.alertExtendedWing = ExpandedDeviceLayout.wing(restingHeight: model.closedSize.height)
         model.extend()
         Activities.shared.keep(alert.kind, for: alert.seconds)
     }

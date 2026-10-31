@@ -228,6 +228,7 @@ final class ActivityBench {
                 {
                     _ = await DeviceTurn.prepare(model)
                     let name = model.rawValue.replacingOccurrences(of: "-", with: " ").capitalized
+                        .replacingOccurrences(of: "Airpods", with: "AirPods")
                     return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count])
                 }
             }
@@ -239,7 +240,11 @@ final class ActivityBench {
                 return DeviceWatch.alert(name: "AirPods", symbol: symbol, pictures: DevicePictures.names(product: product), battery: level)
             }
         }
-        return clips(airPods) + pictured + clips(beats)
+        // Each kind in turn, the widest first, so that all of them come round soon.
+        let order = beats.reversed().enumerated().flatMap { index, model in
+            index < airPods.count ? [model, airPods[index]] : [model]
+        }
+        return pictured + clips(order)
     }
 
     private static func deviceBatteries() -> [@MainActor () async -> NotchAlert] {
