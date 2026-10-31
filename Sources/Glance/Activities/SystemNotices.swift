@@ -11,9 +11,9 @@ import ApplicationServices
 /// macOS's own notifications for what the notch says, found in Notification Center through
 /// Accessibility, to be answered or taken away as they show, so nothing is said twice: Clock's
 /// alert for a timer that's done, Control Center's Low Battery, and AirPods' own when they run low;
-/// and Bluetooth's banner at the top of the screen for a device connecting or running low, hidden,
-/// as is the banner under the menu bar for AirPods doing the same. macOS's settings for them stay as
-/// they are; without Accessibility, they show as before.
+/// and Bluetooth's banner at the top of the screen for a device connecting or running low, hidden
+/// (see `MenuBarBanners` for AirPods' banner). macOS's settings for them stay as they are; without
+/// Accessibility, they show as before.
 @MainActor
 enum SystemNotices {
     /// The alerts and banners showing from an app, by the name it goes by in the system's language,
@@ -92,89 +92,6 @@ enum SystemNotices {
         }
     }
 
-    // MARK: Banners under the menu bar
-
-    /// The menu bar's own app, which shows Control Center's banners in windows of its own.
-    private nonisolated static let menuBarAgent = "com.apple.MenuBarAgent"
-    /// The one for AirPods, by the name Accessibility knows it by: connecting, running low, or
-    /// offering the sound back from another device.
-    private nonisolated static let airPodsBanner = "smart-routing-system-banner"
-
-    private static var bannerWatch: (app: AXUIElement, pid: pid_t, observer: AXObserver)?
-    private static var bannerShown: () -> Void = {}
-    /// The last one seen: each is told of more than once as it's made.
-    private static var lastBanner: AXUIElement?
-
-    /// Follows the menu bar, for AirPods' banner, each as it's made: told at once, unlike the banners
-    /// looked for above, so it's gone before it shows. `shown` is called for each.
-    static func watchBanners(shown: @escaping () -> Void) {
-        bannerShown = shown
-        followMenuBar()
-    }
-
-    /// With Accessibility allowed since, or the menu bar started again, it's followed anew.
-    static func followMenuBar() {
-        guard AXIsProcessTrusted(),
-            let agent = NSRunningApplication.runningApplications(withBundleIdentifier: menuBarAgent).first?.processIdentifier,
-            agent != bannerWatch?.pid
-        else { return }
-        var made: AXObserver?
-        let told: AXObserverCallback = { _, _, _, _ in MainActor.assumeIsolated { SystemNotices.menuBarChanged() } }
-        guard AXObserverCreate(agent, told, &made) == .success, let observer = made else { return }
-        let app = AXUIElementCreateApplication(agent)
-        AXUIElementSetMessagingTimeout(app, 0.3)
-        AXObserverAddNotification(observer, app, kAXCreatedNotification as CFString, nil)
-        AXObserverAddNotification(observer, app, kAXWindowCreatedNotification as CFString, nil)
-        CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes)
-        bannerWatch = (app, agent, observer)
-    }
-
-    /// Its banner is taken off the screen as it's made, before there's anything to read in it, and
-    /// put back unless it turns out to be one the notch says too. What's reconnected as the Mac
-    /// wakes isn't announced, so it stays.
-    private static func menuBarChanged() {
-        guard let app = bannerWatch?.app,
-            let banner = (value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).first(where: { value($0, "AXIdentifier") as? String == airPodsBanner }),
-            lastBanner.map({ !CFEqual($0, banner) }) ?? true
-        else { return }
-        lastBanner = banner
-        defer { bannerShown() }
-        let defaults = UserDefaults.standard
-        guard defaults.bool(forKey: Preferences.notchEnabled), defaults.bool(forKey: Preferences.activityDevices), !Activities.shared.settling,
-            let place = position(of: banner)
-        else { return }
-        // Past every display.
-        let away = CGPoint(x: (NSScreen.screens.map(\.frame.minX).min() ?? 0) - 4000, y: -4000)
-        guard move(banner, to: away) else { return }
-        Task {
-            for _ in 0..<25 {
-                if showsBattery(findAll(in: banner) { value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }.compactMap { value($0, kAXValueAttribute) as? String }) {
-                    return
-                }
-                try? await Task.sleep(for: .milliseconds(20))
-            }
-            move(banner, to: place)
-        }
-    }
-
-    /// AirPods connecting or running low show their level, which is what the notch says; offering
-    /// the sound back, they have nothing to tell and something to press.
-    nonisolated static func showsBattery(_ words: [String]) -> Bool {
-        words.contains { word in !word.isEmpty && word.allSatisfy { $0.isNumber || $0 == "%" } }
-    }
-
-    private static func position(of element: AXUIElement) -> CGPoint? {
-        guard let found = value(element, kAXPositionAttribute), CFGetTypeID(found) == AXValueGetTypeID() else { return nil }
-        var point = CGPoint.zero
-        return AXValueGetValue(found as! AXValue, .cgPoint, &point) ? point : nil
-    }
-
-    @discardableResult private static func move(_ element: AXUIElement, to point: CGPoint) -> Bool {
-        var point = point
-        guard let place = AXValueCreate(.cgPoint, &point) else { return false }
-        return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, place) == .success
-    }
-
     /// AirPods' own notification that they need charging, in Notification Center, taken away.
     static func closeAirPodsReminder() {
         let bundle = URL(fileURLWithPath: "/System/Library/UserNotifications/Bundles/com.apple.AudioAccessoryUserNotifications.bundle")
@@ -192,12 +109,12 @@ enum SystemNotices {
         Bundle(url: app)?.localizedString(forKey: key, value: key, table: table) ?? key
     }
 
-    static func value(_ element: AXUIElement, _ name: String) -> AnyObject? {
+    nonisolated static func value(_ element: AXUIElement, _ name: String) -> AnyObject? {
         var value: AnyObject?
         return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
     }
 
-    static func findAll(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> [AXUIElement] {
+    nonisolated static func findAll(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> [AXUIElement] {
         (match(element) ? [element] : []) + (value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).flatMap { findAll(in: $0, where: match) }
     }
 }

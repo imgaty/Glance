@@ -665,10 +665,10 @@ struct ActivitiesTests {
 struct SystemBannersTests {
     @Test("AirPods connecting or running low show their level; a device's name or an offer doesn't count")
     func showsBattery() {
-        #expect(SystemNotices.showsBattery(["Airpods Pro", "88", "Connected"]))
-        #expect(SystemNotices.showsBattery(["AirPods 4", "9%", "Low Battery"]))
-        #expect(!SystemNotices.showsBattery(["AirPods 4", "Moved to iPhone"]))
-        #expect(!SystemNotices.showsBattery(["", "Airpods Pro"]))
-        #expect(!SystemNotices.showsBattery([]))
+        #expect(MenuBarBanners.showsBattery(["Airpods Pro", "88", "Connected"]))
+        #expect(MenuBarBanners.showsBattery(["AirPods 4", "9%", "Low Battery"]))
+        #expect(!MenuBarBanners.showsBattery(["AirPods 4", "Moved to iPhone"]))
+        #expect(!MenuBarBanners.showsBattery(["", "Airpods Pro"]))
+        #expect(!MenuBarBanners.showsBattery([]))
     }
 }
