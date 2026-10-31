@@ -15,10 +15,10 @@
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
   place of macOS's own notification, which is taken away as it shows. As on
   the iPhone, it grows as tall as the Alarm, its level at the left and, at the
-  right, the battery in a capsule, a ring pulsing around its level, pulsing
-  from a reddish yellow into a soft red as it arrives. Clicking the capsule
-  turns on Low Power Mode: it turns green, and it says `Low Power Mode On`.
-  Clicking it again turns it off.
+  right, the battery in a capsule, a ripple running out of its level every two
+  seconds. Clicking the capsule turns on Low Power Mode: it turns yellow, the
+  ripple stops, and it says `Low Power Mode enabled`. Clicking it again turns
+  it off.
 - Added AirPods and Beats announced as they connect, as the iPhone shows them:
   in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them and others as their symbol, both still,

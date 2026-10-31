@@ -528,22 +528,23 @@ struct ActivitiesTests {
         // The capsule as far in from the end as from the top and bottom.
         let edge = LowBatteryLayout.edge(h)
         #expect(abs(edge * 2 + h * LowBatteryLayout.capsule.height - TimerLayout.tallHeight(h)) < 0.01)
-        // Each wing as wide as the level or the capsule needs against the camera, whichever is wider.
-        let gap = LiveActivityView.cameraGap
-        let level = LowBatteryLayout.width(LowBatteryView.title(10))
+        // Each wing as wide as the capsule needs against the camera, or the words beside it.
+        let right = h * LowBatteryLayout.capsule.width + edge
+        let words = LowBatteryLayout.width(LowBatteryView.offer)
         let wing = SystemActivityView.wing(for: alert, restingHeight: h, closedWidth: 185)
-        #expect(wing == max(LiveActivityView.textEdge(restingHeight: h) + level + gap, gap + h * LowBatteryLayout.capsule.width + edge))
+        #expect(wing == max(LiveActivityView.cameraGap + right, (h * LowBatteryLayout.wordsEdge + words + h * LowBatteryLayout.wordsGap + right - 185) / 2))
         #expect(wing < h * 3)
-        // The offer, under the camera, stays clear of the capsule.
-        let offer = LowBatteryLayout.width(LowBatteryView.offer)
-        let lead = LowBatteryLayout.lead(percent: 10, restingHeight: h, closedWidth: 185)
-        #expect(-lead + offer + h * LowBatteryLayout.wordsGap <= 185 + gap)
         // Its letters start just below the camera.
         #expect(LowBatteryLayout.wordsTop(h) > 0)
-        // Arriving, it settles from its reddish yellow into red, easing in and out.
-        #expect(LowBatteryView.warming(after: 0) == 0)
-        #expect(LowBatteryView.warming(after: LowBatteryLayout.warmUp / 2) == 0.5)
-        #expect(LowBatteryView.warming(after: LowBatteryLayout.warmUp * 2) == 1)
+        // A ripple every two seconds: palest early on, and the line gone before the next.
+        #expect(abs(LowBatteryLayout.rippleTime(after: 2) - LowBatteryLayout.rippleTime(after: 0)) < 0.001)
+        #expect(LowBatteryLayout.along(LowBatteryLayout.pale, at: 0.4) == 1)
+        #expect(LowBatteryLayout.along(LowBatteryLayout.pale, at: 1.8) == 0)
+        #expect(LowBatteryLayout.along(LowBatteryLayout.line, at: 1.8) == 0)
+        // It starts around the level and ends a circle.
+        let (start, end) = (LowBatteryLayout.along(LowBatteryLayout.across, at: 0), LowBatteryLayout.along(LowBatteryLayout.up, at: 0))
+        #expect(start < end)
+        #expect(LowBatteryLayout.along(LowBatteryLayout.across, at: 2) == LowBatteryLayout.along(LowBatteryLayout.up, at: 2))
         // A device running low has a larger ring, for its level in numbers inside.
         #expect(DeviceLayout(height: h, low: true).ring > DeviceLayout(height: h).ring)
     }

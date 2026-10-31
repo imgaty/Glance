@@ -100,7 +100,7 @@ final class BatteryWatch {
     }
 
     static func lowBattery(_ reading: Reading) -> NotchAlert {
-        NotchAlert(kind: .lowBattery, content: .lowBattery(percent: reading.percent), spoken: "Low battery, \(reading.percent) percent", seconds: 6)
+        NotchAlert(kind: .lowBattery, content: .lowBattery(percent: reading.percent), spoken: "Low battery, \(reading.percent) percent", seconds: 5.6)
     }
 
     /// The Mac's own battery, if it has one.

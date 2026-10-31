@@ -68,14 +68,12 @@ struct SystemActivityView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .lowBattery(let percent) = alert.content {
-                LowBatteryView(
-                    percent: percent, restingHeight: restingHeight, wing: wing, closedWidth: closedWidth, hovered: hoveredButton == .lowPower
-                )
-                .islandFade(self.alert != nil)
-                .id(alert.id)
-                .transition(IslandMotion.fade)
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(alert.spoken)
+                LowBatteryView(percent: percent, restingHeight: restingHeight, hovered: hoveredButton == .lowPower)
+                    .islandFade(self.alert != nil)
+                    .id(alert.id)
+                    .transition(IslandMotion.fade)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 DeviceActivityView(
                     symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
