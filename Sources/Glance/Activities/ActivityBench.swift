@@ -21,6 +21,9 @@ final class ActivityBench {
         case airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, accessories, deviceBattery
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
+
+        /// Said for a moment, with no view of its own to open to.
+        var announces: Bool { [.charging, .lowBattery, .headphones, .accessories, .deviceBattery].contains(self) }
     }
 
     /// The scene and its round's seconds, from the arguments Glance was started with.

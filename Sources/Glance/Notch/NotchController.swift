@@ -528,6 +528,11 @@ final class NotchController {
                 model.alert = nil
                 model.switching = wingsShowing
             }
+            // The pointer stayed on it: the hover it held back opens the notch now.
+            let opening = Opening.current
+            if model.state == .peek, opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 {
+                scheduleOpen(after: max(opening.hoverDelay, Self.foldTime))
+            }
             // Folded for the notch to open: what was there shows in the open notch, not first beside
             // the camera.
             guard wingsShowing, foldingUntil < .now else { return }
@@ -936,7 +941,7 @@ final class NotchController {
     private func peek() {
         model.peek()
         startPolling()
-        // On an announcement, it only swells around it: there's nothing of its own to open to.
+        // On an announcement, it only swells around it, and opens once that's over (see `show`).
         if let alert = model.alert, !alert.tall { return }
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
@@ -996,8 +1001,9 @@ final class NotchController {
                 return
             }
         }
-        // At the bench, it opens only to what's being tried: never to the player.
-        if ActivityBench.scene != nil, model.expansion(fromBubble: model.bubbleHovered) == nil { return }
+        // At the bench, it opens only to what's being tried, never to the player, unless what's tried
+        // is announced, which is what opening is tried against.
+        if ActivityBench.scene?.announces == false, model.expansion(fromBubble: model.bubbleHovered) == nil { return }
         // A timer that's done has been seen: it's no longer said.
         ClockActivity.shared.dismissRing()
         // On a display that takes a finger, with the pointer elsewhere and not from the keyboard, a
