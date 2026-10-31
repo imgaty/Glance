@@ -45,16 +45,10 @@ struct SystemDevicesTests {
         #expect(SystemDevices.symbols(model: "Macmini9,1")?.symbol != SystemDevices.symbols(model: "Mac16,1")?.symbol)
     }
 
-    @Test("A model macOS doesn't know, or another maker's IDs, has no picture")
+    @Test("A model macOS doesn't know has no picture")
     func unknown() {
         #expect(SystemDevices.symbols(product: 0x0001) == nil)
         #expect(SystemDevices.symbols(model: "NotAMac1,1") == nil)
-        #expect(SystemDevices.symbols(vendor: 1133, product: 45091) == nil)
-    }
-
-    @Test("Magic Mouse is known by its Bluetooth IDs")
-    func accessories() {
-        #expect(SystemDevices.symbols(vendor: 76, product: 781)?.symbol == "magicmouse")
     }
 
     @MainActor @Test("This Mac has a picture of its own")

@@ -48,11 +48,11 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $devices) {
                     Text("Devices")
-                    Text("Shows headphones, keyboards, mice, trackpads and game controllers as they connect, and sound going to AirPlay.")
+                    Text("Shows AirPods and Beats as they connect, and sound going to AirPlay.")
                 }
                 Toggle(isOn: $airDrop) {
                     Text("AirDrop")
-                    Text("Shows files coming in over AirDrop, as they come.")
+                    Text("Shows files coming in and going out over AirDrop, as they go.")
                 }
             }
             Section {

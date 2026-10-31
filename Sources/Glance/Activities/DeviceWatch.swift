@@ -7,28 +7,23 @@
 
 import AppKit
 import CoreAudio
-import IOKit
-import IOKit.hid
 import UniformTypeIdentifiers
 
 /// Devices connecting, as the iPhone's Dynamic Island shows AirPods connecting, their symbol
 /// turning in beside their battery: Apple's and Beats' headphones and speakers over Bluetooth, as
-/// Core Audio sees them arrive, by their model and battery as System Information reports them;
-/// another maker's aren't announced, as they aren't on the iPhone; and keyboards, mice,
-/// trackpads and game controllers over Bluetooth, as the Mac's list of devices sees them. None of
-/// it needs a permission. What's connected as Glance starts, or reconnects as the Mac wakes, isn't
-/// announced. The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device
-/// whose battery runs down past 20% or 10% is announced the same way, its ring red, as the iPhone
-/// announces AirPods running low; macOS's own banner for it, and AirPods' notification, are taken
-/// away (see `SystemNotices`).
+/// Core Audio sees them arrive, by their model and battery as System Information reports them.
+/// Nothing else is announced, as the Dynamic Island shows nothing else. None of it needs a
+/// permission. What's connected as Glance starts, or reconnects as the Mac wakes, isn't announced.
+/// The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device whose battery
+/// runs down past 20% or 10% is announced the same way, its ring red, as the iPhone announces AirPods
+/// running low; macOS's own banner for it, and AirPods' notification, are taken away (see
+/// `SystemNotices`).
 @MainActor
 final class DeviceWatch {
     /// Sound devices there are, by ID.
     private var outputs: Set<AudioDeviceID> = []
     /// What was announced lately, by name: one device often arrives more than one way.
     private var recent: [String: Date] = [:]
-    private var port: IONotificationPortRef?
-    private var iterator: io_iterator_t = 0
     /// Each connected device's battery as last read, by name.
     private var batteries: [String: Int] = [:]
     private var batteryTimer: Timer?
@@ -40,7 +35,6 @@ final class DeviceWatch {
         AudioObjectAddPropertyListenerBlock(AudioProperty.system, &address, .main) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.devicesChanged() }
         }
-        watchAccessories()
         watchBatteries()
     }
 
@@ -72,83 +66,6 @@ final class DeviceWatch {
 
     static func isBluetooth(_ transport: UInt32) -> Bool {
         transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE
-    }
-
-    // MARK: Keyboards, mice, trackpads
-
-    /// Every input device as it's added to the Mac's list, those over Bluetooth announced. The list
-    /// is read, never the devices themselves, which would need Input Monitoring.
-    private func watchAccessories() {
-        guard let port = IONotificationPortCreate(kIOMainPortDefault) else { return }
-        IONotificationPortSetDispatchQueue(port, .main)
-        self.port = port
-        let context = Unmanaged.passUnretained(self).toOpaque()
-        let result = IOServiceAddMatchingNotification(
-            port, kIOFirstMatchNotification, IOServiceMatching(kIOHIDDeviceKey),
-            { context, iterator in
-                guard let context else { return }
-                let watch = Unmanaged<DeviceWatch>.fromOpaque(context).takeUnretainedValue()
-                MainActor.assumeIsolated { watch.accessoriesArrived(iterator, announcing: true) }
-            }, context, &iterator)
-        guard result == KERN_SUCCESS else { return }
-        // Those already connected are only counted, which also arms the notification.
-        accessoriesArrived(iterator, announcing: false)
-    }
-
-    private func accessoriesArrived(_ iterator: io_iterator_t, announcing: Bool) {
-        while case let entry = IOIteratorNext(iterator), entry != 0 {
-            defer { IOObjectRelease(entry) }
-            guard announcing, let accessory = Self.accessory(entry) else { continue }
-            // Its battery is told a moment after it connects.
-            IOObjectRetain(entry)
-            Task { [weak self] in
-                try? await Task.sleep(for: .seconds(1.5))
-                var battery = Self.battery(of: entry)
-                IOObjectRelease(entry)
-                // Others tell System Information instead.
-                if battery == nil { battery = await Self.bluetooth(named: accessory.name)?.battery }
-                self?.announce(accessory.name, symbol: accessory.symbol, battery: battery)
-            }
-        }
-    }
-
-    /// A keyboard, mouse, trackpad or game controller over Bluetooth, by its name and symbol.
-    static func accessory(_ entry: io_object_t) -> (name: String, symbol: String)? {
-        func property<T>(_ key: String) -> T? {
-            IORegistryEntryCreateCFProperty(entry, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? T
-        }
-        guard let transport: String = property(kIOHIDTransportKey), transport.hasPrefix("Bluetooth"),
-            let name: String = property(kIOHIDProductKey), !name.isEmpty,
-            let symbol = symbol(
-                vendor: property(kIOHIDVendorIDKey), productID: property(kIOHIDProductIDKey), product: name,
-                usagePage: property(kIOHIDPrimaryUsagePageKey) ?? 0, usage: property(kIOHIDPrimaryUsageKey) ?? 0)
-        else { return nil }
-        return (name, symbol)
-    }
-
-    /// As macOS pictures the model, if it does; otherwise by its name, then by what it says it is;
-    /// none for anything else, such as headphones' own buttons, which arrive as sound devices too.
-    static func symbol(vendor: Int? = nil, productID: Int? = nil, product: String, usagePage: Int, usage: Int) -> String? {
-        if let vendor, let productID, let symbol = SystemDevices.symbols(vendor: vendor, product: productID)?.symbol { return symbol }
-        let name = product.lowercased()
-        if name.contains("trackpad") { return "rectangle.and.hand.point.up.left" }
-        if name.contains("magic mouse") { return "magicmouse" }
-        if name.contains("mouse") { return "computermouse" }
-        if name.contains("keyboard") { return "keyboard" }
-        guard usagePage == kHIDPage_GenericDesktop else { return nil }
-        switch usage {
-        case kHIDUsage_GD_Keyboard, kHIDUsage_GD_Keypad: return "keyboard"
-        case kHIDUsage_GD_Mouse, kHIDUsage_GD_Pointer: return "computermouse"
-        case kHIDUsage_GD_GamePad, kHIDUsage_GD_Joystick: return "gamecontroller"
-        default: return nil
-        }
-    }
-
-    /// Its battery, as Apple's keyboards, mice and trackpads tell the Mac.
-    static func battery(of entry: io_object_t) -> Int? {
-        let options = IOOptionBits(kIORegistryIterateRecursively)
-        let value = IORegistryEntrySearchCFProperty(entry, kIOServicePlane, "BatteryPercent" as CFString, kCFAllocatorDefault, options)
-        return (value as? Int).flatMap { (0...100).contains($0) ? $0 : nil }
     }
 
     // MARK: Bluetooth's own report
@@ -203,7 +120,7 @@ final class DeviceWatch {
         /// What System Information calls each kind of device.
         private static let kinds = [
             "Headphones": "headphones", "Headset": "headphones", "Speaker": "hifispeaker", "Portable Audio": "hifispeaker",
-            "Hi-Fi Audio": "hifispeaker", "Keyboard": "keyboard", "Mouse": "computermouse", "Gamepad": "gamecontroller",
+            "Hi-Fi Audio": "hifispeaker",
         ]
     }
 
@@ -279,21 +196,10 @@ final class DeviceWatch {
     private func readBatteries() {
         guard !reading else { return }
         reading = true
-        // Keyboards, mice and trackpads tell the Mac; headphones, System Information, which takes a
-        // moment, so it's asked only while some are connected.
-        var found: [String: Battery] = [:]
-        var entries: io_iterator_t = 0
-        if IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching(kIOHIDDeviceKey), &entries) == KERN_SUCCESS {
-            while case let entry = IOIteratorNext(entries), entry != 0 {
-                defer { IOObjectRelease(entry) }
-                if let accessory = Self.accessory(entry), let percent = Self.battery(of: entry) {
-                    found[accessory.name] = Battery(symbol: accessory.symbol, percent: percent)
-                }
-            }
-            IOObjectRelease(entries)
-        }
+        // System Information takes a moment, so it's asked only while headphones are connected.
         let headphones = AudioOutput.outputs().filter { Self.isBluetooth($0.transport) }
         Task { [weak self] in
+            var found: [String: Battery] = [:]
             if !headphones.isEmpty {
                 let report = await Self.bluetoothReport()
                 for device in headphones {

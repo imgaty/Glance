@@ -79,17 +79,11 @@ struct ActivitiesTests {
         #expect(!low(30, 29))
     }
 
-    @Test("Accessories are named by what they are; headphones' own buttons aren't announced twice")
-    func accessories() {
-        #expect(DeviceWatch.symbol(product: "Magic Keyboard with Touch ID", usagePage: 1, usage: 6) == "keyboard")
-        #expect(DeviceWatch.symbol(product: "Magic Mouse", usagePage: 1, usage: 2) == "magicmouse")
-        #expect(DeviceWatch.symbol(product: "Magic Trackpad", usagePage: 1, usage: 2) == "rectangle.and.hand.point.up.left")
-        #expect(DeviceWatch.symbol(product: "MX Master 3S", usagePage: 1, usage: 2) == "computermouse")
-        #expect(DeviceWatch.symbol(product: "DualSense Wireless Controller", usagePage: 1, usage: 5) == "gamecontroller")
-        #expect(DeviceWatch.symbol(product: "Sam's AirPods Pro", usagePage: 12, usage: 1) == nil)
-        let mouse = DeviceWatch.alert(name: "Magic Mouse", symbol: "magicmouse", battery: 15)
-        #expect(mouse.content == .device(symbol: "magicmouse", pictures: [], battery: 15))
-        #expect(mouse.spoken == "Magic Mouse connected, 15 percent")
+    @Test("A device is announced with its battery")
+    func announced() {
+        let beats = DeviceWatch.alert(name: "Beats Solo 4", symbol: "headphones", battery: 15)
+        #expect(beats.content == .device(symbol: "headphones", pictures: [], battery: 15))
+        #expect(beats.spoken == "Beats Solo 4 connected, 15 percent")
         #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", pictures: [], battery: nil))
         // AirPlay's device, by its name, as Control Center draws it.
         #expect(AirPlayRoute.symbol(for: "Living Room Apple TV") == "appletv")

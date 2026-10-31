@@ -18,12 +18,12 @@ final class ActivityBench {
     static let shared = ActivityBench()
 
     enum Scene: String, CaseIterable {
-        case airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, accessories, deviceBattery
+        case airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .headphones, .accessories, .deviceBattery].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .headphones, .deviceBattery].contains(self) }
     }
 
     /// The scene and its round's seconds, from the arguments Glance was started with.
@@ -92,7 +92,6 @@ final class ActivityBench {
         case .charging: await announce(Self.charging(), every: 6)
         case .lowBattery: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
-        case .accessories: await announce(Self.accessories(), every: 6)
         case .deviceBattery: await announce(Self.deviceBatteries(), every: 6)
         }
     }
@@ -227,25 +226,14 @@ final class ActivityBench {
         return clips(airPods) + pictured + clips(beats)
     }
 
-    private static func accessories() -> [@MainActor () async -> NotchAlert] {
-        [
-            ("Magic Keyboard", "keyboard", 91), ("Magic Mouse", "magicmouse", 64),
-            ("Magic Trackpad", "rectangle.and.hand.point.up.left", 38), ("Controller", "gamecontroller", 15),
-        ].map { name, symbol, level in
-            { DeviceWatch.alert(name: name, symbol: symbol, battery: level) }
-        }
-    }
-
     private static func deviceBatteries() -> [@MainActor () async -> NotchAlert] {
-        [
-            ("AirPods Pro", "airpodspro", Headphones.airpodsPro2 as Headphones?, 20), ("AirPods Pro", "airpodspro", .airpodsPro2, 10),
-            ("Magic Keyboard", "keyboard", nil, 20), ("Magic Keyboard", "keyboard", nil, 10),
-        ].map { name, symbol, model, level in
-            {
-                if let model { _ = await DeviceTurn.prepare(model) }
-                return DeviceWatch.lowBattery(name: name, symbol: symbol, model: model, battery: level)
+        [(Headphones.airpodsPro2, "airpodspro", 20), (.airpodsPro2, "airpodspro", 10), (.beatsSolo4, "headphones", 20), (.beatsSolo4, "headphones", 10)]
+            .map { model, symbol, level in
+                {
+                    _ = await DeviceTurn.prepare(model)
+                    return DeviceWatch.lowBattery(name: model.rawValue, symbol: symbol, model: model, battery: level)
+                }
             }
-        }
     }
 
     /// One of macOS's own desktop pictures, as a photo sent over AirDrop would be.

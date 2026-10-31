@@ -71,10 +71,10 @@ what's made up:
 open build/Glance.app --args --bench airdrop
 ```
 
-The scenes are `airdrop`, `airdropSend`, `timer`, `stopwatch`, `airplay`,
-`charging`, `lowBattery`, `headphones`, `accessories` and `deviceBattery`. A
-number after the name is how long each round lasts, in seconds, 300 unless said.
-Open Glance again without it to go back.
+The scenes are `airdrop`, `airdropSend`, `airdropReal`, `timer`, `stopwatch`,
+`airplay`, `charging`, `lowBattery`, `headphones` and `deviceBattery`. A number
+after the name is how long each round lasts, in seconds, 300 unless said. Open
+Glance again without it to go back.
 
 ### Why the Share extension hands over on a pasteboard
 

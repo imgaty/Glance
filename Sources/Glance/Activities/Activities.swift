@@ -9,7 +9,7 @@ import AppKit
 import SwiftUI
 
 /// A moment the Mac announces beside the camera, drawn as the iPhone's Dynamic Island draws its
-/// own: plugged in, low on battery, AirPods or a keyboard connecting, a timer done. It takes the closed notch's sides over for a few seconds, then whatever was there
+/// own: plugged in, low on battery, AirPods connecting, a timer done. It takes the closed notch's sides over for a few seconds, then whatever was there
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {

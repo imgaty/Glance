@@ -95,11 +95,6 @@ enum SystemDevices {
         symbols(in: lineage(product: product))
     }
 
-    /// An accessory by the IDs it gives over Bluetooth.
-    static func symbols(vendor: Int, product: Int) -> DeviceSymbols? {
-        symbols(in: lineage(of: UTType(tag: "\(vendor):\(product)", tagClass: bluetoothIDs, conformingTo: nil)))
-    }
-
     /// A device by its model name, such as a Mac's or a HomePod's.
     static func symbols(model: String) -> DeviceSymbols? {
         symbols(in: lineage(of: UTType(tag: model, tagClass: modelCode, conformingTo: nil)))
