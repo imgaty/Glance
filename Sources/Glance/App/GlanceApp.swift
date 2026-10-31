@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let trayService = TrayService()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ActivityBench.shared.isolate()
         NSApp.mainMenu = makeMainMenu()
         nowPlaying.start()
         Updater.shared.start()
@@ -54,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         trayService.start()
         SystemDevices.prepare()
         Activities.shared.start()
+        ActivityBench.shared.start()
         NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
         NotchSwipes.shared.start()
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }

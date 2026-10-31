@@ -82,6 +82,7 @@ final class AirPlayWatch: ObservableObject {
     /// Read again, as the output changes: shown while it's an AirPlay device, unless turned off in
     /// Settings.
     func refresh() {
+        guard ActivityBench.scene == nil else { return }
         enabled = UserDefaults.standard.bool(forKey: Preferences.activityDevices)
         let id = AudioOutput.defaultOutput
         let device = AudioOutput.outputs().first { $0.id == id }
@@ -91,8 +92,14 @@ final class AirPlayWatch: ObservableObject {
         if next != route { route = next }
     }
 
+    /// What's shown at the bench (see `ActivityBench`).
+    func bench(_ fake: AirPlayRoute?) {
+        route = fake
+    }
+
     /// The sound back where it played before AirPlay, or on the Mac's own speakers.
     func stop() {
+        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped() }
         let outputs = AudioOutput.outputs().filter { $0.transport != kAudioDeviceTransportTypeAirPlay }
         guard
             let target = outputs.first(where: { $0.id == lastLocal })
@@ -235,8 +242,10 @@ struct ExpandedAirPlayView: View {
     static func width(for route: AirPlayRoute, restingHeight h: CGFloat) -> CGFloat {
         let font = NSFont.systemFont(ofSize: h * AirPlayLayout.title, weight: .semibold)
         let name = ceil((route.name as NSString).size(withAttributes: [.font: font]).width)
-        let needs = h * (AirPlayLayout.symbolInset + AirPlayLayout.bigSymbol * 1.05 + AirPlayLayout.symbolGap + 0.3
-            + AirPlayLayout.bigDevice * 1.45 + AirPlayLayout.deviceInset) + name
+        let needs =
+            h
+            * (AirPlayLayout.symbolInset + AirPlayLayout.bigSymbol * 1.05 + AirPlayLayout.symbolGap + 0.3
+                + AirPlayLayout.bigDevice * 1.45 + AirPlayLayout.deviceInset) + name
         return min(max(h * AirPlayLayout.wide, needs), h * 14)
     }
 }

@@ -25,7 +25,13 @@ final class LowPowerMode: ObservableObject {
         }
     }
 
+    /// At the bench it's only said, and the Mac's stays as it is (see `ActivityBench`).
+    func bench(_ on: Bool) {
+        isOn = on
+    }
+
     func turnOn() {
+        guard ActivityBench.scene == nil else { return bench(true) }
         guard !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
         Self.setPowerMode(1)
         Task {
@@ -122,11 +128,12 @@ enum LowBatteryLayout {
         let offerFont = NSFont.systemFont(ofSize: h * offerWords, weight: .semibold)
         let centered = TimerLayout.tallHeight(h) / 2 - (h * baselines - level.capHeight) / 2
         // How far the offer's letters rise above their baseline.
-        let rise = [LowBatteryView.offer, LowBatteryView.done].map {
-            CTLineGetBoundsWithOptions(
-                CTLineCreateWithAttributedString(NSAttributedString(string: $0, attributes: [.font: offerFont])), .useGlyphPathBounds
-            ).maxY
-        }.max() ?? 0
+        let rise =
+            [LowBatteryView.offer, LowBatteryView.done].map {
+                CTLineGetBoundsWithOptions(
+                    CTLineCreateWithAttributedString(NSAttributedString(string: $0, attributes: [.font: offerFont])), .useGlyphPathBounds
+                ).maxY
+            }.max() ?? 0
         let belowCamera = h + LiveActivityView.cameraGap + rise - h * baselines
         return max(centered, belowCamera) - level.ascender
     }

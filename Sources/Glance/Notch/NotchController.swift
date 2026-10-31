@@ -993,6 +993,8 @@ final class NotchController {
                 return
             }
         }
+        // At the bench, it opens only to what's being tried: never to the player.
+        if ActivityBench.scene != nil, model.expansion(fromBubble: model.bubbleHovered) == nil { return }
         // A timer that's done has been seen: it's no longer said.
         ClockActivity.shared.dismissRing()
         // On a display that takes a finger, with the pointer elsewhere and not from the keyboard, a
@@ -1037,7 +1039,7 @@ final class NotchController {
     /// A page's shortcut: opens the notch on that page, switches to it if the notch is open on the
     /// other, or closes the notch if it's already showing it.
     func toggleFromKeyboard(_ page: NotchPage) {
-        guard page == .player || Tray.isOn else { return }
+        guard page == .player || Tray.isOn, ActivityBench.scene == nil else { return }
         if model.state == .open {
             guard model.page != page else { return close(holdUntilExit: false) }
             turn(to: page)
@@ -1555,6 +1557,7 @@ final class NotchController {
                 model.pop = false
             } else {
                 model.dismissed.insert(activity)
+                ActivityBench.shared.stopped()
             }
         }
     }

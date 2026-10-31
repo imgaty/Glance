@@ -1,6 +1,6 @@
 # Contributing
 
-`Created: 11 October 2026` | `Last updated: 30 October 2026`
+`Created: 11 October 2026` | `Last updated: 31 October 2026`
 
 A guide to contributing to the Glance project.
 
@@ -59,6 +59,22 @@ later. This builds `build/Glance.app` and opens it with the welcome tour:
 ```
 
 `Package.swift` also opens in Xcode.
+
+### Trying a live activity
+
+A build from source can show one live activity alone, made up, round after
+round, with the rest of the notch off and nothing saved, so Settings stay as
+they are. The notch opens only to that activity, and its buttons change only
+what's made up:
+
+```sh
+open build/Glance.app --args --bench airdrop
+```
+
+The scenes are `airdrop`, `timer`, `stopwatch`, `airplay`, `charging`,
+`lowBattery`, `headphones`, `accessories` and `deviceBattery`. A number after
+the name is how long each round lasts, in seconds, 300 unless said. Open Glance
+again without it to go back.
 
 ### Why the Share extension hands over on a pasteboard
 

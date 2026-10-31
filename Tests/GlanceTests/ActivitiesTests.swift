@@ -672,3 +672,22 @@ struct SystemBannersTests {
         #expect(!MenuBarBanners.showsBattery([]))
     }
 }
+
+/// Choosing what the bench tries, from the arguments Glance was started with.
+@Suite("Activity bench")
+struct ActivityBenchTests {
+    @Test("A scene by its name, five minutes a round unless said")
+    func parses() throws {
+        let scene = try #require(ActivityBench.parse(["Glance", "--bench", "airdrop"]))
+        #expect(scene.scene == .airdrop)
+        #expect(scene.seconds == 300)
+        #expect(ActivityBench.parse(["Glance", "--bench", "lowBattery", "20"])?.seconds == 20)
+    }
+
+    @Test("Without one, or with a name it doesn't know, there's no bench")
+    func refuses() {
+        #expect(ActivityBench.parse(["Glance"]) == nil)
+        #expect(ActivityBench.parse(["Glance", "--bench"]) == nil)
+        #expect(ActivityBench.parse(["Glance", "--bench", "player"]) == nil)
+    }
+}

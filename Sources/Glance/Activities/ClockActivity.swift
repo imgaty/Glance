@@ -68,7 +68,7 @@ final class ClockActivity: ObservableObject {
     }
 
     func start() {
-        guard poll == nil else { return }
+        guard poll == nil, ActivityBench.scene == nil else { return }
         // Every second while one shows; every three otherwise, which is soon enough to notice one start.
         let poll = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -214,11 +214,32 @@ final class ClockActivity: ObservableObject {
             return
         }
         guard let lastRing, rung.date > lastRing, Date.now.timeIntervalSince(rung.date) < 30, !rung.dismissed else { return }
+        say(rung)
+        ringInstead(of: rung)
+    }
+
+    private func say(_ rung: Rung) {
         rang = (rung.length, rung.title, rung.date)
         let name = rung.title ?? "Timer"
         activities.post(
             NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: "\(name) done", stays: true))
-        ringInstead(of: rung)
+    }
+
+    // MARK: At the bench (see `ActivityBench`)
+
+    func bench(timer next: NotchTimer.State?) {
+        timer = next
+    }
+
+    func bench(stopwatch next: Stopwatch?) {
+        stopwatch = next
+    }
+
+    /// Rings as a timer does, with Clock's first sound.
+    func benchRing(length: TimeInterval) {
+        timer = nil
+        say(Rung(date: .now, length: length, title: nil, dismissed: false, tone: nil))
+        chime.play(tone: nil)
     }
 
     /// While the notch is on, with Accessibility, macOS's alert for the timer that has just rung is
@@ -292,9 +313,10 @@ final class ClockActivity: ObservableObject {
     private static func answerAlert(_ button: AlertButton, title: String?) -> Bool {
         let alerts = SystemNotices.showing(from: SystemNotices.name(of: Self.clock))
         // The one for this timer, by its label, when it has one.
-        let alert = alerts.first { alert in
-            title.map { SystemNotices.words(of: alert).hasSuffix($0) } ?? true
-        } ?? alerts.first
+        let alert =
+            alerts.first { alert in
+                title.map { SystemNotices.words(of: alert).hasSuffix($0) } ?? true
+            } ?? alerts.first
         guard let alert else { return false }
         // Show Details, Repeat, Stop and Close.
         return button == .again
@@ -363,6 +385,7 @@ final class ClockActivity: ObservableObject {
     /// other. If Glance opened it, it's kept open half a minute, so the next press is as quick, then
     /// quit.
     private func control(_ control: Control) {
+        guard ActivityBench.scene == nil else { return }
         let id = shownID
         quitClock?.cancel()
         Task { @MainActor in

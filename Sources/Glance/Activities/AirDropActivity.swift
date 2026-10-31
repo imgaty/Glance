@@ -66,8 +66,14 @@ final class AirDropWatch: NSObject, ObservableObject {
         }
     }
 
+    /// What's shown at the bench (see `ActivityBench`).
+    func bench(_ fake: AirDropShown?) {
+        transfer = fake
+    }
+
     /// Stops the one showing, as its notice's Cancel does.
     func stop() {
+        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped() }
         guard let id = transfer?.id, let shown = transfers[id] else { return }
         if let cancel = shown.value(forKey: "cancelAction") as? NSObject, cancel.responds(to: NSSelectorFromString("triggerAction")) {
             cancel.perform(NSSelectorFromString("triggerAction"))
@@ -93,14 +99,16 @@ final class AirDropWatch: NSObject, ObservableObject {
         }
         if let next, next.done {
             if transfer?.done != true { transfer = next }
-            finishing = finishing ?? Task { [weak self] in
-                try? await Task.sleep(for: .seconds(1.2))
-                guard let self, !Task.isCancelled else { return }
-                self.transfers[next.id] = nil
-                self.previews[next.id] = nil
-                self.finishing = nil
-                self.refresh()
-            }
+            finishing =
+                finishing
+                ?? Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(1.2))
+                    guard let self, !Task.isCancelled else { return }
+                    self.transfers[next.id] = nil
+                    self.previews[next.id] = nil
+                    self.finishing = nil
+                    self.refresh()
+                }
         } else if next != transfer {
             transfer = next
         }
@@ -323,7 +331,8 @@ struct ExpandedAirDropView: View {
                     .background(RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous).fill(AirDropLayout.badgeFill))
                     .overlay(
                         RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous)
-                            .strokeBorder(.black.opacity(0.6), lineWidth: h * 0.03))
+                            .strokeBorder(.black.opacity(0.6), lineWidth: h * 0.03)
+                    )
                     .offset(x: h * AirDropLayout.badgeOut, y: h * AirDropLayout.badgeOut)
             }
     }
@@ -352,8 +361,9 @@ struct AirDropBadgeGlyph: View {
             // The wedge over the two bands, inside the outer disc, from just under the dot.
             Wedge(apex: side * Self.dot / 2, opening: Self.wedge)
                 .fill(Self.wedgeFill)
-                .clipShape(Circle().size(width: side * Self.outer, height: side * Self.outer)
-                    .offset(x: side * (1 - Self.outer) / 2, y: side * (1 - Self.outer) / 2))
+                .clipShape(
+                    Circle().size(width: side * Self.outer, height: side * Self.outer)
+                        .offset(x: side * (1 - Self.outer) / 2, y: side * (1 - Self.outer) / 2))
             disc(Self.dot, Self.dotShades)
         }
         .frame(width: side, height: side)
