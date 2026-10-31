@@ -71,11 +71,10 @@ enum LowBatteryLayout {
     /// The battery in the capsule, a little right of its middle, as the iPhone sets it.
     static let bodyLeft: CGFloat = 0.54
     static let body = CGSize(width: 1.2, height: 0.645)
-    static let bodyCorner: CGFloat = 0.135
-    /// The level inside the body, never narrower than at 10%, as the iPhone's.
+    static let bodyCorner: CGFloat = 0.19
+    /// The level inside the body.
     static let levelInset: CGFloat = 0.105
     static let levelHeight: CGFloat = 0.45
-    static let leastLevel: CGFloat = 0.21
     static let capGap: CGFloat = 0.055
     static let cap = CGSize(width: 0.073, height: 0.22)
     /// The ripple's line.
@@ -112,6 +111,9 @@ enum LowBatteryLayout {
         let (a, b) = (curve[after - 1], curve[after])
         return a.1 + (b.1 - a.1) * (time - a.0) / (b.0 - a.0)
     }
+
+    /// How wide the level is, as the iPhone's are at 10% and at 20%, the only times it shows.
+    static func level(_ percent: Int) -> CGFloat { 0.181 + 0.0026 * CGFloat(percent) }
 
     /// How far into a ripple it is, so long after it showed.
     static func rippleTime(after seconds: TimeInterval) -> CGFloat {
@@ -206,7 +208,6 @@ struct LowBatteryView: View {
             .padding(.top, layout.wordsTop(h))
             .padding(.leading, h * layout.wordsEdge)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            // As tall as it stands at rest, in the middle, as the capsule is, when it swells.
             .frame(height: TimerLayout.tallHeight(h), alignment: .top)
             .accessibilityElement(children: .combine)
             capsule(h, on: on)
@@ -225,8 +226,7 @@ struct LowBatteryView: View {
     /// on it's all still: a yellow capsule, a black battery, a yellow level.
     private func capsule(_ h: CGFloat, on: Bool) -> some View {
         let layout = LowBatteryLayout.self
-        let inner = layout.body.width - layout.levelInset * 2
-        let level = max(inner * CGFloat(percent) / 100, layout.leastLevel)
+        let level = layout.level(percent)
         // The ripple's middle, from the body's left end: the level's.
         let ringMiddle = layout.levelInset + level / 2
         let shade = on ? layout.yellow : layout.red
@@ -239,7 +239,7 @@ struct LowBatteryView: View {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: h * layout.bodyCorner, style: .continuous)
                         .fill(shade.body)
-                    Capsule()
+                    Capsule(style: .continuous)
                         .fill(fill)
                         .frame(width: h * level, height: h * layout.levelHeight)
                         .shadow(color: on ? .clear : fill.opacity(0.5), radius: h * 0.04)
@@ -254,7 +254,7 @@ struct LowBatteryView: View {
                         .opacity(on ? 0 : layout.along(layout.line, at: time))
                         .offset(x: h * (ringMiddle - across))
                 }
-                Capsule()
+                Ellipse()
                     .fill(shade.body)
                     .frame(width: h * layout.cap.width, height: h * layout.cap.height)
             }

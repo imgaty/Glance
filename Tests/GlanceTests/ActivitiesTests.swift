@@ -536,6 +536,9 @@ struct ActivitiesTests {
         #expect(wing < h * 3)
         // Its letters start just below the camera.
         #expect(LowBatteryLayout.wordsTop(h) > 0)
+        // Tall already, it doesn't swell under the pointer.
+        #expect(model.metrics(for: .peek).height == TimerLayout.tallHeight(h))
+        #expect(model.metrics(for: .peek).bodyWidth == model.metrics(for: .closed).bodyWidth)
         // A ripple every two seconds: palest early on, and the line gone before the next.
         #expect(abs(LowBatteryLayout.rippleTime(after: 2) - LowBatteryLayout.rippleTime(after: 0)) < 0.001)
         #expect(LowBatteryLayout.along(LowBatteryLayout.pale, at: 0.4) == 1)

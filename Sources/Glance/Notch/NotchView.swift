@@ -364,8 +364,8 @@ final class NotchModel: ObservableObject {
                     restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4,
                     resting + Self.nearSwell * proximity + pull
                 )
-            // Extended, it's as large as it gets under the pointer, and it's measured at that size.
-            case .peek where alertExtended: (restingWidth + pull * 0.4, resting + pull)
+            // Tall already, it's as large as it gets under the pointer.
+            case .peek where restingTall: (restingWidth + pull * 0.4, resting + pull)
             case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4, resting + Self.peekSwell + pull)
             case .open where expanded == .airdrop:
                 (
