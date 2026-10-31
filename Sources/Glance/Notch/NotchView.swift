@@ -1018,7 +1018,7 @@ struct NotchShape: Shape {
 
     /// How far past its radius a bottom corner reaches along its sides, with room for it, as Apple's
     /// continuous corners do; and a flare, which stays in its square as the camera housing's does.
-    private static let cornerReach: CGFloat = 1.52866
+    static let cornerReach: CGFloat = 1.52866
     private static let flareSmoothing: CGFloat = 0.1
 
     /// One outline, the same curve at all four corners, so nothing shows where they meet the sides or

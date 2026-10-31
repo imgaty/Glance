@@ -142,8 +142,10 @@ struct PlayerLayoutTests {
     func artwork() {
         #expect(PlayerLayout.top.artwork == 60)
         #expect(PlayerLayout.side.artwork == 120)
-        #expect(PlayerLayout.top.artworkRadius == 11)
-        #expect(PlayerLayout.side.artworkRadius == 14)
+        // As round as a squircle goes: its corners' curves meet at the middle of each side.
+        #expect(PlayerLayout.top.artworkRadius == PlayerLayout.top.artwork / (2 * NotchShape.cornerReach))
+        // Concentric with the notch's.
+        #expect(PlayerLayout.side.artworkRadius == PlayerLayout.cornerRadius - PlayerLayout.padding)
     }
 
     @Test("The open corners are concentric with what's round at the ends")

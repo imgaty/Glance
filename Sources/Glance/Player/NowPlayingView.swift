@@ -45,23 +45,25 @@ struct NowPlayingView: View {
     var body: some View {
         // How far below the artwork's top the camera housing ends; what's under it starts there.
         let clearance = closedNotch.height + PlayerLayout.cameraGap - PlayerLayout.padding
+        // Where the title starts: centered on the artwork, unless that puts it under the camera.
+        let headerTop = layout == .top ? max((layout.artwork - PlayerLayout.headerHeight) / 2, clearance) : clearance
         ZStack(alignment: .topLeading) {
             // The artwork's and the waveform's places are the same views in every layout, so when
             // the layout changes they just move and resize, and the notch's artwork and waveform
             // glide along with them.
             artwork
-            waveformPlace(top: layout == .top ? (layout.artwork - PlayerLayout.headerHeight) / 2 : clearance)
+            waveformPlace(top: headerTop)
             // The rest steps out and comes back in its new places once the notch has reshaped,
             // rather than sliding or stretching across.
             Group {
                 switch layout {
                 case .top:
-                    // The title and artist are shorter than the artwork and centered on it,
-                    // which keeps them below the camera.
+                    // The title and artist are shorter than the artwork, and stay below the camera.
                     VStack(spacing: 0) {
-                        HStack(spacing: PlayerLayout.besideArtwork) {
+                        HStack(alignment: .top, spacing: PlayerLayout.besideArtwork) {
                             Color.clear.frame(width: layout.artwork, height: layout.artwork)
                             header
+                                .padding(.top, headerTop)
                         }
                         .allowsHitTesting(places == nil)
                         timeline

@@ -63,7 +63,9 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
         let width = ("-0:00" as NSString).size(withAttributes: [.font: font]).width
         return max((width - waveform.width) / 2, 0)
     }()
-    var artworkRadius: CGFloat { self == .top ? 11 : 14 }
+    /// The artwork's corners: concentric with the notch's, or for a smaller cover as round as a
+    /// squircle goes, before its corners meet and it starts turning into a circle.
+    var artworkRadius: CGFloat { min(Self.cornerRadius - Self.padding, artwork / (2 * NotchShape.cornerReach)) }
 
     /// The open notch's size around a camera housing of the given size. It's wide enough that the
     /// artwork, up in its corner, stays clear of the housing.
@@ -77,7 +79,8 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
                 // ones do from the sides.
                 (
                     max(p * 2 + 280, besideCamera),
-                    p + artwork + 12 + Self.timelineHeight + 8 + NowPlayingView.hitbox + p
+                    p + max(artwork, closed.height + Self.cameraGap - p + Self.headerHeight) + 12 + Self.timelineHeight + 8
+                        + NowPlayingView.hitbox + p
                 )
             case .side:
                 // The column beside the artwork starts below the camera.
