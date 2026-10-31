@@ -167,9 +167,27 @@ enum PlayerScripting {
     static let spotify = "com.spotify.client"
     private static let queue = DispatchQueue(label: "Glance.PlayerScripting")
 
+    /// Finds the song whose favorite counts, as `t`. A song streamed from Apple Music and its copy
+    /// in the library are separate tracks: the library's is the real favorite, and a change to the
+    /// streamed one can't take it away.
+    private static let favoriteTrack = """
+        set t to current track
+            if class of t is URL track then
+                set {songName, songArtist, songAlbum} to {name of t, artist of t, album of t}
+                set libraryCopies to (every track of library playlist 1 whose name is songName and artist is songArtist and album is songAlbum)
+                if libraryCopies is not {} then set t to item 1 of libraryCopies
+            end if
+        """
+
     static func readScript(for app: String) -> String? {
         switch app {
-        case music: #"tell application "Music" to return (shuffle enabled as text) & "|" & (song repeat as text) & "|" & (favorited of current track as text)"#
+        case music:
+            """
+            tell application "Music"
+                \(favoriteTrack)
+                return (shuffle enabled as text) & "|" & (song repeat as text) & "|" & (favorited of t as text)
+            end tell
+            """
         case spotify:
             // Shuffle and repeat aren't offered while the DJ chooses the music, its own words included
             // (a spotify:media: address); that's how the DJ is told apart from a playlist.
@@ -224,7 +242,13 @@ enum PlayerScripting {
     }
 
     static func setFavorite(_ on: Bool, app: String) -> String? {
-        app == music ? "tell application \"Music\" to set favorited of current track to \(on)" : nil
+        guard app == music else { return nil }
+        return """
+            tell application "Music"
+                \(favoriteTrack)
+                set favorited of t to \(on)
+            end tell
+            """
     }
 
     static let separator = "|~|"

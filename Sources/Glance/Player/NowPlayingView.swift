@@ -105,9 +105,11 @@ struct NowPlayingView: View {
         .onChange(of: isVisible) { if isVisible { nowPlaying.refreshOptions() } }
         .onChange(of: nowPlaying.title) { if isVisible { nowPlaying.refreshOptions() } }
         .task(id: isVisible) {
-            // Keeps the clock, and the lyrics with it, exact while the player shows.
+            // Keeps the clock, and the lyrics with it, exact while the player shows, and the star
+            // true to Music.
             while isVisible, !Task.isCancelled {
                 if nowPlaying.isPlaying { await nowPlaying.syncPosition() }
+                await nowPlaying.syncFavorite()
                 try? await Task.sleep(for: .seconds(2))
             }
         }

@@ -5,6 +5,7 @@
 //  Created by Gaty on 10/10/2026.
 //
 
+import Foundation
 import Testing
 
 @testable import Glance
@@ -161,11 +162,39 @@ struct PlayerScriptingTests {
     }
 
     @Test("Only Music can mark a favorite")
-    func favoriteScripts() {
-        #expect(PlayerScripting.setFavorite(true, app: music) == #"tell application "Music" to set favorited of current track to true"#)
-        #expect(PlayerScripting.setFavorite(false, app: music) == #"tell application "Music" to set favorited of current track to false"#)
+    func favoriteScripts() throws {
+        let save = try #require(PlayerScripting.setFavorite(true, app: music))
+        #expect(save.contains(#"tell application "Music""#))
+        #expect(save.contains("set favorited of t to true"))
+        #expect(try #require(PlayerScripting.setFavorite(false, app: music)).contains("set favorited of t to false"))
         #expect(PlayerScripting.setFavorite(true, app: spotify) == nil)
         #expect(PlayerScripting.setFavorite(true, app: other) == nil)
+    }
+
+    @Test("A streamed song's favorite is read from and set on its copy in the library")
+    func favoriteOfLibraryCopy() throws {
+        let scripts = try [#require(PlayerScripting.readScript(for: music)), #require(PlayerScripting.setFavorite(false, app: music))]
+        for script in scripts {
+            #expect(script.contains("if class of t is URL track then"))
+            #expect(script.contains("every track of library playlist 1 whose name is songName and artist is songArtist and album is songAlbum"))
+            #expect(script.contains("if libraryCopies is not {} then set t to item 1 of libraryCopies"))
+            // A word Music's own dictionary uses, which fails as a variable.
+            #expect(!script.contains("copies to"))
+        }
+    }
+
+    @Test(
+        "A press of the star stands until Music agrees, the song changes or the time is up",
+        arguments: [
+            (false as Bool?, true, 5.0, true),
+            (true as Bool?, true, 5.0, false),
+            (false as Bool?, false, 5.0, false),
+            (false as Bool?, true, 11.0, false),
+        ])
+    func heldFavorite(read: Bool?, sameTrack: Bool, after: Double, holds: Bool) {
+        let pressed = Date(timeIntervalSinceReferenceDate: 0)
+        #expect(
+            NowPlaying.holdsFavorite(true, against: read, sameTrack: sameTrack, until: pressed + 10, at: pressed + after) == holds)
     }
 
     @Test("The position is asked for in whole milliseconds")

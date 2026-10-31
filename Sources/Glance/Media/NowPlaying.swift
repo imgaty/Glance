@@ -56,6 +56,9 @@ final class NowPlaying: ObservableObject {
     /// The read-back that follows a change to shuffle, repeat or favorite.
     private var settle: Task<Void, Never>?
     private var requestedRepeat: RepeatMode?
+    /// After a press of the star, what it asked for: Music takes seconds to save a song new to the
+    /// library, and says it isn't a favorite until then.
+    private var heldFavorite: (value: Bool, track: String, until: Date)?
 
     // The position as last reported, which the clock advances while playing.
     private var elapsed: Double = 0
@@ -137,8 +140,41 @@ final class NowPlaying: ObservableObject {
             // Spotify's scripting only says whether repeat is on. If it's on and the last click
             // asked for one song, that's what it is.
             if app == PlayerScripting.spotify, read.repeatMode == .all, requestedRepeat == .one { read.repeatMode = .one }
+            read.favorite = favorite(reading: read.favorite)
             options = read
         }
+    }
+
+    /// Music doesn't say when a favorite changes, so the player asks while it shows.
+    func syncFavorite() async {
+        guard !isDemo, let app = appBundleID, app == PlayerScripting.music,
+            // Asking an app that isn't open would open it.
+            !NSRunningApplication.runningApplications(withBundleIdentifier: app).isEmpty,
+            let script = PlayerScripting.readScript(for: app)
+        else { return }
+        let track = track
+        guard let reply = await PlayerScripting.run(script), app == appBundleID, track == self.track else { return }
+        let favorite = favorite(reading: PlayerScripting.options(from: reply, app: app).favorite)
+        if favorite != options.favorite { options.favorite = favorite }
+    }
+
+    /// What Music said, unless a press of the star still stands against it.
+    private func favorite(reading read: Bool?) -> Bool? {
+        guard let held = heldFavorite else { return read }
+        guard Self.holdsFavorite(held.value, against: read, sameTrack: held.track == track, until: held.until, at: .now) else {
+            heldFavorite = nil
+            return read
+        }
+        return held.value
+    }
+
+    /// Long enough for Music to save a song new to the library, which took it up to seven seconds.
+    private nonisolated static let favoriteHold = 10.0
+
+    /// A press stands until Music agrees or the song changes. If Music still disagrees once it has
+    /// had time, the press didn't take, and what Music says is true.
+    nonisolated static func holdsFavorite(_ pressed: Bool, against read: Bool?, sameTrack: Bool, until: Date, at date: Date) -> Bool {
+        read != pressed && sameTrack && date < until
     }
 
     /// Set both ways: the app's scripting, and the system's remote command, which is what changes
@@ -174,6 +210,7 @@ final class NowPlaying: ObservableObject {
     func toggleFavorite() {
         guard let favorite = options.favorite, let app = appBundleID else { return }
         options.favorite = !favorite
+        heldFavorite = (!favorite, track, .now + Self.favoriteHold)
         readBack(after: PlayerScripting.setFavorite(!favorite, app: app))
     }
 

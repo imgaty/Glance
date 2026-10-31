@@ -153,6 +153,9 @@
 - Fixed the waveform moving ahead of the music on AirPods and other wireless
   headphones, which play a moment late: it now waits for the sound, as the
   colors' pulse does.
+- Fixed the star for songs streamed from `Music`: it stays lit while `Music`
+  saves the song, it removes the song from favorites, and it follows changes
+  made in `Music`.
 
 ### Opening
 
