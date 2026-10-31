@@ -21,15 +21,19 @@ enum ExpandedDeviceLayout {
     static let ringLine: CGFloat = 0.113
     static let number: CGFloat = 0.45
 
-    /// A device extended: at its usual height, or shorter if it would otherwise reach, as it turns,
-    /// further across than the ring at the other end, which leaves a wide one clear of the words and
-    /// the camera.
+    /// How large every device looks, whatever its shape, by the notch's height, as the square root
+    /// of the area it covers on average as it turns.
+    static let size: CGFloat = 0.74
+
+    /// What a device's height is multiplied by to look that large: as far as it stays within what's
+    /// as wide and tall as the ring at the other end, as it turns, clear of the words and the camera.
     @MainActor
-    static func layout(model: Headphones?, pictures: [String], low: Bool, restingHeight h: CGFloat) -> DeviceLayout {
-        var layout = DeviceLayout(height: h, low: low, extended: true)
-        let across = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: layout) * 2
-        layout.fit = min(TimerLayout.content(h) / across, 1)
-        return layout
+    static func fit(model: Headphones?, pictures: [String], restingHeight h: CGFloat) -> CGFloat {
+        let usual = DeviceLayout(height: h, extended: true)
+        let room = TimerLayout.content(h)
+        let looks = SystemActivityView.deviceSize(model: model, pictures: pictures, layout: usual) ?? h * size
+        let across = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: usual) * 2
+        return min(h * size / looks, room / across, room / usual.picture)
     }
 
     /// Each wing: as wide as the ring or the device, against the camera. The words run under the
@@ -68,8 +72,9 @@ struct DeviceActivityView: View {
 
     var body: some View {
         let h = restingHeight
-        let small = DeviceLayout(height: h, low: low)
-        let large = ExpandedDeviceLayout.layout(model: model, pictures: pictures, low: low, restingHeight: h)
+        let fit = ExpandedDeviceLayout.fit(model: model, pictures: pictures, restingHeight: h)
+        let small = DeviceLayout(height: h, low: low, fit: fit)
+        let large = DeviceLayout(height: h, low: low, extended: true, fit: fit)
         let axis = SystemActivityView.deviceAxis(model: model, pictures: pictures, layout: small)
         let reach = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: small)
         let smallWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: small)

@@ -309,7 +309,8 @@ struct SystemActivityView: View {
         // A device's wings as wide as it turns, against the camera, with none of it going under the
         // camera; or as its ring or its word needs.
         if case .device(_, let model, let pictures, let battery) = alert.content {
-            let layout = DeviceLayout(height: restingHeight, low: alert.kind == .deviceBattery)
+            let fit = ExpandedDeviceLayout.fit(model: model, pictures: pictures, restingHeight: restingHeight)
+            let layout = DeviceLayout(height: restingHeight, low: alert.kind == .deviceBattery, fit: fit)
             let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
             let reach = deviceReach(model: model, pictures: pictures, layout: layout)
             let device = layout.edge + max(axis, reach) + reach + gap
@@ -345,6 +346,13 @@ struct SystemActivityView: View {
     static func deviceWidth(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
         model.flatMap(DeviceTurn.cached).map { TurningDevice.width($0, height: layout.picture) }
             ?? DevicePictures.images(pictures).map { StillPictures.width($0, height: layout.picture) } ?? layout.picture
+    }
+
+    /// How large a device looks at that height, on average over a turn, if it's known.
+    @MainActor
+    static func deviceSize(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat? {
+        model.flatMap(DeviceTurn.cached).map { TurningDevice.size($0, height: layout.picture) }
+            ?? DevicePictures.size(pictures, height: layout.picture)
     }
 
     /// The furthest a device reaches from the middle it turns about, either side, all the way round.
@@ -420,9 +428,9 @@ struct DeviceLayout {
     var low = false
     /// Extended, as the iPhone's are (see `ExpandedDeviceLayout`).
     var extended = false
-    /// How much of its usual height a device takes, extended, to fit its place.
+    /// What a device's usual height is multiplied by, for it to look as large as any other.
     var fit: CGFloat = 1
-    var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture * fit : 0.464) }
+    var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture : 0.464) * fit }
     var ring: CGFloat { extended ? TimerLayout.content(height) : height * (low ? 0.68 : 0.54) }
     /// As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
     var ringLine: CGFloat { extended ? height * ExpandedDeviceLayout.ringLine : max(ring * (low ? 0.1 : 0.12), 2) }
@@ -454,6 +462,9 @@ struct TurningDevice: View {
 
     /// The furthest it reaches from the middle it turns about, either side, all the way round.
     static func reach(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.reach * height / turn.rest.height }
+
+    /// How large it looks, on average over a turn.
+    static func size(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.size * height / turn.rest.height }
 
     /// How far round the pair has turned since it arrived.
     static func degrees(after seconds: TimeInterval) -> Double { max(seconds, 0) * degreesPerSecond }

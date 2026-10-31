@@ -63,6 +63,8 @@ struct DeviceTurn {
     /// The furthest the device reaches from the middle it turns about, either side, all the way
     /// round, in pixels.
     let reach: CGFloat
+    /// How large it looks: the square root of the area it covers, on average over a turn, in pixels.
+    let size: CGFloat
 
     func frame(at degrees: Double) -> CGImage {
         let step = 360 / Double(frames.count)
@@ -103,11 +105,12 @@ struct DeviceTurn {
         guard let first = frames.first, let rest = opaque(first) else { return nil }
         let middle = CGFloat(first.width) / 2
         let reach = frames.compactMap(opaque).map { max($0.maxX - middle, middle - $0.minX) }.max() ?? rest.width / 2
-        return DeviceTurn(frames: frames, rest: rest, canvas: CGSize(width: first.width, height: first.height), reach: reach)
+        let size = (frames.map(covered).reduce(0, +) / CGFloat(frames.count)).squareRoot()
+        return DeviceTurn(frames: frames, rest: rest, canvas: CGSize(width: first.width, height: first.height), reach: reach, size: size)
     }
 
-    /// Where a picture isn't clear, in its pixels, from the top left.
-    static func opaque(_ image: CGImage) -> CGRect? {
+    /// A picture's pixels, four values each, the last how opaque it is.
+    private static func pixels(_ image: CGImage) -> [UInt8]? {
         let width = image.width, height = image.height
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         guard
@@ -116,6 +119,19 @@ struct DeviceTurn {
                 space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return pixels
+    }
+
+    /// How much of a picture isn't clear, in pixels.
+    static func covered(_ image: CGImage) -> CGFloat {
+        guard let pixels = pixels(image) else { return 0 }
+        return stride(from: 3, to: pixels.count, by: 4).reduce(0) { $0 + CGFloat(pixels[$1]) / 255 }
+    }
+
+    /// Where a picture isn't clear, in its pixels, from the top left.
+    static func opaque(_ image: CGImage) -> CGRect? {
+        guard let pixels = pixels(image) else { return nil }
+        let width = image.width, height = image.height
         var (minX, minY, maxX, maxY) = (width, height, -1, -1)
         for y in 0..<height {
             for x in 0..<width where pixels[(y * width + x) * 4 + 3] > 8 {
