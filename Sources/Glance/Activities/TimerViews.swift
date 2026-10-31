@@ -171,16 +171,20 @@ struct StopwatchReading: View {
                     .font(.system(size: size, weight: .semibold).monospacedDigit())
                 Text(Stopwatch.hundredths(elapsed))
                     .font(.system(size: size * StopwatchReading.small, weight: .semibold).monospacedDigit())
-                    .baselineOffset(size * StopwatchReading.raised)
+                    .baselineOffset(StopwatchReading.raised(size))
             }
         }
     }
 
-    /// Measured from the iPhone's: the hundredths a little under half the seconds' size, their tops
-    /// a little below the seconds', just apart from them.
-    static let small: CGFloat = 0.47
-    static let raised: CGFloat = 0.32
+    /// The hundredths a little under two thirds the seconds' size, level with their tops, just apart
+    /// from them.
+    static let small: CGFloat = 0.64
     static let gap: CGFloat = 0.06
+
+    /// How far above the seconds' baseline, for the tops of the two to be level.
+    static func raised(_ size: CGFloat) -> CGFloat {
+        NSFont.systemFont(ofSize: size, weight: .semibold).capHeight * (1 - small)
+    }
 
     /// As wide as it reads with its widest digits.
     @MainActor
