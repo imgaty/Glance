@@ -42,9 +42,11 @@ enum ExpandedDeviceLayout {
 /// A device arriving, sized as the Dynamic Island shows AirPods, by the notch's height: the device
 /// a little under half of it tall, its battery's ring a little over half of it across. Each is at
 /// its end, as far in from it as from the top and bottom: the device as near as it comes as it
-/// turns. There's one of each: as the notch extends they grow into their places, as the cover and
-/// the waveform grow into theirs as it opens, and the words fade in as the player's do.
-struct DeviceActivityView: View, Animatable {
+/// turns. There's one of each, laid out as it stands extended and drawn smaller and further out in
+/// the wings, so that as the notch extends they grow into their places as a picture does, with no
+/// layout to land on whole pixels, as the cover and the waveform grow into theirs as it opens; the
+/// words fade in as the player's do.
+struct DeviceActivityView: View {
     let symbol: String
     let model: Headphones?
     let pictures: [String]
@@ -56,15 +58,13 @@ struct DeviceActivityView: View, Animatable {
     let restingHeight: CGFloat
     let leaving: Bool
     let extended: Bool
-    /// How far it's grown, step by step: 0 in the wings, 1 extended, a little past that as it bounces.
-    var grown: CGFloat
+    /// The size the notch is going to, less its flares.
+    let notch: CGSize
+    /// Riding out with the wings' ends as it arrives, from the camera's.
+    @State private var arrived = false
 
-    var animatableData: CGFloat {
-        get { grown }
-        set { grown = newValue }
-    }
-
-    private func mix(_ small: CGFloat, _ large: CGFloat) -> CGFloat { small + (large - small) * grown }
+    /// How far an end of the notch is from its middle.
+    private var toEnd: CGFloat { (arrived || extended ? notch.width : closedWidth) / 2 }
 
     var body: some View {
         let h = restingHeight
@@ -72,25 +72,36 @@ struct DeviceActivityView: View, Animatable {
         let large = DeviceLayout(height: h, low: low, extended: true)
         let axis = SystemActivityView.deviceAxis(model: model, pictures: pictures, layout: small)
         let reach = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: small)
-        let width = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: large)
-        ZStack {
-            picture(height: mix(small.picture, large.picture))
-                // Its middle as far in from the end as it reaches, turning, or where the iPhone's is.
-                .padding(.leading, mix(small.edge + max(reach - axis, 0), h * ExpandedDeviceLayout.pictureMiddle - width / 2))
-                .frame(maxWidth: .infinity, alignment: .leading)
-            // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
-            // announced (see `DeviceWatch`).
-            if let battery {
-                BatteryRing(
-                    percent: battery, diameter: mix(small.ring, large.ring), line: mix(small.ringLine, large.ringLine),
-                    number: mix(small.number, large.number), numberShown: low ? 1 : min(max(grown, 0), 1)
-                )
-                .modifier(RingArrival(leaving: leaving))
-                .padding(.trailing, mix(small.trailing, large.trailing))
-                .frame(maxWidth: .infinity, alignment: .trailing)
+        let smallWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: small)
+        let largeWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: large)
+        // Its middle where the iPhone's is, or as far in from the end as it reaches, turning.
+        let middle = h * ExpandedDeviceLayout.pictureMiddle
+        let smallMiddle = small.edge + max(reach - axis, 0) + smallWidth / 2
+        let ringScale = small.ring / large.ring
+        // Hung from the notch's top middle, which never moves, each is moved out to its end, and
+        // follows it there on the notch's own spring, with no layout to land on whole pixels.
+        Color.clear.overlay(alignment: .top) {
+            ZStack {
+                picture(height: large.picture)
+                    .frame(width: largeWidth, height: large.picture)
+                    .scaleEffect(extended ? 1 : small.picture / large.picture)
+                    .offset(x: (extended ? middle : smallMiddle) - toEnd, y: notch.height / 2)
+                // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
+                // announced (see `DeviceWatch`).
+                if let battery {
+                    BatteryRing(
+                        percent: battery, diameter: large.ring, line: extended ? large.ringLine : small.ringLine / ringScale,
+                        number: large.number, numberScale: extended ? 1 : small.number / large.number / ringScale, numberShown: extended || low
+                    )
+                    .modifier(RingArrival(leaving: leaving))
+                    .scaleEffect(extended ? 1 : ringScale)
+                    .offset(x: toEnd - (extended ? large.trailing + large.ring / 2 : small.trailing + small.ring / 2), y: notch.height / 2)
+                }
+                words.modifier(PageFade(hidden: !extended))
             }
-            words.modifier(PageFade(hidden: !extended))
+            .frame(width: 0, height: 0)
         }
+        .onAppear { withAnimation(IslandMotion.open) { arrived = true } }
     }
 
     @ViewBuilder private func picture(height: CGFloat) -> some View {
@@ -104,21 +115,19 @@ struct DeviceActivityView: View, Animatable {
     }
 
     /// What's happened and its name, laid out at the size they show at, so they never reflow: the
-    /// notch's ends uncover them, from over what's there, moving none of it. They stop short of the
-    /// ring.
+    /// notch's ends uncover them. They stop short of the ring.
     private var words: some View {
         let h = restingHeight
         let layout = ExpandedDeviceLayout.self
         let wing = layout.wing(model: model, pictures: pictures, restingHeight: h)
-        let ring = h * (layout.ring + layout.ringEdge) + LiveActivityView.cameraGap
-        return Color.clear.overlay(alignment: .leading) {
-            ZStack(alignment: .topLeading) {
-                line(low ? "Low Battery" : "Connected", size: h * layout.said, baseline: h * layout.saidBaseline, color: layout.saidColor)
-                line(name, size: h * layout.name, baseline: h * layout.nameBaseline, color: .white)
-            }
-            .padding(.leading, h * layout.wordsLeft)
-            .frame(width: closedWidth + wing * 2 - ring, height: TimerLayout.tallHeight(h), alignment: .topLeading)
+        let width = closedWidth + wing * 2 - h * (layout.ring + layout.ringEdge) - LiveActivityView.cameraGap
+        return ZStack(alignment: .topLeading) {
+            line(low ? "Low Battery" : "Connected", size: h * layout.said, baseline: h * layout.saidBaseline, color: layout.saidColor)
+            line(name, size: h * layout.name, baseline: h * layout.nameBaseline, color: .white)
         }
+        .padding(.leading, h * layout.wordsLeft)
+        .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)
+        .offset(x: width / 2 - toEnd, y: notch.height / 2)
     }
 
     /// A line of words, by where its baseline falls.

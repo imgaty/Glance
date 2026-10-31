@@ -38,6 +38,8 @@ struct SystemActivityView: View {
     var open: () -> Void = {}
     /// A device being announced is extended, with the pointer on it.
     var extended = false
+    /// The size the notch is going to, less its flares.
+    var notch = CGSize.zero
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
     /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
     /// start, so it never leaves as well as fading.
@@ -78,7 +80,7 @@ struct SystemActivityView: View {
                 DeviceActivityView(
                     symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
                     low: alert.kind == .deviceBattery, closedWidth: closedWidth, restingHeight: restingHeight, leaving: self.alert == nil,
-                    extended: extended, grown: extended ? 1 : 0
+                    extended: extended, notch: notch
                 )
                 .islandFade(self.alert != nil)
                 .id(alert.id)
@@ -635,10 +637,11 @@ struct BatteryRing: View {
     let percent: Int
     let diameter: CGFloat
     let line: CGFloat
-    /// Its level in numbers in its middle, how large and how much of it shows: all of it for a device
-    /// running low or extended.
+    /// Its level in numbers in its middle, how large, drawn at one size and scaled so its letters
+    /// never jump, for a device running low or extended.
     var number: CGFloat = 0
-    var numberShown: CGFloat = 0
+    var numberScale: CGFloat = 1
+    var numberShown = false
     /// The iPhone's, as it shows AirPods' battery.
     static let green = Color(.sRGB, red: 0x45 / 255, green: 0xE2 / 255, blue: 0x74 / 255)
 
@@ -647,17 +650,17 @@ struct BatteryRing: View {
     var body: some View {
         let color = Self.color(for: percent)
         ZStack {
-            Circle().stroke(color.opacity(0.3), lineWidth: line)
-            Circle()
+            Circle().inset(by: line / 2).stroke(color.opacity(0.3), lineWidth: line)
+            Circle().inset(by: line / 2)
                 .trim(from: 0, to: CGFloat(percent) / 100)
                 .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(percent)")
                 .font(.system(size: number, weight: .heavy))
                 .foregroundStyle(color)
-                .opacity(numberShown)
+                .scaleEffect(numberScale)
+                .opacity(numberShown ? 1 : 0)
         }
-        .padding(line / 2)
         .frame(width: diameter, height: diameter)
         .accessibilityLabel("\(percent) percent")
     }

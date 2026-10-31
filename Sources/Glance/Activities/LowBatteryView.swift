@@ -116,7 +116,7 @@ enum LowBatteryLayout {
     /// The ring's line, over the capsule and the battery.
     static let ringOpacity = 0.37
 
-    /// The capsule as far in from the right end as from the top and bottom, concentric with it.
+    /// The capsule as far in from the right end as from the top and bottom, in line with it.
     static func edge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * capsule.height, in: TimerLayout.tallHeight(h)) }
 
     /// From the top to the level's line: the two lines centered, from the level's capitals to the
@@ -160,7 +160,7 @@ enum LowBatteryLayout {
     }
 
     /// Each wing: the wider side against the camera, the words as far in from their end as words
-    /// beside the camera are, or the capsule concentric with its end.
+    /// beside the camera are, or the capsule as far from its end as from the top.
     @MainActor
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let words = LiveActivityView.textEdge(restingHeight: h) + lead(percent: percent, restingHeight: h, closedWidth: closedWidth)

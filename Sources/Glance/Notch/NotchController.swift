@@ -581,6 +581,13 @@ final class NotchController {
                 model.switching = false
                 model.alertWing = wing
                 model.alert = alert
+                // Extended already, the next device takes its own width; anything else folds.
+                if case .device(_, let device, let pictures, _) = alert.content {
+                    model.alertExtendedWing = ExpandedDeviceLayout.wing(
+                        model: device, pictures: pictures, restingHeight: model.closedSize.height)
+                } else {
+                    model.alertExtended = false
+                }
             }
         }
         guard wingsShowing, model.alert == nil, !model.switching else { return announce() }
@@ -968,11 +975,11 @@ final class NotchController {
     // MARK: Transitions
 
     private func peek() {
-        model.peek()
+        if let alert = model.alert, case .device = alert.content { extend(alert) } else { model.peek() }
         startPolling()
         // On an announcement, it only swells around it, or a device extends, and it opens once that's
         // over (see `show`).
-        if let alert = model.alert, !alert.tall { return extend(alert) }
+        if model.alert?.tall == false { return }
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).
@@ -984,13 +991,8 @@ final class NotchController {
     private func extend(_ alert: NotchAlert) {
         guard case .device(_, let device, let pictures, _) = alert.content else { return }
         model.alertExtendedWing = ExpandedDeviceLayout.wing(model: device, pictures: pictures, restingHeight: model.closedSize.height)
-        withAnimation(NotchMotion.expand) { model.alertExtended = true }
+        model.extend()
         Activities.shared.keep(alert.kind, for: alert.seconds)
-    }
-
-    private func foldDevice() {
-        guard model.alertExtended else { return }
-        withAnimation(IslandMotion.fold) { model.alertExtended = false }
     }
 
     /// An announcement folds away when the notch is opened anyway, from a click or a shortcut, and
@@ -1018,7 +1020,6 @@ final class NotchController {
 
     private func settle(at p: CGPoint) {
         openTask?.cancel()
-        foldDevice()
         model.settle(closeness: closeness(to: p))
         stopPolling()
         // Gone before the notch opened, after an announcement folded away for it: what was there

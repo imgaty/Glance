@@ -393,9 +393,9 @@ final class NotchModel: ObservableObject {
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
         // which the glass, sized afresh with the notch, doesn't follow.
         let press: CGFloat = pressed ? 0.975 : 1
-        // As tall as the Dynamic Island's expanded activities, it keeps the notch's small flares.
+        // As tall as the Dynamic Island's expanded activities, its corners are the open notch's.
         let tall = state == .open ? expanded != nil : restingTall
-        let flare = tall ? NotchCorners.restingFlare : corners.radii(forHeight: height * press).flare
+        let flare = tall ? corners.openRadius : corners.radii(forHeight: height * press).flare
         return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare, fold: state == .open || detached == nil ? 0 : wing)
     }
 }
@@ -415,10 +415,20 @@ extension NotchModel {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { state = .peek }
     }
 
-    /// Peek → closed, when the pointer slides off before the notch opens.
+    /// Closed → a device extended, the notch and what it shows in one motion.
+    func extend() {
+        withAnimation(NotchMotion.expand) {
+            state = .peek
+            alertExtended = true
+        }
+    }
+
+    /// Peek → closed, when the pointer slides off before the notch opens. A device extended folds with
+    /// it, as an activity folds, without a bounce.
     func settle(closeness: CGFloat) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAnimation(alertExtended ? IslandMotion.fold : .spring(response: 0.35, dampingFraction: 0.8)) {
             state = .closed
+            alertExtended = false
             proximity = Self.eased(closeness)
         }
     }
@@ -564,7 +574,7 @@ struct NotchView: View {
             // As wide as the notch is at each step, so what the wings show rides in and out with their
             // ends, as the Dynamic Island's activities do.
             LiveActivityView(restingHeight: closed.height, wing: model.wing, pop: model.pop, swell: swell)
-                .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
+                .atNotchStep(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
                 .islandFade(liveShown)
             // What the Mac announces, and a timer, in the same wings.
@@ -574,9 +584,10 @@ struct NotchView: View {
                 route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.switching ? model.airdrop : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
-                hoveredButton: model.hoveredButton, open: { model.openNotch() }, extended: model.alertExtended
+                hoveredButton: model.hoveredButton, open: { model.openNotch() }, extended: model.alertExtended,
+                notch: CGSize(width: m.bodyWidth, height: m.height)
             )
-            .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
+            .atNotchStep(width: m.bodyWidth, height: m.height)
             .allowsHitTesting(false)
             .islandFade(!isOpen)
             // The notch at rest, sharp, over what the wings show, as the Dynamic Island keeps its own
@@ -588,7 +599,7 @@ struct NotchView: View {
             let rest = isOpen ? model.metrics(for: .closed) : m
             let restHeight = model.alertExtended ? closed.height : min(rest.height, model.metrics(for: isOpen ? .closed : model.state, short: true).height)
             NotchShape(corners: model.corners).fill(.black)
-                .frame(width: model.closedSize.width + rest.flare * 2, height: restHeight)
+                .frame(width: model.closedSize.width + model.corners.radii(forHeight: restHeight).flare * 2, height: restHeight)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
@@ -994,7 +1005,7 @@ struct NotchShape: Shape {
     /// the height across; 0 at rest.
     var wingEnds: CGFloat = 0
     /// 1 for what's as tall as the Dynamic Island's expanded activities, more than twice the notch:
-    /// its ends round right across, half its height, and its top keeps the notch's small flares.
+    /// all four corners are the open notch's, however much shorter it stands.
     var tall: CGFloat = 0
     /// How much of the trailing wing is folded away, back to the camera, with another activity
     /// detached (see `NotchModel.detached`). What's left is laid out as it always is, only cut short.
@@ -1013,10 +1024,8 @@ struct NotchShape: Shape {
             radii.bottom += (rect.height / 2 - radii.bottom) * wingEnds * (1 - open)
         }
         if tall > 0 {
-            // Round right across at the Dynamic Island's height, never rounder than its 44 points.
-            let round = min(rect.height / 2, corners.restingHeight * TimerLayout.corner)
-            radii.bottom += (round - radii.bottom) * tall
-            radii.flare += (NotchCorners.restingFlare - radii.flare) * tall
+            radii.bottom += (corners.openRadius - radii.bottom) * tall
+            radii.flare += (corners.openRadius - radii.flare) * tall
         }
         return radii
     }
@@ -1072,31 +1081,28 @@ private struct SteppedFrame: ViewModifier, Animatable {
 
     func body(content: Content) -> some View {
         content.frame(width: width, height: height, alignment: .top)
-            .environment(\.notchStep, width)
     }
-}
-
-extension EnvironmentValues {
-    /// The notch's width at this step as it animates, flares and all (see `SteppedFrame`).
-    @Entry var notchStep: CGFloat?
 }
 
 extension View {
     /// As wide as the notch is at each step as it animates, less its flares, so what the wings show
     /// rides in and out with their ends, as the Dynamic Island's activities do.
-    fileprivate func atNotchStep(flare: CGFloat, height: CGFloat, otherwise width: CGFloat) -> some View {
-        modifier(AtNotchStep(flare: flare, height: height, width: width))
+    fileprivate func atNotchStep(width: CGFloat, height: CGFloat) -> some View {
+        modifier(AtNotchStep(width: width, height: height))
     }
 }
 
-private struct AtNotchStep: ViewModifier {
-    @Environment(\.notchStep) private var step
-    let flare: CGFloat
+private struct AtNotchStep: ViewModifier, Animatable {
+    var width: CGFloat
     let height: CGFloat
-    let width: CGFloat
+
+    var animatableData: CGFloat {
+        get { width }
+        set { width = newValue }
+    }
 
     func body(content: Content) -> some View {
-        content.frame(width: step.map { max($0 - flare * 2, 0) } ?? width, height: height)
+        content.frame(width: width, height: height)
     }
 }
 

@@ -22,8 +22,6 @@ enum TimerLayout {
     static let handTo: CGFloat = 0.21
     // Opened, and done.
     static let tall: CGFloat = 2.4
-    /// Its round corners at the bottom, the Dynamic Island's 44 points.
-    static let corner: CGFloat = 1.2
     static let button: CGFloat = 1.364
     static let buttonGap: CGFloat = 0.23
     static let title: CGFloat = 0.464
@@ -54,8 +52,7 @@ enum TimerLayout {
     /// Opened and done, as tall as the iPhone's, for a notch this tall.
     static func tallHeight(_ h: CGFloat) -> CGFloat { (h * tall).rounded() }
     /// Opened and done, how far in from its end each side sits, buttons and words alike: as far as
-    /// the round buttons are from the top and bottom, so they're concentric with the round ends,
-    /// and the words at the other end match them.
+    /// the round buttons are from the top and bottom, and the words at the other end match them.
     static func buttonEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * button, in: tallHeight(h)) }
 
     // Inside the round buttons.
@@ -200,8 +197,7 @@ struct StopwatchReading: View {
 /// cancel left of the camera, the time left, large, right of it, its name under the camera, as the
 /// player's title sits under it. Opened to the stopwatch, as the iPhone's: its buttons to stop it and
 /// to start it over, or, stopped, to start it and to reset it, and its time alone, to the hundredth.
-/// Each side at its end, as far in from it as from the top and bottom, the round buttons concentric
-/// with the round end; the notch only as wide as the wider side needs, for the time as it reads now. They're Clock's, pressed through Clock (see `ClockActivity`); without
+/// Each side at its end, as far in from it as from the top and bottom; the notch only as wide as the wider side needs, for the time as it reads now. They're Clock's, pressed through Clock (see `ClockActivity`); without
 /// Accessibility, the buttons are dimmed, and a press asks for it.
 struct ExpandedTimerView: View {
     let shown: ClockShown
@@ -330,7 +326,7 @@ struct ExpandedTimerView: View {
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
     }
 
-    /// From the left end to the buttons, which are concentric with it.
+    /// From the left end to the buttons, as far as from the top and bottom.
     private static func buttonsEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
         guard isStopwatch(shown) else { return TimerLayout.buttonEdge(h) }
         return LiveActivityView.concentric(h * TimerLayout.stopwatchButton, in: TimerLayout.tallHeight(h))

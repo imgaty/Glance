@@ -398,10 +398,8 @@ struct ActivitiesTests {
         let (left, right) = SystemActivityView.insets(
             for: .battery(title: "Charging", level: BatteryLevel(percent: 64, charging: true)), restingHeight: h)
         #expect(left == words && right == words)
-        // Opened and done, the round buttons are concentric with the round ends, the Dynamic
-        // Island's 44 points.
-        let round = min(TimerLayout.tallHeight(h) / 2, h * TimerLayout.corner)
-        #expect(abs(TimerLayout.buttonEdge(h) + h * TimerLayout.button / 2 - round) < 0.5)
+        // Opened and done, the round buttons are as far in from the end as from the top and bottom.
+        #expect(abs(TimerLayout.buttonEdge(h) - (TimerLayout.tallHeight(h) - h * TimerLayout.button) / 2) < 0.5)
     }
 
     @Test("Opened to a timer, the notch is as tall as the Timer's expanded view, each side from its end, concentric with it")
@@ -414,7 +412,8 @@ struct ActivitiesTests {
         // Either side of the camera, only as wide as the buttons, wider than "5:00", need.
         let buttons = 32 * (TimerLayout.button * 2 + TimerLayout.buttonGap)
         #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.buttonEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
-        #expect(open.flare == NotchCorners.restingFlare)
+        // All four corners are the open notch's, as the player's are.
+        #expect(open.flare == model.corners.openRadius)
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
