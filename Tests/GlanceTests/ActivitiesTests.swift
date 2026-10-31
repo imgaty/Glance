@@ -168,7 +168,7 @@ struct ActivitiesTests {
         #expect(Stopwatch.format(7.41) == "0:07")
         #expect(Stopwatch.format(727.41) == "12:07")
         #expect(Stopwatch.format(3727.41) == "1:02:07")
-        #expect(Stopwatch.format(7.416, hundredths: true) == "0:07" + (Locale.current.decimalSeparator ?? ".") + "41")
+        #expect(Stopwatch.format(7.416, hundredths: true) == "00:07" + (Locale.current.decimalSeparator ?? ".") + "41")
         // Beside the camera, its hundredths small after the seconds, as wide as its widest reading.
         #expect(Stopwatch.hundredths(7.416) == "41")
         #expect(Stopwatch.hundredths(7.999) == "99")

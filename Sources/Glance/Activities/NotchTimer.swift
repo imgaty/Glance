@@ -115,11 +115,12 @@ enum Stopwatch: Equatable {
         return nil
     }
 
-    /// As Clock shows it: 0:07, 12:07, 1:02:07; opened, to the hundredth, 0:07.41.
+    /// As Clock shows it: 0:07, 12:07, 1:02:07; opened, as the iPhone's, to the hundredth, 00:07,41.
     static func format(_ seconds: TimeInterval, hundredths: Bool = false) -> String {
         let whole = Int(seconds)
         let hours = whole / 3600, minutes = whole / 60 % 60, rest = whole % 60
-        let shown = hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
+        let clock = hundredths ? "%02d:%02d" : "%d:%02d"
+        let shown = hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: clock, minutes, rest)
         guard hundredths else { return shown }
         let hundredth = min(Int((seconds - Double(whole)) * 100), 99)
         return shown + (Locale.current.decimalSeparator ?? ".") + String(format: "%02d", hundredth)
