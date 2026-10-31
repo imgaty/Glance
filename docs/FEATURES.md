@@ -24,7 +24,7 @@ screenshots and screen recordings, newest first. Click something to select it,
 double-click to paste it, drag it out, or send it with AirDrop. Copies stay for
 30 minutes, 8 hours or 7 days, unless you keep them, and passwords never do.
 Open items with any app, add things from any app's Share or Services menu, and
-choose apps whose copies stay out. ⇧⌘2 opens it, or three fingers on the open
+choose apps whose copies stay out. ⌥⇧2 opens it, or three fingers on the open
 notch, and it grows wider with what it keeps. See the [User
 Manual](USER-MANUAL.md#the-tray).
 
@@ -32,7 +32,7 @@ Manual](USER-MANUAL.md#the-tray).
 
 Hover over it, click it, or either, with an optional delay. Swipe down with two
 fingers to open it, up to close it, and sideways to change songs. From any app,
-⇧⌘1 opens it with the player and ⇧⌘2 with the tray, or shortcuts of your
+⌥⇧1 opens it with the player and ⌥⇧2 with the tray, or shortcuts of your
 choice, and the keyboard works it until it closes. On a MacBook Pro with Touch,
 or an iPad over Sidecar, tap it, drag it the same ways with a finger, and touch
 and hold it for its menu. See the

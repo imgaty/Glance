@@ -31,8 +31,8 @@ final class Shortcuts: ObservableObject {
         /// The shortcut out of the box.
         var standard: KeyCombo {
             switch self {
-            case .music: KeyCombo(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(shiftKey | cmdKey), key: "1")
-            case .tray: KeyCombo(keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(shiftKey | cmdKey), key: "2")
+            case .music: KeyCombo(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(shiftKey | optionKey), key: "1")
+            case .tray: KeyCombo(keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(shiftKey | optionKey), key: "2")
             }
         }
 

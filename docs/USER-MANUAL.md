@@ -77,8 +77,8 @@ Reduce Motion on, they only fade.
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead, and, scrolled on past the row's end, goes back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
 | Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |
-| ⇧⌘1, from any app | Opens the notch with the player; again, closes it |
-| ⇧⌘2, from any app | Opens the notch with the tray; again, closes it |
+| ⌥⇧1, from any app | Opens the notch with the player; again, closes it |
+| ⌥⇧2, from any app | Opens the notch with the tray; again, closes it |
 
 The notch opens on the player. The tray is to its right: swipe toward it with
 three fingers on the open notch, or hold Shift and scroll, and back to return.
@@ -104,9 +104,8 @@ keyboard the same way:
 | ⌘Z | On the tray, brings back what you last removed, for a minute |
 | Type a name | On the tray, selects the first item whose name starts with it; Space typed partway is part of the name |
 
-⇧⌘1 and ⇧⌘2 work ahead of every app's own shortcuts, so while Glance runs they
-replace Xcode's Welcome to Xcode and Devices and Simulators. To use other
-shortcuts, change them in **Settings > Opening**.
+⌥⇧1 and ⌥⇧2 work ahead of every app's own shortcuts. To use other shortcuts,
+change them in **Settings > Opening**.
 
 ### With a finger
 
@@ -205,7 +204,7 @@ The tray keeps the files you drop on the notch, what you copy, and your
 screenshots and screen recordings, newest first, as Finder shows files: each
 item's icon, with its name under it. Copied text shows as a page of its first
 words, and a link as its site's icon, with where on the site it goes under the
-site's name. Open it with ⇧⌘2, or switch to it from the player. Dragging a file,
+site's name. Open it with ⌥⇧2, or switch to it from the player. Dragging a file,
 or anything else the tray takes, near the notch and holding it there a moment
 opens it too, ready for the drop, without reaching the top edge.
 
@@ -519,8 +518,8 @@ ellipsis instead of scrolling.
 | `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
 | `Slide to the next tool` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
 | `Natural scrolling` | The tools follow your fingers; off, swiping and scrolling go the other way |
-| `Open the player` | The keyboard shortcut, ⇧⌘1 at first; click it and type another, or Control-click it to restore ⇧⌘1 |
-| `Open the tray` | The tray's shortcut, ⇧⌘2 at first, changed the same way |
+| `Open the player` | The keyboard shortcut, ⌥⇧1 at first; click it and type another, or Control-click it to restore ⌥⇧1 |
+| `Open the tray` | The tray's shortcut, ⌥⇧2 at first, changed the same way |
 
 ### Displays
 

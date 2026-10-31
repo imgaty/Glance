@@ -302,9 +302,9 @@
 
 ### Opening
 
-- Added ⇧⌘1 to open and close the player from any app, ahead of the app's
+- Added ⌥⇧1 to open and close the player from any app, ahead of the app's
   own shortcuts.
-- Added ⇧⌘2 to open and close the tray the same way.
+- Added ⌥⇧2 to open and close the tray the same way.
 - Added three fingers on the open notch, or Shift and a scroll, to switch
   between the player and the tray, either way round.
 - Added opening the tray when something is dragged near the notch and held

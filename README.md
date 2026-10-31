@@ -21,7 +21,7 @@ check for updates.
 Any app that tells macOS what it's playing shows up here
 (the same apps Control Center lists under Now Playing), and you can turn each
 one on or off in Settings. Hover over the notch or click it to reveal the
-controls, or press ⇧⌘1 in any app to open it.
+controls, or press ⌥⇧1 in any app to open it.
 
 <img src="./assets/screenshots/player.gif"
      width="450"
@@ -83,7 +83,7 @@ whenever LRCLIB has timed lyrics for it.
 ### Tray
 
 Drag files onto the notch to keep them close, and find what you copied and your
-screenshots, ready to paste again or AirDrop. Press ⇧⌘2 in any app, or swipe
+screenshots, ready to paste again or AirDrop. Press ⌥⇧2 in any app, or swipe
 left or right with three fingers on the player, to open it.
 
 <img src="./assets/screenshots/tray.gif"
