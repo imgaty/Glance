@@ -538,6 +538,8 @@ final class NotchController {
             }
             return
         }
+        // The pointer resting on the notch doesn't open it over what's just been announced.
+        if !alert.tall, model.state == .peek { openTask?.cancel() }
         let wing = SystemActivityView.wing(
             for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
         func announce() {
@@ -934,16 +936,17 @@ final class NotchController {
     private func peek() {
         model.peek()
         startPolling()
-        foldAnnouncement()
+        // On an announcement, it only swells around it: there's nothing of its own to open to.
+        if let alert = model.alert, !alert.tall { return }
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).
         if opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
     }
 
-    /// An announcement, which has nothing of its own to open to, folds away the moment the pointer
-    /// comes onto the notch, and the notch opens only once it has, as the Dynamic Island finishes
-    /// one activity's motion before the next. One with buttons, as a rung timer, stays for them.
+    /// An announcement folds away when the notch is opened anyway, from a click or a shortcut, and
+    /// the notch opens only once it has, as the Dynamic Island finishes one activity's motion before
+    /// the next. One with buttons, as a rung timer, stays for them.
     private func foldAnnouncement() {
         guard let alert = model.alert, !alert.tall, model.state != .open else { return }
         foldingUntil = .now + Self.foldTime
