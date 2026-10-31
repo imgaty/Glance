@@ -31,8 +31,7 @@ struct IslandBubble: View {
     let flare: CGFloat
     /// How much of the notch's trailing wing is folded away, which the bubble sits off the end of.
     let fold: CGFloat
-    /// The notch is open, as nothing of the bubble shows over its glass, or growing tall, as its ends
-    /// curve in past where the bubble rests hidden.
+    /// The notch is open: nothing of the bubble shows over its glass.
     let hidden: Bool
     let hovered: Bool
     let pressed: Bool
@@ -108,6 +107,8 @@ struct IslandBubble: View {
         .offset(x: h * (1 + Self.gap) - flare - fold)
         // Gone at once as the notch opens; back once it has all but closed, as its black is.
         .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
+        // With nothing to show or running back, it isn't there at all, to show past the notch's end.
+        .opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil ? 1 : 0)
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1

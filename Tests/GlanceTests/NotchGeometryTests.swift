@@ -52,10 +52,10 @@ struct GlassLookTests {
     }
 }
 
-/// The notch's corners as it opens.
+/// The notch's corners, closed and open.
 @Suite("Notch corners")
 struct NotchCornersTests {
-    private let notch = NotchCorners(restingHeight: 32, openHeight: 200, openRadius: 29)
+    private let notch = NotchCorners(restingHeight: 32, radius: 29)
 
     @Test("Closed, it has the hardware notch's flares and corners")
     func resting() {
@@ -64,25 +64,26 @@ struct NotchCornersTests {
         #expect(radii.bottom == 12)
     }
 
-    @Test("Open, all four corners are the open radius")
-    func open() {
-        let radii = notch.radii(forHeight: 200)
-        #expect(isClose(radii.flare, 29))
-        #expect(isClose(radii.bottom, 29))
+    @Test("Closed with wings out, it keeps the hardware notch's flares, and their ends are round")
+    func wings() {
+        let radii = notch.radii(forHeight: 32, wingEnds: 1)
+        #expect(radii.flare == 6)
+        #expect(isClose(radii.bottom, 16))
     }
 
-    @Test("Halfway open, the corners are halfway grown")
-    func halfway() {
-        let radii = notch.radii(forHeight: 116)
-        #expect(isClose(radii.flare, 17.5))
-        #expect(isClose(radii.bottom, 20.5))
+    @Test("Swollen under the pointer, it keeps the hardware notch's flares")
+    func swollen() {
+        #expect(notch.radii(forHeight: 39).flare == 6)
+        #expect(isClose(notch.radii(forHeight: 39, wingEnds: 1).bottom, 19.5))
     }
 
-    @Test("Pulled past open, the corners stay at the open radius")
-    func pastOpen() {
-        let radii = notch.radii(forHeight: 400)
-        #expect(isClose(radii.flare, 29))
-        #expect(isClose(radii.bottom, 29))
+    @Test("Open, all four corners are the player's, however tall it stands", arguments: [58.0, 77.0, 172.0, 400.0])
+    func open(height: CGFloat) {
+        for wingEnds in [0.0, 1.0] {
+            let radii = notch.radii(forHeight: height, wingEnds: wingEnds)
+            #expect(isClose(radii.flare, 29))
+            #expect(isClose(radii.bottom, 29))
+        }
     }
 
     @Test("Shorter than closed, the corners stay at the closed ones")
@@ -90,14 +91,6 @@ struct NotchCornersTests {
         let radii = notch.radii(forHeight: 10)
         #expect(radii.flare == 6)
         #expect(radii.bottom == 12)
-    }
-
-    @Test("Open and closed at the same height doesn't divide by zero")
-    func sameHeights() {
-        let flat = NotchCorners(restingHeight: 32, openHeight: 32, openRadius: 29)
-        let radii = flat.radii(forHeight: 32)
-        #expect(radii.flare.isFinite && radii.bottom.isFinite)
-        #expect(radii.flare == 6)
     }
 
     @Test("The flare is counted on both sides of the width")

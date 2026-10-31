@@ -412,8 +412,8 @@ struct ActivitiesTests {
         // Either side of the camera, only as wide as the buttons, wider than "5:00", need.
         let buttons = 32 * (TimerLayout.button * 2 + TimerLayout.buttonGap)
         #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.buttonEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
-        // All four corners are the open notch's, as the player's are.
-        #expect(open.flare == model.corners.openRadius)
+        // All four corners are the player's.
+        #expect(open.flare == PlayerLayout.cornerRadius)
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
@@ -508,7 +508,7 @@ struct ActivitiesTests {
 
     @Test("Folded, the notch's trailing end comes back and its leading end stays")
     func foldedShape() {
-        let corners = NotchCorners(restingHeight: 32, openHeight: 200, openRadius: 29)
+        let corners = NotchCorners(restingHeight: 32, radius: 29)
         let rect = CGRect(x: 0, y: 0, width: 300, height: 32)
         let whole = NotchShape(corners: corners, wingEnds: 1).path(in: rect).boundingRect
         let folded = NotchShape(corners: corners, wingEnds: 1, fold: 32).path(in: rect).boundingRect

@@ -54,12 +54,12 @@ enum GlassLook {
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
-/// into the screen's edge at the top, small rounded corners at the bottom. Opening, both grow to the
-/// same radius, so all four corners match, in Apple's continuous (squircle) curve.
+/// into the screen's edge at the top, small rounded corners at the bottom, and swelling under the
+/// pointer it stays so. Opening, both grow to the player's radius, so all four corners match, in
+/// Apple's continuous (squircle) curve, as soon as it's tall enough for them.
 struct NotchCorners: Equatable {
     var restingHeight: CGFloat
-    var openHeight: CGFloat
-    var openRadius: CGFloat
+    var radius: CGFloat
 
     static let restingFlare: CGFloat = 6
     private static let restingBottomRadius: CGFloat = 12
@@ -69,12 +69,14 @@ struct NotchCorners: Equatable {
         var bottom: CGFloat
     }
 
-    func radii(forHeight height: CGFloat) -> Radii {
-        // Settled at the open size: a pull never rounds the corners past it.
-        let progress = min(max((height - restingHeight) / max(openHeight - restingHeight, 1), 0), 1)
+    /// With wings out, their ends are round, half the height across, as the Dynamic Island's are.
+    func radii(forHeight height: CGFloat, wingEnds: CGFloat = 0) -> Radii {
+        let swollen = restingHeight + NotchModel.peekSwell
+        let progress = min(max((height - swollen) / max(radius * 2 - swollen, 1), 0), 1)
+        let bottom = Self.restingBottomRadius + (radius - Self.restingBottomRadius) * progress
         return Radii(
-            flare: Self.restingFlare + (openRadius - Self.restingFlare) * progress,
-            bottom: Self.restingBottomRadius + (openRadius - Self.restingBottomRadius) * progress)
+            flare: Self.restingFlare + (radius - Self.restingFlare) * progress,
+            bottom: bottom + (min(height / 2, radius) - bottom) * wingEnds)
     }
 }
 
@@ -95,11 +97,11 @@ final class NotchModel: ObservableObject {
     let closedSize: CGSize
     /// The display has a camera housing at the top, which nothing should be drawn under.
     let hasCamera: Bool
-    /// The player's layout, its open size and corners. They change together, animated, when the
-    /// layout changes in Settings.
+    /// The player's layout and its open size. They change together, animated, when the layout
+    /// changes in Settings.
     @Published var layout: PlayerLayout
     @Published var openSize: CGSize
-    @Published var corners: NotchCorners
+    let corners: NotchCorners
     /// Added to the open notch's width while the lyrics show beside the player.
     let lyricsWidth: CGFloat = 250
     /// The widest a wing gets while a new song is announced; longer titles scroll.
@@ -305,17 +307,13 @@ final class NotchModel: ObservableObject {
         self.layout = layout
         let openSize = layout.size(closed: closedSize)
         self.openSize = openSize
-        // Fully round by the shorter of the two pages, so both have the same corners.
-        corners = NotchCorners(
-            restingHeight: closedSize.height, openHeight: min(openSize.height, Self.trayHeight(closed: closedSize)),
-            openRadius: PlayerLayout.cornerRadius)
+        corners = NotchCorners(restingHeight: closedSize.height, radius: PlayerLayout.cornerRadius)
     }
 
     /// Switches to another layout in place.
     func use(_ layout: PlayerLayout) {
         self.layout = layout
         openSize = layout.size(closed: closedSize)
-        corners.openHeight = min(openSize.height, trayHeight)
     }
 
     /// Each side of the camera while music plays: as wide as the artwork's square needs, right up to
@@ -393,9 +391,7 @@ final class NotchModel: ObservableObject {
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
         // which the glass, sized afresh with the notch, doesn't follow.
         let press: CGFloat = pressed ? 0.975 : 1
-        // As tall as the Dynamic Island's expanded activities, its corners are the open notch's.
-        let tall = state == .open ? expanded != nil : restingTall
-        let flare = tall ? corners.openRadius : corners.radii(forHeight: height * press).flare
+        let flare = corners.radii(forHeight: height * press).flare
         return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare, fold: state == .open || detached == nil ? 0 : wing)
     }
 }
@@ -530,10 +526,8 @@ struct NotchView: View {
         let isOpen = model.state == .open
         // Open on an activity's own view, which shows instead of the player or the tray.
         let expandedShown = model.expandedShown
-        // As tall as the Dynamic Island's expanded activities, it's black all through, as they are.
         let tall = isOpen ? model.expanded != nil : model.restingTall
-        // With wings out, their ends round as the Dynamic Island's do.
-        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, tall: tall ? 1 : 0, fold: m.fold)
+        let shape = NotchShape(corners: model.corners, wingEnds: model.wing > 0 ? 1 : 0, fold: m.fold)
         let onTray = model.page == .tray
         // Open on the player, rather than on the tray.
         let heroOpen = isOpen && !expandedShown
@@ -541,7 +535,7 @@ struct NotchView: View {
         let trayShown = heroOpen && onTray
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
-        let visible: Double = model.state != .closed && !tall ? 1 : 0
+        let visible: Double = model.state != .closed || tall ? 1 : 0
         // With Increase Contrast on, the player's words and buttons sit on plain black.
         let lit = playerShown && nowPlaying.artwork != nil && background != .none && !accessibility.increasesContrast
         let lyricsShown = heroOpen && model.showsLyrics
@@ -551,8 +545,6 @@ struct NotchView: View {
 
         ZStack(alignment: .top) {
             shade
-            Color.black
-                .animation(.easeOut(duration: 0.2)) { $0.opacity(tall ? 1 : 0) }
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
             // black at the top, just where the glass shows; as a spotlight, it's a soft circle around
             // the cover. Choosing between them morphs one into another.
@@ -675,7 +667,7 @@ struct NotchView: View {
         // the picture, so the glass and the notch's black and outline would part as it changes size
         // (opening, a new layout, the lyrics coming or going). Laid out afresh at every step, the
         // whole notch, glass and all, keeps together.
-        .modifier(SteppedFrame(width: m.totalWidth, height: m.height))
+        .modifier(SteppedFrame(width: m.bodyWidth, height: m.height, corners: model.corners))
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         .clipShape(shape)
@@ -742,7 +734,7 @@ struct NotchView: View {
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble() },
-            restingHeight: model.closedSize.height, flare: m.flare, fold: m.fold, hidden: model.state == .open || model.restingTall,
+            restingHeight: model.closedSize.height, flare: m.flare, fold: m.fold, hidden: model.state == .open,
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
@@ -926,8 +918,9 @@ struct NotchView: View {
         .frame(width: lightSize.width, height: lightSize.height, alignment: .top)
     }
 
-    /// Black at the top, fading smoothly all the way down to fully transparent glass at the
-    /// bottom edge. Pinned to the top, so a resting notch stays all black.
+    /// Black at the top, fading smoothly all the way down to fully transparent glass at the open
+    /// player's bottom edge. Pinned to the top, as a mask, so however tall the notch stands it shows as
+    /// much glass as it reaches: a resting notch all black, a short activity a little, a tall one more.
     private var shade: some View {
         let height = model.openSize.height
         return LinearGradient(
@@ -1004,30 +997,17 @@ struct NotchShape: Shape {
     /// 1 with wings out beside the camera, whose ends then round as the Dynamic Island's do, half
     /// the height across; 0 at rest.
     var wingEnds: CGFloat = 0
-    /// 1 for what's as tall as the Dynamic Island's expanded activities, more than twice the notch:
-    /// all four corners are the open notch's, however much shorter it stands.
-    var tall: CGFloat = 0
     /// How much of the trailing wing is folded away, back to the camera, with another activity
     /// detached (see `NotchModel.detached`). What's left is laid out as it always is, only cut short.
     var fold: CGFloat = 0
 
-    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
-        get { AnimatablePair(AnimatablePair(wingEnds, tall), fold) }
-        set { (wingEnds, tall, fold) = (newValue.first.first, newValue.first.second, newValue.second) }
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(wingEnds, fold) }
+        set { (wingEnds, fold) = (newValue.first, newValue.second) }
     }
 
     private func radii(in rect: CGRect) -> NotchCorners.Radii {
-        var radii = corners.radii(forHeight: rect.height)
-        if wingEnds > 0 {
-            // Opening, the open notch's own corners take over.
-            let open = min(max((rect.height - corners.restingHeight) / max(corners.openHeight - corners.restingHeight, 1), 0), 1)
-            radii.bottom += (rect.height / 2 - radii.bottom) * wingEnds * (1 - open)
-        }
-        if tall > 0 {
-            radii.bottom += (corners.openRadius - radii.bottom) * tall
-            radii.flare += (corners.openRadius - radii.flare) * tall
-        }
-        return radii
+        corners.radii(forHeight: rect.height, wingEnds: wingEnds)
     }
 
     /// How far the top corners flare out on each side, at this size.
@@ -1071,8 +1051,11 @@ struct NotchShape: Shape {
 /// Lays its content out at a size that changes step by step as it animates, rather than at the new
 /// size at once with only its picture moving there.
 private struct SteppedFrame: ViewModifier, Animatable {
+    /// Less its flares, which follow from its height at each step, so its ends move on its spring
+    /// alone, whatever the corners are doing.
     var width: CGFloat
     var height: CGFloat
+    let corners: NotchCorners
 
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(width, height) }
@@ -1080,7 +1063,7 @@ private struct SteppedFrame: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
-        content.frame(width: width, height: height, alignment: .top)
+        content.frame(width: width + corners.radii(forHeight: height).flare * 2, height: height, alignment: .top)
     }
 }
 
