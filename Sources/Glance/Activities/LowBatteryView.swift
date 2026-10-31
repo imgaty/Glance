@@ -63,7 +63,9 @@ final class LowPowerMode: ObservableObject {
 /// and at the right end a capsule holding a large battery, a ripple running out of its level. Its colors are the iPhone's own, in Display P3: red, and yellow
 /// once Low Power Mode is on.
 enum LowBatteryLayout {
-    /// From the words to the capsule, at the least.
+    /// From the left end to the words, as on the iPhone: they're low enough to meet the corner, and
+    /// this leaves them the padding from its curve. And from them to the capsule, at the least.
+    static let wordsEdge: CGFloat = 0.88
     static let wordsGap: CGFloat = 0.33
     /// As tall as the padding leaves, and as wide for that as the iPhone's.
     static func capsule(_ h: CGFloat) -> CGSize {
@@ -121,6 +123,15 @@ enum LowBatteryLayout {
         CGFloat((max(seconds, 0) + rippleStart).truncatingRemainder(dividingBy: ripple))
     }
 
+    /// How the words under the level change, and how long it takes.
+    static func change(_ h: CGFloat) -> AnyTransition {
+        let blur = AnyTransition(.blurReplace)
+        return .asymmetric(
+            insertion: blur.combined(with: .offset(y: h * 0.3)),
+            removal: blur.combined(with: .offset(y: -h * 0.3)))
+    }
+    static let changeTime = 0.45
+
     /// The words under the level, as the iPhone's, and once Low Power Mode is on.
     static let offerColor = Color.p3(0x6E, 0x6E, 0x6E)
     static let doneColor = Color.p3(0xE1, 0xC8, 0x78)
@@ -159,7 +170,7 @@ enum LowBatteryLayout {
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let right = capsule(h).width + PlayerLayout.padding
         let words = max(width(LowBatteryView.title(percent)), width(LowBatteryView.offer), width(LowBatteryView.done))
-        return max(LiveActivityView.cameraGap + right, (PlayerLayout.padding + words + h * wordsGap + right - closedWidth) / 2)
+        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
     }
 }
 
@@ -190,21 +201,21 @@ struct LowBatteryView: View {
             VStack(alignment: .leading, spacing: layout.lineGap(h)) {
                 Text(Self.title(percent))
                     .foregroundStyle(.white)
-                // One blurring into the other, as the island's words change.
-                Group {
+                // One rising into the other's place, each blurred on its way, as the island's words change.
+                ZStack(alignment: .leading) {
                     if on {
-                        Text(Self.done).foregroundStyle(layout.doneColor)
+                        Text(Self.done).foregroundStyle(layout.doneColor).transition(layout.change(h))
                     } else {
-                        Text(Self.offer).foregroundStyle(layout.offerColor)
+                        Text(Self.offer).foregroundStyle(layout.offerColor).transition(layout.change(h))
                     }
                 }
-                .transition(.blurReplace)
+                .animation(.easeInOut(duration: layout.changeTime), value: on)
             }
             .font(NotchType.title)
             .lineLimit(1)
             .fixedSize()
             .padding(.top, layout.wordsTop(h))
-            .padding(.leading, PlayerLayout.padding)
+            .padding(.leading, h * layout.wordsEdge)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .frame(height: TimerLayout.tallHeight(h), alignment: .top)
             .accessibilityElement(children: .combine)
