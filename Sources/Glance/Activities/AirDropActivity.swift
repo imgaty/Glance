@@ -182,7 +182,7 @@ enum AirDropLayout {
     static let ringLine: CGFloat = 0.075
     static let ringEdge: CGFloat = 0.19
     // Opened.
-    static let thumbCorner: CGFloat = 0.23
+    static let thumbCorner: CGFloat = 0.2237
     static let badge: CGFloat = 0.55
     static let badgeOut: CGFloat = 0.065
     /// How far in from its square macOS's document icon draws its paper, by the square's side.
@@ -341,7 +341,7 @@ struct ExpandedAirDropView: View {
             .resizable()
             .aspectRatio(contentMode: shown.preview == nil ? .fit : .fill)
             .frame(width: side, height: side)
-            .clipShape(RoundedRectangle(cornerRadius: h * AirDropLayout.thumbCorner, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: side * AirDropLayout.thumbCorner, style: .continuous))
             .overlay(alignment: .bottomTrailing) {
                 AirDropBadgeGlyph(side: badge)
                     .background(RoundedRectangle(cornerRadius: badge * 0.22, style: .continuous).fill(AirDropLayout.badgeFill))
