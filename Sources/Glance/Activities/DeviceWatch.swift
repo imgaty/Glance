@@ -243,7 +243,7 @@ final class DeviceWatch {
     static func lowBattery(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int) -> NotchAlert {
         NotchAlert(
             kind: .deviceBattery, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
-            spoken: "\(name) battery low, \(battery) percent")
+            spoken: "\(name) battery low, \(battery) percent", name: name)
     }
 
     // MARK: Announcing
@@ -275,6 +275,6 @@ final class DeviceWatch {
         let level = battery.map { ", \($0) percent" } ?? ""
         return NotchAlert(
             kind: .device, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
-            spoken: "\(name) connected\(level)")
+            spoken: "\(name) connected\(level)", name: name)
     }
 }

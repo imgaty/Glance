@@ -36,6 +36,8 @@ struct SystemActivityView: View {
     var hoveredButton: AlertButton? = nil
     /// Opens the notch to the timer or stopwatch, as VoiceOver's press does.
     var open: () -> Void = {}
+    /// A device being announced is extended, with the pointer on it.
+    var extended = false
     /// What shows, kept on once it's gone as it fades while the wings fold, so it rides in with their
     /// ends, as the Dynamic Island's activities do, rather than standing where it was. Kept from the
     /// start, so it never leaves as well as fading.
@@ -73,10 +75,20 @@ struct SystemActivityView: View {
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
-                device(
-                    symbol: symbol, model: model, pictures: pictures, battery: battery, low: alert.kind == .deviceBattery, size: size,
-                    leaving: self.alert == nil
-                )
+                ZStack {
+                    device(
+                        symbol: symbol, model: model, pictures: pictures, battery: battery, low: alert.kind == .deviceBattery, size: size,
+                        leaving: self.alert == nil
+                    )
+                    .opacity(extended ? 0 : 1)
+                    if extended {
+                        ExpandedDeviceView(
+                            symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
+                            said: alert.kind == .deviceBattery ? "Low Battery" : "Connected", restingHeight: restingHeight
+                        )
+                        .transition(.opacity)
+                    }
+                }
                 .islandFade(self.alert != nil)
                 .id(alert.id)
                 .transition(IslandMotion.fade)
@@ -450,7 +462,9 @@ struct DeviceLayout {
     let height: CGFloat
     /// Running low, its ring a little larger, for its level in numbers inside.
     var low = false
-    var picture: CGFloat { height * 0.464 }
+    /// Extended, as the iPhone's are (see `ExpandedDeviceLayout`).
+    var extended = false
+    var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture : 0.464) }
     var ring: CGFloat { height * (low ? 0.68 : 0.54) }
     /// From the left end to the device, as it reaches furthest turning.
     var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
@@ -616,7 +630,7 @@ private struct RingArrival: ViewModifier {
 
 /// A device arriving, as AirPods arrive in the Dynamic Island: its symbol turning in, a full turn and
 /// a little past, then settling face on.
-private struct TurningSymbol: View {
+struct TurningSymbol: View {
     let symbol: String
     let side: CGFloat
     @State private var turn: Double = -200
@@ -641,7 +655,7 @@ private struct TurningSymbol: View {
 
 /// Headphones arriving as macOS pictures them, AirPods Max, or AirPods when their 3D model can't
 /// be drawn: turning in together as one, then settling face on.
-private struct TurningPictures: View {
+struct TurningPictures: View {
     let images: [NSImage]
     let height: CGFloat
     @State private var arrived = false

@@ -212,7 +212,8 @@ final class ActivityBench {
             return models.enumerated().map { index, model in
                 {
                     _ = await DeviceTurn.prepare(model)
-                    return DeviceWatch.alert(name: model.rawValue, symbol: "airpods", model: model, battery: levels[index % levels.count])
+                    let name = model.rawValue.replacingOccurrences(of: "-", with: " ").capitalized
+                    return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count])
                 }
             }
         }

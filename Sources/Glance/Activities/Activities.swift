@@ -52,6 +52,8 @@ struct NotchAlert: Identifiable, Equatable {
     /// to open until it starts to fold; one that stays shows until it's dismissed.
     var seconds: Double = 2.82
     var stays = false
+    /// A device's name, as it extends under the pointer.
+    var name: String?
 
     static func == (a: NotchAlert, b: NotchAlert) -> Bool { a.id == b.id }
 }

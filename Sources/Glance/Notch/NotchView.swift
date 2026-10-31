@@ -121,6 +121,9 @@ final class NotchModel: ObservableObject {
     /// wings show it, over whatever else they show.
     @Published var alert: NotchAlert?
     @Published var alertWing: CGFloat = 0
+    /// With the pointer on a device being announced, it extends, as the iPhone's AirPods do.
+    @Published var alertExtended = false
+    var alertExtendedWing: CGFloat = 0
     /// Between what the wings show and what's announced, the notch folds to rest first and opens
     /// again from there, as the Dynamic Island switches between activities.
     @Published var switching = false
@@ -321,7 +324,7 @@ final class NotchModel: ObservableObject {
     var wing: CGFloat {
         let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
         if switching { return 0 }
-        if alert != nil { return max(alertWing, resting) }
+        if alert != nil { return max(alertExtended ? alertExtendedWing : alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
         // With another detached, the first has the leading side alone, as wide as the notch is tall,
         // the Dynamic Island's minimal presentation.
@@ -336,7 +339,7 @@ final class NotchModel: ObservableObject {
     var restingWidth: CGFloat { closedSize.width + wing * 2 }
 
     /// What's announced is as tall as the Dynamic Island's Alarm (see `NotchAlert.tall`).
-    var restingTall: Bool { alert?.tall == true && !switching }
+    var restingTall: Bool { alert.map { $0.tall || alertExtended } == true && !switching }
 
     /// The closed notch's height: more than twice as tall while what's announced is.
     var restingHeight: CGFloat { restingTall ? TimerLayout.tallHeight(closedSize.height) : closedSize.height }
@@ -569,7 +572,7 @@ struct NotchView: View {
                 route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.switching ? model.airdrop : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
-                hoveredButton: model.hoveredButton, open: { model.openNotch() }
+                hoveredButton: model.hoveredButton, open: { model.openNotch() }, extended: model.alertExtended
             )
             .atNotchStep(flare: m.flare, height: m.height, otherwise: m.bodyWidth)
             .allowsHitTesting(false)

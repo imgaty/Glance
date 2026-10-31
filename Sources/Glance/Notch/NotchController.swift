@@ -530,6 +530,7 @@ final class NotchController {
         guard let alert else {
             withAnimation(fold) {
                 model.alert = nil
+                model.alertExtended = false
                 model.switching = wingsShowing
             }
             if let page = reopening, Activities.shared.waiting.isEmpty {
@@ -969,12 +970,27 @@ final class NotchController {
     private func peek() {
         model.peek()
         startPolling()
-        // On an announcement, it only swells around it, and opens once that's over (see `show`).
-        if let alert = model.alert, !alert.tall { return }
+        // On an announcement, it only swells around it, or a device extends, and it opens once that's
+        // over (see `show`).
+        if let alert = model.alert, !alert.tall { return extend(alert) }
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).
         if opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
+    }
+
+    /// A device being announced extends to say what it is, as the iPhone's AirPods do, for as long
+    /// again.
+    private func extend(_ alert: NotchAlert) {
+        guard case .device(_, let device, let pictures, _) = alert.content else { return }
+        model.alertExtendedWing = ExpandedDeviceLayout.wing(model: device, pictures: pictures, restingHeight: model.closedSize.height)
+        withAnimation(NotchMotion.expand) { model.alertExtended = true }
+        Activities.shared.keep(alert.kind, for: alert.seconds)
+    }
+
+    private func foldDevice() {
+        guard model.alertExtended else { return }
+        withAnimation(IslandMotion.fold) { model.alertExtended = false }
     }
 
     /// An announcement folds away when the notch is opened anyway, from a click or a shortcut, and
@@ -1002,6 +1018,7 @@ final class NotchController {
 
     private func settle(at p: CGPoint) {
         openTask?.cancel()
+        foldDevice()
         model.settle(closeness: closeness(to: p))
         stopPolling()
         // Gone before the notch opened, after an announcement folded away for it: what was there
@@ -1059,6 +1076,7 @@ final class NotchController {
                 relayoutTask?.cancel()
                 model.use(PlayerLayout.current)
             }
+            model.alertExtended = false
             model.bubbleHovered = false
             model.bubblePressed = false
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
