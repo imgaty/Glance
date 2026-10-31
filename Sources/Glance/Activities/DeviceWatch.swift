@@ -12,8 +12,9 @@ import IOKit.hid
 import UniformTypeIdentifiers
 
 /// Devices connecting, as the iPhone's Dynamic Island shows AirPods connecting, their symbol
-/// turning in beside their battery: headphones and speakers over Bluetooth, as Core Audio sees them
-/// arrive, by their model and battery as System Information reports them; and keyboards, mice,
+/// turning in beside their battery: Apple's and Beats' headphones and speakers over Bluetooth, as
+/// Core Audio sees them arrive, by their model and battery as System Information reports them;
+/// another maker's aren't announced, as they aren't on the iPhone; and keyboards, mice,
 /// trackpads and game controllers over Bluetooth, as the Mac's list of devices sees them. None of
 /// it needs a permission. What's connected as Glance starts, or reconnects as the Mac wakes, isn't
 /// announced. The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device
@@ -58,6 +59,7 @@ final class DeviceWatch {
                     try? await Task.sleep(for: .seconds(1.5))
                     info = await Self.bluetooth(named: device.name) ?? info
                 }
+                guard info?.announced == true else { return }
                 let symbol = info?.modelSymbols?.symbol ?? device.symbol
                 let pictures = info?.product.map(DevicePictures.names(product:)) ?? []
                 // AirPods and Beats turn in 3D, from a clip read once, before they're shown.
@@ -186,6 +188,12 @@ final class DeviceWatch {
         /// the one battery of headphones that have one.
         var levels = Levels()
 
+        /// Apple's or Beats', which the iPhone announces too. With no maker told, a model macOS
+        /// knows is one of theirs.
+        var announced: Bool {
+            vendor == 0x4C || (vendor == nil && product.flatMap(SystemDevices.symbols(product:)) != nil)
+        }
+
         /// How macOS pictures this model, or for another maker's, what it is.
         var modelSymbols: DeviceSymbols? {
             let model = vendor == nil || vendor == 0x4C ? product.flatMap(SystemDevices.symbols(product:)) : nil
@@ -289,7 +297,7 @@ final class DeviceWatch {
             if !headphones.isEmpty {
                 let report = await Self.bluetoothReport()
                 for device in headphones {
-                    guard let info = report[device.name.lowercased()], let percent = info.battery else { continue }
+                    guard let info = report[device.name.lowercased()], info.announced, let percent = info.battery else { continue }
                     let symbol = info.modelSymbols?.symbol ?? device.symbol
                     found[device.name] = Battery(symbol: symbol, product: info.product, percent: percent)
                 }

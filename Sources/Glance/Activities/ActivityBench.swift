@@ -202,17 +202,26 @@ final class ActivityBench {
     }
 
     private static func headphones() -> [@MainActor () async -> NotchAlert] {
-        let levels = [88, 54, 21, 100, 12]
-        let clips: [@MainActor () async -> NotchAlert] = Headphones.allCases.enumerated().map { index, model in
-            {
-                _ = await DeviceTurn.prepare(model)
-                return DeviceWatch.alert(name: model.rawValue, symbol: "airpods", model: model, battery: levels[index % levels.count])
+        // AirPods 5 are modelled as AirPods 4.
+        let airPods: [Headphones] = [.airpodsPro, .airpodsPro2, .airpodsPro3, .airpods4, .airpods3]
+        let beats = Headphones.allCases.filter { !airPods.contains($0) }
+        func clips(_ models: [Headphones]) -> [@MainActor () async -> NotchAlert] {
+            let levels = [88, 54, 21, 100, 12]
+            return models.enumerated().map { index, model in
+                {
+                    _ = await DeviceTurn.prepare(model)
+                    return DeviceWatch.alert(name: model.rawValue, symbol: "airpods", model: model, battery: levels[index % levels.count])
+                }
             }
         }
-        return clips + [
-            { DeviceWatch.alert(name: "AirPods Max", symbol: "airpodsmax", battery: 72) },
-            { DeviceWatch.alert(name: "Headphones", symbol: "headphones", battery: 40) },
-        ]
+        // Those with no clip, as macOS pictures them: AirPods Max, then AirPods 2.
+        let pictured: [@MainActor () async -> NotchAlert] = [(0x200A, 72), (0x200F, 40)].map { product, level in
+            {
+                let symbol = SystemDevices.symbols(product: product)?.symbol ?? "airpods"
+                return DeviceWatch.alert(name: "AirPods", symbol: symbol, pictures: DevicePictures.names(product: product), battery: level)
+            }
+        }
+        return clips(airPods) + pictured + clips(beats)
     }
 
     private static func accessories() -> [@MainActor () async -> NotchAlert] {

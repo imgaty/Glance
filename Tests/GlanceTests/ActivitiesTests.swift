@@ -725,3 +725,20 @@ struct AirDropSendingTests {
         #expect(ExpandedAirDropView.spoken(shown) == "AirDrop to iCarly, 40 percent")
     }
 }
+
+/// Which headphones and speakers are announced as they connect.
+@Suite("Devices announced")
+struct DevicesAnnouncedTests {
+    private func device(vendor: Int?, product: Int?) -> DeviceWatch.BluetoothInfo {
+        DeviceWatch.BluetoothInfo(battery: 80, product: product, vendor: vendor)
+    }
+
+    @Test("Apple's and Beats' are, whatever the model; another maker's aren't, as on the iPhone")
+    func makers() {
+        #expect(device(vendor: 0x4C, product: 0x2024).announced)
+        #expect(device(vendor: 0x4C, product: 0x7777).announced)
+        #expect(device(vendor: nil, product: 0x2024).announced)
+        #expect(!device(vendor: 0x0A12, product: 0x2024).announced)
+        #expect(!device(vendor: nil, product: nil).announced)
+    }
+}

@@ -18,11 +18,12 @@
   right, the battery in a capsule, a ring pulsing around its level, pulsing
   from a reddish yellow into a soft red as it arrives. Clicking the capsule
   turns on Low Power Mode: it turns green, and it says `Low Power Mode On`.
-- Added AirPods, headphones, keyboards, mice, trackpads and game controllers
+- Added AirPods, Beats, keyboards, mice, trackpads and game controllers
   announced as they connect, as the iPhone shows AirPods: AirPods and Beats in
   3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
   AirPods Max as macOS pictures them, others as their symbol, beside their
-  battery as a ring. A device that doesn't tell its battery isn't announced.
+  battery as a ring. A device that doesn't tell its battery isn't announced,
+  and nor are other makers' headphones and speakers.
   One whose battery runs down past 20% or 10% is announced the same way, its
   ring red with its level in numbers inside, in place of macOS's own banner,
   which is hidden, and AirPods' own notification, which is taken away. With
