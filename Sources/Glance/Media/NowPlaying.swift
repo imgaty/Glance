@@ -313,7 +313,7 @@ final class NowPlaying: ObservableObject {
                 switch content {
                 case .none, .loading: continue
                 case .timed(let lyrics): return lyrics
-                case .unavailable: break answer
+                case .unavailable, .unreachable: break answer
                 // Words without timing, or none to sing, can't play along.
                 case .plain, .instrumental: return nil
                 }

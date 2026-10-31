@@ -583,7 +583,8 @@ their signature matches the one built into Glance.
    **System Settings > Privacy & Security > Accessibility**.
 
 5. **A song has no lyrics.** LRCLIB has no timed lyrics that match it. Glance
-   shows none rather than another song's.
+   shows none rather than another song's. If it says lyrics can't be reached,
+   LRCLIB isn't answering: Glance keeps asking, and they show once it does.
 
 6. **Nothing shows for an app.** It may be turned off in
    **Settings > Player > Apps**.

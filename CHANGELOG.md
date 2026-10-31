@@ -111,6 +111,8 @@
 
 ### Player
 
+- Fixed the lyrics saying a song has none when LRCLIB can't be reached. They
+  say so instead, and ask again by themselves.
 - Changed the sound output menu to look like the Mac's Sound menu: Sound above
   the playing app's volume, each output in a circle, the one playing in the
   accent color, with the Mac's own speakers first, and **Sound Settings…** at

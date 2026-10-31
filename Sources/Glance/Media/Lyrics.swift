@@ -168,6 +168,8 @@ final class LyricsStore: ObservableObject {
         case plain([String])
         case instrumental
         case unavailable
+        /// LRCLIB couldn't be reached, which says nothing of the song; it's asked again in a moment.
+        case unreachable
     }
 
     /// Who wrote the song, and where that came from, shown after the last line.
@@ -228,11 +230,12 @@ final class LyricsStore: ObservableObject {
             content = cached
             return
         }
-        content = .loading
+        // Asked again, what's showing stays until there's an answer.
+        if !due { content = .loading }
         task = Task {
             let found = await Self.find(title: title, artist: artist, album: album, duration: duration)
             guard !Task.isCancelled, self.track == track else { return }
-            content = found ?? .unavailable
+            content = found ?? .unreachable
             // A song with no lyrics isn't asked about again; one LRCLIB was too busy to answer is,
             // after a moment.
             if let found { cache[track] = found } else { unanswered = (track, .now + Self.retryAfter) }
@@ -422,6 +425,9 @@ struct LyricsView: View {
                         .position(x: proxy.size.width / 2, y: middle)
                 case .instrumental, .unavailable:
                     message("No lyrics available for this song")
+                        .position(x: proxy.size.width / 2, y: middle)
+                case .unreachable:
+                    message("Lyrics can't be reached right now")
                         .position(x: proxy.size.width / 2, y: middle)
                 case .none:
                     Color.clear
