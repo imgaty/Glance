@@ -108,8 +108,9 @@ final class MenuBarBanners: @unchecked Sendable {
 
     private var hides: Bool {
         let defaults = UserDefaults.standard
-        return defaults.bool(forKey: Preferences.notchEnabled) && defaults.bool(forKey: Preferences.activityDevices)
-            && lock.withLock { Date.now.timeIntervalSince(wokeAt) >= 10 }
+        // At the bench, devices are off, but what's tried isn't to be talked over.
+        let devices = defaults.bool(forKey: Preferences.activityDevices) || ActivityBench.scene != nil
+        return defaults.bool(forKey: Preferences.notchEnabled) && devices && lock.withLock { Date.now.timeIntervalSince(wokeAt) >= 10 }
     }
 
     /// Taken away before there's anything to read in it, and put back unless it turns out to be one
