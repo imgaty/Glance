@@ -77,7 +77,7 @@ struct NotchCornersTests {
         #expect(isClose(notch.radii(forHeight: 39, wingEnds: 1).bottom, 19.5))
     }
 
-    @Test("Open, all four corners are the player's, however tall it stands", arguments: [58.0, 77.0, 172.0, 400.0])
+    @Test("Open, all four corners are the player's, however tall it stands", arguments: [77.0, 130.0, 172.0, 400.0])
     func open(height: CGFloat) {
         for wingEnds in [0.0, 1.0] {
             let radii = notch.radii(forHeight: height, wingEnds: wingEnds)

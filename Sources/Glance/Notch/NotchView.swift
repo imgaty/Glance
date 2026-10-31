@@ -55,8 +55,8 @@ enum GlassLook {
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
 /// into the screen's edge at the top, small rounded corners at the bottom, and swelling under the
-/// pointer it stays so. Opening, both grow to the player's radius, so all four corners match, in
-/// Apple's continuous (squircle) curve, as soon as it's tall enough for them.
+/// pointer it stays so. Opening, both grow to the player's radius, easing in and out, so all four
+/// corners match by the height of the shortest thing that opens.
 struct NotchCorners: Equatable {
     var restingHeight: CGFloat
     var radius: CGFloat
@@ -72,7 +72,8 @@ struct NotchCorners: Equatable {
     /// With wings out, their ends are round, half the height across, as the Dynamic Island's are.
     func radii(forHeight height: CGFloat, wingEnds: CGFloat = 0) -> Radii {
         let swollen = restingHeight + NotchModel.peekSwell
-        let progress = min(max((height - swollen) / max(radius * 2 - swollen, 1), 0), 1)
+        let grown = min(max((height - swollen) / max(restingHeight * TimerLayout.tall - swollen, 1), 0), 1)
+        let progress = grown * grown * (3 - 2 * grown)
         let bottom = Self.restingBottomRadius + (radius - Self.restingBottomRadius) * progress
         return Radii(
             flare: Self.restingFlare + (radius - Self.restingFlare) * progress,
@@ -1015,36 +1016,59 @@ struct NotchShape: Shape {
         max(0, min(radii(in: rect).flare, rect.width / 4, rect.height / 2))
     }
 
+    /// How far past its radius a bottom corner reaches along its sides, with room for it, as Apple's
+    /// continuous corners do; and a flare, which stays in its square as the camera housing's does.
+    private static let cornerReach: CGFloat = 1.52866
+    private static let flareSmoothing: CGFloat = 0.1
+
+    /// One outline, the same curve at all four corners, so nothing shows where they meet the sides or
+    /// each other at any height. A bottom corner gives up reach as the flare above it takes the side.
     func path(in full: CGRect) -> Path {
         let rect = CGRect(x: full.minX, y: full.minY, width: max(full.width - fold, 0), height: full.height)
-        let radii = radii(in: rect)
         let flare = flare(in: rect)
         let body = rect.insetBy(dx: flare, dy: 0)
-        let bottom = min(radii.bottom, body.width / 2, body.height - flare)
-        let path = UnevenRoundedRectangle(
-            topLeadingRadius: 0, bottomLeadingRadius: bottom,
-            bottomTrailingRadius: bottom, topTrailingRadius: 0,
-            style: .continuous
-        ).path(in: body)
-        guard flare > 0.1 else { return path }
-        // Each flare runs from the screen's edge into the body's side. Its handles sit closer to
-        // the corner than a circle's would, which spreads the bend out like Apple's continuous
-        // corners. It overlaps the body a point so they join without a seam.
-        let handle: CGFloat = 0.62
-        var flares = Path()
-        for (edge, side) in [(rect.minX, body.minX), (rect.maxX, body.maxX)] {
-            let inward: CGFloat = side > edge ? 1 : -1
-            flares.move(to: CGPoint(x: edge, y: rect.minY))
-            flares.addLine(to: CGPoint(x: side + inward, y: rect.minY))
-            flares.addLine(to: CGPoint(x: side + inward, y: rect.minY + flare))
-            flares.addLine(to: CGPoint(x: side, y: rect.minY + flare))
-            flares.addCurve(
-                to: CGPoint(x: edge, y: rect.minY),
-                control1: CGPoint(x: side, y: rect.minY + flare * (1 - handle)),
-                control2: CGPoint(x: edge + (side - edge) * handle, y: rect.minY))
-            flares.closeSubpath()
+        let bottom = max(min(radii(in: rect).bottom, body.width / 2, body.height - flare), 0)
+        let reach = min(bottom * Self.cornerReach, body.height - flare, body.width / 2)
+        let flareRadius = flare / (1 + Self.flareSmoothing)
+        let (right, left, up, down) = (CGVector(dx: 1, dy: 0), CGVector(dx: -1, dy: 0), CGVector(dx: 0, dy: -1), CGVector(dx: 0, dy: 1))
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addCorner(at: CGPoint(x: body.maxX, y: rect.minY), from: right, to: down, radius: flareRadius, reach: flare)
+        path.addCorner(at: CGPoint(x: body.maxX, y: rect.maxY), from: up, to: left, radius: bottom, reach: reach)
+        path.addCorner(at: CGPoint(x: body.minX, y: rect.maxY), from: right, to: up, radius: bottom, reach: reach)
+        path.addCorner(at: CGPoint(x: body.minX, y: rect.minY), from: down, to: left, radius: flareRadius, reach: flare)
+        path.closeSubpath()
+        return path
+    }
+}
+
+extension Path {
+    /// A corner between two straight sides: from `reach` along the side it comes in on, in a line from
+    /// where the path is, to `reach` along the side it leaves on. With no more reach than its radius
+    /// it's a quarter circle. Past that, the middle of it is still a circle of that radius, and it eases
+    /// into each side, its bend fading to nothing there, so the eye finds no join.
+    fileprivate mutating func addCorner(at corner: CGPoint, from first: CGVector, to second: CGVector, radius r: CGFloat, reach p: CGFloat) {
+        func at(_ along: CGFloat, _ across: CGFloat) -> CGPoint {
+            CGPoint(x: corner.x + first.dx * along + second.dx * across, y: corner.y + first.dy * along + second.dy * across)
         }
-        return path.union(flares)
+        guard r > 0.01 else { return addLine(to: corner) }
+        let smoothing = min(max(p / r - 1, 0), 1)
+        let arc = CGFloat.pi / 2 * (1 - smoothing)
+        let bend = CGFloat.pi / 4 * smoothing
+        // Where the circle starts and ends, as far along each side as its tangent there reaches.
+        let tangent = r * tan(bend / 2)
+        let (along, drop) = (tangent * cos(bend), tangent * sin(bend))
+        let near = sin(arc / 2) * r * 2.squareRoot() + drop
+        // Long enough for the curve to arrive at the circle bent exactly as much as the circle is.
+        let ease = bend > 0.001 ? 1.5 * tangent * tangent / (r * sin(bend)) : 0
+        let handle = 4 / 3 * tan(arc / 4)
+        addLine(to: at(p, 0))
+        addCurve(to: at(near, drop), control1: at(near + along + ease, 0), control2: at(near + along, 0))
+        addCurve(
+            to: at(drop, near),
+            control1: at(near + (drop - r) * handle, drop + (r - near) * handle),
+            control2: at(drop - (near - r) * handle, near - (r - drop) * handle))
+        addCurve(to: at(0, p), control1: at(0, near + along), control2: at(0, near + along + ease))
     }
 }
 
