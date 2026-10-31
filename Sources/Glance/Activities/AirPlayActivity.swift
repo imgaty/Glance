@@ -121,8 +121,9 @@ enum AirPlayLayout {
     static let secondary = Color.p3(0x93, 0x92, 0x98)
     // Beside the camera: the symbol and the device, each as far in from its end.
     static let symbol: CGFloat = 0.6
+    static let symbolEdge: CGFloat = 0.144
     static let device: CGFloat = 0.4
-    static let edge: CGFloat = 0.23
+    static let deviceEdge: CGFloat = 0.23
     // Opened.
     static let wide: CGFloat = 10.2
     static let bigSymbol: CGFloat = 0.95
@@ -171,10 +172,10 @@ struct AirPlayMark: View {
             Image(systemName: "airplay.audio")
                 .font(.system(size: h * AirPlayLayout.symbol, weight: .regular))
                 .foregroundStyle(AirPlayLayout.tint)
-                .padding(.leading, h * AirPlayLayout.edge)
+                .padding(.leading, h * AirPlayLayout.symbolEdge)
                 .frame(maxWidth: .infinity, alignment: .leading)
             AirPlayDevice(route: route, size: h * AirPlayLayout.device)
-                .padding(.trailing, h * AirPlayLayout.edge)
+                .padding(.trailing, h * AirPlayLayout.deviceEdge)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .accessibilityElement(children: .ignore)

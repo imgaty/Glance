@@ -177,11 +177,11 @@ enum AirDropLayout {
     static let badgeFill = Color.p3(0x1E, 0x1F, 0x1E)
     static let secondary = Color.p3(0x85, 0x85, 0x85)
     // Beside the camera.
-    static let symbol: CGFloat = 0.59
-    static let symbolEdge: CGFloat = 0.21
+    static let symbol: CGFloat = 0.575
+    static let symbolEdge: CGFloat = 0.148
     static let ring: CGFloat = 0.62
     static let ringLine: CGFloat = 0.075
-    static let ringEdge: CGFloat = 0.22
+    static let ringEdge: CGFloat = 0.19
     // Opened.
     static let thumb: CGFloat = 1.35
     static let thumbCorner: CGFloat = 0.23

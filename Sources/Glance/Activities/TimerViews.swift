@@ -31,6 +31,12 @@ enum TimerLayout {
     static let titleGap: CGFloat = 0.228
     /// The stopwatch's time opened, as the iPhone's: smaller than the timer's, for its hundredths.
     static let stopwatchTime: CGFloat = 0.92
+    /// Digits sit low in their line and short of its end: how far up, and out, brings them level
+    /// with the middle, and as far from the end as the buttons are from theirs.
+    static let timeLift: CGFloat = 0.03
+    static let timeBearing: CGFloat = 0.078
+    static let stopwatchLift: CGFloat = 0.016
+    static let stopwatchBearing: CGFloat = 0.028
     /// How long a timer's name runs, once it's done, before it's cut short.
     static let titleLimit: CGFloat = 4
     // Done, as the iPhone's Timer: its name, large.
@@ -138,6 +144,8 @@ struct StopwatchMark: View {
             }
             .frame(width: side, height: side)
         }
+        // Its crown stands out at the top alone: lowered by half of that, all of it is centered.
+        .offset(y: (stem - line / 2) / 2)
         .accessibilityHidden(true)
     }
 }
@@ -174,7 +182,7 @@ struct StopwatchReading: View {
         func measure(_ text: String, _ size: CGFloat) -> CGFloat {
             ceil((text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)]).width)
         }
-        return measure(shown, size) + size * gap + measure("00", size * small) + 2
+        return measure(shown, size) + size * gap + measure("00", size * small) + 1
     }
 }
 
@@ -284,6 +292,7 @@ struct ExpandedTimerView: View {
         }
         .foregroundStyle(.orange)
         .fixedSize()
+        .offset(y: -h * Self.timeLift(shown))
     }
 
     /// Either side of the camera, as wide as the wider of the buttons and the time needs, each from
@@ -295,8 +304,16 @@ struct ExpandedTimerView: View {
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
     }
 
+    private static func timeLift(_ shown: ClockShown) -> CGFloat {
+        if case .stopwatch = shown { return TimerLayout.stopwatchLift }
+        return TimerLayout.timeLift
+    }
+
     /// From the right end to the time: as far as the buttons are from the left end.
-    static func timeEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
+    static func timeEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
+        if case .stopwatch = shown { return TimerLayout.buttonEdge(h) - h * TimerLayout.stopwatchBearing }
+        return TimerLayout.buttonEdge(h) - h * TimerLayout.timeBearing
+    }
 
     /// The timer's time large, as the iPhone's Timer; the stopwatch's a little smaller, medium, as
     /// its stopwatch.
@@ -313,7 +330,8 @@ struct ExpandedTimerView: View {
             if case .stopwatch = shown { return .monospacedDigitSystemFont(ofSize: h * TimerLayout.stopwatchTime, weight: .medium) }
             return .monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .regular)
         }()
-        return ceil((reading as NSString).size(withAttributes: [.font: font]).width) + 2
+        let spare: CGFloat = { if case .stopwatch = shown { return -h * TimerLayout.stopwatchBearing * 1.7 } else { return 2 } }()
+        return ceil((reading as NSString).size(withAttributes: [.font: font]).width) + spare
     }
 
     @MainActor

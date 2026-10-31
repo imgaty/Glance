@@ -65,21 +65,23 @@ struct SystemActivityView: View {
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .lowBattery(let percent) = alert.content {
                 LowBatteryView(
-                    percent: percent, restingHeight: restingHeight, wing: wing, closedWidth: closedWidth, hovered: hoveredButton == .lowPower)
-                    .islandFade(self.alert != nil)
-                    .id(alert.id)
-                    .transition(IslandMotion.fade)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(alert.spoken)
+                    percent: percent, restingHeight: restingHeight, wing: wing, closedWidth: closedWidth, hovered: hoveredButton == .lowPower
+                )
+                .islandFade(self.alert != nil)
+                .id(alert.id)
+                .transition(IslandMotion.fade)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 device(
                     symbol: symbol, model: model, pictures: pictures, battery: battery, low: alert.kind == .deviceBattery, size: size,
-                    leaving: self.alert == nil)
-                    .islandFade(self.alert != nil)
-                    .id(alert.id)
-                    .transition(IslandMotion.fade)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(alert.spoken)
+                    leaving: self.alert == nil
+                )
+                .islandFade(self.alert != nil)
+                .id(alert.id)
+                .transition(IslandMotion.fade)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert {
                 // Each side kept to its own end, so it rides in and out with it, and from the end
                 // within it.
@@ -128,7 +130,8 @@ struct SystemActivityView: View {
                                     .contentTransition(.numericText(countsDown: true))
                                     .animation(.snappy, value: reading)
                             case .stopwatch(let watch):
-                                StopwatchReading(watch: watch, size: size)
+                                // Its small hundredths end short of the time's own end.
+                                StopwatchReading(watch: watch, size: size).padding(.trailing, size * 0.09)
                             }
                         }
                         .foregroundStyle(.orange)
@@ -162,7 +165,10 @@ struct SystemActivityView: View {
         .frame(maxHeight: .infinity)
         .onChange(of: alert, initial: true) { _, new in
             changes.alert += 1
-            if let new { leaving = new; return }
+            if let new {
+                leaving = new
+                return
+            }
             let change = changes.alert
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
@@ -171,7 +177,10 @@ struct SystemActivityView: View {
         }
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1
-            if let new { leavingClock = new; return }
+            if let new {
+                leavingClock = new
+                return
+            }
             let change = changes.clock
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
@@ -180,7 +189,10 @@ struct SystemActivityView: View {
         }
         .onChange(of: airdrop, initial: true) { _, new in
             changes.airdrop += 1
-            if let new { leavingAirDrop = new; return }
+            if let new {
+                leavingAirDrop = new
+                return
+            }
             let change = changes.airdrop
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
@@ -189,7 +201,10 @@ struct SystemActivityView: View {
         }
         .onChange(of: route, initial: true) { _, new in
             changes.route += 1
-            if let new { leavingRoute = new; return }
+            if let new {
+                leavingRoute = new
+                return
+            }
             let change = changes.route
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
