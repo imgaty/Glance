@@ -13,26 +13,22 @@ import SwiftUI
 /// and its name beside it, running on under the camera, and its battery at the right end, a ring
 /// around its level.
 enum ExpandedDeviceLayout {
-    /// The device's middle, from the left end, and how tall it stands.
-    static let pictureMiddle: CGFloat = 1.267
+    /// How tall the device stands.
     static let picture: CGFloat = 0.97
-    /// Where the words start, from the left end.
-    static let wordsLeft: CGFloat = 2.667
     /// What's happened, and the device's name under it, by their baselines: just under the camera.
     static let saidBaseline: CGFloat = 1.35
     static let nameBaseline: CGFloat = 1.88
-    static let ring: CGFloat = 1.343
     static let ringLine: CGFloat = 0.113
-    static let ringEdge: CGFloat = 0.505
     static let number: CGFloat = 0.45
 
     /// Each wing: as wide as the device or the ring, the wider against the camera. The words run under
     /// the camera, so they need no room of their own.
     @MainActor
     static func wing(model: Headphones?, pictures: [String], restingHeight h: CGFloat) -> CGFloat {
-        let reach = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: DeviceLayout(height: h, extended: true))
+        let large = DeviceLayout(height: h, extended: true)
+        let reach = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: large)
         let gap = LiveActivityView.cameraGap
-        return max(h * pictureMiddle + reach + gap, gap + h * (ring + ringEdge))
+        return max(PlayerLayout.padding + reach * 2 + gap, gap + large.ring + large.trailing)
     }
 }
 
@@ -71,8 +67,8 @@ struct DeviceActivityView: View {
         let reach = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: small)
         let smallWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: small)
         let largeWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: large)
-        // Its middle where the iPhone's is, or as far in from the end as it reaches, turning.
-        let middle = h * ExpandedDeviceLayout.pictureMiddle
+        // Its middle as far in from the end as it reaches, turning, past the padding when extended.
+        let middle = PlayerLayout.padding + SystemActivityView.deviceReach(model: model, pictures: pictures, layout: large)
         let smallMiddle = small.edge + max(reach - axis, 0) + smallWidth / 2
         let ringScale = small.ring / large.ring
         // Hung from the notch's top middle, which never moves, each is moved out to its end, and
@@ -117,12 +113,13 @@ struct DeviceActivityView: View {
         let h = restingHeight
         let layout = ExpandedDeviceLayout.self
         let wing = layout.wing(model: model, pictures: pictures, restingHeight: h)
-        let width = closedWidth + wing * 2 - h * (layout.ring + layout.ringEdge) - LiveActivityView.cameraGap
+        let large = DeviceLayout(height: h, low: low, extended: true)
+        let width = closedWidth + wing * 2 - large.ring - large.trailing - LiveActivityView.cameraGap
         return ZStack(alignment: .topLeading) {
             line(low ? "Low Battery" : "Connected", font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
             line(name, font: NotchType.title, baseline: h * layout.nameBaseline, color: .white)
         }
-        .padding(.leading, h * layout.wordsLeft)
+        .padding(.leading, AirDropLayout.wordsStart(h))
         .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)
         .offset(x: width / 2 - toEnd, y: notch.height / 2)
     }

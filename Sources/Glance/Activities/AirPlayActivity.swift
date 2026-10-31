@@ -126,20 +126,18 @@ enum AirPlayLayout {
     // Opened.
     static let wide: CGFloat = 10.2
     static let bigSymbol: CGFloat = 0.95
-    static let symbolInset: CGFloat = 0.83
+    /// The room each symbol has beside it in its font, which the padding takes the place of.
+    static let bigSymbolMargin: CGFloat = 0.078
     static let symbolGap: CGFloat = 0.53
     static let bigDevice: CGFloat = 0.67
-    static let deviceInset: CGFloat = 0.68
+    static let bigDeviceMargin: CGFloat = 0.094
     /// The title and the name close together, as the iPhone sets them.
     static let header: CGFloat = 0.9
     static let buttonGap: CGFloat = 0.4
-    static let button: CGFloat = 1.2
-    static let buttonInset: CGFloat = 0.545
-    static let buttonBottom: CGFloat = 0.47
 
     /// Opened, its header just below the camera, the button under it.
     static func height(_ h: CGFloat) -> CGFloat {
-        (h + LiveActivityView.cameraGap + h * (header + buttonGap + button + buttonBottom)).rounded()
+        (h + LiveActivityView.cameraGap + h * (header + buttonGap) + TimerLayout.content(h) + PlayerLayout.padding).rounded()
     }
 }
 
@@ -195,7 +193,7 @@ struct ExpandedAirPlayView: View {
                 Image(systemName: "airplay.audio")
                     .font(.system(size: h * AirPlayLayout.bigSymbol, weight: .regular))
                     .foregroundStyle(AirPlayLayout.tint)
-                    .padding(.leading, h * AirPlayLayout.symbolInset)
+                    .padding(.leading, PlayerLayout.padding - h * AirPlayLayout.bigSymbolMargin)
                     .padding(.trailing, h * AirPlayLayout.symbolGap)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("AirPlay")
@@ -209,7 +207,7 @@ struct ExpandedAirPlayView: View {
                 .truncationMode(.tail)
                 Spacer(minLength: h * 0.3)
                 AirPlayDevice(route: route, size: h * AirPlayLayout.bigDevice)
-                    .padding(.trailing, h * AirPlayLayout.deviceInset)
+                    .padding(.trailing, PlayerLayout.padding - h * AirPlayLayout.bigDeviceMargin)
             }
             .frame(height: h * AirPlayLayout.header)
             Button {
@@ -219,17 +217,17 @@ struct ExpandedAirPlayView: View {
                     .font(NotchType.title)
                     .foregroundStyle(AirPlayLayout.buttonWords)
                     .frame(maxWidth: .infinity)
-                    .frame(height: h * AirPlayLayout.button)
+                    .frame(height: TimerLayout.content(h))
                     .background(AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85), in: Capsule())
                     .contentShape(Capsule())
             }
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
             .onHover { hovering = $0 }
             .notchControl()
-            .padding(.horizontal, h * AirPlayLayout.buttonInset)
+            .padding(.horizontal, PlayerLayout.padding)
         }
         .padding(.top, h + LiveActivityView.cameraGap)
-        .padding(.bottom, h * AirPlayLayout.buttonBottom)
+        .padding(.bottom, PlayerLayout.padding)
         .frame(width: width, height: AirPlayLayout.height(h), alignment: .top)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("AirPlay, playing on \(route.name)")
@@ -241,9 +239,7 @@ struct ExpandedAirPlayView: View {
         let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
         let name = ceil((route.name as NSString).size(withAttributes: [.font: font]).width)
         let needs =
-            h
-            * (AirPlayLayout.symbolInset + AirPlayLayout.bigSymbol * 1.05 + AirPlayLayout.symbolGap + 0.3
-                + AirPlayLayout.bigDevice * 1.45 + AirPlayLayout.deviceInset) + name
+            PlayerLayout.padding * 2 + h * (AirPlayLayout.bigSymbol * 1.05 + AirPlayLayout.symbolGap + 0.3 + AirPlayLayout.bigDevice * 1.45) + name
         return min(max(h * AirPlayLayout.wide, needs), h * 14)
     }
 }

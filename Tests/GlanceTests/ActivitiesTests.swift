@@ -259,7 +259,7 @@ struct ActivitiesTests {
         let small = DeviceLayout(height: 32), large = DeviceLayout(height: 32, extended: true)
         #expect(large.picture > small.picture)
         #expect(large.ring > small.ring)
-        #expect(abs(large.trailing - 32 * ExpandedDeviceLayout.ringEdge) < 0.001)
+        #expect(large.trailing == PlayerLayout.padding)
     }
 
     @Test("AirPods and Beats are known by their model, a newer one as the newest of its kind")
@@ -399,7 +399,7 @@ struct ActivitiesTests {
             for: .battery(title: "Charging", level: BatteryLevel(percent: 64, charging: true)), restingHeight: h)
         #expect(left == words && right == words)
         // Opened and done, the round buttons are as far in from the end as from the top and bottom.
-        #expect(abs(TimerLayout.buttonEdge(h) - (TimerLayout.tallHeight(h) - h * TimerLayout.button) / 2) < 0.5)
+        #expect(abs(TimerLayout.buttonEdge(h) - (TimerLayout.tallHeight(h) - TimerLayout.content(h)) / 2) < 0.01)
     }
 
     @Test("Opened to a timer, the notch is as tall as the Timer's expanded view, each side from its end, concentric with it")
@@ -410,10 +410,10 @@ struct ActivitiesTests {
         let open = model.metrics(for: .open)
         #expect(open.height == (32 * TimerLayout.tall).rounded())
         // Either side of the camera, only as wide as the buttons, wider than "5:00", need.
-        let buttons = 32 * (TimerLayout.button * 2 + TimerLayout.buttonGap)
+        let buttons = TimerLayout.content(32) * 2 + 32 * TimerLayout.buttonGap
         #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.buttonEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
         // All four corners are the player's.
-        #expect(open.flare == PlayerLayout.cornerRadius)
+        #expect(open.flare == TimerLayout.tallHeight(32) / 2)
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
@@ -526,13 +526,13 @@ struct ActivitiesTests {
         model.alert = alert
         #expect(model.restingHeight == TimerLayout.tallHeight(h))
         // The capsule as far in from the end as from the top and bottom.
-        let edge = LowBatteryLayout.edge(h)
-        #expect(abs(edge * 2 + h * LowBatteryLayout.capsule.height - TimerLayout.tallHeight(h)) < 0.01)
+        let edge = PlayerLayout.padding
+        #expect(abs(edge * 2 + LowBatteryLayout.capsule(h).height - TimerLayout.tallHeight(h)) < 0.01)
         // Each wing as wide as the capsule needs against the camera, or the words beside it.
-        let right = h * LowBatteryLayout.capsule.width + edge
+        let right = LowBatteryLayout.capsule(h).width + edge
         let words = LowBatteryLayout.width(LowBatteryView.offer)
         let wing = SystemActivityView.wing(for: alert, restingHeight: h, closedWidth: 185)
-        #expect(wing == max(LiveActivityView.cameraGap + right, (h * LowBatteryLayout.wordsEdge + words + h * LowBatteryLayout.wordsGap + right - 185) / 2))
+        #expect(wing == max(LiveActivityView.cameraGap + right, (edge + words + h * LowBatteryLayout.wordsGap + right - 185) / 2))
         #expect(wing < h * 3)
         // Its letters start just below the camera.
         #expect(LowBatteryLayout.wordsTop(h) > 0)

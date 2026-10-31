@@ -87,8 +87,9 @@ struct TrayView: View {
     private var top: CGFloat { closedNotch.height + PlayerLayout.cameraGap }
     /// Under the row, the player's padding, as under its buttons.
     private static let bottomRoom = PlayerLayout.padding
-    /// Around the places to drop: their corners are then concentric with the notch's.
-    private static let zoneInset: CGFloat = 12
+    /// Around the places to drop, the player's padding: their corners are then concentric with the
+    /// notch's.
+    private static let zoneInset = PlayerLayout.padding
     /// Each place's symbol, as a font's size.
     private static let zoneGlyph: CGFloat = 26
 

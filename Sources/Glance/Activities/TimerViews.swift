@@ -22,7 +22,6 @@ enum TimerLayout {
     static let handTo: CGFloat = 0.21
     // Opened, and done.
     static let tall: CGFloat = 2.4
-    static let button: CGFloat = 1.364
     static let buttonGap: CGFloat = 0.23
     static let time: CGFloat = 0.9375
     static let titleGap: CGFloat = 0.228
@@ -30,16 +29,11 @@ enum TimerLayout {
     /// with the middle, and as far from the end as the buttons are from theirs.
     static let timeLift: CGFloat = 0.022
     static let timeBearing: CGFloat = 0.057
-    // The stopwatch opened, measured from the iPhone's: its buttons a little larger than the Timer's,
-    // and its time smaller, for its hundredths, and below the middle, clear of the camera.
-    static let stopwatchButton: CGFloat = 1.429
-    static let stopwatchButtonGap: CGFloat = 0.286
+    // The stopwatch opened: its time below the middle, clear of the camera.
     static let stopwatchPauseBar = CGSize(width: 0.171, height: 0.571)
     static let stopwatchPauseGap: CGFloat = 0.076
     static let stopwatchTracking: CGFloat = -0.018
     static let stopwatchDrop: CGFloat = 0.179
-    /// From the right end to the time, which sits further in than the buttons do from theirs.
-    static let stopwatchEnd: CGFloat = 0.81
     static let stopwatchInk = Color(.sRGB, red: 0xFD / 255, green: 0x95 / 255, blue: 0)
     static let stopwatchPauseFill = Color(.sRGB, red: 0x40 / 255, green: 0x25 / 255, blue: 0x0C / 255)
     static let stopwatchResetFill = Color(.sRGB, red: 0x3B / 255, green: 0x3B / 255, blue: 0x3D / 255)
@@ -48,9 +42,12 @@ enum TimerLayout {
     // Done, as the iPhone's Timer: its name, large.
     /// Opened and done, as tall as the iPhone's, for a notch this tall.
     static func tallHeight(_ h: CGFloat) -> CGFloat { (h * tall).rounded() }
-    /// Opened and done, how far in from its end each side sits, buttons and words alike: as far as
-    /// the round buttons are from the top and bottom, and the words at the other end match them.
-    static func buttonEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * button, in: tallHeight(h)) }
+    /// Opened and done, how far in from its end each side sits, buttons and words alike: the notch's
+    /// one padding, as they are from the top and bottom.
+    static func buttonEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
+    /// What stands at the ends of anything this tall, as tall as the padding leaves: round, it's
+    /// concentric with the notch's round end.
+    static func content(_ h: CGFloat) -> CGFloat { tallHeight(h) - PlayerLayout.padding * 2 }
 
     // Inside the round buttons.
     static let pauseBar = CGSize(width: 0.19, height: 0.6)
@@ -219,15 +216,15 @@ struct ExpandedTimerView: View {
         let side = max((width - camera) / 2, 0)
         HStack(spacing: 0) {
             buttons(h)
-                .padding(.leading, Self.buttonsEdge(shown, h))
+                .padding(.leading, TimerLayout.buttonEdge(h))
                 .frame(width: side, alignment: .leading)
             Color.clear.frame(width: camera)
             time(h)
-                .padding(.trailing, Self.timeEdge(shown, h))
+                .padding(.trailing, Self.timeEdge(h))
                 .frame(width: side, alignment: .trailing)
         }
         // In the middle of its height, as the iPhone's is.
-        .frame(height: h * TimerLayout.button)
+        .frame(height: TimerLayout.content(h))
         .frame(maxHeight: .infinity)
     }
 
@@ -235,11 +232,10 @@ struct ExpandedTimerView: View {
     private func buttons(_ h: CGFloat) -> some View {
         let running = shown.isRunning
         let stopwatch = { if case .stopwatch = shown { return true } else { return false } }()
-        let diameter = stopwatch ? h * TimerLayout.stopwatchButton : nil
-        return HStack(spacing: h * (stopwatch ? TimerLayout.stopwatchButtonGap : TimerLayout.buttonGap)) {
+        return HStack(spacing: h * TimerLayout.buttonGap) {
             IslandCircleButton(
                 height: h, tint: .orange, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume"),
-                diameter: diameter, fill: stopwatch ? TimerLayout.stopwatchPauseFill : nil
+                fill: stopwatch ? TimerLayout.stopwatchPauseFill : nil
             ) {
                 stopwatch ? clock.startStopStopwatch() : clock.toggleTimer()
             } glyph: {
@@ -252,7 +248,7 @@ struct ExpandedTimerView: View {
                 }
             }
             IslandCircleButton(
-                height: h, tint: .white, label: stopwatch ? (running ? "Restart" : "Reset") : "Cancel", diameter: diameter,
+                height: h, tint: .white, label: stopwatch ? (running ? "Restart" : "Reset") : "Cancel",
                 fill: stopwatch ? TimerLayout.stopwatchResetFill : nil
             ) {
                 stopwatch ? clock.resetStopwatch() : clock.cancelTimer()
@@ -317,20 +313,11 @@ struct ExpandedTimerView: View {
     /// its end. For the time as it reads then: it narrows or widens as it loses or gains a digit.
     @MainActor
     static func width(for shown: ClockShown, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
+        let buttons = TimerLayout.buttonEdge(h) + TimerLayout.content(h) * 2 + h * TimerLayout.buttonGap
         // The stopwatch's time runs under the camera, so its buttons alone set how wide it is.
-        if isStopwatch(shown) {
-            let buttons = buttonsEdge(shown, h) + h * (TimerLayout.stopwatchButton * 2 + TimerLayout.stopwatchButtonGap)
-            return camera + 2 * (buttons + LiveActivityView.cameraGap)
-        }
-        let buttons = TimerLayout.buttonEdge(h) + h * (TimerLayout.button * 2 + TimerLayout.buttonGap)
-        let time = timeWidth(shown, h, at: date) + timeEdge(shown, h)
+        if isStopwatch(shown) { return camera + 2 * (buttons + LiveActivityView.cameraGap) }
+        let time = timeWidth(shown, h, at: date) + timeEdge(h)
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
-    }
-
-    /// From the left end to the buttons, as far as from the top and bottom.
-    private static func buttonsEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
-        guard isStopwatch(shown) else { return TimerLayout.buttonEdge(h) }
-        return LiveActivityView.concentric(h * TimerLayout.stopwatchButton, in: TimerLayout.tallHeight(h))
     }
 
     private static func timeLift(_ shown: ClockShown) -> CGFloat {
@@ -338,9 +325,7 @@ struct ExpandedTimerView: View {
     }
 
     /// From the right end to the time: as far as the buttons are from the left end.
-    static func timeEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
-        isStopwatch(shown) ? h * TimerLayout.stopwatchEnd : TimerLayout.buttonEdge(h) - h * TimerLayout.timeBearing
-    }
+    static func timeEdge(_ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) - h * TimerLayout.timeBearing }
 
     /// The time as it reads then, its digits all as wide as each other.
     @MainActor
@@ -412,7 +397,7 @@ struct TimerDoneView: View {
             ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 2,
             h * TimerLayout.titleLimit)
         let left = nameEdge(h) + words + gap
-        let right = gap + h * (TimerLayout.button * 2 + TimerLayout.buttonGap) + TimerLayout.buttonEdge(h)
+        let right = gap + TimerLayout.content(h) * 2 + h * TimerLayout.buttonGap + TimerLayout.buttonEdge(h)
         return max(left, right)
     }
 
@@ -461,8 +446,6 @@ struct IslandCircle<Glyph: View>: View {
     let height: CGFloat
     let tint: Color
     var highlighted = false
-    /// Across, if not the Timer's.
-    var diameter: CGFloat?
     /// Its own solid fill, in place of its color showing faintly.
     var fill: Color?
     @ViewBuilder let glyph: Glyph
@@ -471,7 +454,7 @@ struct IslandCircle<Glyph: View>: View {
     private var faint: Double { (tint == .white ? 0.2 : 0.35) + (highlighted ? 0.1 : 0) }
 
     var body: some View {
-        let side = diameter ?? height * TimerLayout.button
+        let side = TimerLayout.content(height)
         glyph
             .frame(width: side, height: side)
             .background(
@@ -488,7 +471,6 @@ struct IslandCircleButton<Glyph: View>: View {
     let height: CGFloat
     let tint: Color
     let label: String
-    var diameter: CGFloat?
     var fill: Color?
     let action: () -> Void
     @ViewBuilder let glyph: Glyph
@@ -496,7 +478,7 @@ struct IslandCircleButton<Glyph: View>: View {
 
     var body: some View {
         Button(action: action) {
-            IslandCircle(height: height, tint: tint, highlighted: hovering, diameter: diameter, fill: fill) { glyph }
+            IslandCircle(height: height, tint: tint, highlighted: hovering, fill: fill) { glyph }
                 .contentShape(Circle())
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
@@ -514,7 +496,7 @@ private struct ResetArrow: View {
 
     var body: some View {
         let h = height
-        let side = h * TimerLayout.stopwatchButton
+        let side = TimerLayout.content(h)
         let middle = CGPoint(x: side / 2 + h * 0.008, y: side / 2 + h * 0.02)
         let line = h * 0.097
         // Rounded by a stroke round its edge, so drawn that much smaller.

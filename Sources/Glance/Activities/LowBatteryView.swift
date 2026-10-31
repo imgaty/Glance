@@ -59,15 +59,16 @@ final class LowPowerMode: ObservableObject {
 }
 
 /// Low Battery as the iPhone's Dynamic Island shows it, measured from it, by the island's height,
-/// as tall as the Alarm: its level and the offer to turn on Low Power Mode under it, in from the left
-/// end as the iPhone's are, below the camera, and at the right end a capsule holding a large battery,
-/// a ripple running out of its level. Its colors are the iPhone's own, in Display P3: red, and yellow
+/// as tall as the Alarm: its level and the offer to turn on Low Power Mode under it, below the camera,
+/// and at the right end a capsule holding a large battery, a ripple running out of its level. Its colors are the iPhone's own, in Display P3: red, and yellow
 /// once Low Power Mode is on.
 enum LowBatteryLayout {
-    /// From the left end to the words; and from them to the capsule, at the least.
-    static let wordsEdge: CGFloat = 0.88
+    /// From the words to the capsule, at the least.
     static let wordsGap: CGFloat = 0.33
-    static let capsule = CGSize(width: 2.35, height: 1.56)
+    /// As tall as the padding leaves, and as wide for that as the iPhone's.
+    static func capsule(_ h: CGFloat) -> CGSize {
+        CGSize(width: TimerLayout.content(h) * 1.506, height: TimerLayout.content(h))
+    }
     /// The battery in the capsule, a little right of its middle, as the iPhone sets it.
     static let bodyLeft: CGFloat = 0.54
     static let body = CGSize(width: 1.2, height: 0.645)
@@ -136,9 +137,6 @@ enum LowBatteryLayout {
     static let paleLevel = Color.p3(0xEE, 0x8A, 0x9D)
     static let ringColor = Color.p3(0xE1, 0x5E, 0x64)
 
-    /// The capsule as far in from the right end as from the top and bottom, in line with it.
-    static func edge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * capsule.height, in: TimerLayout.tallHeight(h)) }
-
     /// From the top to the level's line, with its letters just below the camera, as a device's words
     /// are, the offer as far under it.
     static func wordsTop(_ h: CGFloat) -> CGFloat {
@@ -159,9 +157,9 @@ enum LowBatteryLayout {
     /// Each wing: the capsule against the camera, or wider, should the words otherwise run into it.
     @MainActor
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
-        let right = h * capsule.width + edge(h)
+        let right = capsule(h).width + PlayerLayout.padding
         let words = max(width(LowBatteryView.title(percent)), width(LowBatteryView.offer), width(LowBatteryView.done))
-        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
+        return max(LiveActivityView.cameraGap + right, (PlayerLayout.padding + words + h * wordsGap + right - closedWidth) / 2)
     }
 }
 
@@ -206,14 +204,14 @@ struct LowBatteryView: View {
             .lineLimit(1)
             .fixedSize()
             .padding(.top, layout.wordsTop(h))
-            .padding(.leading, h * layout.wordsEdge)
+            .padding(.leading, PlayerLayout.padding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .frame(height: TimerLayout.tallHeight(h), alignment: .top)
             .accessibilityElement(children: .combine)
             capsule(h, on: on)
                 .reportsFrame(.lowPower)
                 .spokenButton(on ? "Turn off Low Power Mode" : "Turn on Low Power Mode") { LowPowerMode.shared.toggle() }
-                .padding(.trailing, layout.edge(h))
+                .padding(.trailing, PlayerLayout.padding)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxHeight: .infinity)
@@ -259,7 +257,7 @@ struct LowBatteryView: View {
                     .frame(width: h * layout.cap.width, height: h * layout.cap.height)
             }
             .padding(.leading, h * layout.bodyLeft)
-            .frame(width: h * layout.capsule.width, height: h * layout.capsule.height, alignment: .leading)
+            .frame(width: layout.capsule(h).width, height: layout.capsule(h).height, alignment: .leading)
             .background(Capsule(style: .continuous).fill(hovered ? shade.capsule.mix(with: .white, by: 0.08) : shade.capsule))
         }
         .animation(.easeOut(duration: 0.15), value: hovered)

@@ -14,7 +14,7 @@ import SwiftUI
 struct NowPlayingView: View {
     /// Every button's contact area. The glyphs inside it differ in size; the contact areas don't.
     static let hitbox: CGFloat = 40
-    static let sideColumnHeight = PlayerLayout.headerHeight + 6 + PlayerLayout.timelineHeight + 6 + hitbox
+    static let sideColumnHeight = PlayerLayout.headerHeight + 4 + PlayerLayout.timelineHeight + 4 + hitbox
 
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var output = AudioOutput.shared
@@ -80,11 +80,11 @@ struct NowPlayingView: View {
                             header
                                 .frame(height: PlayerLayout.headerHeight, alignment: .top)
                                 .allowsHitTesting(places == nil)
-                            Spacer(minLength: 6)
+                            Spacer(minLength: 4)
                             timeline
                                 .allowsHitTesting(places == nil)
                             controls
-                                .padding(.top, 6)
+                                .padding(.top, 4)
                         }
                         .frame(height: max(layout.artwork - clearance, Self.sideColumnHeight))
                         .padding(.top, clearance)

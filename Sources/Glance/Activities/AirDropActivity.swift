@@ -182,18 +182,18 @@ enum AirDropLayout {
     static let ringLine: CGFloat = 0.075
     static let ringEdge: CGFloat = 0.19
     // Opened.
-    static let thumb: CGFloat = 1.35
     static let thumbCorner: CGFloat = 0.23
     static let badge: CGFloat = 0.55
     static let badgeOut: CGFloat = 0.065
+    /// How far in from its square macOS's document icon draws its paper, by the square's side.
+    static let paperMargin: CGFloat = 0.16
     static let gap: CGFloat = 0.35
-    static let bigRing: CGFloat = 1.34
     static let bigRingLine: CGFloat = 0.127
     static let stop: CGFloat = 0.43
 
-    /// The picture and the ring as far in from their ends as from the top and bottom.
-    static func thumbEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * thumb, in: TimerLayout.tallHeight(h)) }
-    static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * bigRing, in: TimerLayout.tallHeight(h)) }
+    /// The picture and the ring at the notch's one padding from their ends, as from the top and bottom.
+    static func thumbEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
+    static func ringEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
 
     /// Opened: just wide enough for the picture and AirDrop's name on one side of the camera, against
     /// it, and the same room on the other for the ring.
@@ -201,16 +201,16 @@ enum AirDropLayout {
     static func width(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let left = wordsStart(h) + titleWidth(h) + gap
-        let right = gap + h * bigRing + ringEdge(h)
+        let right = gap + TimerLayout.content(h) + ringEdge(h)
         return camera + max(left, right) * 2
     }
 
     /// Where the words start, from the left end.
-    static func wordsStart(_ h: CGFloat) -> CGFloat { thumbEdge(h) + h * (thumb + gap) }
+    static func wordsStart(_ h: CGFloat) -> CGFloat { thumbEdge(h) + TimerLayout.content(h) + h * gap }
 
     /// As far as who it's from can run, under the camera, before the ring.
     static func wordsRoom(_ h: CGFloat, width: CGFloat) -> CGFloat {
-        max(width - wordsStart(h) - ringEdge(h) - h * (bigRing + gap), 0)
+        max(width - wordsStart(h) - ringEdge(h) - TimerLayout.content(h) - h * gap, 0)
     }
 
     @MainActor
@@ -316,12 +316,12 @@ struct ExpandedAirDropView: View {
         } label: {
             ZStack {
                 Circle().fill(AirDropLayout.tint.opacity(hovering ? 0.12 : 0))
-                AirDropRing(fraction: shown.fraction, diameter: h * AirDropLayout.bigRing, line: h * AirDropLayout.bigRingLine)
+                AirDropRing(fraction: shown.fraction, diameter: TimerLayout.content(h), line: h * AirDropLayout.bigRingLine)
                 RoundedRectangle(cornerRadius: h * AirDropLayout.stop * 0.22, style: .continuous)
                     .fill(AirDropLayout.tint)
                     .frame(width: h * AirDropLayout.stop, height: h * AirDropLayout.stop)
             }
-            .frame(width: h * AirDropLayout.bigRing, height: h * AirDropLayout.bigRing)
+            .frame(width: TimerLayout.content(h), height: TimerLayout.content(h))
             .contentShape(Circle())
             .animation(.easeOut(duration: 0.15), value: hovering)
         }
@@ -334,7 +334,7 @@ struct ExpandedAirDropView: View {
     /// The file, as macOS pictures it, or its kind's icon, with AirDrop's badge, a dark tile with
     /// the iPhone's AirDrop glyph, on its corner.
     private func preview(_ h: CGFloat) -> some View {
-        let side = h * AirDropLayout.thumb
+        let side = TimerLayout.content(h)
         let badge = h * AirDropLayout.badge
         let picture = shown.preview ?? NSWorkspace.shared.icon(for: .data)
         return Image(nsImage: picture)
@@ -351,6 +351,8 @@ struct ExpandedAirDropView: View {
                     )
                     .offset(x: h * AirDropLayout.badgeOut, y: h * AirDropLayout.badgeOut)
             }
+            // A kind's icon has room around its paper: the paper goes on the padding, as a picture does.
+            .offset(x: shown.preview == nil ? -side * AirDropLayout.paperMargin : 0)
     }
 }
 

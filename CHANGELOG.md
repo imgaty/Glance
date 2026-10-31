@@ -29,8 +29,9 @@
   which is hidden, and AirPods' own notification, which is taken away. With
   `Accessibility` allowed, macOS's banner under the menu bar for AirPods
   connecting or running low is hidden too.
-- Changed everything open or tall in the notch to the player's corners, all four
-  matching. Closed, the notch keeps the camera housing's own.
+- Changed everything open or tall in the notch to one set of corners, all four
+  matching and concentric with what's round at its ends, and one padding all
+  around. Closed, the notch keeps the camera housing's own corners.
 - Changed what's tall in the notch to stand on its glass, as the player does:
   the taller it is, the more glass shows.
 - Changed everything open or tall in the notch to the player's type, with one

@@ -27,8 +27,8 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
         PlayerLayout(rawValue: UserDefaults.standard.string(forKey: Preferences.musicLayout) ?? "") ?? .top
     }
 
-    /// Around everything, on every side.
-    static let padding: CGFloat = 18
+    /// Around everything, on every side, whatever the notch opens to.
+    static let padding: CGFloat = 14
     /// Kept between the camera housing and anything below it, and anything beside it.
     static let cameraGap: CGFloat = 4
     static let besideCamera: CGFloat = 8
@@ -48,9 +48,9 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     static let playGlyph: CGFloat = 28
     static let skipGlyph: CGFloat = 18
     static let optionGlyph: CGFloat = 17.5
-    /// The open notch's corners, all four: the padding plus the top cover's corners, so they're
-    /// concentric with it.
-    static let cornerRadius: CGFloat = padding + 11
+    /// The open notch's corners, all four, for the usual notch: half the height of what opens
+    /// shortest, so anything round at its ends is concentric with them (see `NotchModel.corners`).
+    static let cornerRadius: CGFloat = 38.5
 
     var artwork: CGFloat { self == .top ? 60 : 120 }
 

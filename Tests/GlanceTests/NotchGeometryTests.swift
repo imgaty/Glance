@@ -55,7 +55,7 @@ struct GlassLookTests {
 /// The notch's corners, closed and open.
 @Suite("Notch corners")
 struct NotchCornersTests {
-    private let notch = NotchCorners(restingHeight: 32, radius: 29)
+    private let notch = NotchCorners(restingHeight: 32, radius: 38.5)
 
     @Test("Closed, it has the hardware notch's flares and corners")
     func resting() {
@@ -77,12 +77,12 @@ struct NotchCornersTests {
         #expect(isClose(notch.radii(forHeight: 39, wingEnds: 1).bottom, 19.5))
     }
 
-    @Test("Open, all four corners are the player's, however tall it stands", arguments: [77.0, 130.0, 172.0, 400.0])
+    @Test("Open, all four corners are the one radius, however tall it stands", arguments: [77.0, 130.0, 172.0, 400.0])
     func open(height: CGFloat) {
         for wingEnds in [0.0, 1.0] {
             let radii = notch.radii(forHeight: height, wingEnds: wingEnds)
-            #expect(isClose(radii.flare, 29))
-            #expect(isClose(radii.bottom, 29))
+            #expect(isClose(radii.flare, 38.5))
+            #expect(isClose(radii.bottom, 38.5))
         }
     }
 
@@ -146,30 +146,30 @@ struct PlayerLayoutTests {
         #expect(PlayerLayout.side.artworkRadius == 14)
     }
 
-    @Test("The open corners are concentric with the cover's")
+    @Test("The open corners are concentric with what's round at the ends")
     func cornerRadius() {
-        #expect(PlayerLayout.cornerRadius == PlayerLayout.padding + PlayerLayout.top.artworkRadius)
+        #expect(PlayerLayout.cornerRadius == PlayerLayout.padding + TimerLayout.content(32) / 2)
     }
 
     @Test("Cover on top, around the usual notch")
     func topSize() {
-        // Wide enough to keep the cover clear of the camera: 185 + 2 × (18 + 60 + 8) = 357, made even.
-        // Tall enough for the padding, cover, timeline and controls: 18 + 60 + 12 + 16 + 8 + 40 + 18.
-        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 358, height: 172))
+        // Wide enough to keep the cover clear of the camera: 185 + 2 × (14 + 60 + 8) = 349, made even.
+        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 12 + 16 + 8 + 40 + 14.
+        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 164))
     }
 
     @Test("Cover on the side, around the usual notch")
     func sideSize() {
-        // 185 + 2 × (18 + 120 + 8) = 477, made even; the cover sets the height: 18 + 120 + 18.
-        #expect(PlayerLayout.side.size(closed: closed) == CGSize(width: 478, height: 156))
+        // 185 + 2 × (14 + 120 + 8) = 469, made even; the cover sets the height: 14 + 120 + 14.
+        #expect(PlayerLayout.side.size(closed: closed) == CGSize(width: 470, height: 148))
     }
 
     @Test("A narrow camera still leaves room for the controls")
     func narrowCamera() {
         let small = CGSize(width: 100, height: 20)
-        // 18 × 2 + 280 = 316 on top; 18 × 2 + 120 + 17 + 280 = 453 on the side, made even.
-        #expect(PlayerLayout.top.size(closed: small).width == 316)
-        #expect(PlayerLayout.side.size(closed: small).width == 454)
+        // 14 × 2 + 280 = 308 on top; 14 × 2 + 120 + 17 + 280 = 445 on the side, made even.
+        #expect(PlayerLayout.top.size(closed: small).width == 308)
+        #expect(PlayerLayout.side.size(closed: small).width == 446)
     }
 
     @Test("A tall camera pushes the side layout's column down")

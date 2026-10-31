@@ -308,7 +308,7 @@ final class NotchModel: ObservableObject {
         self.layout = layout
         let openSize = layout.size(closed: closedSize)
         self.openSize = openSize
-        corners = NotchCorners(restingHeight: closedSize.height, radius: PlayerLayout.cornerRadius)
+        corners = NotchCorners(restingHeight: closedSize.height, radius: TimerLayout.tallHeight(closedSize.height) / 2)
     }
 
     /// Switches to another layout in place.

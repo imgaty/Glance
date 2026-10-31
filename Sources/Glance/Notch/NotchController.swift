@@ -16,7 +16,7 @@ private enum Layout {
     /// How far away (pt) the closed notch starts to notice the pointer.
     static let proximityRange: CGFloat = 60
     /// Room around the open notch for its glass edge and rubber-band stretch.
-    static let windowPadding = CGSize(width: 60, height: 90)
+    static let windowPadding = CGSize(width: 90, height: 90)
     /// How far the window reaches past the top of the screen, with nothing drawn there: a window
     /// that ends right at the top edge misses a click with the pointer pushed against it.
     static let pastTop: CGFloat = 2
