@@ -676,14 +676,34 @@ private final class NeutralSlider: NSSlider {
 /// menu), on a gray track, with a white knob, the same whether or not Glance is the app in front. (A menu takes its app's look, so
 /// the standard slider turned to the accent color only while Glance happened to be in use.)
 private final class NeutralSliderCell: NSSliderCell {
+    /// How much of the track is filled: in proportion to all of it, so the loudest fills it to the end.
+    private var fraction: Double { maxValue > minValue ? (doubleValue - minValue) / (maxValue - minValue) : 0 }
+
+    // The knob's middle is at the end of what's filled, so the pointer keeps it there: left to itself,
+    // the slider keeps the knob's width in from each end, and it runs ahead of the fill near the left
+    // end and behind it near the right.
+    override func startTracking(at startPoint: NSPoint, in controlView: NSView) -> Bool {
+        defer { follow(startPoint, in: controlView) }
+        return super.startTracking(at: startPoint, in: controlView)
+    }
+
+    override func continueTracking(last lastPoint: NSPoint, current currentPoint: NSPoint, in controlView: NSView) -> Bool {
+        defer { follow(currentPoint, in: controlView) }
+        return super.continueTracking(last: lastPoint, current: currentPoint, in: controlView)
+    }
+
+    private func follow(_ point: NSPoint, in view: NSView) {
+        let track = barRect(flipped: view.isFlipped)
+        doubleValue = minValue + (maxValue - minValue) * min(max((point.x - track.minX) / track.width, 0), 1)
+    }
+
     override func drawBar(inside rect: NSRect, flipped: Bool) {
         let track = NSRect(x: rect.minX, y: rect.midY - 3, width: rect.width, height: 6)
         Self.trackColor.setFill()
         NSBezierPath(roundedRect: track, xRadius: 3, yRadius: 3).fill()
         var filled = track
-        // In proportion to the whole track, so the loudest fills it to the end. The same with the
-        // knob showing or not: its end is always under the knob, which only fades in over it.
-        let fraction = maxValue > minValue ? (doubleValue - minValue) / (maxValue - minValue) : 0
+        // The same with the knob showing or not: its end is always under the knob's middle, which
+        // only fades in over it.
         filled.size.width = max(track.width * fraction, track.height)
         Self.fillColor.setFill()
         NSBezierPath(roundedRect: filled, xRadius: 3, yRadius: 3).fill()
@@ -692,7 +712,10 @@ private final class NeutralSliderCell: NSSliderCell {
     override func drawKnob(_ knobRect: NSRect) {
         let opacity = (controlView as? NeutralSlider)?.knobOpacity ?? 1
         guard opacity > 0 else { return }
-        let knob = NSRect(x: knobRect.midX - 10, y: knobRect.midY - 8, width: 20, height: 16)
+        // Its middle at the end of what's filled, and never past the slider's own ends.
+        let track = barRect(flipped: controlView?.isFlipped ?? false)
+        let middle = min(max(track.minX + track.width * fraction, track.minX + 10), track.maxX - 10)
+        let knob = NSRect(x: middle - 10, y: knobRect.midY - 8, width: 20, height: 16)
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current?.cgContext.setAlpha(opacity)
         let shadow = NSShadow()
