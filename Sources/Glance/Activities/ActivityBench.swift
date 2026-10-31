@@ -76,6 +76,17 @@ final class ActivityBench {
         run = Task { await play(scene) }
     }
 
+    /// Glance started again on another scene, or as usual with none. It waits for this one to go, as
+    /// `open` otherwise ignores the arguments.
+    static func change(to scene: Scene?) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        let bench = scene == nil ? "" : " --args --bench \"$1\""
+        process.arguments = ["-c", "sleep 1; exec /usr/bin/open \"$0\"\(bench)", Bundle.main.bundlePath, scene?.rawValue ?? ""]
+        try? process.run()
+        NSApp.terminate(nil)
+    }
+
     /// The round is over, from its own button or swiped away: the next one comes after a moment.
     func stopped() {
         ended = true

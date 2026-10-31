@@ -69,7 +69,10 @@ final class StatusBarController: NSObject {
         menu.delegate = self
         menu.addItem(updatesItem)
         state.canRebuild = BuildInfo.sourceDirectory != nil
-        if state.canRebuild { menu.addItem(rebuildItem) }
+        if state.canRebuild {
+            menu.addItem(rebuildItem)
+            menu.addItem(benchItem())
+        }
         menu.addItem(settings)
         menu.addItem(.separator())
         menu.addItem(quit)
@@ -115,6 +118,29 @@ final class StatusBarController: NSObject {
     @objc private func startStopStopwatch() { ClockActivity.shared.startStopStopwatch() }
     @objc private func resetStopwatch() { ClockActivity.shared.resetStopwatch() }
     @objc private func rebuildFromMenu() { rebuild() }
+
+    /// Each live activity to try alone, in a build from source (see `ActivityBench`), and none.
+    private func benchItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "Try a Live Activity", action: nil, keyEquivalent: "")
+        let scenes = NSMenu()
+        scenes.autoenablesItems = false
+        func add(_ title: String, _ scene: ActivityBench.Scene?) {
+            let entry = NSMenuItem(title: title, action: #selector(benchFromMenu), keyEquivalent: "")
+            entry.target = self
+            entry.representedObject = scene?.rawValue
+            entry.state = scene == ActivityBench.scene ? .on : .off
+            scenes.addItem(entry)
+        }
+        for scene in ActivityBench.Scene.allCases { add(scene.rawValue, scene) }
+        scenes.addItem(.separator())
+        add("None", nil)
+        item.submenu = scenes
+        return item
+    }
+
+    @objc private func benchFromMenu(_ entry: NSMenuItem) {
+        ActivityBench.change(to: (entry.representedObject as? String).flatMap(ActivityBench.Scene.init(rawValue:)))
+    }
     @objc private func settingsFromMenu() { onOpenSettings?() }
 
     // MARK: Rebuild

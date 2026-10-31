@@ -76,6 +76,9 @@ The scenes are `airdrop`, `airdropSend`, `airdropReal`, `timer`, `stopwatch`,
 after the name is how long each round lasts, in seconds, 300 unless said. Open
 Glance again without it to go back.
 
+Alternatively, right-click the notch and choose a scene from
+**Try a Live Activity**, or `None` to go back.
+
 ### Why the Share extension hands over on a pasteboard
 
 Every app extension runs in a sandbox, so `GlanceShare` can't reach the tray
