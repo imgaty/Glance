@@ -127,15 +127,6 @@ enum LowBatteryLayout {
         CGFloat((max(seconds, 0) + rippleStart).truncatingRemainder(dividingBy: ripple))
     }
 
-    /// How the words under the level change, and how long it takes.
-    static func change(_ h: CGFloat) -> AnyTransition {
-        let blur = AnyTransition(.blurReplace)
-        return .asymmetric(
-            insertion: blur.combined(with: .offset(y: h * 0.3)),
-            removal: blur.combined(with: .offset(y: -h * 0.3)))
-    }
-    static let changeTime = 0.45
-
     /// The words under the level, as the iPhone's, and once Low Power Mode is on.
     static let offerColor = Color.p3(0x6E, 0x6E, 0x6E)
     static let doneColor = Color.p3(0xE1, 0xC8, 0x78)
@@ -205,15 +196,10 @@ struct LowBatteryView: View {
             VStack(alignment: .leading, spacing: layout.lineGap(h)) {
                 Text(Self.title(percent))
                     .foregroundStyle(.white)
-                // One rising into the other's place, each blurred on its way, as the island's words change.
-                ZStack(alignment: .leading) {
-                    if on {
-                        Text(Self.done).foregroundStyle(layout.doneColor).transition(layout.change(h))
-                    } else {
-                        Text(Self.offer).foregroundStyle(layout.offerColor).transition(layout.change(h))
-                    }
-                }
-                .animation(.easeInOut(duration: layout.changeTime), value: on)
+                // Changed at once, as the capsule turns.
+                Text(on ? Self.done : Self.offer)
+                    .foregroundStyle(on ? layout.doneColor : layout.offerColor)
+                    .animation(nil, value: on)
             }
             .font(NotchType.title)
             .lineLimit(1)
