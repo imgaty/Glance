@@ -589,7 +589,8 @@ struct NotchView: View {
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
-                hoveredButton: model.hoveredButton, open: { model.openNotch() }, extended: model.alertExtended,
+                leadingOnly: model.detached != nil, hoveredButton: model.hoveredButton, open: { model.openNotch() },
+                extended: model.alertExtended,
                 notch: CGSize(width: m.bodyWidth, height: m.height)
             )
             .atNotchStep(width: m.bodyWidth, height: m.height)

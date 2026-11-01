@@ -32,6 +32,9 @@ struct SystemActivityView: View {
     var airdrop: AirDropShown? = nil
     /// The timer's name, as VoiceOver says it.
     var timerName = "Timer"
+    /// Another activity is detached: the trailing wing is folded away, and what's on it hidden, or it
+    /// would show past the fold as the pointer swells the notch.
+    var leadingOnly = false
     /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
     var hoveredButton: AlertButton? = nil
     /// Opens the notch to the timer or stopwatch, as VoiceOver's press does.
@@ -147,18 +150,19 @@ struct SystemActivityView: View {
                     }
                     .padding(.trailing, LiveActivityView.textEdge(restingHeight: restingHeight))
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    .islandFade(!leadingOnly)
                 }
                 .islandFade(self.clock != nil)
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .combine)
             } else if let shownAirDrop {
-                AirDropMark(shown: shownAirDrop, restingHeight: restingHeight)
+                AirDropMark(shown: shownAirDrop, restingHeight: restingHeight, leadingOnly: leadingOnly)
                     .islandFade(airdrop != nil)
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction(.default, open)
             } else if let shownRoute {
-                AirPlayMark(route: shownRoute, restingHeight: restingHeight)
+                AirPlayMark(route: shownRoute, restingHeight: restingHeight, leadingOnly: leadingOnly)
                     .islandFade(route != nil)
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)

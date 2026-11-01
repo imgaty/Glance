@@ -174,7 +174,7 @@ final class NotchController {
     private var restPoint: CGPoint?
     /// How long it stays there before either opens, on top of the hover delay; and how far it can
     /// drift and still be at rest.
-    private static let restTime = 0.45
+    private static let restTime = 0.25
     private static let restTremble: CGFloat = 3
 
     /// Slid up out of sight, while full screen.

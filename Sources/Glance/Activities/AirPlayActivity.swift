@@ -159,6 +159,8 @@ struct AirPlayDevice: View {
 struct AirPlayMark: View {
     let route: AirPlayRoute
     let restingHeight: CGFloat
+    /// Only the symbol, with another activity detached (see `SystemActivityView.leadingOnly`).
+    var leadingOnly = false
 
     var body: some View {
         let h = restingHeight
@@ -171,6 +173,7 @@ struct AirPlayMark: View {
             AirPlayDevice(route: route, size: h * AirPlayLayout.device)
                 .padding(.trailing, h * AirPlayLayout.deviceEdge)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .islandFade(!leadingOnly)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("AirPlay, playing on \(route.name)")

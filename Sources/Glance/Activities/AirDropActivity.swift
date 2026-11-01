@@ -243,6 +243,8 @@ struct AirDropRing: View {
 struct AirDropMark: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
+    /// Only the symbol, with another activity detached (see `SystemActivityView.leadingOnly`).
+    var leadingOnly = false
 
     var body: some View {
         let h = restingHeight
@@ -254,6 +256,7 @@ struct AirDropMark: View {
             AirDropRing(fraction: shown.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                 .padding(.trailing, h * AirDropLayout.ringEdge)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .islandFade(!leadingOnly)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ExpandedAirDropView.spoken(shown))
