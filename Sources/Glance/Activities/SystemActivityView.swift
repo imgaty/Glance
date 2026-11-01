@@ -35,6 +35,8 @@ struct SystemActivityView: View {
     /// Another activity is detached: the trailing wing is folded away, and what's on it hidden, or it
     /// would show past the fold as the pointer swells the notch.
     var leadingOnly = false
+    /// Open, what's beside the camera has grown into the notch (see `GrowsOut`), and hides here.
+    var grown = false
     /// Which of a timer's buttons the pointer is on, in the closed notch, which leaves it closed.
     var hoveredButton: AlertButton? = nil
     /// Opens the notch to the timer or stopwatch, as VoiceOver's press does.
@@ -151,6 +153,7 @@ struct SystemActivityView: View {
                     .padding(.trailing, LiveActivityView.textEdge(restingHeight: restingHeight))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .islandFade(!leadingOnly)
+                    .modifier(GrownAway(grown: grown))
                 }
                 .islandFade(self.clock != nil)
                 .transition(IslandMotion.fade)
@@ -163,6 +166,7 @@ struct SystemActivityView: View {
                     .accessibilityAction(.default, open)
             } else if let shownRoute {
                 AirPlayMark(route: shownRoute, restingHeight: restingHeight, leadingOnly: leadingOnly)
+                    .modifier(GrownAway(grown: grown))
                     .islandFade(route != nil)
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
@@ -485,6 +489,15 @@ struct TurningDevice: View {
         .offset(x: (turn.canvas.width / 2 - turn.rest.midX) * scale, y: (turn.canvas.height / 2 - turn.rest.midY) * scale)
         .frame(width: Self.width(turn, height: height), height: height)
         .onAppear { start = .now }
+    }
+}
+
+/// Beside the camera, gone at once as it grows into the notch, and back once it has shrunk here.
+private struct GrownAway: ViewModifier {
+    let grown: Bool
+
+    func body(content: Content) -> some View {
+        content.animation(grown ? .linear(duration: 0.01) : .linear(duration: 0.01).delay(0.26)) { $0.opacity(grown ? 0 : 1) }
     }
 }
 

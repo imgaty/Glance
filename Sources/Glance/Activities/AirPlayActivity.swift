@@ -187,15 +187,28 @@ struct ExpandedAirPlayView: View {
     let route: AirPlayRoute
     let restingHeight: CGFloat
     let width: CGFloat
+    /// The notch is open to it.
+    var revealed = true
+    /// How wide the notch is closed, if it shows beside the camera there, and grows out of that.
+    var closedWidth: CGFloat? = nil
     @State private var hovering = false
+    @State private var arrived = false
 
     var body: some View {
         let h = restingHeight
+        let layout = AirPlayLayout.self
+        let out = revealed && arrived || closedWidth == nil
+        let rise = h / 2 - (h + LiveActivityView.cameraGap + h * layout.header / 2)
+        let spread = ((closedWidth ?? width) - width) / 2
+        let symbolFrom = CGSize(width: h * layout.symbolEdge - PlayerLayout.padding - spread, height: rise)
+        let deviceFrom = CGSize(width: spread - h * layout.deviceEdge + PlayerLayout.padding, height: rise)
         VStack(spacing: h * AirPlayLayout.buttonGap) {
             HStack(spacing: 0) {
                 Image(systemName: "airplay.audio")
                     .font(.system(size: h * AirPlayLayout.bigSymbol, weight: .regular))
                     .foregroundStyle(AirPlayLayout.tint)
+                    .modifier(GrowsOut(out: out, scale: layout.symbol / layout.bigSymbol, anchor: .leading, from: symbolFrom))
+                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
                     .padding(.leading, PlayerLayout.padding - h * AirPlayLayout.bigSymbolMargin)
                     .padding(.trailing, h * AirPlayLayout.symbolGap)
                 VStack(alignment: .leading, spacing: 0) {
@@ -208,8 +221,11 @@ struct ExpandedAirPlayView: View {
                 }
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .modifier(PageFade(hidden: !revealed))
                 Spacer(minLength: h * 0.3)
                 AirPlayDevice(route: route, size: h * AirPlayLayout.bigDevice)
+                    .modifier(GrowsOut(out: out, scale: layout.device / layout.bigDevice, anchor: .trailing, from: deviceFrom))
+                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
                     .padding(.trailing, PlayerLayout.padding - h * AirPlayLayout.bigDeviceMargin)
             }
             .frame(height: h * AirPlayLayout.header)
@@ -228,7 +244,9 @@ struct ExpandedAirPlayView: View {
             .onHover { hovering = $0 }
             .notchControl()
             .padding(.horizontal, PlayerLayout.padding)
+            .modifier(PageFade(hidden: !revealed))
         }
+        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
         .padding(.top, h + LiveActivityView.cameraGap)
         .padding(.bottom, PlayerLayout.padding)
         .frame(width: width, height: AirPlayLayout.height(h), alignment: .top)

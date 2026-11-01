@@ -589,7 +589,8 @@ struct NotchView: View {
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
-                leadingOnly: model.detached != nil, hoveredButton: model.hoveredButton, open: { model.openNotch() },
+                leadingOnly: model.detached != nil, grown: isOpen && grownFrom != nil, hoveredButton: model.hoveredButton,
+                open: { model.openNotch() },
                 extended: model.alertExtended,
                 notch: CGSize(width: m.bodyWidth, height: m.height)
             )
@@ -757,6 +758,12 @@ struct NotchView: View {
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
+    /// How wide the notch is closed, when what it's open to shows beside the camera there, alone, and
+    /// grows out of that; with another detached, or from a bubble, it doesn't.
+    private var grownFrom: CGFloat? {
+        model.second == nil && model.expanded != nil && model.activities.first == model.expanded ? model.restingWidth : nil
+    }
+
     /// Opened to the timer or the stopwatch: its own view, laid out at its open size, as the player
     /// is, so the growing shape reveals it.
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
@@ -764,10 +771,11 @@ struct NotchView: View {
             let h = model.closedSize.height
             let name = model.expanded.map(model.name(of:)) ?? "Timer"
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
-            ExpandedTimerView(shown: clock, name: name, restingHeight: h, camera: model.camera, width: width)
-                .frame(width: width, height: TimerLayout.tallHeight(h))
-                .modifier(PageFade(hidden: !shown))
-                .allowsHitTesting(places == nil && shown)
+            ExpandedTimerView(
+                shown: clock, name: name, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom
+            )
+            .frame(width: width, height: TimerLayout.tallHeight(h))
+            .allowsHitTesting(places == nil && shown)
         }
     }
 
@@ -776,8 +784,7 @@ struct NotchView: View {
         if model.expanded == .airplay, let route = model.airplay {
             let h = model.closedSize.height
             let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
-            ExpandedAirPlayView(route: route, restingHeight: h, width: width)
-                .modifier(PageFade(hidden: !shown))
+            ExpandedAirPlayView(route: route, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom)
                 .allowsHitTesting(places == nil && shown)
         }
     }

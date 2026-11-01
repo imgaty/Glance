@@ -206,25 +206,41 @@ struct ExpandedTimerView: View {
     /// Its own width (see `width(for:name:restingHeight:camera:at:)`), which changes as the time
     /// loses or gains a digit.
     let width: CGFloat
+    /// The notch is open to it.
+    var revealed = true
+    /// How wide the notch is closed, if it shows beside the camera there, and grows out of that.
+    var closedWidth: CGFloat? = nil
     @ObservedObject private var clock = ClockActivity.shared
+    @State private var arrived = false
 
     var body: some View {
         let h = restingHeight
         // The buttons at the left end, the time at the right, the time's name under the camera; to
         // spare, beside the camera.
         let side = max((width - camera) / 2, 0)
+        let out = revealed && arrived
+        let rise = (h - TimerLayout.tallHeight(h)) / 2
+        let spread = ((closedWidth ?? width) - width) / 2
+        let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.timeEdge(h), height: rise)
+        let ringFrom = CGSize(width: SystemActivityView.ringEdge(h) - TimerLayout.buttonEdge(h) - spread, height: rise)
+        let small = LiveActivityView.textSize(for: h) / (h * TimerLayout.time)
         HStack(spacing: 0) {
             buttons(h)
+                .modifier(GrowsOut(out: out || closedWidth == nil, scale: TimerLayout.ring / TimerLayout.content(h) * h, anchor: .leading, from: ringFrom))
+                .modifier(PageFade(hidden: !revealed))
                 .padding(.leading, TimerLayout.buttonEdge(h))
                 .frame(width: side, alignment: .leading)
             Color.clear.frame(width: camera)
             time(h)
+                .modifier(GrowsOut(out: out || closedWidth == nil, scale: small, anchor: .trailing, from: timeFrom))
+                .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
                 .padding(.trailing, Self.timeEdge(h))
                 .frame(width: side, alignment: .trailing)
         }
         // In the middle of its height, as the iPhone's is.
         .frame(height: TimerLayout.content(h))
         .frame(maxHeight: .infinity)
+        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
     }
 
     /// Pause or go on, and cancel; or start or stop, and start over or reset.
@@ -296,6 +312,7 @@ struct ExpandedTimerView: View {
                     .frame(width: label, alignment: .trailing)
                     // Its end just before the time's start.
                     .offset(x: -(label + h * TimerLayout.titleGap))
+                    .modifier(PageFade(hidden: !revealed))
             }
         }
         .foregroundStyle(Self.isStopwatch(shown) ? TimerLayout.stopwatchInk : .orange)
@@ -332,6 +349,40 @@ struct ExpandedTimerView: View {
     @MainActor
     private static func titleWidth(_ name: String, _ h: CGFloat) -> CGFloat {
         ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 1
+    }
+}
+
+/// Something in an activity opened that grows out of where it shows beside the camera, as the cover
+/// and the waveform do, on the notch's own spring: from there, at that size, to its place.
+struct GrowsOut: ViewModifier {
+    /// In its place in the open notch.
+    let out: Bool
+    /// Its size beside the camera, by its size here.
+    let scale: CGFloat
+    let anchor: UnitPoint
+    /// Where it shows beside the camera, from its place here.
+    let from: CGSize
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(out ? 1 : scale, anchor: anchor)
+            .offset(out ? .zero : from)
+    }
+}
+
+/// What grows out of the notch takes over from what's beside the camera at once, as they're in the
+/// same place at the same size, and hands back only once it has shrunk there. What doesn't fades as
+/// the rest of the page does.
+struct GrownFade: ViewModifier {
+    let shown: Bool
+    let grows: Bool
+
+    func body(content: Content) -> some View {
+        if grows {
+            content.animation(shown ? .linear(duration: 0.01) : .linear(duration: 0.08).delay(0.26)) { $0.opacity(shown ? 1 : 0) }
+        } else {
+            content.modifier(PageFade(hidden: !shown))
+        }
     }
 }
 
