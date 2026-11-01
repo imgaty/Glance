@@ -68,7 +68,7 @@ Reduce Motion on, they only fade.
 
 | Gesture | Operation |
 | --- | --- |
-| Hover | Opens the notch, after the hover delay |
+| Hover | Opens the notch, after the hover delay; with two activities showing, opens the notch or the bubble once the pointer stops on it |
 | Click | Opens the notch; click and hold, if a hold time is set |
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away (see [Live Activities](#live-activities)) |
@@ -357,8 +357,11 @@ and it opens to the timer, as tall as the iPhone's: pause or resume it, or
 cancel it, with the round buttons left of the camera. The time is right of it,
 and its name under the camera. Opened, the stopwatch shows its time alone, to
 the hundredth: stop it, or start it over from 0:00 with **↻**, and it keeps
-running. Once it's stopped, start it again or reset it. Bubbles open only with
-a click.
+running. Once it's stopped, start it again or reset it.
+
+With two activities showing, the pointer passing over them opens neither: the
+notch or the bubble opens once the pointer stops on it, a little after the hover
+delay. A click opens either if **Open with** includes it.
 
 Its buttons work as Clock's own do, and what they do shows at once: Glance opens
 Clock hidden, shows it for a moment behind every other window, and, if it wasn't

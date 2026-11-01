@@ -170,6 +170,13 @@ final class NotchController {
         }
     }
 
+    /// Where the pointer came to rest, with two activities showing (see `openOnRest`).
+    private var restPoint: CGPoint?
+    /// How long it stays there before either opens, on top of the hover delay; and how far it can
+    /// drift and still be at rest.
+    private static let restTime = 0.45
+    private static let restTremble: CGFloat = 3
+
     /// Slid up out of sight, while full screen.
     private var tucked = false
     private var revealTask: Task<Void, Never>?
@@ -809,8 +816,10 @@ final class NotchController {
                 openTask?.cancel()
             } else if onBubble {
                 // The bubble's own: the notch beside it stays as it is.
+                openOnRest(at: p)
             } else if interactiveZone.contains(p) {
                 if model.state == .closed, !holdUntilExit { peek() }
+                openOnRest(at: p)
             } else {
                 holdUntilExit = false
                 if model.state == .peek { settle(at: p) } else { model.approach(closeness(to: p)) }
@@ -841,6 +850,7 @@ final class NotchController {
     private func hoverBubble(_ on: Bool, at p: CGPoint) {
         if on, model.state == .peek { settle(at: p) }
         openTask?.cancel()
+        restPoint = nil
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
         if on {
             startPolling()
@@ -875,13 +885,17 @@ final class NotchController {
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
         guard pressBeganClosed else { return }
-        if model.bubbleHovered {
-            // A bubble opens with a plain click, as it's let go.
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
-            return
-        }
-        model.press(true)
         let opening = Opening.current
+        // With two activities, a press isn't a pointer coming to rest.
+        if model.detached != nil {
+            openTask?.cancel()
+            restPoint = nil
+        }
+        if model.bubbleHovered {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
+        } else {
+            model.press(true)
+        }
         // With a hold delay, the notch opens while the button is still down.
         if opening.onClick, opening.clickDelay > 0 {
             scheduleOpen(after: opening.clickDelay)
@@ -895,17 +909,17 @@ final class NotchController {
             return
         }
         guard pressBeganClosed else { return }
-        if model.bubblePressed {
+        let onBubble = model.bubblePressed
+        if onBubble {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
-            if bubbleZone?.contains(p) == true { open() }
-            return
+        } else {
+            model.press(false)
         }
-        model.press(false)
         let opening = Opening.current
         if opening.clickDelay > 0 {
             // Let go before a hold delay ran out: no open.
             if model.state != .open { openTask?.cancel() }
-        } else if opening.onClick, interactiveZone.contains(p) {
+        } else if opening.onClick, onBubble ? bubbleZone?.contains(p) == true : interactiveZone.contains(p) {
             open()
         }
     }
@@ -997,7 +1011,18 @@ final class NotchController {
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).
-        if opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
+        // With two activities showing, it waits for the pointer to stop (see `openOnRest`).
+        if opening.onHover, model.detached == nil, NSEvent.pressedMouseButtons & 1 == 0 { scheduleOpen(after: opening.hoverDelay) }
+    }
+
+    /// With two activities showing, either opens only once the pointer has stopped on it, so a pointer
+    /// passing over them opens neither: any move that's more than a tremble starts the wait over.
+    private func openOnRest(at p: CGPoint) {
+        let opening = Opening.current
+        guard model.detached != nil, !holdUntilExit, opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 else { return }
+        if let restPoint, hypot(p.x - restPoint.x, p.y - restPoint.y) < Self.restTremble { return }
+        restPoint = p
+        scheduleOpen(after: opening.hoverDelay + Self.restTime)
     }
 
     /// A device being announced extends to say what it is, as the iPhone's AirPods do, for as long
@@ -1034,6 +1059,7 @@ final class NotchController {
 
     private func settle(at p: CGPoint) {
         openTask?.cancel()
+        restPoint = nil
         model.settle(closeness: closeness(to: p))
         stopPolling()
         // Gone before the notch opened, after an announcement folded away for it: what was there
@@ -1075,6 +1101,7 @@ final class NotchController {
             holds.insert(.touch)
         }
         openTask?.cancel()
+        restPoint = nil
         closeTask?.cancel()
         closeTask = nil
         popTask?.cancel()

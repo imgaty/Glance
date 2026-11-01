@@ -34,6 +34,9 @@
   height, and one padding all around. Closed, the notch keeps the camera housing's
   own corners.
 - Changed the volume slider to the Mac's accent color in light mode.
+- Changed opening with two live activities showing: the notch or the bubble opens
+  once the pointer stops on it, so passing over them opens neither, and a click
+  on the bubble follows `Open with`, as one on the notch does.
 - Changed `Hide in full screen` on a Mac with a notch: rather than sliding away,
   the notch folds back to the camera with nothing beside it, and still opens from
   there as usual. On a display with no camera, it hides with the menu bar.
