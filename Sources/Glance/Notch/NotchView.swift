@@ -130,6 +130,11 @@ final class NotchModel: ObservableObject {
     /// Between what the wings show and what's announced, the notch folds to rest first and opens
     /// again from there, as the Dynamic Island switches between activities.
     @Published var switching = false
+    /// A full-screen app covers this display: the notch keeps to the camera housing, with nothing
+    /// beside it, and opens from there as usual.
+    @Published var collapsed = false
+    /// Nothing shows beside the camera for now.
+    var folded: Bool { switching || collapsed }
     /// Clock's timer counting down beside the camera, and its stopwatch counting up (see
     /// `ClockActivity`); and each wing's width for the one in the notch.
     @Published var timer: NotchTimer.State?
@@ -254,7 +259,7 @@ final class NotchModel: ObservableObject {
     /// the notch is open, something else is announced, or a new song's name shows: it runs back into
     /// the notch while it does.
     var detached: Activity? {
-        guard state != .open, alert == nil, !switching, !(activity && pop) else { return nil }
+        guard state != .open, alert == nil, !folded, !(activity && pop) else { return nil }
         return activities.dropFirst().first
     }
 
@@ -322,7 +327,7 @@ final class NotchModel: ObservableObject {
     /// needs, against the camera too.
     var wing: CGFloat {
         let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
-        if switching { return 0 }
+        if folded { return 0 }
         if alert != nil { return max(alertExtended ? alertExtendedWing : alertWing, resting) }
         if activity, pop { return max(popWing, resting) }
         // With another detached, the first has the leading side alone, as wide as the notch is tall,
@@ -338,7 +343,7 @@ final class NotchModel: ObservableObject {
     var restingWidth: CGFloat { closedSize.width + wing * 2 }
 
     /// What's announced is as tall as the Dynamic Island's Alarm (see `NotchAlert.tall`).
-    var restingTall: Bool { alert.map { $0.tall || alertExtended } == true && !switching }
+    var restingTall: Bool { alert.map { $0.tall || alertExtended } == true && !folded }
 
     /// The closed notch's height: more than twice as tall while what's announced is.
     var restingHeight: CGFloat { restingTall ? TimerLayout.tallHeight(closedSize.height) : closedSize.height }
@@ -572,10 +577,10 @@ struct NotchView: View {
                 .islandFade(liveShown)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
-                restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.alert,
-                clock: model.activity || model.switching ? nil : model.notchClock,
-                route: model.activities.first == .airplay && !model.switching ? model.airplay : nil,
-                airdrop: model.activities.first == .airdrop && !model.switching ? model.airdrop : nil,
+                restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.collapsed ? nil : model.alert,
+                clock: model.activity || model.folded ? nil : model.notchClock,
+                route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
+                airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
                 hoveredButton: model.hoveredButton, open: { model.openNotch() }, extended: model.alertExtended,
                 notch: CGSize(width: m.bodyWidth, height: m.height)
@@ -721,7 +726,7 @@ struct NotchView: View {
     }
 
     /// The music's wings make way for what's announced, blurring away as the notch folds.
-    private var musicAway: Bool { model.alert != nil || model.switching }
+    private var musicAway: Bool { model.alert != nil || model.folded }
     /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist
     /// takes its place, or another activity is detached, which leaves music the leading side alone.
     private var liveShown: Bool { model.activity && !musicAway && model.state != .open }

@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 31 October 2026`
+`Created: 11 October 2026` | `Last updated: 1 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -527,7 +527,7 @@ ellipsis instead of scrolling.
 | Setting | Operation |
 | --- | --- |
 | `Show the notch` | Whether the display shown has a notch (external displays only; the Mac's own always has one) |
-| `Hide in full screen` | Hides the notch with the menu bar in full-screen apps, on the display shown |
+| `Hide in full screen` | In full-screen apps, on the display shown, folds the notch back to the camera with nothing beside it, and it still opens from there as usual. On a display with no camera, it hides with the menu bar |
 | `Show on external displays` | Draws a notch on external displays too |
 
 With more than one display, choose one at the top of the page. `Show the notch`

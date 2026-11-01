@@ -152,13 +152,21 @@ final class NotchController {
     /// When a wheel with Shift held brought the tray's row to its end toward the player.
     private var trayEdgeSince: Date?
 
-    /// A full-screen app covers this display and the user chose to hide the notch then. Like the
-    /// menu bar there, it stays out of sight until the pointer reaches the top edge, slides down
-    /// with it, and slides away again once the pointer leaves it and the menu bar.
+    /// A full-screen app covers this display and the user chose to hide the notch then. On the
+    /// camera, it folds back to the housing, with nothing beside it, and opens from there as usual.
+    /// With no camera to fold into, it's like the menu bar there: out of sight until the pointer
+    /// reaches the top edge, sliding down with it, and away again once the pointer leaves it and
+    /// the menu bar.
     var fullScreen = false {
         didSet {
             guard fullScreen != oldValue else { return }
-            if fullScreen { tuck() } else { untuck() }
+            if model.hasCamera {
+                keepToCamera()
+            } else if fullScreen {
+                tuck()
+            } else {
+                untuck()
+            }
         }
     }
 
@@ -700,7 +708,14 @@ final class NotchController {
 
     // MARK: Full screen
 
-    /// In full screen, the notch follows the menu bar. Returns true while it's tucked away, when
+    /// Back to the camera housing as a full-screen app comes, or out again as it goes.
+    private func keepToCamera() {
+        if fullScreen { close(holdUntilExit: false) }
+        withAnimation(fullScreen ? IslandMotion.fold : IslandMotion.open) { model.collapsed = fullScreen }
+        placeTouchTarget()
+    }
+
+    /// In full screen, with no camera, the notch follows the menu bar. Returns true while it's tucked away, when
     /// the pointer has nothing else to do with it.
     private func followMenuBar(_ p: CGPoint) -> Bool {
         let frame = screen.frame
@@ -782,7 +797,7 @@ final class NotchController {
     func pointerMoved(to p: CGPoint) {
         // Where three fingers turn the page: the open notch, kept up to date as it opens and closes.
         NotchSwipes.shared.set(swipeZone, for: self)
-        if fullScreen, followMenuBar(p) { return }
+        if fullScreen, !model.hasCamera, followMenuBar(p) { return }
         let button = alertButton(at: p)
         if model.hoveredButton != button { model.hoveredButton = button }
         switch model.state {
@@ -974,11 +989,11 @@ final class NotchController {
     // MARK: Transitions
 
     private func peek() {
-        if let alert = model.alert, case .device = alert.content { extend(alert) } else { model.peek() }
+        if let alert = model.alert, !model.collapsed, case .device = alert.content { extend(alert) } else { model.peek() }
         startPolling()
         // On an announcement, it only swells around it, or a device extends, and it opens once that's
         // over (see `show`).
-        if model.alert != nil { return }
+        if model.alert != nil, !model.collapsed { return }
         let opening = Opening.current
         // With the button held, something's being dragged: a window, which shouldn't open the
         // notch, or something for the tray, which opens it as it comes over (see `dragEntered`).
@@ -1817,7 +1832,8 @@ final class NotchPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = false
         level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
-        // Allowed over full-screen apps; the "Hide in full screen" setting makes it follow the menu bar there.
+        // Allowed over full-screen apps; the "Hide in full screen" setting folds it there, or with no
+        // camera makes it follow the menu bar.
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         hidesOnDeactivate = false
         animationBehavior = .none

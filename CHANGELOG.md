@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 31 October 2026`
+`Created: 11 October 2026` | `Last updated: 1 November 2026`
 
 <br>
 
@@ -32,6 +32,9 @@
 - Changed everything open or tall in the notch to one set of corners, all four
   matching and concentric with what's round at its ends, and one padding all
   around. Closed, the notch keeps the camera housing's own corners.
+- Changed `Hide in full screen` on a Mac with a notch: rather than sliding away,
+  the notch folds back to the camera with nothing beside it, and still opens from
+  there as usual. On a display with no camera, it hides with the menu bar.
 - Changed what's tall in the notch to stand on its glass, as the player does:
   the taller it is, the more glass shows.
 - Changed everything open or tall in the notch to the player's type, with one

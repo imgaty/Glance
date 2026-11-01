@@ -247,6 +247,21 @@ struct ActivitiesTests {
         #expect(wing < layout.ring + layout.trailing + 60)
     }
 
+    @Test("Over a full-screen app, nothing shows beside the camera, and it still opens")
+    func collapsedNotch() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.alert = DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 50)
+        model.alertWing = 80
+        model.alertExtended = true
+        #expect(model.restingWidth > 185)
+        #expect(model.restingHeight > 32)
+        let open = model.metrics(for: .open)
+        model.collapsed = true
+        #expect(model.restingWidth == 185)
+        #expect(model.restingHeight == 32)
+        #expect(model.metrics(for: .open).bodyWidth == open.bodyWidth)
+    }
+
     @Test("A device extended is the iPhone's size under the pointer, with no swell on top, its device and ring grown")
     func deviceExtended() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
