@@ -127,6 +127,12 @@ enum LowBatteryLayout {
         CGFloat((max(seconds, 0) + rippleStart).truncatingRemainder(dividingBy: ripple))
     }
 
+    /// How the words under the level and the battery change as Low Power Mode is switched: what
+    /// shows fades out, and what comes fades in as it goes.
+    static let change = AnyTransition.asymmetric(
+        insertion: .opacity.animation(.easeOut(duration: 0.25).delay(0.15)),
+        removal: .opacity.animation(.easeIn(duration: 0.2)))
+
     /// The words under the level, as the iPhone's, and once Low Power Mode is on.
     static let offerColor = Color.p3(0x6E, 0x6E, 0x6E)
     static let doneColor = Color.p3(0xE1, 0xC8, 0x78)
@@ -196,10 +202,13 @@ struct LowBatteryView: View {
             VStack(alignment: .leading, spacing: layout.lineGap(h)) {
                 Text(Self.title(percent))
                     .foregroundStyle(.white)
-                // Changed at once, as the capsule turns.
-                Text(on ? Self.done : Self.offer)
-                    .foregroundStyle(on ? layout.doneColor : layout.offerColor)
-                    .animation(nil, value: on)
+                ZStack(alignment: .leading) {
+                    if on {
+                        Text(Self.done).foregroundStyle(layout.doneColor).transition(layout.change)
+                    } else {
+                        Text(Self.offer).foregroundStyle(layout.offerColor).transition(layout.change)
+                    }
+                }
             }
             .font(NotchType.title)
             .lineLimit(1)
@@ -209,14 +218,19 @@ struct LowBatteryView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .frame(height: TimerLayout.tallHeight(h), alignment: .top)
             .accessibilityElement(children: .combine)
-            capsule(h, on: on)
-                .reportsFrame(.lowPower)
-                .spokenButton(on ? "Turn off Low Power Mode" : "Turn on Low Power Mode") { LowPowerMode.shared.toggle() }
-                .padding(.trailing, PlayerLayout.padding)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            ZStack {
+                if on {
+                    capsule(h, on: true).transition(layout.change)
+                } else {
+                    capsule(h, on: false).transition(layout.change)
+                }
+            }
+            .reportsFrame(.lowPower)
+            .spokenButton(on ? "Turn off Low Power Mode" : "Turn on Low Power Mode") { LowPowerMode.shared.toggle() }
+            .padding(.trailing, PlayerLayout.padding)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxHeight: .infinity)
-        .animation(.easeInOut(duration: 0.3), value: on)
     }
 
     /// The battery, large, in its capsule, as the iPhone draws it: the body, the level bright and
