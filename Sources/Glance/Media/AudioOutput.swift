@@ -270,7 +270,8 @@ private struct VolumeSlider: View {
 /// The sound output menu's measures, as the Mac's Sound menu has them: no check marks, its
 /// headings, rows and separators the same way in from both sides.
 private enum SoundMenu {
-    static let radius: CGFloat = 16
+    /// The menu's corners, as macOS draws them: it keeps its own outline, whatever's asked of its glass.
+    static let radius: CGFloat = 12
     static let inset: CGFloat = 14
     /// Each output's circle, and between it and its name.
     static let circle: CGFloat = 26
@@ -373,14 +374,6 @@ private final class SoundMenuHeading: NSView {
     }
 
     required init?(coder: NSCoder) { nil }
-
-    /// The menu's glass, rounder than a standard menu's, as the Mac's Sound menu is.
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        guard main, let window, let glass = window.contentView as? NSGlassEffectView else { return }
-        glass.cornerRadius = SoundMenu.radius
-        window.invalidateShadow()
-    }
 }
 
 /// An output in the sound output menu, as the Mac's Sound menu shows it: its symbol in a circle,
