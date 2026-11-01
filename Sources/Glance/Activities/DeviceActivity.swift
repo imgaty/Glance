@@ -33,10 +33,10 @@ enum ExpandedDeviceLayout {
         return min(h * size / looks, room / across, room / usual.picture)
     }
 
-    /// What's happened, and the device's name under it, by their baselines: under the camera, the
-    /// name the padding from the bottom.
-    static let saidBaseline: CGFloat = 1.4375
-    static let nameBaseline: CGFloat = 1.96875
+    /// What's happened, and the device's name under it, by their baselines: as high as they go, their
+    /// letters just under the camera.
+    static let saidBaseline: CGFloat = 1.35
+    static let nameBaseline: CGFloat = 1.88
 
     /// Each wing: as wide as the ring needs against the camera, or wider for a long name, under the
     /// camera, to reach the ring.
