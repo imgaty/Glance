@@ -12,8 +12,9 @@ import SwiftUI
 /// another: only ever off the notch's trailing end, the first staying attached at its leading end.
 /// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
 /// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's
-/// symbol in it as beside the camera. It buds off the notch's end as it comes, joined to it for a
-/// moment as two drops are, and runs back into it as it goes; as the notch opens it stays where it
+/// symbol in it as beside the camera. It leaves the notch's end as a drop of water does, stretching
+/// on a neck that thins until it parts, past where it rests and back, and runs back into it as it
+/// goes; as the notch opens it stays where it
 /// rests, and the notch comes out over it. With Reduce Motion on, it fades in and out where it rests.
 /// VoiceOver names it, and opens it as a click does.
 struct IslandBubble: View {
@@ -46,6 +47,11 @@ struct IslandBubble: View {
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
 
+    /// Out with a little overshoot, as a drop that's let go; back in, straight.
+    private var motion: Animation {
+        shown ? .spring(response: 0.62, dampingFraction: 0.6) : .spring(response: 0.38, dampingFraction: 1)
+    }
+
     var body: some View {
         let h = restingHeight
         // With Reduce Motion on, it stays where it rests, and only fades.
@@ -53,6 +59,7 @@ struct IslandBubble: View {
         ZStack(alignment: .leading) {
             if !reduceMotion {
                 BubbleNeck(out: out).fill(.black)
+                    .animation(motion, value: out)
             }
             ZStack {
                 Circle().fill(.black)
@@ -99,7 +106,8 @@ struct IslandBubble: View {
             }
             .scaleEffect(reduceMotion ? 1 : pressed ? 0.94 : hovered ? 1.06 : 1)
             .animation(.easeInOut(duration: 0.25)) { $0.opacity(reduceMotion && !shown ? 0 : 1) }
-            .offset(x: h * (1 + Self.gap) * out)
+            .modifier(BubbleDrop(out: out, distance: h * (1 + Self.gap)))
+            .animation(motion, value: out)
         }
         // From inside the notch's end, where it comes out of, to where it rests.
         .frame(width: h * (2 + Self.gap), height: h, alignment: .leading)
@@ -108,7 +116,7 @@ struct IslandBubble: View {
         // as anything fading here would show as a pale circle beside the notch.
         .animation(hidden ? .linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)) { $0.opacity(hidden ? 0 : 1) }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
-        .opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil ? 1 : 0)
+        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil ? 1 : 0) }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1
@@ -140,6 +148,29 @@ struct IslandBubble: View {
     }
 }
 
+/// The bubble on its way, at each step of it: longest halfway out, as a drop is, and round where it
+/// starts and where it rests.
+private struct BubbleDrop: ViewModifier, Animatable {
+    var out: CGFloat
+    let distance: CGFloat
+
+    /// How much longer than it's wide it gets, and how much of that it loses in height.
+    private static let stretch: CGFloat = 0.14
+    private static let thinning: CGFloat = 0.5
+
+    var animatableData: CGFloat {
+        get { out }
+        set { out = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let along = sin(min(max(out, 0), 1) * .pi) * Self.stretch
+        content
+            .scaleEffect(x: 1 + along, y: 1 - along * Self.thinning)
+            .offset(x: distance * out)
+    }
+}
+
 /// The bridge between the notch's end and the bubble while they're near, as between two drops
 /// running together or apart: between two circles as tall as the notch, one in the notch's end and
 /// the bubble, curves that pinch in as they part, until it breaks a little before the bubble rests.
@@ -154,9 +185,9 @@ struct BubbleNeck: Shape {
         set { out = newValue }
     }
 
-    /// How far past touching the bridge breaks, by the circles' radius: before the bubble rests,
+    /// How far past touching the bridge breaks, by the circles' radius: just before the bubble rests,
     /// 0.35 past.
-    static let reach: CGFloat = 0.25
+    static let reach: CGFloat = 0.32
 
     func path(in rect: CGRect) -> Path {
         let r = rect.height / 2

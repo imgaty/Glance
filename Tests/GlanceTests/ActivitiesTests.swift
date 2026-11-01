@@ -528,7 +528,8 @@ struct ActivitiesTests {
         let whole = NotchShape(corners: corners, wingEnds: 1).path(in: rect).boundingRect
         let folded = NotchShape(corners: corners, wingEnds: 1, fold: 32).path(in: rect).boundingRect
         #expect(isClose(folded.minX, whole.minX))
-        #expect(isClose(folded.maxX, whole.maxX - 32))
+        // Less the top corner beside it, which curves as the bubble does.
+        #expect(isClose(folded.maxX, whole.maxX - 32 + (16 - 6)))
     }
 
     @Test("Low Battery is as tall as the Alarm, its level and its capsule against the camera, its offer under it")

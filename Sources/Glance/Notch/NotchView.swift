@@ -1048,11 +1048,18 @@ struct NotchShape: Shape {
         let bottom = max(min(radii(in: rect).bottom, body.width / 2, body.height - flare), 0)
         let reach = min(bottom * Self.cornerReach, body.height - flare, body.width / 2)
         let flareRadius = flare / (1 + Self.flareSmoothing)
+        // Beside a detached activity, the top corner curves as the activity does, half the notch's
+        // resting height across, for the gap between them to be even all the way down.
+        let folded = min(fold / corners.restingHeight, 1)
+        let nearFlare = flare + (corners.restingHeight / 2 - flare) * folded
+        let nearReach = min(bottom * Self.cornerReach, body.height - nearFlare, body.width / 2)
         let (right, left, up, down) = (CGVector(dx: 1, dy: 0), CGVector(dx: -1, dy: 0), CGVector(dx: 0, dy: -1), CGVector(dx: 0, dy: 1))
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addCorner(at: CGPoint(x: body.maxX, y: rect.minY), from: right, to: down, radius: flareRadius, reach: flare)
-        path.addCorner(at: CGPoint(x: body.maxX, y: rect.maxY), from: up, to: left, radius: bottom, reach: reach)
+        path.addCorner(
+            at: CGPoint(x: body.maxX, y: rect.minY), from: right, to: down, radius: nearFlare / (1 + Self.flareSmoothing * (1 - folded)),
+            reach: nearFlare)
+        path.addCorner(at: CGPoint(x: body.maxX, y: rect.maxY), from: up, to: left, radius: bottom, reach: nearReach)
         path.addCorner(at: CGPoint(x: body.minX, y: rect.maxY), from: right, to: up, radius: bottom, reach: reach)
         path.addCorner(at: CGPoint(x: body.minX, y: rect.minY), from: down, to: left, radius: flareRadius, reach: flare)
         path.closeSubpath()
