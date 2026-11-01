@@ -7,6 +7,7 @@
 
 import AppKit
 import CoreAudio
+import SwiftUI
 
 /// The Mac's sound output: which device is playing, and a menu to switch to another.
 @MainActor
@@ -186,26 +187,17 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 }
 
-/// The playing app's volume in the sound output menu, drawn as the Mac's Sound menu draws its
-/// slider: a quiet speaker at the left end, a loud one at the right.
+/// The playing app's volume in the sound output menu, laid out as the Mac's Sound menu: Apple's own
+/// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right.
 private final class VolumeMenuSlider: NSView {
     private let volume: AppVolume
-    private let slider = NeutralSlider(value: 1, minValue: 0, maxValue: 1, target: nil, action: nil)
 
     init(volume: AppVolume) {
         self.volume = volume
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
         // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
-        slider.target = self
-        slider.action = #selector(slide)
-        // A finger brings no pointer to show the knob: it shows while the slider's being dragged, and
-        // stays after only under the pointer.
-        slider.addTarget(self, action: #selector(dragBegan), for: .trackingBegan)
-        slider.addTarget(self, action: #selector(dragEnded), for: [.trackingEndedInside, .trackingEndedOutside, .trackingCancelled])
-        slider.isContinuous = true
-        slider.doubleValue = volume.level
-        slider.isEnabled = volume.canChange
+        let slider = NSHostingView(rootView: VolumeSlider(volume: volume))
         // As the Mac's Sound menu: the speakers at the edges of the menu's own column, in line
         // with its headings and its separators, the slider filling the room between them. Each is
         // centered on the slider's track by its symbol's own alignment box, as the Mac's menus
@@ -224,48 +216,9 @@ private final class VolumeMenuSlider: NSView {
             quiet.centerYAnchor.constraint(equalTo: slider.centerYAnchor, constant: -0.5),
             loud.centerYAnchor.constraint(equalTo: slider.centerYAnchor),
         ])
-        // Music's and Spotify's own volume, read afresh as the menu opens.
-        Task { [weak self] in
-            await volume.refresh()
-            self?.slider.doubleValue = volume.level
-        }
     }
 
     required init?(coder: NSCoder) { nil }
-
-    // MARK: The knob, under the pointer
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        for area in trackingAreas { removeTrackingArea(area) }
-        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
-    }
-
-    /// The menu can open with the pointer already over the row.
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        slider.knobOpacity = pointerInside ? 1 : 0
-    }
-
-    override func mouseEntered(with event: NSEvent) { showKnob(true) }
-
-    /// Kept while it's being dragged, wherever the pointer has gone.
-    override func mouseExited(with event: NSEvent) {
-        if NSEvent.pressedMouseButtons == 0 { showKnob(false) }
-    }
-
-    private var pointerInside: Bool {
-        guard let window else { return false }
-        return bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil))
-    }
-
-    private func showKnob(_ shown: Bool) {
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            slider.animator().knobOpacity = shown ? 1 : 0
-        }
-    }
 
     /// Where the menu starts and ends its headings, rows and separators, in from its sides.
     private static let column = (leading: SoundMenu.inset, trailing: SoundMenu.inset)
@@ -282,14 +235,35 @@ private final class VolumeMenuSlider: NSView {
         return image
     }
 
-    @objc private func slide() {
-        volume.set(slider.doubleValue)
-    }
+}
 
-    @objc private func dragBegan() { showKnob(true) }
+/// Apple's slider, with its Liquid Glass knob, filled white, or with the Mac's accent color in a light
+/// menu, whether or not Glance is the app in front: a menu otherwise takes its app's look, and leaves
+/// it gray.
+private struct VolumeSlider: View {
+    let volume: AppVolume
+    @State private var level = 1.0
+    @Environment(\.colorScheme) private var colorScheme
 
-    @objc private func dragEnded() {
-        if !pointerInside { showKnob(false) }
+    var body: some View {
+        Slider(
+            value: Binding(
+                get: { level },
+                set: {
+                    level = $0
+                    volume.set($0)
+                })
+        )
+        .tint(colorScheme == .dark ? Color.white : .accentColor)
+        .environment(\.controlActiveState, .key)
+        .disabled(!volume.canChange)
+        .labelsHidden()
+        .task {
+            level = volume.level
+            // Music's and Spotify's own volume, read afresh as the menu opens.
+            await volume.refresh()
+            level = volume.level
+        }
     }
 }
 
@@ -651,93 +625,5 @@ enum AudioProperty {
         else { return pid }
         let owner = unsafeBitCast(symbol, to: Responsible.self)(pid)
         return owner > 0 ? owner : pid
-    }
-}
-
-/// The volume slider, drawn by NeutralSliderCell, its knob showing only while the pointer is over
-/// its row or it's being dragged, fading in and out.
-private final class NeutralSlider: NSSlider {
-    override class var cellClass: AnyClass? {
-        get { NeutralSliderCell.self }
-        set {}
-    }
-
-    /// From 0, hidden, to 1; animated through `animator()`.
-    @objc dynamic var knobOpacity: CGFloat = 0 {
-        didSet { needsDisplay = true }
-    }
-
-    override static func defaultAnimation(forKey key: NSAnimatablePropertyKey) -> Any? {
-        key == "knobOpacity" ? CABasicAnimation() : super.defaultAnimation(forKey: key)
-    }
-}
-
-/// Drawn as Control Center draws its sound slider: white where it's filled (the Mac's accent color in
-/// a light menu), on a gray track, with a white knob, the same whether or not Glance is the app in front. (A menu takes its app's look, so
-/// the standard slider turned to the accent color only while Glance happened to be in use.)
-private final class NeutralSliderCell: NSSliderCell {
-    /// How much of the track is filled: in proportion to all of it, so the loudest fills it to the end.
-    private var fraction: Double { maxValue > minValue ? (doubleValue - minValue) / (maxValue - minValue) : 0 }
-
-    // The knob's middle is at the end of what's filled, so the pointer keeps it there: left to itself,
-    // the slider keeps the knob's width in from each end, and it runs ahead of the fill near the left
-    // end and behind it near the right.
-    override func startTracking(at startPoint: NSPoint, in controlView: NSView) -> Bool {
-        defer { follow(startPoint, in: controlView) }
-        return super.startTracking(at: startPoint, in: controlView)
-    }
-
-    override func continueTracking(last lastPoint: NSPoint, current currentPoint: NSPoint, in controlView: NSView) -> Bool {
-        defer { follow(currentPoint, in: controlView) }
-        return super.continueTracking(last: lastPoint, current: currentPoint, in: controlView)
-    }
-
-    private func follow(_ point: NSPoint, in view: NSView) {
-        let track = barRect(flipped: view.isFlipped)
-        doubleValue = minValue + (maxValue - minValue) * min(max((point.x - track.minX) / track.width, 0), 1)
-    }
-
-    override func drawBar(inside rect: NSRect, flipped: Bool) {
-        let track = NSRect(x: rect.minX, y: rect.midY - 3, width: rect.width, height: 6)
-        Self.trackColor.setFill()
-        NSBezierPath(roundedRect: track, xRadius: 3, yRadius: 3).fill()
-        var filled = track
-        // The same with the knob showing or not: its end is always under the knob's middle, which
-        // only fades in over it.
-        filled.size.width = max(track.width * fraction, track.height)
-        Self.fillColor.setFill()
-        NSBezierPath(roundedRect: filled, xRadius: 3, yRadius: 3).fill()
-    }
-
-    override func drawKnob(_ knobRect: NSRect) {
-        let opacity = (controlView as? NeutralSlider)?.knobOpacity ?? 1
-        guard opacity > 0 else { return }
-        // Its middle at the end of what's filled, and never past the slider's own ends.
-        let track = barRect(flipped: controlView?.isFlipped ?? false)
-        let middle = min(max(track.minX + track.width * fraction, track.minX + 10), track.maxX - 10)
-        let knob = NSRect(x: middle - 10, y: knobRect.midY - 8, width: 20, height: 16)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current?.cgContext.setAlpha(opacity)
-        let shadow = NSShadow()
-        shadow.shadowColor = .black.withAlphaComponent(0.25)
-        shadow.shadowBlurRadius = 2
-        shadow.shadowOffset = NSSize(width: 0, height: -0.5)
-        shadow.set()
-        Self.knobColor.setFill()
-        NSBezierPath(roundedRect: knob, xRadius: 8, yRadius: 8).fill()
-        NSGraphicsContext.restoreGraphicsState()
-    }
-
-    /// White, as Control Center's; in a light menu, where white wouldn't show, the Mac's accent color.
-    private static let fillColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .controlAccentColor
-    }
-
-    private static let trackColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .quaternaryLabelColor : NSColor(white: 0, alpha: 0.16)
-    }
-
-    private static let knobColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.94, alpha: 1) : .white
     }
 }
