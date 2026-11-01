@@ -59,15 +59,12 @@ final class LowPowerMode: ObservableObject {
 }
 
 /// Low Battery as the iPhone's Dynamic Island shows it, measured from it, by the island's height,
-/// as tall as the Alarm: its level and the offer to turn on Low Power Mode under it, below the camera,
+/// as tall as the Alarm: its level beside the camera and the offer to turn on Low Power Mode under it,
 /// and at the right end a capsule holding a large battery, a ripple running out of its level. Its colors are the iPhone's own, in Display P3: red, and yellow
 /// once Low Power Mode is on.
 enum LowBatteryLayout {
-    /// The offer's baseline, from the top: as high as it goes under the level.
-    static let offerBaseline: CGFloat = 1.814
-    /// From the left end to the words: their letters as far from it as the offer's are from the
-    /// bottom.
-    static let wordsEdge: CGFloat = 0.545
+    /// From the left end to the words: their letters as far from it as from the top and bottom.
+    static let wordsEdge: CGFloat = 0.75
     /// From the words to the capsule, at the least.
     static let wordsGap: CGFloat = 0.33
     /// As tall as the padding leaves, and as wide for that as the iPhone's.
@@ -149,29 +146,19 @@ enum LowBatteryLayout {
     static let paleLevel = Color.p3(0xEE, 0x8A, 0x9D)
     static let ringColor = Color.p3(0xE1, 0x5E, 0x64)
 
-    /// From the top to the level's line, with its letters just below the camera, as a device's words
-    /// are, the offer as far under it.
-    static func wordsTop(_ h: CGFloat) -> CGFloat {
-        h * ExpandedDeviceLayout.saidBaseline - NSFont.systemFont(ofSize: NotchType.size, weight: .semibold).ascender
-    }
-
-    /// Between the two lines' boxes, for their baselines to be as far apart as a device's.
-    static func lineGap(_ h: CGFloat) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
-        return h * (offerBaseline - ExpandedDeviceLayout.saidBaseline) + font.descender - font.ascender
-    }
-
     @MainActor
     static func width(_ text: String) -> CGFloat {
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
     }
 
-    /// Each wing: the capsule against the camera, or wider, should the words otherwise run into it.
+    /// Each wing: the capsule, or the level, against the camera, or wider, should the offer, running
+    /// on beneath the camera, otherwise reach the capsule.
     @MainActor
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let right = capsule(h).width + PlayerLayout.padding
-        let words = max(width(LowBatteryView.title(percent)), width(LowBatteryView.offer), width(LowBatteryView.done))
-        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
+        let left = h * wordsEdge + width(LowBatteryView.title(percent))
+        let words = max(width(LowBatteryView.offer), width(LowBatteryView.done))
+        return max(LiveActivityView.cameraGap + max(left, right), (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
     }
 }
 
@@ -199,7 +186,7 @@ struct LowBatteryView: View {
         let on = lowPower.isOn
         let layout = LowBatteryLayout.self
         ZStack {
-            VStack(alignment: .leading, spacing: layout.lineGap(h)) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(Self.title(percent))
                     .foregroundStyle(.white)
                 ZStack(alignment: .leading) {
@@ -213,10 +200,9 @@ struct LowBatteryView: View {
             .font(NotchType.title)
             .lineLimit(1)
             .fixedSize()
-            .padding(.top, layout.wordsTop(h))
             .padding(.leading, h * layout.wordsEdge)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .frame(height: TimerLayout.tallHeight(h), alignment: .top)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: TimerLayout.tallHeight(h))
             .accessibilityElement(children: .combine)
             ZStack {
                 if on {

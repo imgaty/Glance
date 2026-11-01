@@ -29,11 +29,10 @@ enum TimerLayout {
     /// with the middle, and as far from the end as the buttons are from theirs.
     static let timeLift: CGFloat = 0.022
     static let timeBearing: CGFloat = 0.057
-    // The stopwatch opened: its time below the middle, clear of the camera.
+    // The stopwatch opened.
     static let stopwatchPauseBar = CGSize(width: 0.171, height: 0.571)
     static let stopwatchPauseGap: CGFloat = 0.076
     static let stopwatchTracking: CGFloat = -0.018
-    static let stopwatchDrop: CGFloat = 0.179
     static let stopwatchInk = Color(.sRGB, red: 0xFD / 255, green: 0x95 / 255, blue: 0)
     static let stopwatchPauseFill = Color(.sRGB, red: 0x40 / 255, green: 0x25 / 255, blue: 0x0C / 255)
     static let stopwatchResetFill = Color(.sRGB, red: 0x3B / 255, green: 0x3B / 255, blue: 0x3D / 255)
@@ -301,7 +300,7 @@ struct ExpandedTimerView: View {
         }
         .foregroundStyle(Self.isStopwatch(shown) ? TimerLayout.stopwatchInk : .orange)
         .fixedSize()
-        .offset(y: -h * Self.timeLift(shown))
+        .offset(y: -h * TimerLayout.timeLift)
     }
 
     private static func isStopwatch(_ shown: ClockShown) -> Bool {
@@ -314,14 +313,8 @@ struct ExpandedTimerView: View {
     @MainActor
     static func width(for shown: ClockShown, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
         let buttons = TimerLayout.buttonEdge(h) + TimerLayout.content(h) * 2 + h * TimerLayout.buttonGap
-        // The stopwatch's time runs under the camera, so its buttons alone set how wide it is.
-        if isStopwatch(shown) { return camera + 2 * (buttons + LiveActivityView.cameraGap) }
         let time = timeWidth(shown, h, at: date) + timeEdge(h)
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
-    }
-
-    private static func timeLift(_ shown: ClockShown) -> CGFloat {
-        isStopwatch(shown) ? -TimerLayout.stopwatchDrop : TimerLayout.timeLift
     }
 
     /// From the right end to the time: as far as the buttons are from the left end.
@@ -332,7 +325,8 @@ struct ExpandedTimerView: View {
     private static func timeWidth(_ shown: ClockShown, _ h: CGFloat, at date: Date = .now) -> CGFloat {
         let reading = shown.reading(at: date).replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
         let font = NSFont.monospacedDigitSystemFont(ofSize: h * TimerLayout.time, weight: .semibold)
-        return ceil((reading as NSString).size(withAttributes: [.font: font]).width) + 2
+        let tracking = isStopwatch(shown) ? CGFloat(reading.count) * h * TimerLayout.stopwatchTracking : 0
+        return ceil((reading as NSString).size(withAttributes: [.font: font]).width + tracking) + 2
     }
 
     @MainActor

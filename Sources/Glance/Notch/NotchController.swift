@@ -583,7 +583,7 @@ final class NotchController {
                 model.alert = alert
                 // Extended already, the next device takes its own width; anything else folds.
                 if case .device = alert.content {
-                    model.alertExtendedWing = ExpandedDeviceLayout.wing(restingHeight: model.closedSize.height)
+                    model.alertExtendedWing = ExpandedDeviceLayout.wing(low: alert.kind == .deviceBattery, restingHeight: model.closedSize.height)
                 } else {
                     model.alertExtended = false
                 }
@@ -989,7 +989,7 @@ final class NotchController {
     /// again.
     private func extend(_ alert: NotchAlert) {
         guard case .device = alert.content else { return }
-        model.alertExtendedWing = ExpandedDeviceLayout.wing(restingHeight: model.closedSize.height)
+        model.alertExtendedWing = ExpandedDeviceLayout.wing(low: alert.kind == .deviceBattery, restingHeight: model.closedSize.height)
         model.extend()
         Activities.shared.keep(alert.kind, for: alert.seconds)
     }

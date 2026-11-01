@@ -528,14 +528,13 @@ struct ActivitiesTests {
         // The capsule as far in from the end as from the top and bottom.
         let edge = PlayerLayout.padding
         #expect(abs(edge * 2 + LowBatteryLayout.capsule(h).height - TimerLayout.tallHeight(h)) < 0.01)
-        // Each wing as wide as the capsule needs against the camera, or the words beside it.
+        // Each wing as wide as the capsule or the level needs against the camera, or the words under it.
         let right = LowBatteryLayout.capsule(h).width + edge
+        let left = h * LowBatteryLayout.wordsEdge + LowBatteryLayout.width(LowBatteryView.title(10))
         let words = LowBatteryLayout.width(LowBatteryView.offer)
         let wing = SystemActivityView.wing(for: alert, restingHeight: h, closedWidth: 185)
-        #expect(wing == max(LiveActivityView.cameraGap + right, (edge + words + h * LowBatteryLayout.wordsGap + right - 185) / 2))
-        #expect(wing < h * 3)
-        // Its letters start just below the camera.
-        #expect(LowBatteryLayout.wordsTop(h) > 0)
+        #expect(wing == max(LiveActivityView.cameraGap + max(left, right), (h * LowBatteryLayout.wordsEdge + words + h * LowBatteryLayout.wordsGap + right - 185) / 2))
+        #expect(wing < h * 4)
         // Tall already, it doesn't swell under the pointer.
         #expect(model.metrics(for: .peek).height == TimerLayout.tallHeight(h))
         #expect(model.metrics(for: .peek).bodyWidth == model.metrics(for: .closed).bodyWidth)
