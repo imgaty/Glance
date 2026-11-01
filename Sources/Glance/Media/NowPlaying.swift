@@ -273,7 +273,8 @@ final class NowPlaying: ObservableObject {
         player.isDemo = true
         player.isSong = true
         player.isPlaying = true
-        player.options = PlaybackOptions(shuffle: false, repeatMode: .off, favorite: false)
+        // At the bench nothing can be saved, so the star says so.
+        player.options = PlaybackOptions(shuffle: false, repeatMode: .off, favorite: ActivityBench.scene == nil ? false : nil)
         player.appIcon = NSWorkspace.shared.icon(forApp: PlayerScripting.music)
         player.title = song.title
         player.artist = song.artist
@@ -469,6 +470,9 @@ final class NowPlaying: ObservableObject {
         if app != appBundleID {
             appBundleID = app
             appIcon = app.flatMap(NSWorkspace.shared.icon(forApp:))
+            // What the last app offered isn't this one's, until it's read.
+            options = PlaybackOptions()
+            heldFavorite = nil
         }
         // The waveforms listen to the process making the sound while it plays, and the volume
         // slider turns it up and down.
