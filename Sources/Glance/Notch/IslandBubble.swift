@@ -12,9 +12,9 @@ import SwiftUI
 /// another: only ever off the notch's trailing end, the first staying attached at its leading end.
 /// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
 /// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's
-/// symbol in it as beside the camera. It leaves the notch's end as a drop of water does, stretching
-/// on a neck that thins until it parts, past where it rests and back, and runs back into it as it
-/// goes; as the notch opens it stays where it
+/// symbol in it as beside the camera. It leaves the notch's end as a drop of water does: the end
+/// draws back from it on a neck that thins until it parts, and it runs back into the end as it goes;
+/// as the notch opens it stays where it
 /// rests, and the notch comes out over it. With Reduce Motion on, it fades in and out where it rests.
 /// VoiceOver names it, and opens it as a click does.
 struct IslandBubble: View {
@@ -47,10 +47,8 @@ struct IslandBubble: View {
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
 
-    /// Out with a little overshoot, as a drop that's let go; back in, straight.
-    private var motion: Animation {
-        shown ? .spring(response: 0.62, dampingFraction: 0.6) : .spring(response: 0.38, dampingFraction: 1)
-    }
+    /// On the spring the notch's end draws back on, so the two part evenly.
+    private var motion: Animation { shown ? IslandMotion.open : IslandMotion.fold }
 
     var body: some View {
         let h = restingHeight
@@ -58,7 +56,7 @@ struct IslandBubble: View {
         let out: CGFloat = shown || reduceMotion ? 1 : 0
         ZStack(alignment: .leading) {
             if !reduceMotion {
-                BubbleNeck(out: out).fill(.black)
+                BubbleBlend(out: out)
                     .animation(motion, value: out)
             }
             ZStack {
@@ -77,7 +75,9 @@ struct IslandBubble: View {
                         }
                     }
                 }
-                .islandFade(shown && !hidden)
+                .modifier(BubbleGlyph(out: reduceMotion ? 1 : out))
+                .animation(motion, value: out)
+                .animation(.easeOut(duration: 0.1)) { $0.opacity(hidden ? 0 : 1) }
             }
             .frame(width: h, height: h)
             // What it shows, in words, and a click's opening.
@@ -106,7 +106,7 @@ struct IslandBubble: View {
             }
             .scaleEffect(reduceMotion ? 1 : pressed ? 0.94 : hovered ? 1.06 : 1)
             .animation(.easeInOut(duration: 0.25)) { $0.opacity(reduceMotion && !shown ? 0 : 1) }
-            .modifier(BubbleDrop(out: out, distance: h * (1 + Self.gap)))
+            .offset(x: h * (1 + Self.gap) * out)
             .animation(motion, value: out)
         }
         // From inside the notch's end, where it comes out of, to where it rests.
@@ -148,15 +148,10 @@ struct IslandBubble: View {
     }
 }
 
-/// The bubble on its way, at each step of it: longest halfway out, as a drop is, and round where it
-/// starts and where it rests.
-private struct BubbleDrop: ViewModifier, Animatable {
+/// What the bubble shows, once it's all but out: no sooner, as anything in it would show as a tint on
+/// the black while it's still one with the notch.
+private struct BubbleGlyph: ViewModifier, Animatable {
     var out: CGFloat
-    let distance: CGFloat
-
-    /// How much longer than it's wide it gets, and how much of that it loses in height.
-    private static let stretch: CGFloat = 0.14
-    private static let thinning: CGFloat = 0.5
 
     var animatableData: CGFloat {
         get { out }
@@ -164,53 +159,38 @@ private struct BubbleDrop: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
-        let along = sin(min(max(out, 0), 1) * .pi) * Self.stretch
-        content
-            .scaleEffect(x: 1 + along, y: 1 - along * Self.thinning)
-            .offset(x: distance * out)
+        content.opacity(min(max((out - 0.8) / 0.2, 0), 1))
     }
 }
 
-/// The bridge between the notch's end and the bubble while they're near, as between two drops
-/// running together or apart: between two circles as tall as the notch, one in the notch's end and
-/// the bubble, curves that pinch in as they part, until it breaks a little before the bubble rests.
-/// Drawn as metaballs are, with the curves drawn in to the line between the circles' middles as
-/// they part, so it thins away rather than snapping.
-struct BubbleNeck: Shape {
+/// The notch's end and the bubble running together as two drops do: two circles, one in the notch's
+/// end, blurred and cut back to a hard edge, so that where they're near, their blurs add up past the
+/// cut into a neck that thins and parts, as nothing drawn by hand does.
+struct BubbleBlend: View, Animatable {
     /// 0 with the bubble in the notch's end, 1 where it rests.
     var out: CGFloat
+
+    /// How much it's blurred, by the height: enough for them to part just before the bubble rests.
+    static let blur: CGFloat = 0.11
+    /// Room around them for the blur.
+    private static let margin: CGFloat = 12
 
     var animatableData: CGFloat {
         get { out }
         set { out = newValue }
     }
 
-    /// How far past touching the bridge breaks, by the circles' radius: just before the bubble rests,
-    /// 0.35 past.
-    static let reach: CGFloat = 0.32
-
-    func path(in rect: CGRect) -> Path {
-        let r = rect.height / 2
-        let d = rect.height * (1 + IslandBubble.gap) * out
-        let apart = d - 2 * r
-        guard d > 1, apart < r * Self.reach else { return Path() }
-        let spread = apart <= 0 ? 0.5 : 0.5 * (1 - apart / (r * Self.reach))
-        // Overlapping, the curves start where the circles cross.
-        let u = d < 2 * r ? acos(d / (2 * r)) : 0
-        let a1 = u + (.pi / 2 - u) * spread
-        let a3 = .pi - u - (.pi / 2 - u) * spread
-        let a = CGPoint(x: r, y: r), b = CGPoint(x: r + d, y: r)
-        func on(_ c: CGPoint, _ angle: CGFloat, _ length: CGFloat) -> CGPoint {
-            CGPoint(x: c.x + cos(angle) * length, y: c.y + sin(angle) * length)
+    var body: some View {
+        Canvas { context, size in
+            let h = size.height - Self.margin * 2
+            context.addFilter(.alphaThreshold(min: 0.5, color: .black))
+            context.addFilter(.blur(radius: h * Self.blur))
+            context.drawLayer { layer in
+                for x in [0, h * (1 + IslandBubble.gap) * out] {
+                    layer.fill(Path(ellipseIn: CGRect(x: Self.margin + x, y: Self.margin, width: h, height: h)), with: .color(.black))
+                }
+            }
         }
-        let p1 = on(a, a1, r), p2 = on(a, -a1, r), p3 = on(b, a3, r), p4 = on(b, -a3, r)
-        let handle = r * min(spread * 2.4, hypot(p3.x - p1.x, p3.y - p1.y) / (2 * r)) * min(1, d / r)
-        var path = Path()
-        path.move(to: p1)
-        path.addCurve(to: p3, control1: on(p1, a1 - .pi / 2, handle), control2: on(p3, a3 + .pi / 2, handle))
-        path.addLine(to: p4)
-        path.addCurve(to: p2, control1: on(p4, -a3 - .pi / 2, handle), control2: on(p2, -a1 + .pi / 2, handle))
-        path.closeSubpath()
-        return path
+        .padding(-Self.margin)
     }
 }

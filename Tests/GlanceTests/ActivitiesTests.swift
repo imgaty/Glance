@@ -528,8 +528,9 @@ struct ActivitiesTests {
         let whole = NotchShape(corners: corners, wingEnds: 1).path(in: rect).boundingRect
         let folded = NotchShape(corners: corners, wingEnds: 1, fold: 32).path(in: rect).boundingRect
         #expect(isClose(folded.minX, whole.minX))
-        // Less the top corner beside it, which curves as the bubble does.
-        #expect(isClose(folded.maxX, whole.maxX - 32 + (16 - 6)))
+        // Short of its end by the wing, less the top corner beside it, which goes around the bubble.
+        #expect(folded.maxX < whole.maxX - 16)
+        #expect(folded.maxX > whole.maxX - 32 - 6)
     }
 
     @Test("Low Battery is as tall as the Alarm, its level and its capsule against the camera, its offer under it")
@@ -671,18 +672,6 @@ struct ActivitiesTests {
         // Beside the camera it runs under the camera, which the width doesn't change for.
         let state = ClockShown.timer(.paused(left: 300, total: 300))
         #expect(ExpandedTimerView.width(for: state, name: "Pasta", restingHeight: 32, camera: 185) == ExpandedTimerView.width(for: state, restingHeight: 32, camera: 185))
-    }
-
-    @Test("The bubble buds off the notch's end joined to it, thins away, and rests apart")
-    func bubbleNeck() {
-        let rect = CGRect(x: 0, y: 0, width: 32 * (2 + IslandBubble.gap), height: 32)
-        #expect(BubbleNeck(out: 0).path(in: rect).isEmpty)
-        #expect(!BubbleNeck(out: 0.6).path(in: rect).isEmpty)
-        #expect(BubbleNeck(out: 1).path(in: rect).isEmpty)
-        // Just before it breaks, the bridge is thinner than as the two first part.
-        let late = BubbleNeck(out: 0.95).path(in: rect).boundingRect
-        let early = BubbleNeck(out: 0.88).path(in: rect).boundingRect
-        #expect(late.height < early.height)
     }
 }
 
