@@ -13,8 +13,9 @@ import SwiftUI
 /// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
 /// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's
 /// symbol in it as beside the camera. It buds off the notch's end as it comes, joined to it for a
-/// moment as two drops are, and runs back into it as it goes, or as the notch opens; with Reduce
-/// Motion on, it fades in and out where it rests. VoiceOver names it, and opens it as a click does.
+/// moment as two drops are, and runs back into it as it goes; as the notch opens it stays where it
+/// rests, and the notch comes out over it. With Reduce Motion on, it fades in and out where it rests.
+/// VoiceOver names it, and opens it as a click does.
 struct IslandBubble: View {
     /// Out of the notch; in it, it's hidden in its end.
     let shown: Bool
@@ -27,10 +28,8 @@ struct IslandBubble: View {
     /// Opens it, as a click on it does.
     let open: () -> Void
     let restingHeight: CGFloat
-    /// How far the notch's top corners flare out past its body.
-    let flare: CGFloat
-    /// How much of the notch's trailing wing is folded away, which the bubble sits off the end of.
-    let fold: CGFloat
+    /// How far from the notch's middle its trailing end is, which the bubble sits off.
+    let notchEnd: CGFloat
     /// The notch is open: nothing of the bubble shows over its glass.
     let hidden: Bool
     let hovered: Bool
@@ -71,7 +70,7 @@ struct IslandBubble: View {
                         }
                     }
                 }
-                .islandFade(shown)
+                .islandFade(shown && !hidden)
             }
             .frame(width: h, height: h)
             // What it shows, in words, and a click's opening.
@@ -104,9 +103,10 @@ struct IslandBubble: View {
         }
         // From inside the notch's end, where it comes out of, to where it rests.
         .frame(width: h * (2 + Self.gap), height: h, alignment: .leading)
-        .offset(x: h * (1 + Self.gap) - flare - fold)
-        // Gone at once as the notch opens; back once it has all but closed, as its black is.
-        .animation(hidden ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(hidden ? 0 : 1) }
+        .offset(x: notchEnd - h + h * (2 + Self.gap) / 2)
+        // Solid until the opening notch has covered it, and back before the closing notch uncovers it,
+        // as anything fading here would show as a pale circle beside the notch.
+        .animation(hidden ? .linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)) { $0.opacity(hidden ? 0 : 1) }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
         .opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil ? 1 : 0)
         .allowsHitTesting(false)

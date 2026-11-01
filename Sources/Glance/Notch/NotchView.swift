@@ -264,8 +264,11 @@ final class NotchModel: ObservableObject {
     /// the notch while it does.
     var detached: Activity? {
         guard state != .open, alert == nil, !folded, !(activity && pop) else { return nil }
-        return activities.dropFirst().first
+        return second
     }
+
+    /// The second of those showing, which is detached while the notch is closed.
+    var second: Activity? { activities.dropFirst().first }
 
     /// What opening shows, as the Dynamic Island expands what was clicked: the detached activity,
     /// or the notch's. Nil for music, which opens to the player.
@@ -683,7 +686,7 @@ struct NotchView: View {
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
         // end, all of it is hidden there, under what the notch shows.
-        .background(alignment: .topTrailing) { bubble(m) }
+        .background(alignment: .top) { bubble(m) }
         .background {
             ZStack {
                 if thumbnail {
@@ -738,13 +741,18 @@ struct NotchView: View {
     private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.detached == nil }
 
     private func bubble(_ m: NotchMetrics) -> some View {
-        let activity = model.detached
+        // Open, it stays where it was, under the notch, which came out over it.
+        let activity = model.detached ?? (model.state == .open ? model.second : nil)
+        // Riding on the notch's end under the pointer; as the notch opens, it stays where it rests,
+        // off the camera's end, the notch's trailing wing folded away there.
+        let restingEnd = model.closedSize.width / 2
         return IslandBubble(
             shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble() },
-            restingHeight: model.closedSize.height, flare: m.flare, fold: m.fold, hidden: model.state == .open,
+            restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
+            hidden: model.state == .open,
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
