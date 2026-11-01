@@ -124,22 +124,37 @@ final class StatusBarController: NSObject {
         let item = NSMenuItem(title: "Try a Live Activity", action: nil, keyEquivalent: "")
         let scenes = NSMenu()
         scenes.autoenablesItems = false
-        func add(_ title: String, _ scene: ActivityBench.Scene?) {
+        func entry(_ title: String, tries chosen: [ActivityBench.Scene], on: Bool) -> NSMenuItem {
             let entry = NSMenuItem(title: title, action: #selector(benchFromMenu), keyEquivalent: "")
             entry.target = self
-            entry.representedObject = scene?.rawValue
-            entry.state = scene == ActivityBench.scene ? .on : .off
-            scenes.addItem(entry)
+            entry.representedObject = chosen.map(\.rawValue)
+            entry.state = on ? .on : .off
+            return entry
         }
-        for scene in ActivityBench.Scene.allCases { add(scene.rawValue, scene) }
+        let first = ActivityBench.scene
+        for scene in ActivityBench.Scene.allCases { scenes.addItem(entry(scene.rawValue, tries: [scene], on: scene == first)) }
         scenes.addItem(.separator())
-        add("None", nil)
+        // A second beside the first, the most the notch shows; chosen again, it goes.
+        let second = NSMenuItem(title: "Add a Second", action: nil, keyEquivalent: "")
+        second.isEnabled = first != nil
+        if let first {
+            let others = NSMenu()
+            others.autoenablesItems = false
+            for scene in ActivityBench.Scene.seconds where scene != first {
+                let on = ActivityBench.scenes.contains(scene)
+                others.addItem(entry(scene.rawValue, tries: on ? [first] : [first, scene], on: on))
+            }
+            second.submenu = others
+        }
+        scenes.addItem(second)
+        scenes.addItem(.separator())
+        scenes.addItem(entry("None", tries: [], on: first == nil))
         item.submenu = scenes
         return item
     }
 
     @objc private func benchFromMenu(_ entry: NSMenuItem) {
-        ActivityBench.change(to: (entry.representedObject as? String).flatMap(ActivityBench.Scene.init(rawValue:)))
+        ActivityBench.change(to: (entry.representedObject as? [String] ?? []).compactMap(ActivityBench.Scene.init(rawValue:)))
     }
     @objc private func settingsFromMenu() { onOpenSettings?() }
 

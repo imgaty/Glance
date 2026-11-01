@@ -30,7 +30,7 @@ enum GlanceApp {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let nowPlaying = NowPlaying()
+    private let nowPlaying = ActivityBench.scenes.contains(.music) ? NowPlaying.demo(.tour) : NowPlaying()
     private lazy var notches = NotchManager(nowPlaying: nowPlaying)
     private let settings = SettingsWindowController()
     private let onboarding = OnboardingWindowController()

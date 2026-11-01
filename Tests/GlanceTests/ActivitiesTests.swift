@@ -704,9 +704,16 @@ struct ActivityBenchTests {
     @Test("A scene by its name, five minutes a round unless said")
     func parses() throws {
         let scene = try #require(ActivityBench.parse(["Glance", "--bench", "airdrop"]))
-        #expect(scene.scene == .airdrop)
+        #expect(scene.scenes == [.airdrop])
         #expect(scene.seconds == 300)
         #expect(ActivityBench.parse(["Glance", "--bench", "lowBattery", "20"])?.seconds == 20)
+    }
+
+    @Test("Two together, and no more, the most the notch shows")
+    func pairs() {
+        #expect(ActivityBench.parse(["Glance", "--bench", "music+timer", "60"])?.scenes == [.music, .timer])
+        #expect(ActivityBench.parse(["Glance", "--bench", "music+timer+airplay"]) == nil)
+        #expect(ActivityBench.parse(["Glance", "--bench", "music+player"]) == nil)
     }
 
     @Test("Without one, or with a name it doesn't know, there's no bench")

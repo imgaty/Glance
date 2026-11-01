@@ -86,7 +86,7 @@ final class AirDropWatch: NSObject, ObservableObject {
 
     /// Stops the one showing, as its notice's Cancel does.
     func stop() {
-        guard !ActivityBench.fakes else { return ActivityBench.shared.stopped() }
+        guard !ActivityBench.fakes else { return ActivityBench.shared.stopped(.airdrop) }
         if transfer?.sending == true { return sends.stop() }
         guard let id = transfer?.id, let shown = transfers[id] else { return }
         if let cancel = shown.value(forKey: "cancelAction") as? NSObject, cancel.responds(to: NSSelectorFromString("triggerAction")) {

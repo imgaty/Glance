@@ -99,7 +99,7 @@ final class AirPlayWatch: ObservableObject {
 
     /// The sound back where it played before AirPlay, or on the Mac's own speakers.
     func stop() {
-        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped() }
+        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped(.airplay) }
         let outputs = AudioOutput.outputs().filter { $0.transport != kAudioDeviceTransportTypeAirPlay }
         guard
             let target = outputs.first(where: { $0.id == lastLocal })

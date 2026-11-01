@@ -7,8 +7,9 @@
 
 import AppKit
 
-/// One live activity alone on the notch, to try it: a build made from source, started with
-/// `--bench airdrop`, shows that activity made up, round after round, and nothing else. Everything
+/// One live activity alone on the notch, to try it, or two together, the most the notch shows: a
+/// build made from source, started with `--bench airdrop` or `--bench airdrop+timer`, shows them
+/// made up, round after round, and nothing else. Everything
 /// else is off for as long as it runs, in a domain that's never saved, so Settings stay as they are;
 /// the notch opens only to the activity's own view, never to the player; and its buttons only
 /// change what's made up, so nothing real is pressed. A number after its name is how long each round
@@ -18,7 +19,7 @@ final class ActivityBench {
     static let shared = ActivityBench()
 
     enum Scene: String, CaseIterable {
-        case airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery
+        case music, airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
         /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
@@ -26,32 +27,43 @@ final class ActivityBench {
 
         /// Said for a moment, with no view of its own to open to.
         var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery].contains(self) }
+
+        /// What can be tried beside another: all but those that touch something real.
+        static var seconds: [Scene] { allCases.filter { $0 != .airdropReal && $0 != .lowBatteryReal } }
     }
 
-    /// The scene and its round's seconds, from the arguments Glance was started with.
-    nonisolated static func parse(_ arguments: [String]) -> (scene: Scene, seconds: Double)? {
-        guard let flag = arguments.firstIndex(of: "--bench"), flag + 1 < arguments.count,
-            let scene = Scene(rawValue: arguments[flag + 1])
-        else { return nil }
+    /// The most the notch shows at once.
+    static let most = 2
+
+    /// The scenes and each round's seconds, from the arguments Glance was started with.
+    nonisolated static func parse(_ arguments: [String]) -> (scenes: [Scene], seconds: Double)? {
+        guard let flag = arguments.firstIndex(of: "--bench"), flag + 1 < arguments.count else { return nil }
+        let names = arguments[flag + 1].split(separator: "+").map(String.init)
+        let scenes = names.compactMap(Scene.init(rawValue:))
+        guard !scenes.isEmpty, scenes.count == names.count, scenes.count <= most else { return nil }
         let seconds = arguments.dropFirst(flag + 2).first.flatMap(Double.init) ?? 300
-        return (scene, max(seconds, 1))
+        return (scenes, max(seconds, 1))
     }
 
     /// Only in a build made from source.
-    private nonisolated static let chosen: (scene: Scene, seconds: Double)? =
+    private nonisolated static let chosen: (scenes: [Scene], seconds: Double)? =
         Bundle.main.object(forInfoDictionaryKey: "GlanceSourceDirectory") == nil ? nil : parse(CommandLine.arguments)
 
-    nonisolated static var scene: Scene? { chosen?.scene }
+    nonisolated static var scenes: [Scene] { chosen?.scenes ?? [] }
+    nonisolated static var scene: Scene? { scenes.first }
     /// What's shown is made up, rather than only alone.
-    nonisolated static var fakes: Bool { scene != nil && scene != .airdropReal }
+    nonisolated static var fakes: Bool { !scenes.isEmpty && !scenes.contains(.airdropReal) }
     /// Low Power Mode is only said, and the Mac's stays as it is.
-    nonisolated static var fakesPower: Bool { scene != nil && scene != .lowBatteryReal }
+    nonisolated static var fakesPower: Bool { !scenes.isEmpty && !scenes.contains(.lowBatteryReal) }
+    /// The notch can open to the player: unless what's tried stays, with nothing to open to but itself.
+    nonisolated static var opensToPlayer: Bool { scenes.isEmpty || scenes.contains { $0.announces || $0 == .music } }
     private var length: Double { Self.chosen?.seconds ?? 300 }
 
     /// Between one round and the next.
     private static let rest = 3.0
-    private var ended = false
-    private var run: Task<Void, Never>?
+    /// What was stopped, from its own button or swiped away, each till its next round.
+    private var ended: Set<NotchModel.Activity> = []
+    private var runs: [Task<Void, Never>] = []
 
     /// Everything off but what's tried, unsaved.
     func isolate() {
@@ -62,7 +74,8 @@ final class ActivityBench {
             Preferences.activityCharging, Preferences.activityLowBattery, Preferences.activityDevices, Preferences.activityAirDrop,
             Preferences.activityClockTimers, Preferences.activityStopwatch,
         ] { off[key] = false }
-        if Self.scene == .airdropReal { off[Preferences.activityAirDrop] = true }
+        if Self.scenes.contains(.airdropReal) { off[Preferences.activityAirDrop] = true }
+        if Self.scenes.contains(.music) { off[Preferences.liveActivity] = true }
         Self.keep(off)
     }
 
@@ -76,29 +89,30 @@ final class ActivityBench {
     }
 
     func start() {
-        guard run == nil, let scene = Self.scene else { return }
-        run = Task { await play(scene) }
+        guard runs.isEmpty else { return }
+        runs = Self.scenes.map { scene in Task { await play(scene) } }
     }
 
-    /// Glance started again on another scene, or as usual with none. It waits for this one to go, as
+    /// Glance started again on other scenes, or as usual with none. It waits for this one to go, as
     /// `open` otherwise ignores the arguments.
-    static func change(to scene: Scene?) {
+    static func change(to scenes: [Scene]) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        let bench = scene == nil ? "" : " --args --bench \"$1\""
-        process.arguments = ["-c", "sleep 1; exec /usr/bin/open \"$0\"\(bench)", Bundle.main.bundlePath, scene?.rawValue ?? ""]
+        let bench = scenes.isEmpty ? "" : " --args --bench \"$1\""
+        let names = scenes.map(\.rawValue).joined(separator: "+")
+        process.arguments = ["-c", "sleep 1; exec /usr/bin/open \"$0\"\(bench)", Bundle.main.bundlePath, names]
         try? process.run()
         NSApp.terminate(nil)
     }
 
-    /// The round is over, from its own button or swiped away: the next one comes after a moment.
-    func stopped() {
-        ended = true
+    /// Its round is over, from its own button or swiped away: the next one comes after a moment.
+    func stopped(_ activity: NotchModel.Activity) {
+        ended.insert(activity)
     }
 
     private func play(_ scene: Scene) async {
         switch scene {
-        case .airdropReal: break
+        case .airdropReal, .music: break
         case .airdrop: await airDrop(sending: false)
         case .airdropSend: await airDrop(sending: true)
         case .timer: await timer()
@@ -115,11 +129,11 @@ final class ActivityBench {
         try? await Task.sleep(for: .seconds(seconds))
     }
 
-    /// Waits out a round, or until it's stopped or `over` says so.
-    private func round(over: () -> Bool = { false }) async {
-        ended = false
+    /// Waits out a round, or until it's stopped.
+    private func round(of activity: NotchModel.Activity) async {
+        ended.remove(activity)
         let end = Date.now + length
-        while !ended, !over(), Date.now < end, !Task.isCancelled { await wait(0.2) }
+        while !ended.contains(activity), Date.now < end, !Task.isCancelled { await wait(0.2) }
     }
 
     // MARK: Activities that stay
@@ -129,17 +143,17 @@ final class ActivityBench {
         let picture = Self.photo()
         let watch = AirDropWatch.shared
         while !Task.isCancelled {
-            ended = false
+            ended.remove(.airdrop)
             let id = UUID().uuidString, start = Date.now
             var fraction = 0.0
-            while !ended, fraction < 1, !Task.isCancelled {
+            while !ended.contains(.airdrop), fraction < 1, !Task.isCancelled {
                 fraction = min(Date.now.timeIntervalSince(start) / length, 1)
                 let recipient = sending ? "iPhone" : nil
                 watch.bench(AirDropShown(id: id, sender: "iPhone", preview: picture, fraction: fraction, sending: sending, recipient: recipient))
                 await wait(0.1)
             }
             // In, it shows a moment full.
-            if !ended { await wait(1.2) }
+            if !ended.contains(.airdrop) { await wait(1.2) }
             watch.bench(nil)
             await wait(Self.rest)
         }
@@ -150,9 +164,9 @@ final class ActivityBench {
     private func timer() async {
         let clock = ClockActivity.shared
         while !Task.isCancelled {
-            ended = false
+            ended.remove(.timer)
             clock.bench(timer: .running(until: .now + length, total: length))
-            while !ended, !Task.isCancelled, clock.timer != nil || clock.rang != nil {
+            while !ended.contains(.timer), !Task.isCancelled, clock.timer != nil || clock.rang != nil {
                 if case .running(let until, let total) = clock.timer, until <= .now { clock.benchRing(length: total) }
                 await wait(0.2)
             }
@@ -165,9 +179,9 @@ final class ActivityBench {
     private func stopwatch() async {
         let clock = ClockActivity.shared
         while !Task.isCancelled {
-            ended = false
+            ended.remove(.stopwatch)
             clock.bench(stopwatch: .running(since: .now))
-            while !ended, !Task.isCancelled, clock.stopwatch != nil { await wait(0.2) }
+            while !ended.contains(.stopwatch), !Task.isCancelled, clock.stopwatch != nil { await wait(0.2) }
             clock.bench(stopwatch: nil)
             await wait(Self.rest)
         }
@@ -180,7 +194,7 @@ final class ActivityBench {
         while !Task.isCancelled {
             let name = ["HomePod", "Living Room TV", "Kitchen", "MacBook Pro"][index % 4]
             watch.bench(AirPlayRoute(name: name, symbol: AirPlayRoute.symbol(for: name)))
-            await round()
+            await round(of: .airplay)
             watch.bench(nil)
             index += 1
             await wait(Self.rest)

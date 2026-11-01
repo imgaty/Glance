@@ -1066,7 +1066,7 @@ final class NotchController {
         }
         // At the bench, it opens only to what's being tried, never to the player, unless what's tried
         // is announced, which is what opening is tried against.
-        if ActivityBench.scene?.announces == false, model.expansion(fromBubble: model.bubbleHovered) == nil { return }
+        if !ActivityBench.opensToPlayer, model.expansion(fromBubble: model.bubbleHovered) == nil { return }
         // A timer that's done has been seen: it's no longer said.
         ClockActivity.shared.dismissRing()
         // On a display that takes a finger, with the pointer elsewhere and not from the keyboard, a
@@ -1630,7 +1630,7 @@ final class NotchController {
                 model.pop = false
             } else {
                 model.dismissed.insert(activity)
-                ActivityBench.shared.stopped()
+                ActivityBench.shared.stopped(activity)
             }
         }
     }
