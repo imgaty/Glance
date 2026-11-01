@@ -63,9 +63,11 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
         let width = ("-0:00" as NSString).size(withAttributes: [.font: font]).width
         return max((width - waveform.width) / 2, 0)
     }()
-    /// The artwork's corners: concentric with the notch's, or for a smaller cover as round as a
-    /// squircle goes, before its corners meet and it starts turning into a circle.
-    var artworkRadius: CGFloat { min(Self.cornerRadius - Self.padding, artwork / (2 * NotchShape.cornerReach)) }
+    /// A thumbnail's corners, by its side, as the iPhone rounds them.
+    static let thumbnailCorner: CGFloat = 0.2237
+    /// The artwork's corners: concentric with the notch's with the cover on the side, in its corner,
+    /// and a thumbnail's on top.
+    var artworkRadius: CGFloat { self == .top ? artwork * Self.thumbnailCorner : Self.cornerRadius - Self.padding }
 
     /// The open notch's size around a camera housing of the given size. It's wide enough that the
     /// artwork, up in its corner, stays clear of the housing.

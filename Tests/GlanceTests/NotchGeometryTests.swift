@@ -142,8 +142,8 @@ struct PlayerLayoutTests {
     func artwork() {
         #expect(PlayerLayout.top.artwork == 60)
         #expect(PlayerLayout.side.artwork == 120)
-        // As round as a squircle goes: its corners' curves meet at the middle of each side.
-        #expect(PlayerLayout.top.artworkRadius == PlayerLayout.top.artwork / (2 * NotchShape.cornerReach))
+        // A thumbnail's corners.
+        #expect(PlayerLayout.top.artworkRadius == PlayerLayout.top.artwork * PlayerLayout.thumbnailCorner)
         // Concentric with the notch's.
         #expect(PlayerLayout.side.artworkRadius == PlayerLayout.cornerRadius - PlayerLayout.padding)
     }
