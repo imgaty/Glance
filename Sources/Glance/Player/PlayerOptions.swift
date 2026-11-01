@@ -48,7 +48,7 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     static let playGlyph: CGFloat = 28
     static let skipGlyph: CGFloat = 18
     static let optionGlyph: CGFloat = 17.5
-    /// The open notch's corners, all four, for the usual notch: half the height of what opens
+    /// The open notch's bottom corners, for the usual notch: half the height of what opens
     /// shortest, so anything round at its ends is concentric with them (see `NotchModel.corners`).
     static let cornerRadius: CGFloat = 38.5
 

@@ -29,9 +29,10 @@
   which is hidden, and AirPods' own notification, which is taken away. With
   `Accessibility` allowed, macOS's banner under the menu bar for AirPods
   connecting or running low is hidden too.
-- Changed everything open or tall in the notch to one set of corners, all four
-  matching and concentric with what's round at its ends, and one padding all
-  around. Closed, the notch keeps the camera housing's own corners.
+- Changed everything open or tall in the notch to one set of bottom corners,
+  concentric with what's round at its ends, top corners that grow with its
+  height, and one padding all around. Closed, the notch keeps the camera housing's
+  own corners.
 - Changed `Hide in full screen` on a Mac with a notch: rather than sliding away,
   the notch folds back to the camera with nothing beside it, and still opens from
   there as usual. On a display with no camera, it hides with the menu bar.

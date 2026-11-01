@@ -427,8 +427,8 @@ struct ActivitiesTests {
         // Either side of the camera, only as wide as the buttons, wider than "5:00", need.
         let buttons = TimerLayout.content(32) * 2 + 32 * TimerLayout.buttonGap
         #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.buttonEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
-        // All four corners are the player's.
-        #expect(open.flare == TimerLayout.tallHeight(32) / 2)
+        // Its top corners in proportion to its height.
+        #expect(open.flare == 6 * (open.height - NotchModel.peekSwell) / 32)
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)

@@ -76,7 +76,8 @@ struct NotchCorners: Equatable {
         let progress = grown * grown * (3 - 2 * grown)
         let bottom = Self.restingBottomRadius + (radius - Self.restingBottomRadius) * progress
         return Radii(
-            flare: Self.restingFlare + (radius - Self.restingFlare) * progress,
+            // In proportion to the notch's height, past what the pointer swells it by.
+            flare: Self.restingFlare * max(height - NotchModel.peekSwell, restingHeight) / restingHeight,
             bottom: bottom + (min(height / 2, radius) - bottom) * wingEnds)
     }
 }

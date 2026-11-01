@@ -77,11 +77,11 @@ struct NotchCornersTests {
         #expect(isClose(notch.radii(forHeight: 39, wingEnds: 1).bottom, 19.5))
     }
 
-    @Test("Open, all four corners are the one radius, however tall it stands", arguments: [77.0, 130.0, 172.0, 400.0])
+    @Test("Open, the bottom corners are the one radius, however tall it stands, and the top follow its height", arguments: [77.0, 130.0, 172.0, 400.0])
     func open(height: CGFloat) {
         for wingEnds in [0.0, 1.0] {
             let radii = notch.radii(forHeight: height, wingEnds: wingEnds)
-            #expect(isClose(radii.flare, 38.5))
+            #expect(isClose(radii.flare, 6 * (height - NotchModel.peekSwell) / 32))
             #expect(isClose(radii.bottom, 38.5))
         }
     }
