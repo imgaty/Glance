@@ -672,8 +672,8 @@ private final class NeutralSlider: NSSlider {
     }
 }
 
-/// Drawn as Control Center draws its sound slider: white where it's filled (dark gray in a light
-/// menu), on a gray track, with a white knob, the same whether or not Glance is the app in front. (A menu takes its app's look, so
+/// Drawn as Control Center draws its sound slider: white where it's filled (the Mac's accent color in
+/// a light menu), on a gray track, with a white knob, the same whether or not Glance is the app in front. (A menu takes its app's look, so
 /// the standard slider turned to the accent color only while Glance happened to be in use.)
 private final class NeutralSliderCell: NSSliderCell {
     /// How much of the track is filled: in proportion to all of it, so the loudest fills it to the end.
@@ -728,9 +728,9 @@ private final class NeutralSliderCell: NSSliderCell {
         NSGraphicsContext.restoreGraphicsState()
     }
 
-    /// White, as Control Center's; in a light menu, where white wouldn't show, the menu's text color.
+    /// White, as Control Center's; in a light menu, where white wouldn't show, the Mac's accent color.
     private static let fillColor = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .labelColor
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .controlAccentColor
     }
 
     private static let trackColor = NSColor(name: nil) { appearance in
