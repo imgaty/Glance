@@ -1055,27 +1055,11 @@ struct NotchShape: Shape {
         let bottom = max(min(radii(in: rect).bottom, body.width / 2, body.height - flare), 0)
         let reach = min(bottom * Self.cornerReach, body.height - flare, body.width / 2)
         let flareRadius = flare / (1 + Self.flareSmoothing)
-        // Beside a detached activity, the top corner goes around it, from its middle, for the gap
-        // between them to be even all the way; cut off by the top of the screen, it's no longer quite
-        // a flare.
-        let folded = min(fold / corners.restingHeight, 1)
-        let around = corners.restingHeight * (0.5 + IslandBubble.gap)
-        let nearRadius = flare + (around - flare) * folded
-        let nearDrop = min(nearRadius, corners.restingHeight / 2)
-        let nearTip = nearRadius - (nearRadius * nearRadius - nearDrop * nearDrop).squareRoot()
-        let nearReach = min(bottom * Self.cornerReach, body.height - nearDrop, body.width / 2)
         let (right, left, up, down) = (CGVector(dx: 1, dy: 0), CGVector(dx: -1, dy: 0), CGVector(dx: 0, dy: -1), CGVector(dx: 0, dy: 1))
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        if folded > 0 {
-            path.addLine(to: CGPoint(x: body.maxX + nearTip, y: rect.minY))
-            path.addArc(
-                center: CGPoint(x: body.maxX + nearRadius, y: rect.minY + nearDrop), radius: nearRadius,
-                startAngle: .radians(atan2(-nearDrop, nearTip - nearRadius)), endAngle: .radians(-.pi), clockwise: true)
-        } else {
-            path.addCorner(at: CGPoint(x: body.maxX, y: rect.minY), from: right, to: down, radius: flareRadius, reach: flare)
-        }
-        path.addCorner(at: CGPoint(x: body.maxX, y: rect.maxY), from: up, to: left, radius: bottom, reach: nearReach)
+        path.addCorner(at: CGPoint(x: body.maxX, y: rect.minY), from: right, to: down, radius: flareRadius, reach: flare)
+        path.addCorner(at: CGPoint(x: body.maxX, y: rect.maxY), from: up, to: left, radius: bottom, reach: reach)
         path.addCorner(at: CGPoint(x: body.minX, y: rect.maxY), from: right, to: up, radius: bottom, reach: reach)
         path.addCorner(at: CGPoint(x: body.minX, y: rect.minY), from: down, to: left, radius: flareRadius, reach: flare)
         path.closeSubpath()
