@@ -63,6 +63,9 @@ struct NotchCorners: Equatable {
 
     static let restingFlare: CGFloat = 6
     private static let restingBottomRadius: CGFloat = 12
+    /// The height, by the notch's at rest, of the tray and the player, with their top corners the
+    /// radius: what's shorter has them in proportion.
+    private static let fullHeight: CGFloat = 4.625
 
     struct Radii {
         var flare: CGFloat
@@ -75,9 +78,9 @@ struct NotchCorners: Equatable {
         let grown = min(max((height - swollen) / max(restingHeight * TimerLayout.tall - swollen, 1), 0), 1)
         let progress = grown * grown * (3 - 2 * grown)
         let bottom = Self.restingBottomRadius + (radius - Self.restingBottomRadius) * progress
+        let flare = min(radius * height / (restingHeight * Self.fullHeight), radius)
         return Radii(
-            // In proportion to the notch's height, past what the pointer swells it by.
-            flare: Self.restingFlare * max(height - NotchModel.peekSwell, restingHeight) / restingHeight,
+            flare: Self.restingFlare + (flare - Self.restingFlare) * progress,
             bottom: bottom + (min(height / 2, radius) - bottom) * wingEnds)
     }
 }

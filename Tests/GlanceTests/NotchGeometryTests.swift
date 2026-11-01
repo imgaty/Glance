@@ -81,7 +81,7 @@ struct NotchCornersTests {
     func open(height: CGFloat) {
         for wingEnds in [0.0, 1.0] {
             let radii = notch.radii(forHeight: height, wingEnds: wingEnds)
-            #expect(isClose(radii.flare, 6 * (height - NotchModel.peekSwell) / 32))
+            #expect(isClose(radii.flare, min(38.5 * height / 148, 38.5)))
             #expect(isClose(radii.bottom, 38.5))
         }
     }
