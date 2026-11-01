@@ -33,14 +33,18 @@ enum ExpandedDeviceLayout {
         return min(h * size / looks, room / across, room / usual.picture)
     }
 
-    /// What's happened, over the device's name.
-    static func said(low: Bool) -> String { low ? "Low Battery" : "Connected" }
+    /// What's happened, and the device's name under it, by their baselines: under the camera, the
+    /// name the padding from the bottom.
+    static let saidBaseline: CGFloat = 1.4375
+    static let nameBaseline: CGFloat = 1.96875
 
-    /// Each wing: as wide as the device and what's happened, against the camera. The name, under
-    /// it, runs on beneath the camera, for the two to sit in the middle of the height.
-    static func wing(low: Bool, restingHeight h: CGFloat) -> CGFloat {
-        let said = (said(low: low) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size)])
-        return AirDropLayout.wordsStart(h) + ceil(said.width) + 1 + LiveActivityView.cameraGap
+    /// Each wing: as wide as the ring needs against the camera, or wider for a long name, under the
+    /// camera, to reach the ring.
+    static func wing(name: String, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
+        let right = TimerLayout.content(h) + PlayerLayout.padding
+        let words = ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
+        let needs = AirDropLayout.wordsStart(h) + words + h * AirDropLayout.gap + right
+        return max(LiveActivityView.cameraGap + right, (needs - closedWidth) / 2)
     }
 }
 
@@ -125,21 +129,26 @@ struct DeviceActivityView: View {
     /// notch's ends uncover them. They stop short of the ring.
     private var words: some View {
         let h = restingHeight
-        let wing = ExpandedDeviceLayout.wing(low: low, restingHeight: h)
+        let layout = ExpandedDeviceLayout.self
+        let wing = layout.wing(name: name, restingHeight: h, closedWidth: closedWidth)
         let large = DeviceLayout(height: h, low: low, extended: true)
         let width = closedWidth + wing * 2 - large.ring - large.trailing - LiveActivityView.cameraGap
-        return VStack(alignment: .leading, spacing: 0) {
-            Text(ExpandedDeviceLayout.said(low: low))
-                .font(NotchType.detail)
-                .foregroundStyle(NotchType.detailColor)
-            Text(name)
-                .font(NotchType.title)
-                .foregroundStyle(.white)
+        return ZStack(alignment: .topLeading) {
+            line(low ? "Low Battery" : "Connected", font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
+            line(name, font: NotchType.title, baseline: h * layout.nameBaseline, color: .white)
         }
-        .lineLimit(1)
-        .truncationMode(.tail)
         .padding(.leading, AirDropLayout.wordsStart(h))
-        .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .leading)
+        .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)
         .offset(x: width / 2 - toEnd, y: notch.height / 2)
+    }
+
+    /// A line of words, by where its baseline falls.
+    private func line(_ text: String, font: Font, baseline: CGFloat, color: Color) -> some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.top, baseline - NSFont.systemFont(ofSize: NotchType.size, weight: .semibold).ascender)
     }
 }
