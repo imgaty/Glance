@@ -136,6 +136,24 @@ struct PlayerKeysTests {
         #expect(keys.typed(key: kVK_Space, shift: false, hasMedia: true, activity: buttons) == .none)
     }
 
+    @Test("Where the tray's row runs right to left, its arrows swap, and nothing else does")
+    func arrowsMirror() {
+        #expect(NotchController.readingOrder(kVK_LeftArrow, rightToLeft: true) == kVK_RightArrow)
+        #expect(NotchController.readingOrder(kVK_RightArrow, rightToLeft: true) == kVK_LeftArrow)
+        #expect(NotchController.readingOrder(kVK_LeftArrow, rightToLeft: false) == kVK_LeftArrow)
+        #expect(NotchController.readingOrder(kVK_Tab, rightToLeft: true) == kVK_Tab)
+        #expect(NotchController.readingOrder(kVK_UpArrow, rightToLeft: true) == kVK_UpArrow)
+    }
+
+    @Test("Fingers going left bring the next song in every language, as next is on the right in every language")
+    func songsSwipeTheSameWay() {
+        // Going left, a swipe counts down; where the notch reads right to left, it counts up.
+        #expect(NotchController.bringsNextSong(-60, rightToLeft: false))
+        #expect(NotchController.bringsNextSong(60, rightToLeft: true))
+        #expect(!NotchController.bringsNextSong(60, rightToLeft: false))
+        #expect(!NotchController.bringsNextSong(-60, rightToLeft: true))
+    }
+
     @Test("Up and down go to an activity, through the lyrics' lines, or turn the sound up and down")
     func upAndDown() {
         let keys = keys([.lyrics, .line, .position, .playPause, .right])

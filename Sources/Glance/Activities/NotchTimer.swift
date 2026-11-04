@@ -31,9 +31,7 @@ enum NotchTimer {
 
     /// As a clock shows a length of time: 4:59, or 1:04:59 for an hour or more.
     static func format(_ seconds: TimeInterval) -> String {
-        let whole = Int(seconds.rounded(.up))
-        let hours = whole / 3600, minutes = whole / 60 % 60, rest = whole % 60
-        return hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
+        ClockText.of(Int(seconds.rounded(.up)))
     }
 
     /// As the Dynamic Island counts down beside the camera: under ten minutes, its minutes and
@@ -117,18 +115,14 @@ enum Stopwatch: Equatable {
 
     /// As Clock shows it: 0:07, 12:07, 1:02:07; opened, as the iPhone's, to the hundredth, 00:07,41.
     static func format(_ seconds: TimeInterval, hundredths: Bool = false) -> String {
-        let whole = Int(seconds)
-        let hours = whole / 3600, minutes = whole / 60 % 60, rest = whole % 60
-        let clock = hundredths ? "%02d:%02d" : "%d:%02d"
-        let shown = hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: clock, minutes, rest)
+        let shown = ClockText.of(Int(seconds), paddingMinutes: hundredths)
         guard hundredths else { return shown }
-        let hundredth = min(Int((seconds - Double(whole)) * 100), 99)
-        return shown + (Locale.current.decimalSeparator ?? ".") + String(format: "%02d", hundredth)
+        return shown + (Locale.current.decimalSeparator ?? ".") + Self.hundredths(seconds)
     }
 
     /// The hundredths of a second, as they're shown small after the seconds.
     static func hundredths(_ seconds: TimeInterval) -> String {
-        String(format: "%02d", min(Int((seconds - floor(seconds)) * 100), 99))
+        min(Int((seconds - floor(seconds)) * 100), 99).formatted(.number.precision(.integerLength(2)))
     }
 
     /// As VoiceOver says it: "Stopwatch, 1 minute, 7 seconds, stopped".

@@ -29,6 +29,8 @@ struct NowPlayingView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.playerOnLight) private var onLight
     @Environment(\.playerKeys) private var keys
+    /// The way the Mac's language reads, outside the rows that always run left to right.
+    @Environment(\.layoutDirection) private var reading
     /// The clock and the scrolling titles only move, and options are only read, while it shows.
     let isVisible: Bool
     /// The artwork and the waveform are drawn by the notch, flying in from the closed notch; the
@@ -170,7 +172,7 @@ struct NowPlayingView: View {
     }
 
     /// Elapsed time, the bar, and time left, on one line as on the iPhone, the times flush with
-    /// the edges.
+    /// the edges. It runs left to right in every language; only the times' digits change.
     private var timeline: some View {
         TimelineView(.animation(minimumInterval: 0.5, paused: !(isVisible && nowPlaying.isPlaying))) { context in
             // With nothing playing, no times and an empty bar, as on the iPhone.
@@ -194,22 +196,25 @@ struct NowPlayingView: View {
                 }
                 .disabled(duration <= 0)
                 .keyRing(.position, in: Capsule(), outset: CGSize(width: 6, height: 0))
-                Text(playing ? "-" + Self.time(duration - position) : "--:--")
+                Text(playing ? ClockText.left(Int(max(duration - position, 0).rounded())) : "--:--")
                     .frame(minWidth: 30, alignment: .trailing)
             }
             .font(NotchType.timeline)
             .foregroundStyle(buttonGray)
+            .environment(\.layoutDirection, .leftToRight)
         }
         .frame(height: PlayerLayout.timelineHeight)
     }
 
     /// Five equal contact areas, their centers evenly spaced, the outer two starting and ending on the
-    /// edges the artwork and the timeline do.
+    /// edges the artwork and the timeline do. Previous is on the left and next on the right in every
+    /// language; the side buttons' own symbols still follow the language.
     private var controls: some View {
         EvenRow(leading: PlayerLayout.controlsInset, trailing: PlayerLayout.controlsInset) {
             // (Its places, in order: one side, the three transport controls, the other side.)
             if let places {
                 ControlMark(place: .left, control: leftSlot, symbol: symbol(for: leftSlot), places: places)
+                    .environment(\.layoutDirection, reading)
             } else if nowPlaying.djPlaying {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
                 DJButton(color: sideGray, talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
@@ -217,6 +222,7 @@ struct NowPlayingView: View {
                     .transition(.opacity)
             } else {
                 slot(leftSlot)
+                    .environment(\.layoutDirection, reading)
                     .keyRing(.left)
             }
             Group {
@@ -245,11 +251,14 @@ struct NowPlayingView: View {
             .allowsHitTesting(places == nil)
             if let places {
                 ControlMark(place: .right, control: rightSlot, symbol: symbol(for: rightSlot), places: places)
+                    .environment(\.layoutDirection, reading)
             } else {
                 slot(rightSlot)
+                    .environment(\.layoutDirection, reading)
                     .keyRing(.right)
             }
         }
+        .environment(\.layoutDirection, .leftToRight)
         .frame(height: Self.hitbox)
         .onChange(of: nowPlaying.options.repeatMode, initial: true) { old, new in
             let off = new.map { $0 == .off } ?? true
@@ -457,10 +466,7 @@ struct NowPlayingView: View {
     private var sideGray: Color { PlayerLayout.sideButton(onLight: onLightBackground) }
 
     private static func time(_ seconds: Double) -> String {
-        let total = Int(max(seconds, 0).rounded())
-        return total >= 3600
-            ? String(format: "%d:%02d:%02d", total / 3600, total / 60 % 60, total % 60)
-            : String(format: "%d:%02d", total / 60, total % 60)
+        ClockText.of(Int(max(seconds, 0).rounded()))
     }
 }
 

@@ -34,6 +34,7 @@ struct OnboardingView: View {
     @StateObject private var preview = SettingsPreview()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
 
     static let size = CGSize(width: 450, height: 600)
 
@@ -102,12 +103,13 @@ struct OnboardingView: View {
         // The arrow keys go through the pages too.
         .focusable()
         .focusEffectDisabled()
+        // As the pages read: the other way where they run right to left.
         .onKeyPress(.leftArrow) {
-            go(to: place - 1)
+            go(to: place + (layoutDirection == .leftToRight ? -1 : 1))
             return .handled
         }
         .onKeyPress(.rightArrow) {
-            go(to: place + 1)
+            go(to: place + (layoutDirection == .leftToRight ? 1 : -1))
             return .handled
         }
     }

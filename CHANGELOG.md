@@ -62,6 +62,11 @@
   widens without bouncing and nothing blurs.
 - Added every language macOS comes in, 36 in all: Glance follows the language
   macOS shows it in, and its words for macOS's own settings are macOS's.
+- Added right to left in Arabic and Hebrew: the notch, Settings, the welcome tour and
+  the tray's row mirror, and so do the arrows, swipes and scrolling that move through
+  them. Playback stays left to right: the progress bar, previous and next, and the
+  swipe between songs.
+- Added each language and region's own digits to times and percentages.
 - Added the keyboard to live activities, lyrics and the sound: with the notch
   opened from its shortcut, the up and down arrows go from the player to a timer's,
   the stopwatch's, AirDrop's or AirPlay's own view and back, where Tab and Space

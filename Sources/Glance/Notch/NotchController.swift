@@ -968,8 +968,10 @@ final class NotchController {
     private func panned(_ pan: NSPanGestureRecognizer) {
         guard #available(macOS 27, *) else { return }
         // In the notch's flipped points: down is positive.
-        let moved = pan.translation(in: pan.view)
+        let dragged = pan.translation(in: pan.view)
         pan.setTranslation(.zero, in: pan.view)
+        // Sideways the way the page reads, as with a scroll.
+        let moved = CGPoint(x: Self.readsRightToLeft ? -dragged.x : dragged.x, y: dragged.y)
         if pan.state == .began { swipeBegan() }
         // Two fingers going sideways turn the page; up or down, they're as one.
         let sideways = scrollAxis.map { $0 == .horizontal } ?? (abs(moved.x) > abs(moved.y))
@@ -980,7 +982,8 @@ final class NotchController {
             swipeMoved(down: moved.y, right: moved.x, scroll: moved, turnsPages: pages)
         case .ended, .cancelled:
             if model.state == .open, model.page == .tray, scrollAxis == .horizontal, !pages {
-                glideTray(at: pan.velocity(in: pan.view).x)
+                let speed = pan.velocity(in: pan.view).x
+                glideTray(at: Self.readsRightToLeft ? -speed : speed)
             }
             swipeEnded()
         default:
@@ -1253,18 +1256,21 @@ final class NotchController {
     private func typed(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let command = flags.contains(.command), shift = flags.contains(.shift)
-        let key = Int(event.keyCode)
+        let code = Int(event.keyCode)
         // ⌘ and a letter, wherever the letter is on this keyboard.
         let letter = command ? event.charactersIgnoringModifiers?.lowercased() : nil
-        if (key == kVK_Escape && !command) || letter == "w" {
+        if (code == kVK_Escape && !command) || letter == "w" {
             close(holdUntilExit: false)
             return true
         }
         guard model.page == .tray else {
             guard !command, flags.isDisjoint(with: [.control, .option]) else { return false }
-            return typedOnPlayer(key: key, shift: shift)
+            return typedOnPlayer(key: code, shift: shift)
         }
         let tray = Tray.shared
+        // The tray's row runs the way people read, and its arrows with it. The player's don't turn
+        // round: its buttons and progress run left to right in every language.
+        let key = Self.readingOrder(code, rightToLeft: Self.readsRightToLeft)
         switch (key, letter) {
         case (kVK_LeftArrow, nil), (kVK_RightArrow, nil):
             guard let id = tray.move(by: key == kVK_LeftArrow ? -1 : 1, extending: shift) else { return false }
@@ -1295,6 +1301,20 @@ final class NotchController {
             return choose(typing: event)
         }
         return true
+    }
+
+    /// Glance's language reads right to left, so the notch's contents are mirrored.
+    static var readsRightToLeft: Bool { NSApp.userInterfaceLayoutDirection == .rightToLeft }
+
+    /// An arrow key as what it means on the tray's row: where it runs right to left, the left arrow
+    /// is the one going on through it.
+    nonisolated static func readingOrder(_ key: Int, rightToLeft: Bool) -> Int {
+        guard rightToLeft else { return key }
+        switch key {
+        case kVK_LeftArrow: return kVK_RightArrow
+        case kVK_RightArrow: return kVK_LeftArrow
+        default: return key
+        }
     }
 
     /// The buttons of the activity's own view that's open.
@@ -1563,13 +1583,15 @@ final class NotchController {
         // Positive means fingers (or wheel) moving down or right, whatever the natural-scrolling setting.
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
-        let right = event.scrollingDeltaX * direction
+        // Sideways the way the page reads: to the right in a language read left to right.
+        let sideways = Self.readsRightToLeft ? -event.scrollingDeltaX : event.scrollingDeltaX
+        let right = sideways * direction
         let onTray = model.state == .open && model.page == .tray
         // A swipe on the tray let go: the row glides on, and settles within its ends.
         guard event.momentumPhase.isEmpty else {
             guard trayGliding, onTray else { return }
             glideCheck?.cancel()
-            scrollTray(by: event.scrollingDeltaX)
+            scrollTray(by: sideways)
             // Gliding past an end, it bounces back rather than running on.
             let past = model.trayScroll < -24 || model.trayScroll > trayReach + 24
             if past || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
@@ -1584,12 +1606,12 @@ final class NotchController {
         // A mouse's wheel on a tray with more than fits scrolls its row, as a wheel scrolls any row on
         // a Mac: down or with Shift, toward its end; up, back. A notch at a time, gliding there.
         if onTray, event.phase.isEmpty, trayReach > 0 {
-            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+            let along = sideways != 0 ? sideways : event.scrollingDeltaY
             return wheelTray(by: along * (event.hasPreciseScrollingDeltas ? 1 : 24), switches: switches)
         }
         // A wheel, a notch at a time.
         if switches, event.phase.isEmpty {
-            let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+            let along = sideways != 0 ? sideways : event.scrollingDeltaY
             if along != 0 { turn(to: along < 0 ? .tray : .player) }
             return
         }
@@ -1606,7 +1628,7 @@ final class NotchController {
         case .began, .mayBegin:
             swipeBegan()
         case .changed:
-            let scroll = CGPoint(x: event.scrollingDeltaX, y: event.scrollingDeltaY)
+            let scroll = CGPoint(x: sideways, y: event.scrollingDeltaY)
             swipeMoved(down: down, right: right, scroll: scroll, turnsPages: switches)
         default:
             if onTray, scrollAxis == .horizontal, !switches {
@@ -1749,7 +1771,7 @@ final class NotchController {
 
     /// Three fingers on the open notch: toward the page on the right, the tray, or back.
     func swipe(right: Bool) {
-        let page: NotchPage = right ? .tray : .player
+        let page: NotchPage = right != Self.readsRightToLeft ? .tray : .player
         guard page != model.page else { return }
         turn(to: page)
         Opening.tap()
@@ -1821,20 +1843,26 @@ final class NotchController {
         Shelf.reach(count: Tray.shared.items.count, in: model.trayWidth)
     }
 
-    /// Two fingers sideways: left for the next song, right for the previous one, as on a phone's
-    /// player. The artwork leans along, then skips.
+    /// Two fingers sideways: left for the next song, right for the previous one, in every language,
+    /// as next is on the right in every language. The artwork leans along, then skips.
     private func swiped(by delta: CGFloat) {
         guard nowPlaying.hasMedia, !pullFired else { return }
         swipe += delta
         if abs(swipe) > 56 {
             pullFired = true
-            if swipe < 0 { nowPlaying.next() } else { nowPlaying.previous() }
+            if Self.bringsNextSong(swipe, rightToLeft: Self.readsRightToLeft) { nowPlaying.next() } else { nowPlaying.previous() }
             Opening.tap()
             withAnimation(NotchMotion.spring(response: 0.4, dampingFraction: 0.6)) { model.nudge = 0 }
             return
         }
         let lean = (swipe >= 0 ? 1 : -1) * 14 * (1 - 1 / (abs(swipe) * 0.04 + 1))
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.nudge = lean }
+    }
+
+    /// Whether a swipe that's gone far enough is toward the next song. Where the notch reads right
+    /// to left, a swipe's sign is the other way round, as its pages' and the tray's row are.
+    nonisolated static func bringsNextSong(_ swipe: CGFloat, rightToLeft: Bool) -> Bool {
+        rightToLeft ? swipe > 0 : swipe < 0
     }
 
     private func rubberBand(_ x: CGFloat) -> CGFloat {
@@ -1877,7 +1905,9 @@ final class NotchController {
         guard model.detached != nil else { return nil }
         let h = model.closedSize.height
         let m = model.metrics(for: .closed)
-        let left = centerX + m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
+        let out = m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
+        // Beside the notch's far end, as people read: to its left, right to left.
+        let left = Self.readsRightToLeft ? centerX - out - h : centerX + out
         return CGRect(x: left - 4, y: topY - h - 4, width: h + 8, height: h + 6)
     }
 

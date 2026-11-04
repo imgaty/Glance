@@ -432,15 +432,19 @@ private final class OutputRow: NSView {
         let textWidth = bounds.width - textX - SoundMenu.inset
         // Half a point above the circle's middle, as the Mac sets its pictures.
         symbol.frame = circleRect.offsetBy(dx: 0, dy: -0.5)
+        // At the far end of the row from the circle, right to left.
+        func placed(_ rect: NSRect) -> NSRect {
+            userInterfaceLayoutDirection == .leftToRight ? rect : NSRect(x: bounds.width - rect.maxX, y: rect.minY, width: rect.width, height: rect.height)
+        }
         let nameHeight = name.intrinsicContentSize.height, batteryHeight = battery.intrinsicContentSize.height
         // By their text, which starts a little way into a label's frame.
         if battery.isHidden {
-            name.frame = name.frame(forAlignmentRect: NSRect(x: textX, y: (bounds.height - nameHeight) / 2, width: textWidth, height: nameHeight))
+            name.frame = name.frame(forAlignmentRect: placed(NSRect(x: textX, y: (bounds.height - nameHeight) / 2, width: textWidth, height: nameHeight)))
         } else {
             // Name and batteries together, centered on the circle.
             let top = (bounds.height - nameHeight - batteryHeight) / 2
-            name.frame = name.frame(forAlignmentRect: NSRect(x: textX, y: top, width: textWidth, height: nameHeight))
-            battery.frame = battery.frame(forAlignmentRect: NSRect(x: textX, y: top + nameHeight, width: textWidth, height: batteryHeight))
+            name.frame = name.frame(forAlignmentRect: placed(NSRect(x: textX, y: top, width: textWidth, height: nameHeight)))
+            battery.frame = battery.frame(forAlignmentRect: placed(NSRect(x: textX, y: top + nameHeight, width: textWidth, height: batteryHeight)))
         }
     }
 
@@ -452,7 +456,8 @@ private final class OutputRow: NSView {
 
     private var circleRect: NSRect {
         let circle = SoundMenu.circle
-        return NSRect(x: SoundMenu.inset, y: (bounds.height - circle) / 2, width: circle, height: circle)
+        let x = userInterfaceLayoutDirection == .leftToRight ? SoundMenu.inset : bounds.width - SoundMenu.inset - circle
+        return NSRect(x: x, y: (bounds.height - circle) / 2, width: circle, height: circle)
     }
 
     /// Chooses it, as the menu's own items are chosen: the menu closes, then it plays there.

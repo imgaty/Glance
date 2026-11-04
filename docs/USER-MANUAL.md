@@ -67,6 +67,12 @@ open Glance again. The same words macOS uses, such as those for its own settings
 are taken from macOS. Names like AirDrop and Spotify stay as they are, and so does
 what a song or a file calls itself.
 
+In Arabic and Hebrew, Glance reads right to left: the notch, Settings, the welcome
+tour and the tray's row mirror, and so do the arrows, swipes and scrolling that move
+through them. Playback doesn't: the progress bar still fills from the left, previous
+stays on the left and next on the right, and fingers going left still bring the next
+song. Times and percentages use the digits of your language and region.
+
 ## Opening and closing
 
 Hover over the notch or click it, depending on
