@@ -140,8 +140,8 @@ enum LowBatteryLayout {
         let body: Color
         let level: Color
     }
-    static let red = Shade(capsule: .p3(0x2F, 0x10, 0x0F), body: .p3(0x7A, 0x29, 0x2A), level: .p3(0xEB, 0x5B, 0x5F))
-    static let yellow = Shade(capsule: .p3(0xF5, 0xC8, 0x51), body: .black, level: .p3(0xF5, 0xC8, 0x51))
+    static let red = Shade(capsule: .p3(0x2F, 0x10, 0x0F), body: .p3(0x7A, 0x29, 0x2A), level: BatteryColor.red)
+    static let yellow = Shade(capsule: BatteryColor.yellow, body: .black, level: BatteryColor.yellow)
     /// The level at its palest, and the ripple's line.
     static let paleLevel = Color.p3(0xEE, 0x8A, 0x9D)
     static let ringColor = Color.p3(0xE1, 0x5E, 0x64)

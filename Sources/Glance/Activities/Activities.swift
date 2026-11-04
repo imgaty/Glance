@@ -65,8 +65,15 @@ struct BatteryLevel: Equatable {
     /// Low Power Mode is on.
     var lowPower = false
 
-    /// Green, or red at 20% and below, charging or not; yellow in Low Power Mode, as the iPhone's.
-    var color: Color { lowPower ? .yellow : percent <= 20 ? .red : .green }
+    /// Green, or red at 20% and below, charging or not; yellow in Low Power Mode.
+    var color: Color { lowPower ? BatteryColor.yellow : percent <= 20 ? BatteryColor.red : BatteryColor.green }
+}
+
+/// A battery's colors, measured, one of each wherever a battery shows.
+enum BatteryColor {
+    static let green = Color(.sRGB, red: 0x45 / 255, green: 0xE2 / 255, blue: 0x74 / 255)
+    static let red = Color.p3(0xEB, 0x5B, 0x5F)
+    static let yellow = Color.p3(0xF5, 0xC8, 0x51)
 }
 
 /// Every display's notch shows what's announced, one thing at a time, in turn: each waits for the

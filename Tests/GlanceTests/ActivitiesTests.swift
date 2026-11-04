@@ -59,10 +59,15 @@ struct ActivitiesTests {
         let held = BatteryWatch.alert(from: Reading(percent: 80, onPower: false, charging: false), to: Reading(percent: 80, onPower: true, charging: false), lowPower: false)
         #expect(held?.content == .battery(title: "Plugged In", level: BatteryLevel(percent: 80, charging: false)))
         // Red at 20% and below, charging or not, as the iPhone's.
-        #expect(BatteryLevel(percent: 20, charging: true).color == .red)
-        #expect(BatteryLevel(percent: 21, charging: false).color == .green)
+        #expect(BatteryLevel(percent: 20, charging: true).color == BatteryColor.red)
+        #expect(BatteryLevel(percent: 21, charging: false).color == BatteryColor.green)
         // Yellow in Low Power Mode, as the iPhone's.
-        #expect(BatteryLevel(percent: 6, charging: true, lowPower: true).color == .yellow)
+        #expect(BatteryLevel(percent: 6, charging: true, lowPower: true).color == BatteryColor.yellow)
+        // One of each, wherever a battery shows.
+        #expect(BatteryRing.color(for: 20) == BatteryColor.red)
+        #expect(BatteryRing.color(for: 21) == BatteryColor.green)
+        #expect(LowBatteryLayout.red.level == BatteryColor.red)
+        #expect(LowBatteryLayout.yellow.level == BatteryColor.yellow)
         let saving = BatteryWatch.alert(
             from: Reading(percent: 6, onPower: false, charging: false), to: Reading(percent: 6, onPower: true, charging: true), lowPower: true)
         #expect(saving?.content == .battery(title: "Charging", level: BatteryLevel(percent: 6, charging: true, lowPower: true)))

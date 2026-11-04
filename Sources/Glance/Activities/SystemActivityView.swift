@@ -670,10 +670,8 @@ struct BatteryRing: View {
     var number: CGFloat = 0
     var numberScale: CGFloat = 1
     var numberShown = false
-    /// The iPhone's, as it shows AirPods' battery.
-    static let green = Color(.sRGB, red: 0x45 / 255, green: 0xE2 / 255, blue: 0x74 / 255)
 
-    static func color(for percent: Int) -> Color { percent <= 20 ? .red : green }
+    static func color(for percent: Int) -> Color { percent <= 20 ? BatteryColor.red : BatteryColor.green }
 
     var body: some View {
         let color = Self.color(for: percent)
