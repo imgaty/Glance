@@ -59,7 +59,7 @@ final class DeviceWatch {
                 // AirPods and Beats turn in 3D, from a clip read once, before they're shown.
                 let model = info?.product.flatMap(Headphones.init(product:))
                 if let model { _ = await DeviceTurn.prepare(model) }
-                self?.announce(device.name, symbol: symbol, model: model, pictures: pictures, battery: info?.battery)
+                self?.announce(device.name, symbol: symbol, model: model, pictures: pictures, battery: info?.battery, chargingCase: info?.caseBattery)
             }
         }
     }
@@ -104,6 +104,13 @@ final class DeviceWatch {
         /// Each part's level, as the Sound menu shows AirPods': each earbud's and the case's, or
         /// the one battery of headphones that have one.
         var levels = Levels()
+
+        /// The case's level, beside the earbuds' or the headphones' own: with nothing else told, the
+        /// case's level is already what `battery` says, and it shows once.
+        var caseBattery: CaseBattery? {
+            guard let level = levels.chargingCase, levels.left != nil || levels.right != nil || levels.main != nil else { return nil }
+            return CaseBattery(level: level, symbol: modelSymbols?.chargingCase ?? "airpods.chargingcase.fill")
+        }
 
         /// Apple's or Beats', which the iPhone announces too. With no maker told, a model macOS
         /// knows is one of theirs.
@@ -248,7 +255,9 @@ final class DeviceWatch {
 
     // MARK: Announcing
 
-    private func announce(_ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) {
+    private func announce(
+        _ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil, chargingCase: CaseBattery? = nil
+    ) {
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
         guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
@@ -257,7 +266,8 @@ final class DeviceWatch {
         // A device is announced with its battery, as AirPods are; one that doesn't tell it, not at all.
         guard battery != nil else { return }
         recent[name] = now
-        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery))
+        Activities.shared.post(
+            Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery, chargingCase: chargingCase))
         // macOS's own banner for it says the same.
         SystemNotices.hideBluetoothBanner()
     }
@@ -271,10 +281,13 @@ final class DeviceWatch {
     }
 
     /// A device: its symbol and battery, as AirPods are shown.
-    static func alert(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) -> NotchAlert {
+    static func alert(
+        name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil, chargingCase: CaseBattery? = nil
+    ) -> NotchAlert {
         let level = battery.map { ", \($0) percent" } ?? ""
+        let caseLevel = chargingCase.map { ", case \($0.level) percent" } ?? ""
         return NotchAlert(
-            kind: .device, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
-            spoken: "\(name) connected\(level)", name: name)
+            kind: .device, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery, chargingCase: chargingCase),
+            spoken: "\(name) connected\(level)\(caseLevel)", name: name)
     }
 }

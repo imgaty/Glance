@@ -40,8 +40,8 @@ enum ExpandedDeviceLayout {
 
     /// Each wing: as wide as the ring needs against the camera, or wider for a long name, under the
     /// camera, to reach the ring.
-    static func wing(name: String, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
-        let right = TimerLayout.content(h) + PlayerLayout.padding
+    static func wing(name: String, hasCase: Bool = false, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
+        let right = TimerLayout.content(h) + PlayerLayout.padding + (hasCase ? TimerLayout.content(h) + h * TimerLayout.buttonGap : 0)
         let words = ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
         let needs = AirDropLayout.wordsStart(h) + words + h * AirDropLayout.gap + right
         return max(LiveActivityView.cameraGap + right, (needs - closedWidth) / 2)
@@ -60,6 +60,8 @@ struct DeviceActivityView: View {
     let model: Headphones?
     let pictures: [String]
     let battery: Int?
+    /// Its case's battery, in a ring of its own at the end, the device's beside it.
+    var chargingCase: CaseBattery? = nil
     let name: String
     /// Running low, its ring a little larger, with its level in numbers in the middle.
     let low: Bool
@@ -88,7 +90,6 @@ struct DeviceActivityView: View {
         let largeAxis = SystemActivityView.deviceAxis(model: model, pictures: pictures, layout: large)
         let middle = PlayerLayout.padding + TimerLayout.content(h) / 2 - (largeAxis - largeWidth / 2)
         let smallMiddle = small.edge + max(reach - axis, 0) + smallWidth / 2
-        let ringScale = small.ring / large.ring
         // Hung from the notch's top middle, which never moves, each is moved out to its end, and
         // follows it there on the notch's own spring, with no layout to land on whole pixels.
         Color.clear.overlay(alignment: .top) {
@@ -97,22 +98,33 @@ struct DeviceActivityView: View {
                     .frame(width: largeWidth, height: large.picture)
                     .scaleEffect(extended ? 1 : small.picture / large.picture)
                     .offset(x: (extended ? middle : smallMiddle) - toEnd, y: notch.height / 2)
-                // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
-                // announced (see `DeviceWatch`).
+                // Its battery as a ring alone: a device that doesn't tell it isn't announced (see
+                // `DeviceWatch`). With its case's beside it, each says which it is once extended.
                 if let battery {
-                    BatteryRing(
-                        percent: battery, diameter: large.ring, line: extended ? large.ringLine : small.ringLine / ringScale,
-                        number: large.number, numberScale: extended ? 1 : small.number / large.number / ringScale, numberShown: extended || low
-                    )
-                    .modifier(RingArrival(leaving: leaving))
-                    .scaleEffect(extended ? 1 : ringScale)
-                    .offset(x: toEnd - (extended ? large.trailing + large.ring / 2 : small.trailing + small.ring / 2), y: notch.height / 2)
+                    ring(battery, symbol: chargingCase == nil ? nil : symbol, fromEnd: chargingCase == nil ? 0 : 1, small: small, large: large)
+                }
+                if let chargingCase {
+                    ring(chargingCase.level, symbol: chargingCase.symbol, fromEnd: 0, small: small, large: large)
                 }
                 words.modifier(PageFade(hidden: !extended))
             }
             .frame(width: 0, height: 0)
         }
         .onAppear { withAnimation(IslandMotion.open) { arrived = true } }
+    }
+
+    /// A battery's ring, this many rings in from the end.
+    private func ring(_ percent: Int, symbol: String?, fromEnd: CGFloat, small: DeviceLayout, large: DeviceLayout) -> some View {
+        let ringScale = small.ring / large.ring
+        let layout = extended ? large : small
+        return BatteryRing(
+            percent: percent, diameter: large.ring, line: extended ? large.ringLine : small.ringLine / ringScale,
+            number: large.number, numberScale: extended ? 1 : small.number / large.number / ringScale, numberShown: extended || low,
+            symbol: symbol
+        )
+        .modifier(RingArrival(leaving: leaving))
+        .scaleEffect(extended ? 1 : ringScale)
+        .offset(x: toEnd - layout.trailing - layout.ring / 2 - fromEnd * (layout.ring + layout.ringGap), y: notch.height / 2)
     }
 
     @ViewBuilder private func picture(height: CGFloat) -> some View {
@@ -130,9 +142,10 @@ struct DeviceActivityView: View {
     private var words: some View {
         let h = restingHeight
         let layout = ExpandedDeviceLayout.self
-        let wing = layout.wing(name: name, restingHeight: h, closedWidth: closedWidth)
+        let wing = layout.wing(name: name, hasCase: chargingCase != nil, restingHeight: h, closedWidth: closedWidth)
         let large = DeviceLayout(height: h, low: low, extended: true)
-        let width = closedWidth + wing * 2 - large.ring - large.trailing - LiveActivityView.cameraGap
+        let rings = large.ring + (chargingCase == nil ? 0 : large.ring + large.ringGap)
+        let width = closedWidth + wing * 2 - rings - large.trailing - LiveActivityView.cameraGap
         return ZStack(alignment: .topLeading) {
             line(low ? "Low Battery" : "Connected", font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
             line(name, font: NotchType.title, baseline: h * layout.nameBaseline, color: .white)

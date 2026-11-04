@@ -243,7 +243,9 @@ final class ActivityBench {
                     _ = await DeviceTurn.prepare(model)
                     let name = model.rawValue.replacingOccurrences(of: "-", with: " ").capitalized
                         .replacingOccurrences(of: "Airpods", with: "AirPods")
-                    return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count])
+                    // Earbuds have a case with a battery of its own.
+                    let chargingCase = airPods.contains(model) ? CaseBattery(level: levels[(index + 2) % levels.count], symbol: PreviewActivity.caseSymbol) : nil
+                    return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count], chargingCase: chargingCase)
                 }
             }
         }

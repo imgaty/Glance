@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Added the case's battery to AirPods and Beats connecting, in a ring of its own
+  beside theirs. With the pointer on them, each ring shows what it's for and its
+  level in numbers.
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
