@@ -162,7 +162,10 @@ Motion on, the colors hold still.
 ### Controls
 
 Beside the playback controls are two buttons of your choice. Choose them in
-**Settings > Player > Controls > Customize Controls**.
+**Settings > Player > Controls > Customize Controls**. From the keyboard, Tab
+goes between the two buttons and the controls under them, Space selects a button
+or puts a control in the selected one, and Delete takes a control out of a
+button.
 
 | Control | Operation |
 | --- | --- |

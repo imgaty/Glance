@@ -28,6 +28,9 @@ struct ControlsSheet: View {
     @State private var selected = ControlPlace.left
     /// The control the pointer is over, below the player.
     @State private var hovered: PlayerSlot?
+    /// The focus ring shows only while the keys are in use, not after a click, as on a button.
+    @State private var keysInUse = false
+    @State private var inputWatch: Any?
 
     private static let width: CGFloat = 600
     private static let margin: CGFloat = 20
@@ -79,8 +82,19 @@ struct ControlsSheet: View {
         .frame(width: Self.width)
         .overlay(alignment: .topLeading) { editing }
         .coordinateSpace(.named(ControlPlaces.space))
-        // An empty button is the one to fill first.
-        .onAppear { if right == .empty, left != .empty { selected = .right } }
+        .focusEffectDisabled(!keysInUse)
+        .onAppear {
+            // An empty button is the one to fill first.
+            if right == .empty, left != .empty { selected = .right }
+            inputWatch = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { event in
+                keysInUse = event.type == .keyDown
+                return event
+            }
+        }
+        .onDisappear {
+            if let inputWatch { NSEvent.removeMonitor(inputWatch) }
+            inputWatch = nil
+        }
     }
 
     /// Over the player's two buttons: the selected one ringed in the accent color, each one to
@@ -99,6 +113,12 @@ struct ControlsSheet: View {
                     Color.clear
                         .contentShape(Circle())
                         .frame(width: frame.width, height: frame.height)
+                        .keyStop(in: Circle()) { selected = place }
+                        // The Delete key comes as U+007F, which neither of SwiftUI's names matches.
+                        .onKeyPress(keys: [.delete, .deleteForward, KeyEquivalent("\u{7F}")]) { _ in
+                            if control != .empty { remove(at: place) }
+                            return .handled
+                        }
                         .gesture(drag(control, from: place))
                         .pointerStyle(control == .empty ? .link : .grabIdle)
                         .help(control == .empty ? "No button here" : control.summary)
@@ -214,8 +234,10 @@ struct ControlsSheet: View {
         poof()
     }
 
-    /// Gone in a puff of smoke, as anything dragged off a toolbar or the Dock.
+    /// Gone in a puff of smoke at the pointer. From the keyboard the pointer can be anywhere, so
+    /// there's no puff.
     private func poof() {
+        guard NSApp.currentEvent?.type != .keyDown else { return }
         NSAnimationEffect.poof.show(centeredAt: NSEvent.mouseLocation, size: NSSize(width: 40, height: 40))
     }
 
@@ -278,6 +300,12 @@ private struct ControlGallery<Drag: Gesture>: View {
                         .fixedSize()
                 }
                 .contentShape(Rectangle())
+                // Room for the focus ring around the symbol and its name, taking none from the row.
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .keyStop(in: RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous)) { choose(control) }
+                .padding(.horizontal, -8)
+                .padding(.vertical, -5)
                 .onHover { inside in
                     if inside { hovered = control } else if hovered == control { hovered = nil }
                 }
@@ -293,6 +321,19 @@ private struct ControlGallery<Drag: Gesture>: View {
         .padding(.vertical, 4)
         .animation(.easeOut(duration: 0.12), value: hovered)
         .animation(.easeOut(duration: 0.15), value: chosen)
+    }
+}
+
+extension View {
+    /// For the keyboard, on what the pointer clicks and drags: where Tab stops, with the system's
+    /// focus ring in this shape, and what Space presses. Return stays Done's.
+    fileprivate func keyStop(in shape: some Shape, press: @escaping () -> Void) -> some View {
+        contentShape(.focusEffect, shape)
+            .focusable()
+            .onKeyPress(.space) {
+                press()
+                return .handled
+            }
     }
 }
 

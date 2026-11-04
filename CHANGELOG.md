@@ -238,6 +238,9 @@
   from control to control, with a ring around the one they're on, Space or
   Return presses it, and on the progress bar the arrows move ten seconds through
   the song. The sound menu opens under its button.
+- Added the keyboard to **Customize Controls**: Tab goes between the player's
+  two buttons and the controls under them, Space selects a button or puts a
+  control in the selected one, and Delete takes a control out of a button.
 - Added the keyboard to the menu bar menu, as it works in any menu: the up and
   down arrows go from row to row, the switch among them, Return or Space chooses
   the one lit, a letter goes to the next row starting with it, and VoiceOver
