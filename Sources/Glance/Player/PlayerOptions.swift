@@ -38,6 +38,10 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     static let secondary = Color(red: 158 / 255, green: 158 / 255, blue: 162 / 255)
     /// An option that's off: the gray of the iPhone's star and AirPods buttons, also solid.
     static let optionOff = Color(red: 130 / 255, green: 130 / 255, blue: 134 / 255)
+    /// The buttons at the ends of the row, on and off: gray on a dark background, and white on a
+    /// light one, where gray fades below 3 to 1. There, on and off differ by their symbols alone.
+    static func sideButton(onLight: Bool) -> Color { onLight ? .white : secondary }
+    static func sideButtonOff(onLight: Bool) -> Color { onLight ? .white : optionOff }
     /// The title and the artist, one line each with no space between.
     static let headerHeight: CGFloat = 34
     static let waveform = CGSize(width: 21, height: 22)

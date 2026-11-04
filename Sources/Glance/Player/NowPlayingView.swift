@@ -211,7 +211,7 @@ struct NowPlayingView: View {
                 ControlMark(place: .left, control: leftSlot, symbol: symbol(for: leftSlot), places: places)
             } else if nowPlaying.djPlaying {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
-                DJButton(color: buttonGray, talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
+                DJButton(color: sideGray, talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
                     .keyRing(.left)
                     .transition(.opacity)
             } else {
@@ -305,7 +305,7 @@ struct NowPlayingView: View {
             }
             .disabled(options.repeatMode == nil)
         case .output:
-            IslandButton(symbol: output.symbol, size: size, color: buttonGray, label: slot.title) { use(.output) }
+            IslandButton(symbol: output.symbol, size: size, color: sideGray, label: slot.title) { use(.output) }
         case .lyrics:
             IslandButton(
                 symbol: symbol(for: .lyrics), size: size,
@@ -418,28 +418,32 @@ struct NowPlayingView: View {
         }
     }
 
-    /// Shuffle and repeat: the artist's gray, on or off (off, they're struck through); faint when the
-    /// app doesn't offer them.
+    /// Shuffle and repeat: the side buttons' color, on or off (off, they're struck through); faint
+    /// when the app doesn't offer them.
     private func switchColor(_ on: Bool?) -> Color {
-        on == nil ? buttonGray.opacity(0.4) : buttonGray
+        on == nil ? sideGray.opacity(0.4) : sideGray
     }
 
-    /// The artist's gray when on, as on the iPhone, so only play and the skip buttons are white;
-    /// a step dimmer when off (the iPhone's resting star), faint when the app doesn't offer it.
+    /// The side buttons' color when on, so only play and the skip buttons are white on a dark
+    /// background; a step dimmer when off, faint when the app doesn't offer it.
     private func optionColor(_ on: Bool?) -> Color {
         switch on {
-        case true?: buttonGray
-        case false?: colorScheme == .light || onLight ? Color(white: 0.78) : PlayerLayout.optionOff
-        case nil: buttonGray.opacity(0.4)
+        case true?: sideGray
+        case false?: PlayerLayout.sideButtonOff(onLight: onLightBackground)
+        case nil: sideGray.opacity(0.4)
         }
     }
 
     /// In light mode the glass at the bottom of the notch shows light windows through it, and a light
-    /// cover's colors are light too. The artist's gray would vanish into either, so the times and
-    /// the side buttons are lighter there.
+    /// cover's colors are light too.
+    private var onLightBackground: Bool { colorScheme == .light || onLight }
+
+    /// The artist's gray would vanish into a light background, so the times are lighter there.
     private var buttonGray: Color {
-        colorScheme == .light || onLight ? Color(white: 0.88) : PlayerLayout.secondary
+        onLightBackground ? Color(white: 0.88) : PlayerLayout.secondary
     }
+
+    private var sideGray: Color { PlayerLayout.sideButton(onLight: onLightBackground) }
 
     private static func time(_ seconds: Double) -> String {
         let total = Int(max(seconds, 0).rounded())

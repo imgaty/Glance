@@ -32,6 +32,22 @@ struct ContrastTests {
         #expect(contrast(blue.readableOnBlack()) < 5)
     }
 
+    @Test("The side buttons keep 3 to 1 on the lightest backgrounds measured behind them")
+    func sideButtons() {
+        func contrast(_ color: Color, onGray gray: Double) -> Double {
+            func luminance(_ value: Double) -> Double { value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4) }
+            let rgb = NSColor(color).usingColorSpace(.sRGB)!
+            let front =
+                0.2126 * luminance(rgb.redComponent) + 0.7152 * luminance(rgb.greenComponent) + 0.0722 * luminance(rgb.blueComponent)
+            return (max(front, luminance(gray)) + 0.05) / (min(front, luminance(gray)) + 0.05)
+        }
+        // Behind the buttons: a white cover's colors, and Clear glass over a white window.
+        for gray in [136.0, 139.0, 145.0] {
+            #expect(contrast(PlayerLayout.sideButton(onLight: true), onGray: gray / 255) >= 3)
+            #expect(contrast(PlayerLayout.sideButtonOff(onLight: true), onGray: gray / 255) >= 3)
+        }
+    }
+
     @Test("A color that already reads on black is left as it is")
     func light() {
         let yellow = Color(.sRGB, red: 1, green: 0.85, blue: 0.2)
