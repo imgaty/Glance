@@ -454,7 +454,9 @@ letter goes to the next row starting with it, and **Escape** closes it.
 
 ## Settings
 
-Settings opens on the page you last used.
+Settings opens on the page you last used. While it's open, the **View** menu has
+**Back** (⌘[), **Forward** (⌘]), **Search** (⌘F) and every page, and
+**Help > Glance Help** opens this manual.
 
 ### General
 

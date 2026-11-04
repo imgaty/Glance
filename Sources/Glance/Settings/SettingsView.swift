@@ -27,6 +27,7 @@ struct SettingsView: View {
     /// Read only by the notches pictured on pages, which hold still on pages not shown; nothing else
     /// has to change when the page does.
     @State private var shownPage = ShownPage(page: SettingsPane.last)
+    @FocusState private var searching: Bool
 
     private var panes: [SettingsPane] { SettingsPane.matching(query) }
 
@@ -46,6 +47,7 @@ struct SettingsView: View {
                 if panes.isEmpty { ContentUnavailableView.search(text: query) }
             }
             .searchable(text: $query, placement: .sidebar, prompt: "Search")
+            .searchFocused($searching)
             .toolbar(removing: .sidebarToggle)
             // Last, or the toolbar change above loses it.
             .navigationSplitViewColumnWidth(
@@ -125,6 +127,20 @@ struct SettingsView: View {
             place = history.count - 1
         }
         .onChange(of: query) { if let first = panes.first, !panes.contains(pane ?? .general) { pane = first } }
+        // What the View menu asks for goes through here, and what it can do follows the pages visited.
+        .onAppear {
+            let commands = SettingsCommands.shared
+            commands.go = { go(by: $0) }
+            commands.show = { pane = $0 }
+            commands.search = { searching = true }
+        }
+        .onDisappear { SettingsCommands.shared.reset() }
+        .onChange(of: "\(place) \(history.count) \(pane?.rawValue ?? "")", initial: true) {
+            let commands = SettingsCommands.shared
+            commands.canGoBack = place > 0
+            commands.canGoForward = place < history.count - 1
+            commands.shown = pane
+        }
     }
 
     private func go(by step: Int) {
@@ -133,6 +149,28 @@ struct SettingsView: View {
         place = target
         travelling = true
         pane = history[target]
+    }
+}
+
+/// What the View menu asks of the Settings window, which keeps the pages visited. With the window
+/// closed, there's nothing to ask.
+@MainActor
+final class SettingsCommands {
+    static let shared = SettingsCommands()
+    var go: ((Int) -> Void)?
+    var show: ((SettingsPane) -> Void)?
+    var search: (() -> Void)?
+    var canGoBack = false
+    var canGoForward = false
+    var shown: SettingsPane?
+
+    func reset() {
+        go = nil
+        show = nil
+        search = nil
+        canGoBack = false
+        canGoForward = false
+        shown = nil
     }
 }
 

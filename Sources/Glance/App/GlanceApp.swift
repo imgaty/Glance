@@ -88,6 +88,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ]
     }
 
+    @objc private func goBack() { SettingsCommands.shared.go?(-1) }
+    @objc private func goForward() { SettingsCommands.shared.go?(1) }
+    @objc private func searchSettings() { SettingsCommands.shared.search?() }
+    @objc private func showPane(_ item: NSMenuItem) {
+        guard let pane = (item.representedObject as? String).flatMap(SettingsPane.init) else { return }
+        SettingsCommands.shared.show?(pane)
+    }
+    @objc private func openHelp() {
+        if let manual = URL(string: "https://github.com/imgaty/Glance/blob/main/docs/USER-MANUAL.md") { NSWorkspace.shared.open(manual) }
+    }
+
     @objc private func openSettings() {
         settings.show()
     }
@@ -106,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// The menu bar while Settings or the welcome tour is open: Apple's standard menus, in their
     /// order, with what those windows can use of them.
-    private func makeMainMenu() -> NSMenu {
+    func makeMainMenu() -> NSMenu {
         let app = NSMenu()
         app.addItem(withTitle: "About Glance", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
@@ -146,13 +157,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
         NSApp.windowsMenu = window
 
+        // Every command in the Settings window's toolbar, and every page, from the keyboard too.
+        let view = NSMenu(title: "View")
+        view.addItem(withTitle: "Back", action: #selector(goBack), keyEquivalent: "[").target = self
+        view.addItem(withTitle: "Forward", action: #selector(goForward), keyEquivalent: "]").target = self
+        view.addItem(.separator())
+        view.addItem(withTitle: "Search", action: #selector(searchSettings), keyEquivalent: "f").target = self
+        view.addItem(.separator())
+        for pane in SettingsPane.allCases {
+            let item = view.addItem(withTitle: pane.title, action: #selector(showPane), keyEquivalent: "")
+            item.target = self
+            item.representedObject = pane.rawValue
+        }
+
+        let help = NSMenu(title: "Help")
+        help.addItem(withTitle: "Glance Help", action: #selector(openHelp), keyEquivalent: "?").target = self
+        NSApp.helpMenu = help
+
         let main = NSMenu()
-        for menu in [app, file, edit, window] {
+        for menu in [app, file, edit, view, window, help] {
             let item = NSMenuItem()
             item.submenu = menu
             main.addItem(item)
         }
         return main
+    }
+}
+
+/// The View menu works on the Settings window, while it's open.
+extension AppDelegate: NSMenuItemValidation {
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        let commands = SettingsCommands.shared
+        switch item.action {
+        case #selector(goBack): return commands.canGoBack
+        case #selector(goForward): return commands.canGoForward
+        case #selector(searchSettings): return commands.search != nil
+        case #selector(showPane):
+            item.state = commands.shown?.rawValue == item.representedObject as? String ? .on : .off
+            return commands.show != nil
+        default: return true
+        }
     }
 }
 

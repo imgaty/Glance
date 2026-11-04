@@ -198,6 +198,8 @@
 ### Settings
 
 - Changed Settings to open on the page you last used.
+- Added a **View** menu while Settings is open, with **Back**, **Forward**,
+  **Search** and every page, and a **Help** menu with the user manual.
 - Added a picture of the notch to the Live Activities page, showing what's
   turned on there, made up, one after another. Turning a switch on shows it at
   once.

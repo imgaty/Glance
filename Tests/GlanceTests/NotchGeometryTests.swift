@@ -336,6 +336,18 @@ struct SettingsPaneTests {
         #expect(SettingsPane.matching(query) == [pane])
     }
 
+    @Test("The View menu has Back, Forward, Search and every page, and comes before Window and Help")
+    @MainActor
+    func viewMenu() throws {
+        _ = NSApplication.shared
+        let main = AppDelegate().makeMainMenu()
+        #expect(main.items.compactMap { $0.submenu?.title }.suffix(3) == ["View", "Window", "Help"])
+        let view = try #require(main.items.first { $0.submenu?.title == "View" }?.submenu)
+        let items = view.items.filter { !$0.isSeparatorItem }
+        #expect(items.map(\.title) == ["Back", "Forward", "Search"] + SettingsPane.allCases.map(\.title))
+        #expect(items.prefix(3).map(\.keyEquivalent) == ["[", "]", "f"])
+    }
+
     @Test("Search finds nothing for what Glance doesn't have, and every page with nothing typed")
     func searchEdges() {
         #expect(SettingsPane.matching("mouse").isEmpty)
