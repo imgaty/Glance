@@ -243,6 +243,7 @@ struct ExpandedAirPlayView: View {
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
             .onHover { hovering = $0 }
             .notchControl()
+            .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: "Stop AirPlay") { AirPlayWatch.shared.stop() }
             .padding(.horizontal, PlayerLayout.padding)
             .modifier(PageFade(hidden: !revealed))
         }

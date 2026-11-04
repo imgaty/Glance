@@ -250,7 +250,7 @@ struct ExpandedTimerView: View {
         let stopwatch = { if case .stopwatch = shown { return true } else { return false } }()
         return HStack(spacing: h * TimerLayout.buttonGap) {
             IslandCircleButton(
-                height: h, tint: TimerLayout.ink, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume"),
+                control: .activityFirst, height: h, tint: TimerLayout.ink, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume"),
                 fill: stopwatch ? TimerLayout.stopwatchPauseFill : nil
             ) {
                 stopwatch ? clock.startStopStopwatch() : clock.toggleTimer()
@@ -264,7 +264,7 @@ struct ExpandedTimerView: View {
                 }
             }
             IslandCircleButton(
-                height: h, tint: .white, label: stopwatch ? (running ? "Restart" : "Reset") : "Cancel",
+                control: .activitySecond, height: h, tint: .white, label: stopwatch ? (running ? "Restart" : "Reset") : "Cancel",
                 fill: stopwatch ? TimerLayout.stopwatchResetFill : nil
             ) {
                 stopwatch ? clock.resetStopwatch() : clock.cancelTimer()
@@ -514,6 +514,7 @@ struct IslandCircle<Glyph: View>: View {
 
 /// An `IslandCircle` that's a button, in the open notch.
 struct IslandCircleButton<Glyph: View>: View {
+    let control: PlayerControl
     let height: CGFloat
     let tint: Color
     let label: String
@@ -530,6 +531,7 @@ struct IslandCircleButton<Glyph: View>: View {
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
         .onHover { hovering = $0 }
         .notchControl()
+        .keyControl(control, outset: CGSize(width: 3, height: 3), spoken: label, action: action)
         .accessibilityLabel(label)
     }
 }

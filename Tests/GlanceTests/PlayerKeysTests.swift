@@ -116,4 +116,41 @@ struct PlayerKeysTests {
         #expect(keys.focus == nil)
         #expect(keys.typed(key: kVK_Space, shift: false, hasMedia: true) == .playPause)
     }
+
+    @Test("On an activity's own view, Tab goes through its buttons and the song's keys do nothing")
+    func activityButtons() {
+        let keys = keys()
+        let buttons: [PlayerControl] = [.activityFirst, .activitySecond]
+        keys.focus(on: .activityFirst)
+        #expect(keys.typed(key: kVK_Tab, shift: false, hasMedia: true, activity: buttons) == .moved)
+        #expect(keys.focus == .activitySecond)
+        #expect(keys.typed(key: kVK_Tab, shift: false, hasMedia: true, activity: buttons) == .moved)
+        #expect(keys.focus == .activityFirst)
+        #expect(keys.typed(key: kVK_Space, shift: false, hasMedia: true, activity: buttons) == .pressed)
+        #expect(keys.typed(key: kVK_LeftArrow, shift: false, hasMedia: true, activity: buttons) == .none)
+        #expect(keys.typed(key: kVK_RightArrow, shift: false, hasMedia: true, activity: buttons) == .none)
+        // What the player can use changing doesn't take the ring off an activity's button.
+        keys.usable = [.playPause]
+        #expect(keys.focus == .activityFirst)
+        keys.clear()
+        #expect(keys.typed(key: kVK_Space, shift: false, hasMedia: true, activity: buttons) == .none)
+    }
+
+    @Test("Up and down go to an activity, through the lyrics' lines, or turn the sound up and down")
+    func upAndDown() {
+        let keys = keys([.lyrics, .line, .position, .playPause, .right])
+        #expect(keys.typed(key: kVK_DownArrow, shift: false, hasMedia: true) == .activityAfter)
+        #expect(keys.typed(key: kVK_UpArrow, shift: false, hasMedia: true) == .activityBefore)
+        tab(keys, times: 2)
+        #expect(keys.focus == .line)
+        #expect(keys.typed(key: kVK_DownArrow, shift: false, hasMedia: true) == .moved)
+        #expect(keys.lineSteps == 1)
+        #expect(keys.typed(key: kVK_UpArrow, shift: false, hasMedia: true) == .moved)
+        #expect(keys.lineSteps == 0)
+        keys.soundControl = .right
+        tab(keys, times: 3)
+        #expect(keys.focus == .right)
+        #expect(keys.typed(key: kVK_UpArrow, shift: false, hasMedia: true) == .louder)
+        #expect(keys.typed(key: kVK_DownArrow, shift: false, hasMedia: true) == .quieter)
+    }
 }

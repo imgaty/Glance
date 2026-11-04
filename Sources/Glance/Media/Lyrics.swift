@@ -519,6 +519,9 @@ private struct TimedLyricsView: View {
     @State private var heights: [Int: CGFloat] = [:]
     /// With Reduce Motion on, the lines don't glide up: the next ones fade in where they rest.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerKeys) private var keys
+    /// The line the keyboard moved to, until it's reached or the ring goes elsewhere.
+    @State private var chosen: Int?
 
     /// The lines, then the credits a moment after the last one has been sung.
     private var entries: [TimedLyrics.Entry] {
@@ -555,6 +558,49 @@ private struct TimedLyricsView: View {
         }
         // Nothing follows the credits, so they're never faded.
         .mask { LyricsStyle.edges(fadingBottom: !showsCredits) }
+        .onChange(of: isVisible, initial: true) { keys?.hasLines = isVisible }
+        .onDisappear { keys?.hasLines = false }
+        .onChange(of: keys?.lineSteps) { old, new in
+            if let old, let new { choose(by: new - old) }
+        }
+        .onChange(of: keys?.presses) {
+            guard keys?.focus == .line, let line = ringed(current: nowCurrent) else { return }
+            nowPlaying.seek(to: entries[line].start)
+            chosen = nil
+        }
+        .onChange(of: keys?.focus) { if keys?.focus != .line { chosen = nil } }
+    }
+
+    private var nowCurrent: Int { current(at: nowPlaying.position(at: .now) + LyricsStyle.lead) }
+
+    private func isLine(_ index: Int) -> Bool {
+        if case .line = entries[index].item { return true }
+        return false
+    }
+
+    /// The line the ring is on: the one moved to, or the one being sung or next to be.
+    private func ringed(current: Int) -> Int? {
+        let start = max(chosen ?? focus(current), focus(current))
+        return (start..<entries.count).first(where: isLine)
+    }
+
+    /// The arrows, from line to line of those that can be seen, as those are the ones to click.
+    private func choose(by step: Int) {
+        let current = nowCurrent, focus = focus(current)
+        guard var index = ringed(current: current), step != 0 else { return }
+        let way = step > 0 ? 1 : -1
+        for _ in 0..<abs(step) {
+            guard let next = stride(from: index + way, to: way > 0 ? entries.count : focus - 1, by: way).first(where: isLine),
+                offset(of: next, focus: focus, current: current) + size(next, current: current) <= height
+            else { break }
+            index = next
+        }
+        chosen = index
+        if case .line(let text) = entries[index].item {
+            NSAccessibility.post(
+                element: NSApp as Any, notification: .announcementRequested,
+                userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.high.rawValue])
+        }
     }
 
     private var showsCredits: Bool {
@@ -581,6 +627,18 @@ private struct TimedLyricsView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { nowPlaying.seek(to: entry.start) }
                 .notchControl(enabled: isVisible)
+                .overlay {
+                    if keys?.focus == .line, ringed(current: current) == index {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(.white, lineWidth: 2)
+                            .padding(-5)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Goes to this line")
+                .accessibilityAction { nowPlaying.seek(to: entry.start) }
         case .credits:
             CreditsView(credits: credits)
         case .interlude where notes:

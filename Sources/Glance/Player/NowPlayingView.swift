@@ -108,8 +108,9 @@ struct NowPlayingView: View {
         .onChange(of: isVisible) { if isVisible { nowPlaying.refreshOptions() } }
         .onChange(of: nowPlaying.title) { if isVisible { nowPlaying.refreshOptions() } }
         .onChange(of: usableControls, initial: true) { keys?.usable = usableControls }
+        .onChange(of: soundControl, initial: true) { keys?.soundControl = soundControl }
         .onChange(of: keys?.presses) { if let control = keys?.focus { press(control, fromKeys: true) } }
-        .onChange(of: keys?.focus) { if let control = keys?.focus { announce(control) } }
+        .onChange(of: keys?.focus) { if let control = keys?.focus, !control.onActivity { announce(control) } }
         .task(id: isVisible) {
             // Keeps the clock, and the lyrics with it, exact while the player shows, and the star
             // true to Music.
@@ -328,6 +329,12 @@ struct NowPlayingView: View {
 
     // MARK: The keyboard
 
+    /// Which of the sides is Sound Output, for the arrows to turn the sound up and down there.
+    private var soundControl: PlayerControl? {
+        if leftSlot == .output, !nowPlaying.djPlaying { return .left }
+        return rightSlot == .output ? .right : nil
+    }
+
     /// The controls that can be used now, in the order Tab goes through them.
     private var usableControls: [PlayerControl] {
         guard isVisible, places == nil else { return [] }
@@ -345,6 +352,7 @@ struct NowPlayingView: View {
         var controls: [PlayerControl] = []
         if media { controls.append(.cover) }
         if lyricsControl.available { controls.append(.lyrics) }
+        if keys?.hasLines == true { controls.append(.line) }
         if media, nowPlaying.duration > 0 { controls.append(.position) }
         if nowPlaying.djPlaying || usable(leftSlot) { controls.append(.left) }
         if media { controls += [.previous, .playPause, .next] }
@@ -357,7 +365,8 @@ struct NowPlayingView: View {
         switch control {
         case .cover: nowPlaying.openSource()
         case .lyrics: lyricsControl.toggle()
-        case .position: break
+        // The lines and an activity's buttons see to their own.
+        case .line, .position, .activityFirst, .activitySecond: break
         case .left:
             if nowPlaying.djPlaying { nowPlaying.openApp() } else { use(leftSlot, fromKeys: fromKeys) }
         case .previous:
@@ -409,12 +418,14 @@ struct NowPlayingView: View {
         return switch control {
         case .cover: "Show Where It's Playing"
         case .lyrics: lyricsControl.shown ? "Hide Lyrics" : "Show Lyrics"
+        case .line: "Lyrics"
         case .position: "Track Position"
         case .left: nowPlaying.djPlaying ? "DJ" : named(leftSlot)
         case .previous: "Previous"
         case .playPause: nowPlaying.isPlaying ? "Pause" : "Play"
         case .next: "Next"
         case .right: named(rightSlot)
+        case .activityFirst, .activitySecond: ""
         }
     }
 

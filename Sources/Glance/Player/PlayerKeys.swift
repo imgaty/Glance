@@ -10,9 +10,13 @@ import Carbon.HIToolbox
 import SwiftUI
 
 /// The open player's controls, in the order Tab goes through them: as they read, the cover and the
-/// waveform, then the progress bar, then the row of buttons.
+/// waveform, then the lyrics' lines, then the progress bar, then the row of buttons. An activity's
+/// own view has its buttons instead.
 enum PlayerControl: Hashable {
-    case cover, lyrics, position, left, previous, playPause, next, right
+    case cover, lyrics, line, position, left, previous, playPause, next, right
+    case activityFirst, activitySecond
+
+    var onActivity: Bool { self == .activityFirst || self == .activitySecond }
 }
 
 /// Where the keyboard is in the open player. The notch takes every key typed while it has the
@@ -24,6 +28,10 @@ final class PlayerKeys {
     /// What a key does on the player.
     enum Outcome: Equatable {
         case moved, pressed, playPause, previous, next, seekBack, seekAhead
+        /// Up or down, with the ring on Sound Output.
+        case louder, quieter
+        /// Up or down otherwise: from the player to a live activity's own view, and back.
+        case activityBefore, activityAfter
         /// The key has no use here: the alert sound.
         case none
     }
@@ -35,13 +43,19 @@ final class PlayerKeys {
     /// a control that can't be used any more.
     var usable: [PlayerControl] = [] {
         didSet {
-            if let focus, !usable.contains(focus) { self.focus = nil }
+            if let focus, !focus.onActivity, !usable.contains(focus) { self.focus = nil }
         }
     }
+    /// The player's control that's Sound Output, if one is: up and down turn the sound up and down.
+    var soundControl: PlayerControl?
+    /// The lyrics' lines are showing, with lines to go to.
+    var hasLines = false
     /// The control with the ring around it. With none, the keys work the song.
     private(set) var focus: PlayerControl?
     /// Counts the presses: each new value presses the control with the ring.
     private(set) var presses = 0
+    /// Counts the lines moved through, down or back up, with the ring on the lyrics' lines.
+    private(set) var lineSteps = 0
     /// Where the control with the ring is, in the notch's own points, for what opens from it.
     var focusFrame: CGRect?
     /// Where something opening from a control goes on the screen, as the notch's window knows.
@@ -57,12 +71,12 @@ final class PlayerKeys {
         return controls[(index + (backward ? controls.count - 1 : 1)) % controls.count]
     }
 
-    /// A key typed on the player, by its key code. Moves the ring if it's Tab; what else it does is
-    /// for the notch to carry out.
-    func typed(key: Int, shift: Bool, hasMedia: Bool) -> Outcome {
+    /// A key typed on the player, or on an activity's own view with the buttons given. Moves the ring
+    /// if it's Tab; what else it does is for the notch to carry out.
+    func typed(key: Int, shift: Bool, hasMedia: Bool, activity: [PlayerControl]? = nil) -> Outcome {
         switch key {
         case kVK_Tab:
-            guard let next = Self.step(usable, from: focus, backward: shift) else { return .none }
+            guard let next = Self.step(activity ?? usable, from: focus, backward: shift) else { return .none }
             focus = next
             return .moved
         case kVK_Space, kVK_Return, kVK_ANSI_KeypadEnter:
@@ -71,16 +85,29 @@ final class PlayerKeys {
                 presses += 1
                 return .pressed
             }
-            return key == kVK_Space && hasMedia ? .playPause : .none
+            return key == kVK_Space && hasMedia && activity == nil ? .playPause : .none
         case kVK_LeftArrow:
-            guard hasMedia else { return .none }
+            guard hasMedia, activity == nil else { return .none }
             return focus == .position ? .seekBack : .previous
         case kVK_RightArrow:
-            guard hasMedia else { return .none }
+            guard hasMedia, activity == nil else { return .none }
             return focus == .position ? .seekAhead : .next
+        case kVK_UpArrow, kVK_DownArrow:
+            let down = key == kVK_DownArrow
+            if focus == .line {
+                lineSteps += down ? 1 : -1
+                return .moved
+            }
+            if let focus, focus == soundControl { return down ? .quieter : .louder }
+            return down ? .activityAfter : .activityBefore
         default:
             return .none
         }
+    }
+
+    /// The ring goes to a control: an activity's first button, as its view opens from the keyboard.
+    func focus(on control: PlayerControl) {
+        focus = control
     }
 
     /// The ring goes: a click, or the notch letting go of the keyboard.
@@ -98,6 +125,32 @@ extension View {
     /// control as given. White, the one color that reads on all the notch's backgrounds.
     func keyRing(_ control: PlayerControl, in shape: some InsettableShape = Circle(), outset: CGSize = .zero) -> some View {
         modifier(KeyRing(control: control, shape: shape, outset: outset))
+    }
+
+    /// One of an activity's own buttons on the keyboard: the ring around it, what Space or Return
+    /// does, and its name, said to VoiceOver as the ring reaches it.
+    func keyControl(
+        _ control: PlayerControl, in shape: some InsettableShape = Circle(), outset: CGSize = .zero, spoken: String, action: @escaping () -> Void
+    ) -> some View {
+        modifier(KeyControl(control: control, spoken: spoken, action: action)).keyRing(control, in: shape, outset: outset)
+    }
+}
+
+private struct KeyControl: ViewModifier {
+    let control: PlayerControl
+    let spoken: String
+    let action: () -> Void
+    @Environment(\.playerKeys) private var keys
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: keys?.presses) { if keys?.focus == control { action() } }
+            .onChange(of: keys?.focus, initial: true) {
+                guard keys?.focus == control else { return }
+                NSAccessibility.post(
+                    element: NSApp as Any, notification: .announcementRequested,
+                    userInfo: [.announcement: spoken, .priority: NSAccessibilityPriorityLevel.high.rawValue])
+            }
     }
 }
 

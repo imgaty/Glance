@@ -1161,6 +1161,7 @@ final class NotchController {
     // MARK: The keyboard
 
     private var lookWatch: AnyCancellable?
+    private var soundTurned = Date.distantPast
 
     /// The notch takes the keyboard, and every key typed comes to it, ahead of Glance's menus, so
     /// ⌘Q or ⌘H can't quit or hide it from there.
@@ -1244,7 +1245,8 @@ final class NotchController {
     /// A key typed while the notch has the keyboard: Escape closes it. On the player, Tab goes from
     /// control to control, Space or Return presses the one it's on, and otherwise Space plays or
     /// pauses and the arrows go to the song before or after, or through the song on the progress
-    /// bar. On the tray, the arrows choose an item (with Shift, a run of them), Space shows the
+    /// bar; up and down go to a live activity's own view, or from line to line of the lyrics, or turn
+    /// the sound up and down on Sound Output. On the tray, the arrows choose an item (with Shift, a run of them), Space shows the
     /// chosen ones in Quick Look, Return pastes them, ⌘C copies them, ⌘A chooses everything, ⌘Delete removes
     /// them, and ⌘Z brings back what was last removed. Returns whether the notch had a use for the
     /// key.
@@ -1295,11 +1297,53 @@ final class NotchController {
         return true
     }
 
+    /// The buttons of the activity's own view that's open.
+    private var activityControls: [PlayerControl]? {
+        switch model.expanded {
+        case .timer, .stopwatch: [.activityFirst, .activitySecond]
+        case .airdrop, .airplay: [.activityFirst]
+        case .music, nil: nil
+        }
+    }
+
+    /// Up or down: from the player to each live activity's own view, the ring on its first button,
+    /// and on back to the player.
+    private func showActivity(by step: Int) -> Bool {
+        let views: [NotchModel.Activity?] = [nil] + model.activities.filter { $0 != .music }
+        guard views.count > 1, let place = views.firstIndex(of: model.expanded) else { return false }
+        let next = views[(place + step + views.count) % views.count]
+        model.keys.clear()
+        withAnimation(NotchMotion.expand) { model.expanded = next }
+        if next != nil { model.keys.focus(on: .activityFirst) }
+        return true
+    }
+
+    /// Up or down on Sound Output: the sound of the app playing, by a tenth, said to VoiceOver. Music's
+    /// and Spotify's own volume is read afresh first, unless it's only just been turned.
+    private func turnSound(by step: Double) -> Bool {
+        let volume = AppVolume.shared
+        guard volume.canChange else { return false }
+        let turning = Date.now.timeIntervalSince(soundTurned) < 2
+        soundTurned = .now
+        Task {
+            if !turning { await volume.refresh() }
+            volume.set(volume.level + step)
+            NSAccessibility.post(
+                element: NSApp as Any, notification: .announcementRequested,
+                userInfo: [.announcement: "Volume \(Int((volume.level * 100).rounded())) percent", .priority: NSAccessibilityPriorityLevel.high.rawValue])
+        }
+        return true
+    }
+
     /// A key on the player: the ring moves and presses by itself, and the rest is the song's.
     private func typedOnPlayer(key: Int, shift: Bool) -> Bool {
         let step = PlayerKeys.seekStep
-        switch model.keys.typed(key: key, shift: shift, hasMedia: nowPlaying.hasMedia) {
+        switch model.keys.typed(key: key, shift: shift, hasMedia: nowPlaying.hasMedia, activity: activityControls) {
         case .moved, .pressed: break
+        case .louder: return turnSound(by: 0.1)
+        case .quieter: return turnSound(by: -0.1)
+        case .activityBefore: return showActivity(by: -1)
+        case .activityAfter: return showActivity(by: 1)
         case .playPause: nowPlaying.togglePlayPause()
         case .previous: nowPlaying.previous()
         case .next: nowPlaying.next()

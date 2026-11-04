@@ -99,9 +99,10 @@ keyboard the same way:
 | Key | Operation |
 | --- | --- |
 | Escape or ⌘W | Closes the notch |
-| Tab or Shift-Tab | On the player, goes from control to control, with a ring around the one it's on |
+| Tab or Shift-Tab | On the player, goes from control to control, with a ring around the one it's on, and through the lyrics while they show; on a live activity's own view, from button to button |
 | Space | Presses the control with the ring; otherwise plays or pauses; on the tray, shows the selected items in Quick Look |
 | Left or right arrow | Goes to the song before or after, or with the ring on the progress bar, ten seconds back or ahead; on the tray, selects the item before or after it, or with Shift, a run of them |
+| Up or down arrow | With a timer, the stopwatch, AirDrop or AirPlay showing, goes from the player to its own view, the ring on its first button, and back; with the ring on the lyrics, goes from line to line, and Space or Return plays from there; with the ring on `Sound Output`, turns the playing app's sound up or down |
 | Return | Presses the control with the ring; on the tray, pastes the selected items where you were typing (with `Accessibility` allowed) |
 | ⌘C | On the tray, copies the selected items |
 | ⌘A | On the tray, selects everything |

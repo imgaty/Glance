@@ -58,6 +58,12 @@
   it folds to rest before opening for the next, and the pointer on it folds it
   away at once, the notch opening once it has. With Reduce Motion on, the notch
   widens without bouncing and nothing blurs.
+- Added the keyboard to live activities, lyrics and the sound: with the notch
+  opened from its shortcut, the up and down arrows go from the player to a timer's,
+  the stopwatch's, AirDrop's or AirPlay's own view and back, where Tab and Space
+  work its buttons; Tab reaches the lyrics, the arrows go from line to line and
+  Space or Return plays from there; and on `Sound Output` the arrows turn the
+  playing app's sound up or down.
 - Changed everything else that moves to follow Reduce Motion: the notch's swell,
   press and swipes, the bubbles, the buttons and the cover settle without
   bouncing, the star glows without swelling, the skip arrows stay where they are,
