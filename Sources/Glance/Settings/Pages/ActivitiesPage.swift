@@ -33,12 +33,12 @@ struct ActivitiesPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.activities, "Shows what's going on beside the camera while the notch is closed, as the iPhone's Dynamic Island does.")
+                PageIntro(.activities, "Shows what's going on beside the camera while the notch is closed.")
             }
             Section {
                 Toggle(isOn: $liveActivity) {
                     Text("Cover and waveform")
-                    Text("Shows what's playing beside the camera while the notch is closed.")
+                    Text("Shows the cover on one side of the camera and a waveform on the other.")
                 }
                 Toggle(isOn: $trackPop) {
                     Text("Announce new audio")
