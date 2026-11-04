@@ -29,11 +29,12 @@ enum TimerLayout {
     /// with the middle, and as far from the end as the buttons are from theirs.
     static let timeLift: CGFloat = 0.022
     static let timeBearing: CGFloat = 0.057
+    /// Clock's orange, measured, for the timer and the stopwatch alike.
+    static let ink = Color(.sRGB, red: 0xFD / 255, green: 0x95 / 255, blue: 0)
     // The stopwatch opened.
     static let stopwatchPauseBar = CGSize(width: 0.171, height: 0.571)
     static let stopwatchPauseGap: CGFloat = 0.076
     static let stopwatchTracking: CGFloat = -0.018
-    static let stopwatchInk = Color(.sRGB, red: 0xFD / 255, green: 0x95 / 255, blue: 0)
     static let stopwatchPauseFill = Color(.sRGB, red: 0x40 / 255, green: 0x25 / 255, blue: 0x0C / 255)
     static let stopwatchResetFill = Color(.sRGB, red: 0x3B / 255, green: 0x3B / 255, blue: 0x3D / 255)
     /// How long a timer's name runs, once it's done, before it's cut short.
@@ -67,13 +68,13 @@ struct TimerRing: View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let left = state.total > 0 ? min(max(state.left(at: context.date) / state.total, 0), 1) : 0
             ZStack {
-                Circle().stroke(.orange.opacity(0.3), lineWidth: line)
+                Circle().stroke(TimerLayout.ink.opacity(0.3), lineWidth: line)
                 Circle()
                     .trim(from: 0, to: left)
-                    .stroke(.orange, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                    .stroke(TimerLayout.ink, style: StrokeStyle(lineWidth: line, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Capsule()
-                    .fill(.orange)
+                    .fill(TimerLayout.ink)
                     .frame(width: line, height: height * (TimerLayout.handTo - TimerLayout.handFrom))
                     .offset(y: -height * (TimerLayout.handFrom + TimerLayout.handTo) / 2)
                     .rotationEffect(.degrees(left * 360))
@@ -128,16 +129,16 @@ struct StopwatchMark: View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !watch.isRunning)) { context in
             let second = watch.elapsed(at: context.date).truncatingRemainder(dividingBy: 60)
             ZStack {
-                Circle().stroke(.orange, lineWidth: line).padding(line / 2)
+                Circle().stroke(TimerLayout.ink, lineWidth: line).padding(line / 2)
                 ForEach([0.0, 45], id: \.self) { degrees in
                     Capsule()
-                        .fill(.orange)
+                        .fill(TimerLayout.ink)
                         .frame(width: line, height: stem)
                         .offset(y: -(side + stem) / 2 + line / 2)
                         .rotationEffect(.degrees(degrees))
                 }
                 Capsule()
-                    .fill(.orange)
+                    .fill(TimerLayout.ink)
                     .frame(width: line, height: height * (TimerLayout.handTo - TimerLayout.handFrom))
                     .offset(y: -height * (TimerLayout.handFrom + TimerLayout.handTo) / 2)
                     .rotationEffect(.degrees(second / 60 * 360))
@@ -249,7 +250,7 @@ struct ExpandedTimerView: View {
         let stopwatch = { if case .stopwatch = shown { return true } else { return false } }()
         return HStack(spacing: h * TimerLayout.buttonGap) {
             IslandCircleButton(
-                height: h, tint: .orange, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume"),
+                height: h, tint: TimerLayout.ink, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume"),
                 fill: stopwatch ? TimerLayout.stopwatchPauseFill : nil
             ) {
                 stopwatch ? clock.startStopStopwatch() : clock.toggleTimer()
@@ -259,7 +260,7 @@ struct ExpandedTimerView: View {
                 } else {
                     Image(systemName: "play.fill")
                         .font(.system(size: h * 0.62, weight: .bold))
-                        .foregroundStyle(stopwatch ? TimerLayout.stopwatchInk : .orange)
+                        .foregroundStyle(TimerLayout.ink)
                 }
             }
             IslandCircleButton(
@@ -315,7 +316,7 @@ struct ExpandedTimerView: View {
                     .modifier(PageFade(hidden: !revealed))
             }
         }
-        .foregroundStyle(Self.isStopwatch(shown) ? TimerLayout.stopwatchInk : .orange)
+        .foregroundStyle(TimerLayout.ink)
         .fixedSize()
         .offset(y: -h * TimerLayout.timeLift)
     }
@@ -407,7 +408,7 @@ struct TimerDoneView: View {
         ZStack {
             Text(name)
                 .font(NotchType.title)
-                .foregroundStyle(.orange)
+                .foregroundStyle(TimerLayout.ink)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: max(wing - nameEdge - gap, 0), alignment: .leading)
@@ -415,10 +416,10 @@ struct TimerDoneView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityHidden(true)
             HStack(spacing: h * TimerLayout.buttonGap) {
-                IslandCircle(height: h, tint: .orange, highlighted: hovered == .again) {
+                IslandCircle(height: h, tint: TimerLayout.ink, highlighted: hovered == .again) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: h * 0.58, weight: .semibold))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(TimerLayout.ink)
                 }
                 .reportsFrame(.again)
                 .spokenButton("Repeat") { ClockActivity.shared.repeatTimer() }
@@ -576,7 +577,7 @@ private struct PauseGlyph: View {
         HStack(spacing: height * (stopwatch ? TimerLayout.stopwatchPauseGap : TimerLayout.pauseGap)) {
             ForEach(0..<2, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: height * 0.05, style: .continuous)
-                    .fill(stopwatch ? TimerLayout.stopwatchInk : .orange)
+                    .fill(TimerLayout.ink)
                     .frame(width: height * bar.width, height: height * bar.height)
             }
         }

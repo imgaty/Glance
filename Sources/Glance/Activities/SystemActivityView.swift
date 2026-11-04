@@ -142,7 +142,7 @@ struct SystemActivityView: View {
                                 StopwatchReading(watch: watch, size: size).padding(.trailing, size * 0.09)
                             }
                         }
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(TimerLayout.ink)
                         .fixedSize()
                         // In words, rather than the pause symbol's name and the digits.
                         .accessibilityElement(children: .ignore)

@@ -263,6 +263,7 @@
 - Changed the question **Clear…** asks to say that files stay where they are.
 - Changed batteries to one green, one red and one yellow, wherever a battery
   shows.
+- Changed the timer's orange to the stopwatch's, so both show in one orange.
 - Added the keyboard to **Customize Controls**: Tab goes between the player's
   two buttons and the controls under them, Space selects a button or puts a
   control in the selected one, and Delete takes a control out of a button.
