@@ -16,7 +16,6 @@ struct OpeningPage: View {
     @AppStorage(Preferences.swipeToOpen) private var swipeToOpen = true
     @AppStorage(Preferences.swipeToSkip) private var swipeToSkip = true
     @AppStorage(Preferences.swipeToSwitch) private var swipeToSwitch = true
-    @AppStorage(Preferences.swipeToSwitchReversed) private var switchReversed = false
     @AppStorage(Preferences.tray) private var trayOn = true
 
     var body: some View {
@@ -45,12 +44,8 @@ struct OpeningPage: View {
                 }
                 if trayOn {
                     Toggle(isOn: $swipeToSwitch) {
-                        Text("Slide to the next tool")
+                        Text("Swipe between tools")
                         Text("Swipe left or right with three fingers on the open notch, or scroll holding Shift.")
-                    }
-                    if swipeToSwitch {
-                        // Stored the other way around, as it was when it turned the direction around.
-                        Toggle("Natural scrolling", isOn: Binding(get: { !switchReversed }, set: { switchReversed = !$0 }))
                     }
                 }
             }

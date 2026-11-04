@@ -536,8 +536,7 @@ on, it stays on what's playing.
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
 | `Open and close` | Two-finger swipes down and up, and dragging down and up on the display |
 | `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
-| `Slide to the next tool` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display |
-| `Natural scrolling` | The tools follow your fingers; off, swiping and scrolling go the other way |
+| `Swipe between tools` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display. Scrolling goes the way your Mac scrolls |
 | `Open the player` | The keyboard shortcut, ⌥⇧1 at first; click it and type another, or Control-click it to restore ⌥⇧1 |
 | `Open the tray` | The tray's shortcut, ⌥⇧2 at first, changed the same way |
 

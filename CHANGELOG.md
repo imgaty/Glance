@@ -212,9 +212,9 @@
   in the picture of the notch. With nothing playing, the pictures play a song of
   their own.
 - Changed the Music page's name to Player.
-- Changed `Switch to the tray` to `Slide to the next tool`, and `Reverse
-  direction` to `Natural scrolling`, which is on when the tools follow your
-  fingers.
+- Changed `Switch to the tray` to `Swipe between tools`.
+- Removed `Reverse direction`: Shift and a scroll now go the way your Mac
+  scrolls.
 - Changed `Background` to sit beside its name, as `Layout` does.
 - Changed the Displays page to show the display first, with `Hide in full screen`
   and, on an external display, `Show the notch` for that display alone.

@@ -1546,7 +1546,7 @@ final class NotchController {
         // A wheel, a notch at a time.
         if switches, event.phase.isEmpty {
             let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
-            if along != 0 { turn(to: (along < 0) != switchReversed ? .tray : .player) }
+            if along != 0 { turn(to: along < 0 ? .tray : .player) }
             return
         }
 
@@ -1705,7 +1705,7 @@ final class NotchController {
 
     /// Three fingers on the open notch: toward the page on the right, the tray, or back.
     func swipe(right: Bool) {
-        let page: NotchPage = right != switchReversed ? .tray : .player
+        let page: NotchPage = right ? .tray : .player
         guard page != model.page else { return }
         turn(to: page)
         Opening.tap()
@@ -1717,8 +1717,9 @@ final class NotchController {
     private func swipedPage(by delta: CGFloat) {
         guard !pullFired else { return }
         swipe += delta
-        // Scrolled toward the right: the tray, unless that's turned around in Settings.
-        let target: NotchPage = (swipe < 0) != switchReversed ? .tray : .player
+        // Scrolled toward the right, which macOS's scroll values already say the way this Mac
+        // scrolls: the tray.
+        let target: NotchPage = swipe < 0 ? .tray : .player
         if abs(swipe) > 56, target != model.page {
             pullFired = true
             turn(to: target)
@@ -1740,9 +1741,6 @@ final class NotchController {
         }
     }
 
-    /// Turned around in Settings: the other way reaches the tray.
-    private var switchReversed: Bool { UserDefaults.standard.bool(forKey: Preferences.swipeToSwitchReversed) }
-
     private func scrollTray(by delta: CGFloat) {
         model.slideTray(by: delta, reach: trayReach)
     }
@@ -1751,10 +1749,9 @@ final class NotchController {
     /// past its end toward the player turns back to it, as Shift turns the pages everywhere else;
     /// only after a moment there, so a wheel spun along the row stops at its end first.
     private func wheelTray(by delta: CGFloat, switches: Bool) {
-        // Toward the player: back along the row, or onward if the pages are turned around.
-        let towardPlayer = delta != 0 && (delta < 0) == switchReversed
-        let edge = switchReversed ? trayReach : 0
-        if switches, towardPlayer, abs(model.trayScroll - edge) < 0.5 {
+        // Toward the player: back along the row.
+        let towardPlayer = delta > 0
+        if switches, towardPlayer, abs(model.trayScroll) < 0.5 {
             if let since = trayEdgeSince, Date.now.timeIntervalSince(since) > Self.edgePause {
                 trayEdgeSince = nil
                 turn(to: .player)
@@ -1764,7 +1761,7 @@ final class NotchController {
             return
         }
         let target = min(max(model.trayScroll - delta, 0), trayReach)
-        trayEdgeSince = switches && towardPlayer && abs(target - edge) < 0.5 ? .now : nil
+        trayEdgeSince = switches && towardPlayer && abs(target) < 0.5 ? .now : nil
         guard target != model.trayScroll else { return }
         withAnimation(.smooth(duration: 0.2)) { model.trayScroll = target }
     }

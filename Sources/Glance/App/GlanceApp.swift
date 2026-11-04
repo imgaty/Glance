@@ -295,8 +295,6 @@ enum Preferences {
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"
-    /// Swiping and scrolling the other way reaches the tray.
-    static let swipeToSwitchReversed = "swipeToSwitchReversed"
 }
 
 /// The settings that are watched by their keys.

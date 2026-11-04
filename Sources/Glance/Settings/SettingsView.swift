@@ -285,7 +285,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .tray: "shelf files drop drag clipboard copy copies paste history screenshots recordings private passwords keep clear share quick look"
         case .activities:
             "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
-        case .opening: "hover click delay hold haptic feedback gestures swipe slide tool natural scrolling trackpad keyboard shortcut hotkey"
+        case .opening: "hover click delay hold haptic feedback gestures swipe slide tool tools scrolling trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }
     }
