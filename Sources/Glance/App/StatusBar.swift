@@ -261,7 +261,7 @@ final class StatusBarController: NSObject {
         alert.messageText = "Rebuild failed"
         alert.informativeText = message
         alert.addButton(withTitle: "OK")
-        if log != nil { alert.addButton(withTitle: "Open Log") }
+        if log != nil { alert.addButton(withTitle: "Open Log…") }
         NSApp.activate()
         if alert.runModal() == .alertSecondButtonReturn, let log {
             NSWorkspace.shared.open(log)

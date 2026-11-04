@@ -162,7 +162,7 @@ Motion on, the colors hold still.
 ### Controls
 
 Beside the playback controls are two buttons of your choice. Choose them in
-**Settings > Player > Controls > Customize Controls**. From the keyboard, Tab
+**Settings > Player > Controls > Customize Controls…**. From the keyboard, Tab
 goes between the two buttons and the controls under them, Space selects a button
 or puts a control in the selected one, and Delete takes a control out of a
 button.
@@ -342,7 +342,7 @@ it. Turn each of these off in **Settings > Live Activities**.
 ### Timer and stopwatch
 
 The timer and the stopwatch are Clock's: start them in the Clock app, in Control
-Center or with Siri, and the notch shows them. **Open Clock** in
+Center or with Siri, and the notch shows them. **Open Clock…** in
 **Settings > Live Activities** opens Clock.
 
 A timer counts down beside the camera as the iPhone's Timer does, a ring
@@ -521,7 +521,7 @@ on, it stays on what's playing.
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect, and sound going to AirPlay |
 | `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
-| `Clock` | **Open Clock** opens the Clock app, where timers and the stopwatch start |
+| `Clock` | **Open Clock…** opens the Clock app, where timers and the stopwatch start |
 | `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
 | `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed (off at first). macOS keeps it out even after this is off; **Menu Bar settings**, under it, opens **System Settings > Menu Bar** to bring it back |

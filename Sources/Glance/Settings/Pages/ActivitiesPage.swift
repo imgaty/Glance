@@ -73,7 +73,7 @@ struct ActivitiesPage: View {
                     Text("Clock")
                     Text("Timers and the stopwatch are Clock's, started there, in Control Center or with Siri.")
                 } trailing: {
-                    Button("Open Clock") {
+                    Button("Open Clock…") {
                         NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
                     }
                 }
@@ -96,7 +96,7 @@ struct ActivitiesPage: View {
                         Text("Glance can't take macOS's timer out")
                         Text("Allow it in Privacy & Security, under Accessibility.")
                     } trailing: {
-                        Button("Open Privacy & Security") {
+                        Button("Open Privacy & Security…") {
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
                         }
                     }

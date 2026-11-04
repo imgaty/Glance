@@ -49,7 +49,7 @@ struct TrayPage: View {
                         Text("Glance can't see what you copy")
                         Text("Allow it in Privacy & Security, under Paste from Other Apps.")
                     } trailing: {
-                        Button("Open Privacy & Security") {
+                        Button("Open Privacy & Security…") {
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Pasteboard")!)
                         }
                     }
@@ -76,7 +76,7 @@ struct TrayPage: View {
                         Text("Add from the Share menu")
                         Text("Turn on Glance Tray, under Extensions in Sharing, to share pictures, links and files to the tray.")
                     } trailing: {
-                        Button("Open Login Items & Extensions") { NSWorkspace.shared.open(TrayService.extensionsSettings) }
+                        Button("Open Login Items & Extensions…") { NSWorkspace.shared.open(TrayService.extensionsSettings) }
                     }
                 }
                 .disabled(!trayOn)

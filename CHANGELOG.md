@@ -254,6 +254,8 @@
 - Fixed the buttons at the ends of the player's row, such as `Favorite` and
   `Sound Output`, fading on light covers and on glass over light windows:
   they're white there now.
+- Changed the buttons that open a window or an app, such as
+  **Customize Controls…** and **Open Clock…**, to end in an ellipsis.
 - Added the keyboard to **Customize Controls**: Tab goes between the player's
   two buttons and the controls under them, Space selects a button or puts a
   control in the selected one, and Delete takes a control out of a button.

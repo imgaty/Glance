@@ -39,7 +39,7 @@ struct PlayerPage: View {
                     Text("Controls")
                     Text("Choose the buttons beside the playback controls.")
                 } trailing: {
-                    Button("Customize Controls") { customizing = true }
+                    Button("Customize Controls…") { customizing = true }
                 }
                 Toggle(isOn: $lyrics) {
                     Text("Lyrics")

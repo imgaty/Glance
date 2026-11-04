@@ -664,7 +664,7 @@ private struct PermissionRow: View {
                     .foregroundStyle(.green)
                     .font(.system(size: 12, weight: .medium))
             case .denied:
-                Button("Open Settings", action: openSettings)
+                Button("Open Settings…", action: openSettings)
             case .notDetermined:
                 // Not "Allow": that's the answer in macOS's own question, which this only brings up.
                 Button("Request…", action: allow)
