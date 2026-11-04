@@ -491,9 +491,8 @@ ellipsis instead of scrolling.
 | `Tint progress bar` | Colors the progress bar with the accent color |
 | `Animated art` | Plays an album's animated cover, when it has one |
 | `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
-| `Apps` | Which apps' audio Glance shows |
+| `Show audio from` | Which apps' audio Glance shows; **Add App…** adds an app, and right-clicking one offers **Remove from List** |
 | `Show new apps` | Whether apps that start playing are added turned on |
-| `Other apps` | **Add App…** adds an app to the list |
 
 ### Tray
 
@@ -504,7 +503,7 @@ ellipsis instead of scrolling.
 | `Keep screenshots and screen recordings` | Adds each one to the tray |
 | `Keep them for` | `30 Minutes`, `8 Hours`, or `7 Days` |
 | `When dragged out` | `Keep in Tray`, or `Remove from Tray` once something takes the item; ⌘Z brings it back for a minute |
-| `Never keep copies from` | Apps whose copies the tray never keeps; add them with `Add App…` |
+| `Never keep copies from` | Apps whose copies the tray never keeps; **Add App…** adds an app, and **Remove** or right-clicking one takes it off |
 | `Add from the Share menu` | Shows only while Glance Tray is off in the Share menu, with the way to turn it on |
 | `Clear tray` | Removes everything in the tray; files stay where they are |
 

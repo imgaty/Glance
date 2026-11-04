@@ -194,6 +194,9 @@
 ### Settings
 
 - Changed Settings to open on the page you last used.
+- Changed the app lists on the Player and Tray pages to work alike: what the
+  list is for and **Add App…** at the top, each app under it, and
+  **Remove from List** in its menu.
 - Fixed search in Settings not finding `AirDrop`, timers, the stopwatch, Clock,
   Beats or updates on their pages.
 - Added a message for when a search in Settings finds nothing.

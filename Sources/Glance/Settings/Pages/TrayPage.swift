@@ -57,26 +57,14 @@ struct TrayPage: View {
             }
             .disabled(!trayOn)
             Section {
-                CenteredRow {
-                    Text("Never keep copies from")
-                    Text("What you copy in these apps doesn't join the tray.")
-                } trailing: {
-                    Button("Add App…") {
-                        InstalledApps.choose(message: "Choose apps whose copies the tray never keeps.") { $0.forEach(TrayApps.add) }
-                    }
-                }
-                // Follows the stored list, so an app added shows at once; by name, as Music's list is.
-                ForEach(ignored, id: \.self) { app in
-                    CenteredRow {
-                        Label {
-                            Text(MusicApps.name(of: app))
-                        } icon: {
-                            AppIcon(bundleID: app)
-                        }
-                    } trailing: {
-                        Button("Remove") { TrayApps.remove(app) }
-                            .accessibilityLabel("Remove \(MusicApps.name(of: app))")
-                    }
+                // Follows the stored list, so an app added shows at once; by name, as the player's list is.
+                AppList(
+                    title: "Never keep copies from", detail: "What you copy in these apps doesn't join the tray.",
+                    prompt: "Choose apps whose copies the tray never keeps.",
+                    apps: ignored, add: TrayApps.add, remove: TrayApps.remove
+                ) { app in
+                    Button("Remove") { TrayApps.remove(app) }
+                        .accessibilityLabel("Remove \(MusicApps.name(of: app))")
                 }
             } header: {
                 SectionTitle("Apps")

@@ -56,35 +56,24 @@ struct PlayerPage: View {
             }
             Section {
                 // Follows the stored list, so an app that has just played appears at once.
-                ForEach(MusicApps.listed(seen: seenApps.split(separator: ",").map(String.init)), id: \.self) { app in
+                AppList(
+                    title: "Show audio from", detail: "Turn an app off to keep it out of the notch.",
+                    prompt: "Choose apps to show in the notch.",
+                    apps: MusicApps.listed(seen: seenApps.split(separator: ",").map(String.init)),
+                    add: MusicApps.add, remove: MusicApps.forget, removable: MusicApps.removable
+                ) { app in
                     Toggle(
+                        MusicApps.name(of: app),
                         isOn: Binding(
                             get: { !hiddenApps.split(separator: ",").contains(Substring(app)) },
                             set: { MusicApps.set(app, shown: $0) })
-                    ) {
-                        Label {
-                            Text(MusicApps.name(of: app))
-                        } icon: {
-                            AppIcon(bundleID: app)
-                        }
-                    }
-                    .contextMenu {
-                        if MusicApps.removable(app) {
-                            Button("Remove from List") { MusicApps.forget(app) }
-                        }
-                    }
+                    )
+                    .toggleStyle(.switch)
+                    .labelsHidden()
                 }
                 Toggle(isOn: $showsNewApps) {
                     Text("Show new apps")
                     Text("Apps that start playing are added turned on.")
-                }
-                CenteredRow {
-                    Text("Other apps")
-                    Text("Add apps to show or hide them.")
-                } trailing: {
-                    Button("Add App…") {
-                        InstalledApps.choose(message: "Choose apps to show in the notch.") { $0.forEach(MusicApps.add) }
-                    }
                 }
             } header: {
                 SectionTitle("Apps")
