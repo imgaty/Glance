@@ -194,6 +194,9 @@
 ### Settings
 
 - Changed Settings to open on the page you last used.
+- Fixed search in Settings not finding `AirDrop`, timers, the stopwatch, Clock,
+  Beats or updates on their pages.
+- Added a message for when a search in Settings finds nothing.
 - Added a few words on how it works, beside its icon, at the top of the Player,
   Tray and Live Activities pages.
 - Added a picture of a file being dragged to the tray on the Tray page. With the

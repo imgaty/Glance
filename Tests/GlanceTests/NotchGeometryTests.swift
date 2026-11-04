@@ -316,4 +316,27 @@ struct SettingsPaneTests {
         let found = SettingsPane.allCases.filter { $0.keywords.split(separator: " ").contains { $0.hasPrefix(word) } }
         #expect(found == [pane])
     }
+
+    @Test(
+        "Search finds a setting on the page it's on",
+        arguments: [
+            ("airdrop", SettingsPane.activities),
+            ("AirDrop", .activities),
+            ("timers", .activities),
+            ("stopwatch", .activities),
+            ("clock", .activities),
+            ("beats", .activities),
+            ("update", .general),
+            ("volume", .player),
+            ("recordings", .tray),
+        ])
+    func searchFinds(query: String, pane: SettingsPane) {
+        #expect(SettingsPane.matching(query) == [pane])
+    }
+
+    @Test("Search finds nothing for what Glance doesn't have, and every page with nothing typed")
+    func searchEdges() {
+        #expect(SettingsPane.matching("mouse").isEmpty)
+        #expect(SettingsPane.matching("  ") == SettingsPane.allCases)
+    }
 }

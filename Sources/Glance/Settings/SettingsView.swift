@@ -28,14 +28,7 @@ struct SettingsView: View {
     /// has to change when the page does.
     @State private var shownPage = ShownPage(page: SettingsPane.last)
 
-    private var panes: [SettingsPane] {
-        let words = query.lowercased().split(separator: " ")
-        guard !words.isEmpty else { return SettingsPane.allCases }
-        return SettingsPane.allCases.filter { pane in
-            let text = (pane.title + " " + pane.keywords).lowercased()
-            return words.allSatisfy { text.contains($0) }
-        }
-    }
+    private var panes: [SettingsPane] { SettingsPane.matching(query) }
 
     var body: some View {
         NavigationSplitView {
@@ -48,6 +41,9 @@ struct SettingsView: View {
                 }
                 .padding(.leading, 3)
                 .tag(pane)
+            }
+            .overlay {
+                if panes.isEmpty { ContentUnavailableView.search(text: query) }
             }
             .searchable(text: $query, placement: .sidebar, prompt: "Search")
             .toolbar(removing: .sidebarToggle)
@@ -280,15 +276,25 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// Words a search in the sidebar finds the page by.
     var keywords: String {
         switch self {
-        case .general: "login launch startup permissions about build version source"
+        case .general: "login launch startup permissions privacy accessibility about build version source update updates automatically"
         case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight display preview"
         case .player:
-            "music apps sources apple spotify safari browser layout cover progress bar controls customize buttons favorite shuffle repeat output lyrics animated art announce songs"
-        case .tray: "shelf files drop drag clipboard copy paste history screenshots keep clear airdrop share quick look"
+            "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art announce songs"
+        case .tray: "shelf files drop drag clipboard copy copies paste history screenshots recordings private passwords keep clear share quick look"
         case .activities:
-            "live activity activities dynamic island music cover waveform closed battery charging low power plugged devices airpods headphones keyboard mouse trackpad bluetooth airplay timer countdown"
+            "live activity activities music cover waveform closed battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
         case .opening: "hover click delay hold haptic feedback gestures swipe slide tool natural scrolling trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
+        }
+    }
+
+    /// The pages a search finds: those whose name or words hold every word typed.
+    static func matching(_ query: String) -> [SettingsPane] {
+        let words = query.lowercased().split(separator: " ")
+        guard !words.isEmpty else { return allCases }
+        return allCases.filter { pane in
+            let text = (pane.title + " " + pane.keywords).lowercased()
+            return words.allSatisfy { text.contains($0) }
         }
     }
 }
