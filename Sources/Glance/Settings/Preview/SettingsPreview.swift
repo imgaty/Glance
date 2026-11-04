@@ -336,7 +336,11 @@ extension NotchModel {
 @MainActor
 @Observable
 final class ShownPage {
-    var page = SettingsPane.general
+    var page: SettingsPane
+
+    init(page: SettingsPane = .general) {
+        self.page = page
+    }
 }
 
 extension EnvironmentValues {

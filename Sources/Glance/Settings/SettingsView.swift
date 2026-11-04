@@ -13,7 +13,7 @@ struct SettingsView: View {
     var onShowPermissions: () -> Void
     /// The window's title follows the page shown.
     var onPage: (SettingsPane) -> Void = { _ in }
-    @State private var pane: SettingsPane? = .general
+    @State private var pane: SettingsPane? = SettingsPane.last
     @State private var query = ""
     /// The pages visited, for back and forward.
     @State private var history: [SettingsPane] = []
@@ -26,7 +26,7 @@ struct SettingsView: View {
     @State private var built: Set<SettingsPane> = []
     /// Read only by the notches pictured on pages, which hold still on pages not shown; nothing else
     /// has to change when the page does.
-    @State private var shownPage = ShownPage()
+    @State private var shownPage = ShownPage(page: SettingsPane.last)
 
     private var panes: [SettingsPane] {
         let words = query.lowercased().split(separator: " ")
@@ -122,6 +122,7 @@ struct SettingsView: View {
         .onChange(of: pane, initial: true) {
             let shown = pane ?? .general
             shownPage.page = shown
+            SettingsPane.last = shown
             onPage(shown)
             guard !travelling else { return travelling = false }
             history = Array(history.prefix(place + 1)) + (history.last == shown && place == history.count - 1 ? [] : [shown])
@@ -228,6 +229,13 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case general, appearance, player, tray, activities, opening, displays
 
     var id: Self { self }
+
+    /// The page last shown, which the window opens on; General the first time.
+    static var last: SettingsPane {
+        get { UserDefaults.standard.string(forKey: Preferences.settingsPane).flatMap(SettingsPane.init) ?? .general }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: Preferences.settingsPane) }
+    }
+
     var title: String {
         switch self {
         case .general: "General"

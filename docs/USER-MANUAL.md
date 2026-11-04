@@ -453,6 +453,8 @@ letter goes to the next row starting with it, and **Escape** closes it.
 
 ## Settings
 
+Settings opens on the page you last used.
+
 ### General
 
 | Setting | Operation |

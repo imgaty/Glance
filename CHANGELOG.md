@@ -193,6 +193,7 @@
 
 ### Settings
 
+- Changed Settings to open on the page you last used.
 - Added a few words on how it works, beside its icon, at the top of the Player,
   Tray and Live Activities pages.
 - Added a picture of a file being dragged to the tray on the Tray page. With the

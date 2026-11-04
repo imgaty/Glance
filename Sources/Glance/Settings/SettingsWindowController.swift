@@ -96,8 +96,8 @@ final class SettingsWindowController {
         // As wide as System Settings, always; as tall as you make it, within its limits. (Its
         // preferred size would hold the height at the page's ideal.)
         controller.sizingOptions = [.minSize, .maxSize]
-        // It opens on General, which is shown before the window could take its title.
-        window.title = SettingsPane.general.title
+        // It opens on the page last shown, before the window could take that page's title.
+        window.title = SettingsPane.last.title
         window.contentViewController = controller
         // Taking the pages shrinks the window to its smallest: it opens where it was, or, the first
         // time, as tall as System Settings does, in the middle of the screen.

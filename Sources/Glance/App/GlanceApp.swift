@@ -262,6 +262,8 @@ enum Preferences {
     static let swipeToOpen = "swipeToOpen"
     static let swipeToSkip = "swipeToSkip"
     static let onboardingDone = "onboardingDone"
+    /// The Settings page last shown (a SettingsPane).
+    static let settingsPane = "settingsPane"
     static let openTrigger = "openTrigger"
     static let hoverDelay = "hoverDelay"
     static let clickDelay = "clickDelay"
