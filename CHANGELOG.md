@@ -101,10 +101,11 @@
 - Added Clock's buttons for its timer and stopwatch to the notch and its
   right-click menu, which work as Clock's own do, at once, with Clock opened
   hidden and quit half a minute after the last press. Without `Accessibility`,
-  they're dimmed, and pressing one asks for it. While a timer shows, macOS's own
-  is taken out of the menu bar. `Timers`, `Stopwatch` and `Hide in menu bar` in
-  **Settings > Live Activities** turn each off, beside **Open Clock** and a way
-  to Menu Bar settings to bring macOS's own timer back.
+  they're dimmed, and pressing one asks for it. `Timers` and `Stopwatch` in
+  **Settings > Live Activities** turn each off, beside **Open Clock**. With
+  `Hide in menu bar` there, off at first, macOS's own timer is taken out of the
+  menu bar while a timer shows; a link under it to Menu Bar settings brings it
+  back, as macOS keeps it out even once the switch is off.
 - Added a Live Activities page to Settings, to turn each one off, music's cover
   and waveform among them.
 
@@ -214,6 +215,10 @@
   tray and the player not sliding as the tray is turned on and off.
 - Fixed the − on a control in **Customize Controls** being smaller than macOS's
   smallest control: it now takes a click a little around it.
+- Changed the permission buttons in the welcome tour and in
+  **Settings > General > Permissions** from **Allow** to **Request…**, as they
+  only bring up macOS's own question, and `Accessibility` to say everything
+  it's used for.
 
 ### Tray
 

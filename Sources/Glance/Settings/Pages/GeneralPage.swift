@@ -18,7 +18,7 @@ struct GeneralPage: View {
                 LaunchAtLoginToggle()
                 CenteredRow {
                     Text("Permissions")
-                    Text("Allow access to audio and media apps.")
+                    Text("Audio from apps, Music, Spotify and Accessibility, and what each is for.")
                 } trailing: {
                     Button("Review…", action: showPermissions.action)
                 }

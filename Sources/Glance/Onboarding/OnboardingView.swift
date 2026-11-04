@@ -389,7 +389,8 @@ private struct PermissionsPage: View {
             Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
                 symbol: "accessibility", title: "Accessibility",
-                detail: "To paste from the tray with a double-click, and to switch to it with three fingers on the notch.",
+                detail:
+                    "To paste from the tray, swipe to it, press Clock's and AirDrop's buttons, find the tab a song plays in, and hide macOS's own banners and timer.",
                 state: permissions.accessibility, allow: permissions.requestAccessibility,
                 openSettings: { permissions.openSettings(for: \.accessibility) })
         }
@@ -665,7 +666,8 @@ private struct PermissionRow: View {
             case .denied:
                 Button("Open Settings", action: openSettings)
             case .notDetermined:
-                Button("Allow", action: allow)
+                // Not "Allow": that's the answer in macOS's own question, which this only brings up.
+                Button("Request…", action: allow)
             case .notInstalled:
                 Text("Not installed")
                     .font(.system(size: 12))

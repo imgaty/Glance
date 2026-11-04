@@ -19,7 +19,9 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityAirDrop) private var airDrop = true
     @AppStorage(Preferences.activityClockTimers) private var timers = true
     @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
-    @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = true
+    @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = false
+    /// Taking macOS's timer out of the menu bar takes Accessibility.
+    @State private var accessibilityAllowed = AXIsProcessTrusted()
     private let hasBattery = BatteryWatch.hasBattery
 
     var body: some View {
@@ -74,18 +76,30 @@ struct ActivitiesPage: View {
                 }
                 Toggle(isOn: $hidesMenuBar) {
                     Text("Hide in menu bar")
-                    Text("Takes macOS's timer out of the menu bar while the notch shows it. Needs Accessibility.")
+                    Text("Takes macOS's timer out of the menu bar while the notch shows it.")
                 }
                 .disabled(!timers)
-                CenteredRow {
-                    Text("Menu bar timer")
-                    Text("Once taken out, macOS's timer comes back with Show When Active for Timer in Menu Bar settings.")
-                } trailing: {
-                    Button("Menu Bar Settings…") {
-                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
+                // Said only when it's in the way, as the Tray page says Glance can't see copies.
+                if timers, hidesMenuBar, !accessibilityAllowed {
+                    CenteredRow {
+                        Text("Glance can't take macOS's timer out")
+                        Text("Allow it in Privacy & Security, under Accessibility.")
+                    } trailing: {
+                        Button("Open Privacy & Security") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                        }
                     }
                 }
+            } footer: {
+                // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
+                Text(
+                    "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
+                )
             }
+        }
+        // Looked at again on coming back from System Settings.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            accessibilityAllowed = AXIsProcessTrusted()
         }
     }
 }

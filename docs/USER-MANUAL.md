@@ -52,8 +52,9 @@ for more.
 ### The welcome tour
 
 The first time Glance opens, a short tour shows each feature, sets up the
-choices that matter, and asks for the permissions. To see its permissions page
-again, use **Settings > General > Permissions > Review…**.
+choices that matter, and asks for the permissions: **Request…** beside each one
+brings up macOS's own question. To see its permissions page again, use
+**Settings > General > Permissions > Review…**.
 
 <br>
 
@@ -381,11 +382,12 @@ Without `Accessibility`, macOS's own alert and chime show beside the notch:
 **Repeat** and **✕** answer that alert too, which stops its chime, and stopped
 or repeated in macOS's alert, the timer goes from the notch as well.
 
-While a timer shows, Glance takes macOS's own timer out of the menu bar, with
-`Accessibility` allowed; macOS keeps that choice. To have it back in the menu
-bar, turn off **Hide in menu bar** in **Settings > Live Activities**, then click
-**Menu Bar Settings…** there and choose `Show When Active` for Timer. Turn off
-**Timers** or **Stopwatch** there to leave them out of the notch.
+With **Hide in menu bar** on in **Settings > Live Activities**, off at first,
+and `Accessibility` allowed, Glance takes macOS's own timer out of the menu bar
+while a timer shows. macOS keeps that choice, even after the switch is turned
+off. To have it back in the menu bar, click **Menu Bar settings** under the
+switch and choose `Show When Active` for Timer. Turn off **Timers** or
+**Stopwatch** there to leave them out of the notch.
 
 VoiceOver reads the timer as its name and the time left in words, and whether
 it's paused, and the stopwatch as its time. It reads each, in the notch or a
@@ -513,8 +515,7 @@ ellipsis instead of scrolling.
 | `Clock` | **Open Clock** opens the Clock app, where timers and the stopwatch start |
 | `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
 | `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |
-| `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed |
-| `Menu bar timer` | **Menu Bar Settings…** opens **System Settings > Menu Bar**, to bring macOS's own timer back |
+| `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed (off at first). macOS keeps it out even after this is off; **Menu Bar settings**, under it, opens **System Settings > Menu Bar** to bring it back |
 
 ### Opening
 

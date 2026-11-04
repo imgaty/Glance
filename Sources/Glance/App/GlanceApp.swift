@@ -187,7 +187,8 @@ enum Preferences {
             activityDevices: true,
             activityAirDrop: true,
             activityClockTimers: true,
-            clockTimerHidesMenuBar: true,
+            // Off: macOS keeps its timer out of the menu bar once it's taken out, after Glance is gone.
+            clockTimerHidesMenuBar: false,
             activityStopwatch: true,
             swipeToSwitch: true,
         ])
