@@ -119,9 +119,13 @@ struct ControlsSheet: View {
                                 .background(Circle().fill(Color(white: 0.42)))
                                 .overlay(Circle().strokeBorder(.black.opacity(0.25), lineWidth: 0.5))
                                 .shadow(color: .black.opacity(0.3), radius: 1.5, y: 0.5)
+                                // Drawn at 18 points, clicked in 24: macOS's least is 20.
+                                .frame(width: 24, height: 24)
+                                .contentShape(Circle())
                         }
                         .buttonStyle(.plain)
                         .help("Remove \(control.title)")
+                        .accessibilityLabel("Remove \(control.title)")
                         .position(x: frame.minX + 7, y: frame.minY + 7)
                         .transition(.scale(scale: 0.3).combined(with: .opacity))
                     }

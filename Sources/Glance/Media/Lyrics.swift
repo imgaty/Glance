@@ -517,6 +517,8 @@ private struct TimedLyricsView: View {
     /// Breaks in the singing show as a note, as Spotify does, rather than as dots.
     let notes: Bool
     @State private var heights: [Int: CGFloat] = [:]
+    /// With Reduce Motion on, the lines don't glide up: the next ones fade in where they rest.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The lines, then the credits a moment after the last one has been sung.
     private var entries: [TimedLyrics.Entry] {
@@ -541,11 +543,15 @@ private struct TimedLyricsView: View {
                         .blur(radius: edgeBlur(atY: y + size(index, current: current) / 2))
                         .offset(y: y)
                         .animation(
-                            LyricsStyle.glide(delay: min(Double(max(index - focus + 1, 0)) * 0.045, 0.35)),
+                            reduceMotion ? nil : LyricsStyle.glide(delay: min(Double(max(index - focus + 1, 0)) * 0.045, 0.35)),
                             value: current)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // Each line's lines are their own then, the last ones fading out as these fade in.
+            .id(reduceMotion ? current : 0)
+            .transition(.opacity)
+            .animation(reduceMotion ? .easeInOut(duration: 0.3) : nil, value: current)
         }
         // Nothing follows the credits, so they're never faded.
         .mask { LyricsStyle.edges(fadingBottom: !showsCredits) }
@@ -657,36 +663,40 @@ private struct TimedLyricsView: View {
     }
 }
 
-/// Spotify's note, breathing gently while the lyrics are found.
+/// Spotify's note, breathing gently while the lyrics are found; still with Reduce Motion on.
 private struct LoadingNote: View {
     let breathing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(paused: !breathing)) { context in
+        TimelineView(.animation(paused: !breathing || reduceMotion)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
+            let breath = reduceMotion ? 0.5 : (1 + sin(t * 2 * .pi / 2.4)) / 2
             Text("♪")
                 .font(LyricsStyle.font)
-                .foregroundStyle(.white.opacity(LyricsStyle.dim + 0.25 * (1 + sin(t * 2 * .pi / 2.4)) / 2))
+                .foregroundStyle(.white.opacity(LyricsStyle.dim + 0.25 * breath))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
 
 /// Three dots that fill one by one through a pause in the singing, breathing gently while the song
-/// plays, then fold away just before the next line.
+/// plays, then fold away just before the next line. With Reduce Motion on, they hold their size,
+/// and fade away rather than fold.
 private struct InterludeDots: View {
     static let height: CGFloat = 18
     let progress: Double
     let isCurrent: Bool
     let breathing: Bool
     var fold: Double = .infinity
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(paused: !(breathing && isCurrent))) { context in
+        TimelineView(.animation(paused: !(breathing && isCurrent) || reduceMotion)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             // Still while paused: what's around it redraws all the time, so pausing the timeline
             // alone wouldn't hold it.
-            let breath = breathing ? 1 + 0.08 * sin(t * 2 * .pi / 2.4) : 1
+            let breath = breathing && !reduceMotion ? 1 + 0.08 * sin(t * 2 * .pi / 2.4) : 1
             // Paused just as they fold, they stay whole until the song goes on.
             let folding = breathing ? min(max(fold / 0.4, 0), 1) : 1
             HStack(spacing: 7) {
@@ -697,9 +707,9 @@ private struct InterludeDots: View {
                         .frame(width: 10, height: 10)
                 }
             }
-            .scaleEffect(isCurrent ? breath * folding : 0.4, anchor: .leading)
+            .scaleEffect(reduceMotion ? 1 : (isCurrent ? breath * folding : 0.4), anchor: .leading)
             .animation(.easeOut(duration: 0.3), value: breathing)
-            .opacity(isCurrent ? 1 : 0)
+            .opacity(isCurrent ? (reduceMotion ? folding : 1) : 0)
             .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height, alignment: .leading)
         }
     }

@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 1 November 2026`
+`Created: 11 October 2026` | `Last updated: 4 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -195,6 +195,8 @@ in below it. While the song is paused they dim, as the cover and the colors
 behind the player do. Lyrics come from [LRCLIB](https://lrclib.net), found as
 each song starts so they're ready when you ask for them, and show only when a
 record matches the song's title, artist and length.
+With Reduce Motion on, each line fades in where it rests rather than gliding
+up, and the dots in a pause in the singing hold still.
 
 <br>
 
@@ -436,6 +438,10 @@ Glance's icon in the menu bar opens a menu:
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
 | `Quit Glance` | Quits Glance |
+
+The menu works from the keyboard too: the up and down arrows go from row to
+row, the switch among them, **Return** or **Space** chooses the one lit, a
+letter goes to the next row starting with it, and **Escape** closes it.
 
 <br>
 

@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 1 November 2026`
+`Created: 11 October 2026` | `Last updated: 4 November 2026`
 
 <br>
 
@@ -162,6 +162,9 @@
   looked for several ways at once, for a few seconds at most.
 - Fixed the lyrics jumping back as a song paused, and the dots in a pause in the
   singing disappearing with them.
+- Changed the lyrics, with Reduce Motion on, to fade from one line to the next
+  where they rest, rather than gliding up, and the dots and Spotify's note to
+  hold still.
 - Changed the waveform to take far less of the Mac's power while music plays.
 - Fixed the dots before a song's first line coming and going, and the first line
   jumping up and down, while the song loaded.
@@ -209,6 +212,8 @@
   rather than being cut off at its edge.
 - Fixed the player's size in the Tray page's picture with the tray off, and the
   tray and the player not sliding as the tray is turned on and off.
+- Fixed the − on a control in **Customize Controls** being smaller than macOS's
+  smallest control: it now takes a click a little around it.
 
 ### Tray
 
@@ -224,6 +229,10 @@
 - Changed the menu bar icon to the app icon's shapes.
 - Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
   it while its menu is open.
+- Added the keyboard to the menu bar menu, as it works in any menu: the up and
+  down arrows go from row to row, the switch among them, Return or Space chooses
+  the one lit, a letter goes to the next row starting with it, and VoiceOver
+  says where you are.
 
 <br>
 

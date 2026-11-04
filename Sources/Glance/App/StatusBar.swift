@@ -93,21 +93,68 @@ final class StatusBarController: NSObject {
     @objc private func clicked() {
         guard let button = statusItem.button else { return }
         if panel.isShown { return panel.close() }
+        state.lit = nil
         panel.show(
             below: button,
-            content: StatusMenu(state: state) { [weak self] action in
-                guard let self else { return }
-                panel.close()
-                switch action {
-                case .checkForUpdates: Updater.shared.checkForUpdates()
-                case .rebuild: rebuild()
-                case .settings: onOpenSettings?()
-                case .quit: NSApp.terminate(nil)
-                }
-            })
+            content: StatusMenu(state: state) { [weak self] in self?.perform($0) },
+            onKey: { [weak self] in self?.key($0) ?? false })
         if let window = panel.window {
             statusItem.beginPresenting(window) { [weak self] in self?.panel.close() }
         }
+    }
+
+    /// A row chosen. The switch flips and the menu stays, as Control Center's do; anything else
+    /// closes it first.
+    private func perform(_ action: StatusMenu.Action) {
+        if action == .toggle {
+            UserDefaults.standard.set(!UserDefaults.standard.notchEnabled, forKey: Preferences.notchEnabled)
+            return
+        }
+        panel.close()
+        switch action {
+        case .toggle: break
+        case .checkForUpdates: Updater.shared.checkForUpdates()
+        case .rebuild: rebuild()
+        case .settings: onOpenSettings?()
+        case .quit: NSApp.terminate(nil)
+        }
+    }
+
+    /// The keys, as a menu takes them: the up and down arrows go from row to row, Return, Enter or
+    /// Space chooses the row lit, and a letter goes to the next row starting with it. Escape is the
+    /// panel's own; with no row lit, Space is the switch's, if it has the focus.
+    private func key(_ event: NSEvent) -> Bool {
+        guard event.modifierFlags.isDisjoint(with: [.command, .control, .option]) else { return false }
+        let rows = StatusMenu.rows(state, canCheck: Updater.shared.canCheck)
+        let next: StatusMenu.Action?
+        switch event.specialKey {
+        case .downArrow?: next = StatusMenu.step(rows, from: state.lit, by: 1)
+        case .upArrow?: next = StatusMenu.step(rows, from: state.lit, by: -1)
+        case .carriageReturn?, .enter?:
+            guard let lit = state.lit else { return true }
+            perform(lit)
+            return true
+        case nil where event.charactersIgnoringModifiers == " ":
+            guard let lit = state.lit else { return false }
+            perform(lit)
+            return true
+        case nil:
+            guard let letter = event.charactersIgnoringModifiers, letter.count == 1, letter.first?.isLetter == true,
+                let found = StatusMenu.typed(letter, in: rows, from: state.lit)
+            else { return false }
+            next = found
+        default:
+            return false
+        }
+        guard let next else { return true }
+        state.lit = next
+        // VoiceOver says where the keys went, as it does in a menu.
+        let row = rows.first { $0.action == next }
+        let words = next == .toggle ? "Glance, \(UserDefaults.standard.notchEnabled ? "on" : "off")" : row?.title ?? ""
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: words, .priority: NSAccessibilityPriorityLevel.high.rawValue])
+        return true
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
@@ -420,14 +467,26 @@ final class StatusIcon {
 final class StatusMenuState {
     var canRebuild = false
     var rebuilding = false
+    /// The row lit, by the pointer or by the arrow keys: one at a time, as in a menu.
+    var lit: StatusMenu.Action?
 }
 
 /// The menu itself, as Control Center lays out its menus: the same padding all around, rows 22
 /// points tall one after another, lit under the pointer with corners as much rounder than the
-/// menu's as they're inset, and a real switch at the top.
-private struct StatusMenu: View {
+/// menu's as they're inset, and a real switch at the top. The keys work it as they do a menu (see
+/// `StatusMenu.step` and `StatusMenu.typed`).
+struct StatusMenu: View {
     enum Action {
+        /// The switch at the top.
+        case toggle
         case checkForUpdates, rebuild, settings, quit
+    }
+
+    /// A row, as the keys go through them: the switch first, then the rest in order.
+    struct Row: Equatable {
+        let action: Action
+        let title: String
+        var enabled = true
     }
 
     let state: StatusMenuState
@@ -441,7 +500,39 @@ private struct StatusMenu: View {
     /// Room around the menu, in its window, for its shadow.
     static let shadowRoom: CGFloat = 40
 
+    /// Every row, the switch's among them, with whether it can be chosen now. Rebuild is only in
+    /// builds made from source, which know where it is.
+    static func rows(_ state: StatusMenuState, canCheck: Bool) -> [Row] {
+        var rows = [Row(action: .toggle, title: "Glance"), Row(action: .checkForUpdates, title: "Check for Updates…", enabled: canCheck)]
+        if state.canRebuild {
+            rows.append(Row(action: .rebuild, title: state.rebuilding ? "Rebuilding…" : "Rebuild", enabled: !state.rebuilding))
+        }
+        return rows + [Row(action: .settings, title: "Glance Settings…"), Row(action: .quit, title: "Quit Glance")]
+    }
+
+    /// Where an arrow key goes from the row lit: a row down or up, past dimmed ones, and round from
+    /// one end to the other, as in a menu. With none lit, down goes to the first and up to the last.
+    static func step(_ rows: [Row], from lit: Action?, by step: Int) -> Action? {
+        let usable = rows.filter(\.enabled)
+        guard !usable.isEmpty else { return nil }
+        guard let lit, let index = usable.firstIndex(where: { $0.action == lit }) else {
+            return (step > 0 ? usable.first : usable.last)?.action
+        }
+        return usable[((index + step) % usable.count + usable.count) % usable.count].action
+    }
+
+    /// Where typing a letter goes, as in a menu: the next row after the one lit whose name starts
+    /// with it, round from the end; nowhere if none does.
+    static func typed(_ letter: String, in rows: [Row], from lit: Action?) -> Action? {
+        let usable = rows.filter(\.enabled)
+        guard !letter.isEmpty, !usable.isEmpty else { return nil }
+        let start = lit.flatMap { lit in usable.firstIndex { $0.action == lit } }.map { $0 + 1 } ?? 0
+        return (0..<usable.count).map { usable[(start + $0) % usable.count] }
+            .first { $0.title.lowercased().hasPrefix(letter.lowercased()) }?.action
+    }
+
     var body: some View {
+        let rows = Self.rows(state, canCheck: updater.canCheck)
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Glance")
@@ -453,17 +544,14 @@ private struct StatusMenu: View {
             }
             .padding(.horizontal, 9)
             .frame(height: 36)
+            // Lit only from the keys: the pointer goes to the switch itself.
+            .background { StatusMenuLight(lit: state.lit == .toggle) }
+            .onHover { if $0 { state.lit = nil } }
             separator
-            StatusMenuRow(title: "Check for Updates…", enabled: updater.canCheck) { perform(.checkForUpdates) }
-            // Only in builds made from source, which know where it is.
-            if state.canRebuild {
-                StatusMenuRow(title: state.rebuilding ? "Rebuilding…" : "Rebuild", enabled: !state.rebuilding) {
-                    perform(.rebuild)
-                }
+            ForEach(rows.filter { $0.action != .toggle }, id: \.action) { row in
+                StatusMenuRow(row: row, state: state) { perform(row.action) }
+                if row.action == .settings { separator }
             }
-            StatusMenuRow(title: "Glance Settings…") { perform(.settings) }
-            separator
-            StatusMenuRow(title: "Quit Glance") { perform(.quit) }
         }
         .padding(Self.inset)
         .frame(width: 280)
@@ -499,30 +587,43 @@ private struct StatusMenu: View {
 }
 
 private struct StatusMenuRow: View {
-    let title: String
-    var enabled = true
+    let row: StatusMenu.Row
+    let state: StatusMenuState
     let action: () -> Void
-    @State private var hovering = false
+
+    var body: some View {
+        Text(row.title)
+            .font(.system(size: 13))
+            .foregroundStyle(row.enabled ? .primary : .tertiary)
+            .padding(.horizontal, 9)
+            .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
+            .background { StatusMenuLight(lit: row.enabled && state.lit == row.action) }
+            .contentShape(Rectangle())
+            // The pointer and the arrow keys light the same one, as in a menu.
+            .onHover { inside in
+                if inside, row.enabled {
+                    state.lit = row.action
+                } else if !inside, state.lit == row.action {
+                    state.lit = nil
+                }
+            }
+            .onTapGesture { if row.enabled { action() } }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { if row.enabled { action() } }
+    }
+}
+
+/// A row's light, under the pointer or the arrow keys.
+private struct StatusMenuLight: View {
+    let lit: Bool
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        Text(title)
-            .font(.system(size: 13))
-            .foregroundStyle(enabled ? .primary : .tertiary)
-            .padding(.horizontal, 9)
-            .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
-            .background {
-                // A plain color: the glass would make a vibrant one fainter. Measured against the
-                // Wi-Fi menu's.
-                RoundedRectangle(cornerRadius: StatusMenu.radius - StatusMenu.inset, style: .continuous)
-                    .fill(scheme == .dark ? Color.white : Color.black)
-                    .opacity(enabled && hovering ? (scheme == .dark ? 0.1 : 0.055) : 0)
-            }
-            .contentShape(Rectangle())
-            .onHover { hovering = $0 }
-            .onTapGesture { if enabled { action() } }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { if enabled { action() } }
+        // A plain color: the glass would make a vibrant one fainter. Measured against the Wi-Fi
+        // menu's.
+        RoundedRectangle(cornerRadius: StatusMenu.radius - StatusMenu.inset, style: .continuous)
+            .fill(scheme == .dark ? Color.white : Color.black)
+            .opacity(lit ? (scheme == .dark ? 0.1 : 0.055) : 0)
     }
 }
 
@@ -544,7 +645,7 @@ final class StatusPanel {
     var isShown: Bool { panel?.isVisible == true }
     var window: NSWindow? { panel }
 
-    func show(below button: NSStatusBarButton, content: some View) {
+    func show(below button: NSStatusBarButton, content: some View, onKey: @escaping (NSEvent) -> Bool) {
         close()
         letLingeringGo()
         previousKey = NSApp.keyWindow
@@ -564,6 +665,7 @@ final class StatusPanel {
         panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
         panel.contentView = host
         panel.onCancel = { [weak self] in self?.close() }
+        panel.onKey = onKey
         // Under the icon, as menus open from the menu bar: its left edge under the icon's left edge,
         // or, if it wouldn't fit on the screen that way, its right edge under the icon's right edge.
         if let window = button.window, let screen = window.screen {
@@ -643,14 +745,22 @@ extension StatusPanel {
     }
 }
 
-/// Takes the focus for Escape, without making Glance the app in use, and looks like a window in front.
+/// Takes the focus for the keys, without making Glance the app in use, and looks like a window in
+/// front.
 private final class MenuPanel: NSPanel {
     var onCancel: (() -> Void)?
+    /// A key pressed, before anything in the menu sees it: whether the menu took it.
+    var onKey: ((NSEvent) -> Bool)?
     /// Gone from sight, kept only until another app is in use (see `StatusPanel.linger`).
     var lingers = false
 
     override var canBecomeKey: Bool { !lingers }
     override func cancelOperation(_ sender: Any?) { onCancel?() }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, onKey?(event) == true { return }
+        super.sendEvent(event)
+    }
 
     /// Private AppKit hooks: drawn as a window in front, so the switch has its color and the glass
     /// isn't the flat look of a window behind.
