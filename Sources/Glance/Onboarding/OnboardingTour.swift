@@ -73,6 +73,8 @@ enum OnboardingSetting {
 struct OnboardingSwitch: Identifiable {
     let key: String
     let title: String
+    /// The setting it does nothing without, as Settings has it: off, it's dimmed.
+    var needs: String?
     var id: String { key }
 }
 
@@ -103,7 +105,7 @@ extension OnboardingFeature {
                     settings: [
                         .switches([
                             OnboardingSwitch(key: Preferences.liveActivity, title: "Cover and waveform"),
-                            OnboardingSwitch(key: Preferences.musicTrackPop, title: "Announce new audio"),
+                            OnboardingSwitch(key: Preferences.musicTrackPop, title: "Announce new audio", needs: Preferences.liveActivity),
                         ])
                     ]),
             ])
@@ -126,7 +128,7 @@ extension OnboardingFeature {
                     settings: [
                         .switches([
                             OnboardingSwitch(key: Preferences.tray, title: "Tray"),
-                            OnboardingSwitch(key: Preferences.trayClipboard, title: "Keep what you copy"),
+                            OnboardingSwitch(key: Preferences.trayClipboard, title: "Keep what you copy", needs: Preferences.tray),
                         ])
                     ])
             ])

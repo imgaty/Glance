@@ -65,6 +65,9 @@
   work its buttons; Tab reaches the lyrics, the arrows go from line to line and
   Space or Return plays from there; and on `Sound Output` the arrows turn the
   playing app's sound up or down.
+- Changed the welcome tour to open on Glance's own icon, with every symbol drawn
+  alike, page dots easier to click, and `Announce new audio` and
+  `Keep what you copy` dimmed while what they need is off, as Settings has them.
 - Changed everything else that moves to follow Reduce Motion: the notch's swell,
   press and swipes, the bubbles, the buttons and the cover settle without
   bouncing, the star glows without swelling, the skip arrows stay where they are,

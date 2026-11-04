@@ -185,7 +185,7 @@ private struct PageSymbol: View {
     var body: some View {
         Image(systemName: name)
             .font(.system(size: 48, weight: .regular))
-            .symbolRenderingMode(.hierarchical)
+            .symbolRenderingMode(.monochrome)
             .foregroundStyle(.tint)
             .accessibilityHidden(true)
     }
@@ -207,7 +207,7 @@ private struct PageDots: View {
                     Circle()
                         .fill(Color.primary.opacity(page == current ? 0.8 : 0.22))
                         .frame(width: 7, height: 7)
-                        .frame(width: 16, height: 20)
+                        .frame(width: 20, height: 20)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -226,14 +226,17 @@ private struct PageDots: View {
 private struct WelcomePage: View {
     var body: some View {
         PageLayout(title: "Welcome to Glance") {
-            PageSymbol(name: "rectangle.topthird.inset.filled")
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: OnboardingMetrics.iconSize, height: OnboardingMetrics.iconSize)
+                .accessibilityHidden(true)
         } content: {
             VStack(alignment: .leading, spacing: 24) {
                 ForEach(OnboardingFeature.all.flatMap(\.highlights) + [.personalize]) { highlight in
                     HStack(alignment: .center, spacing: 16) {
                         Image(systemName: highlight.symbol)
                             .font(.system(size: 26, weight: .regular))
-                            .symbolRenderingMode(.hierarchical)
+                            .symbolRenderingMode(.monochrome)
                             .foregroundStyle(.tint)
                             .frame(width: 34)
                         VStack(alignment: .leading, spacing: 2) {
@@ -475,25 +478,30 @@ private struct SwitchList<Rows: View>: View {
 private struct SettingSwitch: View {
     let item: OnboardingSwitch
     @AppStorage private var isOn: Bool
+    @AppStorage private var neededIsOn: Bool
 
     init(item: OnboardingSwitch) {
         self.item = item
         _isOn = AppStorage(wrappedValue: true, item.key)
+        _neededIsOn = AppStorage(wrappedValue: true, item.needs ?? item.key)
     }
 
     var body: some View {
         SwitchRow(title: item.title, isOn: $isOn)
+            .disabled(item.needs != nil && !neededIsOn)
     }
 }
 
 private struct SwitchRow: View {
     let title: String
     @Binding var isOn: Bool
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: 12) {
             Text(title)
                 .font(.system(size: 13))
+                .foregroundStyle(isEnabled ? .primary : .tertiary)
             Spacer(minLength: 8)
             Toggle(title, isOn: $isOn)
                 .controlSize(.mini)
