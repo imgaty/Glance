@@ -12,6 +12,8 @@ import SwiftUI
 /// what's playing, what the Mac announces, and Clock's timer and stopwatch. The battery's choices
 /// show only on a Mac with one.
 struct ActivitiesPage: View {
+    @EnvironmentObject private var preview: SettingsPreview
+    @Environment(\.shownPage) private var shownPage
     @AppStorage(Preferences.liveActivity) private var liveActivity = true
     @AppStorage(Preferences.musicTrackPop) private var trackPop = true
     @AppStorage(Preferences.activityCharging) private var charging = true
@@ -24,6 +26,9 @@ struct ActivitiesPage: View {
     /// Taking macOS's timer out of the menu bar takes Accessibility.
     @State private var accessibilityAllowed = AXIsProcessTrusted()
     private let hasBattery = BatteryWatch.hasBattery
+
+    /// In the order of `PreviewActivity`.
+    private var switches: [Bool] { [trackPop, charging, lowBattery, devices, airDrop, timers, stopwatch] }
 
     var body: some View {
         Form {
@@ -102,6 +107,12 @@ struct ActivitiesPage: View {
                     "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
                 )
             }
+        }
+        // Turned on, the picture shows what it does.
+        .onChange(of: switches) { old, new in
+            guard shownPage?.page == .activities, let turned = zip(old, new).enumerated().first(where: { !$0.element.0 && $0.element.1 })
+            else { return }
+            preview.show(PreviewActivity.allCases[turned.offset])
         }
         // Looked at again on coming back from System Settings.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

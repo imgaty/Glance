@@ -259,7 +259,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     }
 
     /// The pages about how the notch looks and works show it, live, at the top.
-    var showsPreview: Bool { [.appearance, .player, .tray, .opening].contains(self) }
+    var showsPreview: Bool { [.appearance, .player, .tray, .activities, .opening].contains(self) }
+    /// There it rests closed, as the real notch does, rather than open.
+    var restsClosed: Bool { [.activities, .opening].contains(self) }
 
     var color: Color {
         switch self {

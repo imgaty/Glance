@@ -272,7 +272,7 @@ final class ActivityBench {
     }
 
     /// One of macOS's own desktop pictures, as a photo sent over AirDrop would be.
-    private static func photo() -> NSImage? {
+    static func photo() -> NSImage? {
         let folder = URL(fileURLWithPath: "/System/Library/Desktop Pictures/.thumbnails")
         let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
         return files.lazy.compactMap { NSImage(contentsOf: $0) }.first

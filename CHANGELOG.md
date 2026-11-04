@@ -194,6 +194,9 @@
 ### Settings
 
 - Changed Settings to open on the page you last used.
+- Added a picture of the notch to the Live Activities page, showing what's
+  turned on there, made up, one after another. Turning a switch on shows it at
+  once.
 - Changed the app lists on the Player and Tray pages to work alike: what the
   list is for and **Add App…** at the top, each app under it, and
   **Remove from List** in its menu.

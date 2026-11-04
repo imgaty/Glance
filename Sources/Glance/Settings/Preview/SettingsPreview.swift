@@ -9,9 +9,9 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// The notch above the Appearance, Player, Tray and Opening pages: live, in the look of the display chosen
-/// in Appearance. One for the window, so it carries on between pages, open; on the Opening page it
-/// works as the real one does, to try opening and closing it.
+/// The notch above the Appearance, Player, Tray, Live Activities and Opening pages: live, in the look of
+/// the display chosen in Appearance. One for the window, so it carries on between pages, open; on the
+/// Opening and Live Activities pages it rests closed and works as the real one does.
 @MainActor
 final class SettingsPreview: ObservableObject {
     /// The display's own notch, as it is at rest there: made again when the display shown changes,
@@ -97,46 +97,16 @@ final class SettingsPreview: ObservableObject {
         }
     }
 
-    // MARK: Announcing
+    // MARK: What shows beside the camera
 
-    private var announcement: Task<Void, Never>?
+    /// Turned on, on the Live Activities page: the picture shows it now and carries on from there
+    /// (see `playActivities`).
+    private(set) var requestedActivity: PreviewActivity?
+    @Published private(set) var activityRequests = 0
 
-    /// What a new song gets on screen, for what's playing: the notch closes, its wings widen for the
-    /// name for a few seconds, and it opens again.
-    func announce(_ song: NowPlaying) {
-        announcement?.cancel()
-        let model = model
-        let playing = model.activity
-        announcement = Task { [weak self] in
-            // Paused, there are no wings to widen, until it's over.
-            model.activity = true
-            if model.state != .closed {
-                model.close()
-                try? await Task.sleep(for: .seconds(0.45))
-            }
-            guard !Task.isCancelled else { return }
-            // No wider than the picture: a longer title or artist scrolls, as it does on screen.
-            let room = (PreviewHeader.width / NotchPreview.scale(for: PreviewHeader.width, model: model) - model.closedSize.width) / 2 - 12
-            let wing = LiveActivityView.popWing(title: song.title, artist: song.artist, restingHeight: model.closedSize.height)
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                model.popWing = min(wing, room)
-                model.pop = true
-            }
-            try? await Task.sleep(for: .seconds(3.5))
-            guard !Task.isCancelled else { return }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false }
-            try? await Task.sleep(for: .seconds(0.6))
-            guard !Task.isCancelled else { return }
-            model.activity = playing
-            if self?.interactive == false { model.open() }
-        }
-    }
-
-    /// Left before it's over, it's over.
-    func stopAnnouncing() {
-        announcement?.cancel()
-        announcement = nil
-        if model.pop { model.pop = false }
+    func show(_ activity: PreviewActivity) {
+        requestedActivity = activity
+        activityRequests += 1
     }
 
     /// Where the notch is in the preview, for each of its states.
@@ -380,6 +350,8 @@ struct PreviewHeader: View {
     @AppStorage(Preferences.sameLook) private var sameLook = false
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
     @AppStorage(Preferences.tray) private var trayOn = true
+    @EnvironmentObject private var nowPlaying: NowPlaying
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A moment after the tray shows, it's shown how something's dragged there, round after round.
     @State private var showsDrop = false
     /// The pointer is over the picture: the drag gives way, and the tray is there to touch.
@@ -393,7 +365,8 @@ struct PreviewHeader: View {
             // the new one in once it has settled.
             NotchPreview(
                 model: preview.model, display: preview.display, top: preview.top,
-                interactive: pane == .opening, still: !pane.showsPreview, demo: onTray && showsDrop ? .dropInTray : nil,
+                interactive: pane.restsClosed, hintsOpening: pane == .opening, still: !pane.showsPreview,
+                demo: onTray && showsDrop ? .dropInTray : nil,
                 pointerOver: $pointerOver
             )
             .environment(\.notchPaused, !pane.showsPreview)
@@ -435,13 +408,18 @@ struct PreviewHeader: View {
             withAnimation(.smooth(duration: 0.3)) { preview.model.trayScroll = 0 }
             showsDrop = true
         }
+        // On the Live Activities page, what's turned on there, in turn; with Reduce Motion, it rests.
+        .task(id: "\(pane == .activities) \(preview.activityRequests) \(reduceMotion) \(identity)") {
+            preview.clearActivities()
+            guard pane == .activities, !reduceMotion else { return }
+            await preview.playActivities(song: nowPlaying, startingAt: preview.requestedActivity)
+        }
         .onDisappear { preview.slidesTray(nil) }
     }
 
     /// As this page wants it.
     private func settle(animated: Bool) {
-        preview.stopAnnouncing()
-        preview.setInteractive(pane == .opening, animated: animated)
+        preview.setInteractive(pane.restsClosed, animated: animated)
         let page: NotchPage = onTray ? .tray : .player
         withAnimation(animated ? .spring(response: 0.4, dampingFraction: 1) : nil) { preview.model.page = page }
     }

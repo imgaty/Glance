@@ -294,7 +294,8 @@ struct SettingsPaneTests {
 
     @Test("The pages about the notch's look and behavior show it at the top")
     func previews() {
-        #expect(SettingsPane.allCases.filter(\.showsPreview) == [.appearance, .player, .tray, .opening])
+        #expect(SettingsPane.allCases.filter(\.showsPreview) == [.appearance, .player, .tray, .activities, .opening])
+        #expect(SettingsPane.allCases.filter(\.restsClosed) == [.activities, .opening])
     }
 
     @Test("Each page can be found by search", arguments: SettingsPane.allCases)

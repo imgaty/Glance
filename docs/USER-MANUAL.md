@@ -509,6 +509,10 @@ ellipsis instead of scrolling.
 
 ### Live Activities
 
+The picture of the notch at the top of the page shows what's turned on, made up,
+one after another, and turning a switch on shows it at once. With Reduce Motion
+on, it stays on what's playing.
+
 | Setting | Operation |
 | --- | --- |
 | `Cover and waveform` | What's playing beside the camera while the notch is closed |
