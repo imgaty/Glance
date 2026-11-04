@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 31 October 2026`
+`Created: 11 October 2026` | `Last updated: 4 November 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -40,7 +40,7 @@ and hold it for its menu. See the
 
 ### Layouts and backgrounds
 
-Two layouts and four backgrounds for the player, on Liquid Glass or a blur, in
+Two layouts and three backgrounds for the player, on Liquid Glass or a blur, in
 the cover's colors or your Mac's accent color, pulsing with the beat.
 
 ### Live Activities
