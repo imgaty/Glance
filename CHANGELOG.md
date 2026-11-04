@@ -65,6 +65,8 @@
   work its buttons; Tab reaches the lyrics, the arrows go from line to line and
   Space or Return plays from there; and on `Sound Output` the arrows turn the
   playing app's sound up or down.
+- Changed the names in the tray to a stronger shadow, so they read over light
+  windows.
 - Changed the welcome tour to open on Glance's own icon, with every symbol drawn
   alike, page dots easier to click, and `Announce new audio` and
   `Keep what you copy` dimmed while what they need is off, as Settings has them.

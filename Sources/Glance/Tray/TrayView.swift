@@ -268,8 +268,7 @@ private struct TileLayout<Icon: View>: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .truncationMode(keepsEnd ? .middle : .tail)
-                // Legible on the glass, as names are on the desktop.
-                .shadow(color: .black.opacity(lit ? 0 : 0.45), radius: 1, y: 0.5)
+                .modifier(TrayNameShadow(lit: lit))
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background {
@@ -378,4 +377,17 @@ extension View {
 /// The open notch's two pages: the player, and the tray to its right.
 enum NotchPage {
     case player, tray
+}
+
+/// A name legible on the glass, whatever's behind it, as names are on the desktop: a close dark edge
+/// around its letters and a wider, softer one that holds over a light window. Chosen, it has its own
+/// color behind it.
+struct TrayNameShadow: ViewModifier {
+    let lit: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: .black.opacity(lit ? 0 : 0.8), radius: 1, y: 0.5)
+            .shadow(color: .black.opacity(lit ? 0 : 0.5), radius: 3)
+    }
 }
