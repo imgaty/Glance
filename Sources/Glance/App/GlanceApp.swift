@@ -119,50 +119,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// order, with what those windows can use of them.
     func makeMainMenu() -> NSMenu {
         let app = NSMenu()
-        app.addItem(withTitle: "About Glance", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        app.addItem(withTitle: String(localized: "About Glance"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
-        app.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        app.addItem(withTitle: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",").target = self
         app.addItem(.separator())
-        let services = NSMenu(title: "Services")
-        app.addItem(withTitle: "Services", action: nil, keyEquivalent: "").submenu = services
+        let services = NSMenu(title: String(localized: "Services"))
+        app.addItem(withTitle: String(localized: "Services"), action: nil, keyEquivalent: "").submenu = services
         NSApp.servicesMenu = services
         app.addItem(.separator())
-        app.addItem(withTitle: "Hide Glance", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        app.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        app.addItem(withTitle: String(localized: "Hide Glance"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        app.addItem(withTitle: String(localized: "Hide Others"), action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
             .keyEquivalentModifierMask = [.command, .option]
-        app.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        app.addItem(withTitle: String(localized: "Show All"), action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         app.addItem(.separator())
-        app.addItem(withTitle: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        app.addItem(withTitle: String(localized: "Quit Glance"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         // Closing a window is the File menu's, not the Window menu's.
-        let file = NSMenu(title: "File")
-        file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        let file = NSMenu(title: String(localized: "File"))
+        file.addItem(withTitle: String(localized: "Close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 
-        let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        let edit = NSMenu(title: String(localized: "Edit"))
+        edit.addItem(withTitle: String(localized: "Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: String(localized: "Redo"), action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Delete", action: #selector(NSText.delete(_:)), keyEquivalent: "")
-        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: String(localized: "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: String(localized: "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: String(localized: "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: String(localized: "Delete"), action: #selector(NSText.delete(_:)), keyEquivalent: "")
+        edit.addItem(withTitle: String(localized: "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
 
         // Minimize and Zoom even for one window, so the keyboard reaches them with Full Keyboard
         // Access; macOS adds its own tiling items and the windows' names below.
-        let window = NSMenu(title: "Window")
-        window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        window.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        let window = NSMenu(title: String(localized: "Window"))
+        window.addItem(withTitle: String(localized: "Minimize"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        window.addItem(withTitle: String(localized: "Zoom"), action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
         window.addItem(.separator())
-        window.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
+        window.addItem(withTitle: String(localized: "Bring All to Front"), action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
         NSApp.windowsMenu = window
 
         // Every command in the Settings window's toolbar, and every page, from the keyboard too.
-        let view = NSMenu(title: "View")
-        view.addItem(withTitle: "Back", action: #selector(goBack), keyEquivalent: "[").target = self
-        view.addItem(withTitle: "Forward", action: #selector(goForward), keyEquivalent: "]").target = self
+        let view = NSMenu(title: String(localized: "View"))
+        view.addItem(withTitle: String(localized: "Back"), action: #selector(goBack), keyEquivalent: "[").target = self
+        view.addItem(withTitle: String(localized: "Forward"), action: #selector(goForward), keyEquivalent: "]").target = self
         view.addItem(.separator())
-        view.addItem(withTitle: "Search", action: #selector(searchSettings), keyEquivalent: "f").target = self
+        view.addItem(withTitle: String(localized: "Search"), action: #selector(searchSettings), keyEquivalent: "f").target = self
         view.addItem(.separator())
         for pane in SettingsPane.allCases {
             let item = view.addItem(withTitle: pane.title, action: #selector(showPane), keyEquivalent: "")
@@ -170,8 +170,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.representedObject = pane.rawValue
         }
 
-        let help = NSMenu(title: "Help")
-        help.addItem(withTitle: "Glance Help", action: #selector(openHelp), keyEquivalent: "?").target = self
+        let help = NSMenu(title: String(localized: "Help"))
+        help.addItem(withTitle: String(localized: "Glance Help"), action: #selector(openHelp), keyEquivalent: "?").target = self
         NSApp.helpMenu = help
 
         let main = NSMenu()
@@ -358,9 +358,9 @@ enum OpenTrigger: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .hover: "Hover"
-        case .click: "Click"
-        case .both: "Hover or click"
+        case .hover: String(localized: "Hover")
+        case .click: String(localized: "Click")
+        case .both: String(localized: "Hover or click")
         }
     }
 }

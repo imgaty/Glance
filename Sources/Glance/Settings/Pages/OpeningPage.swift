@@ -25,10 +25,10 @@ struct OpeningPage: View {
                     ForEach(OpenTrigger.allCases) { Text($0.title).tag($0) }
                 }
                 if openTrigger != .click {
-                    delaySlider($hoverDelay, "Hover delay")
+                    delaySlider($hoverDelay, String(localized: "Hover delay"))
                 }
                 if openTrigger != .hover {
-                    delaySlider($clickDelay, "Click and hold")
+                    delaySlider($clickDelay, String(localized: "Click and hold"))
                 }
                 Toggle("Haptic feedback", isOn: $haptics)
             }

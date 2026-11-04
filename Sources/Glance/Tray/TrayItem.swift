@@ -66,10 +66,10 @@ struct TrayItem: Codable, Identifiable, Equatable {
     /// The name under the item: a file's, or what kind of thing it is.
     var title: String {
         switch kind {
-        case .files: names.count > 1 ? "\(names.count) Items" : names.first ?? "File"
-        case .image: "Image"
-        case .link: text.flatMap { URL(string: $0)?.host() }.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 } ?? "Link"
-        case .text: "Text"
+        case .files: names.count > 1 ? String(localized: "\(names.count) Items") : names.first ?? String(localized: "File")
+        case .image: String(localized: "Image")
+        case .link: text.flatMap { URL(string: $0)?.host() }.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 } ?? String(localized: "Link")
+        case .text: String(localized: "Text")
         }
     }
 }
@@ -82,8 +82,8 @@ enum TrayDragOut: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .keep: "Keep in Tray"
-        case .remove: "Remove from Tray"
+        case .keep: String(localized: "Keep in Tray")
+        case .remove: String(localized: "Remove from Tray")
         }
     }
 
@@ -99,9 +99,9 @@ enum ClipboardKeep: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .halfHour: "30 Minutes"
-        case .eightHours: "8 Hours"
-        case .week: "7 Days"
+        case .halfHour: String(localized: "30 Minutes")
+        case .eightHours: String(localized: "8 Hours")
+        case .week: String(localized: "7 Days")
         }
     }
 

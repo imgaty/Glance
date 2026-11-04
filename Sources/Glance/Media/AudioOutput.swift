@@ -38,7 +38,7 @@ final class AudioOutput: NSObject, ObservableObject {
         // No check marks: the output playing is filled in.
         menu.showsStateColumn = false
         let volume = AppVolume.shared
-        var views: [NSView] = [SoundMenuHeading(title: "Sound", main: true)]
+        var views: [NSView] = [SoundMenuHeading(title: String(localized: "Sound"), main: true)]
         if volume.app != nil { views.append(VolumeMenuSlider(volume: volume)) }
         for view in views {
             let item = NSMenuItem()
@@ -46,8 +46,8 @@ final class AudioOutput: NSObject, ObservableObject {
             menu.addItem(item)
         }
         views.append(Self.addDivider(to: menu, height: 7))
-        let heading = NSMenuItem.sectionHeader(title: "Output")
-        heading.view = SoundMenuHeading(title: "Output", main: false)
+        let heading = NSMenuItem.sectionHeader(title: String(localized: "Output"))
+        heading.view = SoundMenuHeading(title: String(localized: "Output"), main: false)
         views.append(heading.view!)
         menu.addItem(heading)
         let current = Self.defaultOutput
@@ -65,7 +65,7 @@ final class AudioOutput: NSObject, ObservableObject {
             rows.append(row)
         }
         views.append(Self.addDivider(to: menu, height: 11))
-        let settings = NSMenuItem(title: "Sound Settings…", action: #selector(openSoundSettings), keyEquivalent: "")
+        let settings = NSMenuItem(title: String(localized: "Sound Settings…"), action: #selector(openSoundSettings), keyEquivalent: "")
         settings.target = self
         settings.view = SoundMenuRow(title: settings.title)
         views.append(settings.view!)
@@ -169,7 +169,7 @@ final class AudioOutput: NSObject, ObservableObject {
                 var transport: UInt32 = 0
                 _ = AudioProperty.read(id, kAudioObjectPropertyName, &name)
                 _ = AudioProperty.read(id, kAudioDevicePropertyTransportType, &transport)
-                let title = name?.takeRetainedValue() as String? ?? "Output"
+                let title = name?.takeRetainedValue() as String? ?? String(localized: "Output")
                 return Device(id: id, name: title, symbol: symbol(name: title, transport: transport), transport: transport)
             }
     }
@@ -502,7 +502,7 @@ private final class OutputRow: NSView {
                 // As far from its level as the Mac's.
                 text.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: 0.5]))
             }
-            text.append(NSAttributedString(string: "\(level)%", attributes: [.font: font]))
+            text.append(NSAttributedString(string: level.formatted(.percent), attributes: [.font: font]))
         }
         text.addAttribute(.foregroundColor, value: SoundMenu.batteryGray, range: NSRange(location: 0, length: text.length))
         return text

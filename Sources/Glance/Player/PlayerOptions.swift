@@ -18,8 +18,8 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .top: "Cover on top"
-        case .side: "Cover on the side"
+        case .top: String(localized: "Cover on top")
+        case .side: String(localized: "Cover on the side")
         }
     }
 
@@ -137,9 +137,9 @@ enum MusicBackground: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .replaceGlass: "Replace glass"
-        case .spotlight: "Spotlight"
-        case .none: "None"
+        case .replaceGlass: String(localized: "Replace glass")
+        case .spotlight: String(localized: "Spotlight")
+        case .none: String(localized: "None")
         }
     }
 }
@@ -152,8 +152,8 @@ enum AccentSource: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .artwork: "Cover"
-        case .system: "System"
+        case .artwork: String(localized: "Cover")
+        case .system: String(localized: "System")
         default: rawValue.capitalized
         }
     }
@@ -250,12 +250,12 @@ enum PlayerSlot: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .favorite: "Favorite"
-        case .shuffle: "Shuffle"
-        case .repeatMode: "Repeat"
-        case .output: "Sound Output"
-        case .lyrics: "Lyrics"
-        case .empty: "None"
+        case .favorite: String(localized: "Favorite")
+        case .shuffle: String(localized: "Shuffle")
+        case .repeatMode: String(localized: "Repeat")
+        case .output: String(localized: "Sound Output")
+        case .lyrics: String(localized: "Lyrics")
+        case .empty: String(localized: "None")
         }
     }
 
@@ -273,11 +273,11 @@ enum PlayerSlot: String, CaseIterable, Identifiable {
     /// What it does, in a few words.
     var summary: String {
         switch self {
-        case .favorite: "Add the song to favorites."
-        case .shuffle: "Turn shuffle on or off."
-        case .repeatMode: "Repeat all songs or one song."
-        case .output: "Choose where audio plays."
-        case .lyrics: "Show lyrics for the song."
+        case .favorite: String(localized: "Add the song to favorites.")
+        case .shuffle: String(localized: "Turn shuffle on or off.")
+        case .repeatMode: String(localized: "Repeat all songs or one song.")
+        case .output: String(localized: "Choose where audio plays.")
+        case .lyrics: String(localized: "Show lyrics for the song.")
         case .empty: ""
         }
     }

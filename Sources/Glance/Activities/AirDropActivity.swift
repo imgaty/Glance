@@ -146,7 +146,7 @@ final class AirDropWatch: NSObject, ObservableObject {
         let meta = transfer.value(forKey: "metaData") as? NSObject
         func text(_ key: String) -> String? { (meta?.value(forKey: key) as? String).flatMap { $0.isEmpty ? nil : $0 } }
         let mine = meta?.value(forKey: "senderIsMe") as? Bool ?? false
-        let sender = (mine ? text("senderComputerName") : nil) ?? text("senderCompositeName") ?? text("senderComputerName") ?? "Nearby"
+        let sender = (mine ? text("senderComputerName") : nil) ?? text("senderCompositeName") ?? text("senderComputerName") ?? String(localized: "Nearby")
         let preview =
             previews[id] ?? Self.image(meta?.value(forKey: "smallPreviewImage")) ?? Self.image(meta?.value(forKey: "previewImage"))
         previews[id] = preview
@@ -274,13 +274,13 @@ struct ExpandedAirDropView: View {
 
     /// Who it's with; going out, the file, until macOS's window says who it's going to.
     static func from(_ shown: AirDropShown) -> String {
-        guard shown.sending else { return "From \(shown.sender)" }
-        return shown.recipient.map { "To \($0)" } ?? shown.file ?? "Sending"
+        guard shown.sending else { return String(localized: "From \(shown.sender)") }
+        return shown.recipient.map { String(localized: "To \($0)") } ?? shown.file ?? String(localized: "Sending")
     }
 
     static func spoken(_ shown: AirDropShown) -> String {
-        let who = shown.sending ? shown.recipient.map { "to \($0)" } ?? "sending" : "from \(shown.sender)"
-        return "AirDrop \(who), \(Int((shown.fraction * 100).rounded())) percent"
+        let who = shown.sending ? shown.recipient.map { String(localized: "to \($0)") } ?? String(localized: "sending") : String(localized: "from \(shown.sender)")
+        return String(localized: "AirDrop \(who), \(Int((shown.fraction * 100).rounded())) percent")
     }
 
     var body: some View {
@@ -330,7 +330,7 @@ struct ExpandedAirDropView: View {
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
         .onHover { hovering = $0 }
         .notchControl()
-        .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: "Stop AirDrop") { AirDropWatch.shared.stop() }
+        .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirDrop")) { AirDropWatch.shared.stop() }
         .accessibilityLabel("Stop AirDrop")
     }
 

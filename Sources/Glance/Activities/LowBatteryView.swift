@@ -177,9 +177,9 @@ struct LowBatteryView: View {
     /// When it showed, which its ripples count from.
     @State private var shownAt = Date.now
 
-    static func title(_ percent: Int) -> String { "\(percent)% Battery" }
-    static let offer = "Click to turn on Low Power Mode"
-    static let done = "Low Power Mode enabled"
+    static func title(_ percent: Int) -> String { String(localized: "\(percent.formatted(.percent)) Battery") }
+    static let offer = String(localized: "Click to turn on Low Power Mode")
+    static let done = String(localized: "Low Power Mode enabled")
 
     var body: some View {
         let h = restingHeight
@@ -212,7 +212,7 @@ struct LowBatteryView: View {
                 }
             }
             .reportsFrame(.lowPower)
-            .spokenButton(on ? "Turn off Low Power Mode" : "Turn on Low Power Mode") { LowPowerMode.shared.toggle() }
+            .spokenButton(on ? String(localized: "Turn off Low Power Mode") : String(localized: "Turn on Low Power Mode")) { LowPowerMode.shared.toggle() }
             .padding(.trailing, PlayerLayout.padding)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }

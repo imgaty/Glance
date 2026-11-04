@@ -134,7 +134,7 @@ struct DeviceActivityView: View {
         let large = DeviceLayout(height: h, low: low, extended: true)
         let width = closedWidth + wing * 2 - large.ring - large.trailing - LiveActivityView.cameraGap
         return ZStack(alignment: .topLeading) {
-            line(low ? "Low Battery" : "Connected", font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
+            line(low ? String(localized: "Low Battery") : String(localized: "Connected"), font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
             line(name, font: NotchType.title, baseline: h * layout.nameBaseline, color: .white)
         }
         .padding(.leading, AirDropLayout.wordsStart(h))

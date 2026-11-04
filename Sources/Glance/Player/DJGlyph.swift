@@ -23,7 +23,7 @@ struct DJButton: View {
         .buttonStyle(IslandPress())
         .notchControl()
         .accessibilityLabel("DJ")
-        .accessibilityValue(talking ? "Talking" : "")
+        .accessibilityValue(talking ? String(localized: "Talking") : "")
         .accessibilityHint("Opens Spotify")
     }
 }

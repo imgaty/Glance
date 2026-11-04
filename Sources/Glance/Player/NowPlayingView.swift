@@ -134,7 +134,7 @@ struct NowPlayingView: View {
                 // The explicit badge follows the title, as on the iPhone.
                 HStack(spacing: 5) {
                     MarqueeText(
-                        text: nowPlaying.hasMedia ? nowPlaying.title : "Not Playing",
+                        text: nowPlaying.hasMedia ? nowPlaying.title : String(localized: "Not Playing"),
                         font: NotchType.title, active: isVisible, fills: false)
                     if nowPlaying.explicit {
                         Image(systemName: "e.square.fill")
@@ -183,7 +183,7 @@ struct NowPlayingView: View {
                 Scrubber(
                     fraction: duration > 0 ? position / duration : 0,
                     color: accentTimeline ? accent : .white.opacity(0.7),
-                    spoken: playing ? Self.time(position) + " of " + Self.time(duration) : "",
+                    spoken: playing ? String(localized: "\(Self.time(position)) of \(Self.time(duration))") : "",
                     // Ten seconds at a time.
                     step: duration > 0 ? min(10 / duration, 1) : 0
                 ) {
@@ -220,7 +220,7 @@ struct NowPlayingView: View {
                     .keyRing(.left)
             }
             Group {
-                GlyphButton(label: "Previous") {
+                GlyphButton(label: String(localized: "Previous")) {
                     press(.previous)
                 } glyph: {
                     SkipSymbol(forward: false, skips: skipsBack)
@@ -228,12 +228,12 @@ struct NowPlayingView: View {
                 .keyRing(.previous)
                 IslandButton(
                     symbol: nowPlaying.isPlaying ? "pause.fill" : "play.fill", size: PlayerLayout.playGlyph,
-                    label: nowPlaying.isPlaying ? "Pause" : "Play"
+                    label: nowPlaying.isPlaying ? String(localized: "Pause") : String(localized: "Play")
                 ) {
                     press(.playPause)
                 }
                 .keyRing(.playPause)
-                GlyphButton(label: "Next") {
+                GlyphButton(label: String(localized: "Next")) {
                     press(.next)
                 } glyph: {
                     SkipSymbol(forward: true, skips: skipsForward)
@@ -324,7 +324,7 @@ struct NowPlayingView: View {
 
     /// An option's state as VoiceOver says a switch's.
     private static func spoken(_ on: Bool?) -> String? {
-        on.map { $0 ? "On" : "Off" }
+        on.map { $0 ? String(localized: "On") : String(localized: "Off") }
     }
 
     // MARK: The keyboard
@@ -416,14 +416,14 @@ struct NowPlayingView: View {
             return [slot.title, state].compactMap { $0 }.joined(separator: ", ")
         }
         return switch control {
-        case .cover: "Show Where It's Playing"
-        case .lyrics: lyricsControl.shown ? "Hide Lyrics" : "Show Lyrics"
-        case .line: "Lyrics"
-        case .position: "Track Position"
+        case .cover: String(localized: "Show Where It's Playing")
+        case .lyrics: lyricsControl.shown ? String(localized: "Hide Lyrics") : String(localized: "Show Lyrics")
+        case .line: String(localized: "Lyrics")
+        case .position: String(localized: "Track Position")
         case .left: nowPlaying.djPlaying ? "DJ" : named(leftSlot)
-        case .previous: "Previous"
-        case .playPause: nowPlaying.isPlaying ? "Pause" : "Play"
-        case .next: "Next"
+        case .previous: String(localized: "Previous")
+        case .playPause: nowPlaying.isPlaying ? String(localized: "Pause") : String(localized: "Play")
+        case .next: String(localized: "Next")
         case .right: named(rightSlot)
         case .activityFirst, .activitySecond: ""
         }

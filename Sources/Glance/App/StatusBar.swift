@@ -36,7 +36,7 @@ final class StatusBarController: NSObject {
     /// Square, as an icon in the menu bar is: macOS's pill around it comes out the size of the
     /// system's own icons', and the icons beside it as far away. Any wider, the pill is wider still.
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    private let updatesItem = NSMenuItem(title: "Check for Updates…", action: #selector(updatesFromMenu), keyEquivalent: "")
+    private let updatesItem = NSMenuItem(title: String(localized: "Check for Updates…"), action: #selector(updatesFromMenu), keyEquivalent: "")
     private let rebuildItem = NSMenuItem(title: "Rebuild", action: #selector(rebuildFromMenu), keyEquivalent: "")
     private var canCheckWatch: AnyCancellable?
     private var buildProcess: Process?
@@ -60,11 +60,11 @@ final class StatusBarController: NSObject {
             return nil
         }
 
-        let settings = NSMenuItem(title: "Glance Settings…", action: #selector(settingsFromMenu), keyEquivalent: "")
+        let settings = NSMenuItem(title: String(localized: "Glance Settings…"), action: #selector(settingsFromMenu), keyEquivalent: "")
         settings.target = self
         updatesItem.target = self
         rebuildItem.target = self
-        let quit = NSMenuItem(title: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        let quit = NSMenuItem(title: String(localized: "Quit Glance"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu.autoenablesItems = false
         menu.delegate = self
         menu.addItem(updatesItem)
@@ -150,7 +150,7 @@ final class StatusBarController: NSObject {
         state.lit = next
         // VoiceOver says where the keys went, as it does in a menu.
         let row = rows.first { $0.action == next }
-        let words = next == .toggle ? "Glance, \(UserDefaults.standard.notchEnabled ? "on" : "off")" : row?.title ?? ""
+        let words = next == .toggle ? (UserDefaults.standard.notchEnabled ? String(localized: "Glance, on") : String(localized: "Glance, off")) : row?.title ?? ""
         NSAccessibility.post(
             element: NSApp as Any, notification: .announcementRequested,
             userInfo: [.announcement: words, .priority: NSAccessibilityPriorityLevel.high.rawValue])
@@ -168,7 +168,7 @@ final class StatusBarController: NSObject {
 
     /// Each live activity to try alone, in a build from source (see `ActivityBench`), and none.
     private func benchItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Try a Live Activity", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: String(localized: "Try a Live Activity"), action: nil, keyEquivalent: "")
         let scenes = NSMenu()
         scenes.autoenablesItems = false
         func entry(_ title: String, tries chosen: [ActivityBench.Scene], on: Bool) -> NSMenuItem {
@@ -182,7 +182,7 @@ final class StatusBarController: NSObject {
         for scene in ActivityBench.Scene.allCases { scenes.addItem(entry(scene.rawValue, tries: [scene], on: scene == first)) }
         scenes.addItem(.separator())
         // A second beside the first, the most the notch shows; chosen again, it goes.
-        let second = NSMenuItem(title: "Add a Second", action: nil, keyEquivalent: "")
+        let second = NSMenuItem(title: String(localized: "Add a Second"), action: nil, keyEquivalent: "")
         second.isEnabled = first != nil
         if let first {
             let others = NSMenu()
@@ -195,7 +195,7 @@ final class StatusBarController: NSObject {
         }
         scenes.addItem(second)
         scenes.addItem(.separator())
-        scenes.addItem(entry("None", tries: [], on: first == nil))
+        scenes.addItem(entry(String(localized: "None"), tries: [], on: first == nil))
         item.submenu = scenes
         return item
     }
@@ -316,15 +316,15 @@ extension StatusBarController: NSMenuDelegate {
             items.append(item)
         }
         if let timer = clock.timer {
-            add(timer.isRunning ? "Pause Timer" : "Resume Timer", #selector(pauseOrResumeTimer))
-            add("Cancel Timer", #selector(cancelTimer))
+            add(timer.isRunning ? String(localized: "Pause Timer") : String(localized: "Resume Timer"), #selector(pauseOrResumeTimer))
+            add(String(localized: "Cancel Timer"), #selector(cancelTimer))
         } else if clock.rang != nil {
-            add("Repeat Timer", #selector(repeatTimer))
-            add("Stop Timer", #selector(stopTimer))
+            add(String(localized: "Repeat Timer"), #selector(repeatTimer))
+            add(String(localized: "Stop Timer"), #selector(stopTimer))
         }
         if let watch = clock.stopwatch {
-            add(watch.isRunning ? "Stop Stopwatch" : "Start Stopwatch", #selector(startStopStopwatch))
-            add(watch.isRunning ? "Restart Stopwatch" : "Reset Stopwatch", #selector(resetStopwatch))
+            add(watch.isRunning ? String(localized: "Stop Stopwatch") : String(localized: "Start Stopwatch"), #selector(startStopStopwatch))
+            add(watch.isRunning ? String(localized: "Restart Stopwatch") : String(localized: "Reset Stopwatch"), #selector(resetStopwatch))
         }
         guard !items.isEmpty else { return }
         items.append(.separator())
@@ -454,7 +454,7 @@ final class StatusIcon {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = slash > 0.5 ? "Glance, off" : "Glance"
+        image.accessibilityDescription = slash > 0.5 ? String(localized: "Glance, off") : "Glance"
         button?.image = image
     }
 
@@ -503,11 +503,11 @@ struct StatusMenu: View {
     /// Every row, the switch's among them, with whether it can be chosen now. Rebuild is only in
     /// builds made from source, which know where it is.
     static func rows(_ state: StatusMenuState, canCheck: Bool) -> [Row] {
-        var rows = [Row(action: .toggle, title: "Glance"), Row(action: .checkForUpdates, title: "Check for Updates…", enabled: canCheck)]
+        var rows = [Row(action: .toggle, title: "Glance"), Row(action: .checkForUpdates, title: String(localized: "Check for Updates…"), enabled: canCheck)]
         if state.canRebuild {
             rows.append(Row(action: .rebuild, title: state.rebuilding ? "Rebuilding…" : "Rebuild", enabled: !state.rebuilding))
         }
-        return rows + [Row(action: .settings, title: "Glance Settings…"), Row(action: .quit, title: "Quit Glance")]
+        return rows + [Row(action: .settings, title: String(localized: "Glance Settings…")), Row(action: .quit, title: String(localized: "Quit Glance"))]
     }
 
     /// Where an arrow key goes from the row lit: a row down or up, past dimmed ones, and round from

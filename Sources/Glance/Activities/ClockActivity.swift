@@ -220,9 +220,9 @@ final class ClockActivity: ObservableObject {
 
     private func say(_ rung: Rung) {
         rang = (rung.length, rung.title, rung.date)
-        let name = rung.title ?? "Timer"
+        let name = rung.title ?? String(localized: "Timer")
         activities.post(
-            NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: "\(name) done", stays: true))
+            NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: String(localized: "\(name) done"), stays: true))
     }
 
     // MARK: At the bench (see `ActivityBench`)

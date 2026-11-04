@@ -295,9 +295,9 @@ final class NotchModel: ObservableObject {
     /// or Stopwatch.
     func name(of activity: Activity) -> String {
         switch activity {
-        case .music: "Music"
-        case .timer: timerName ?? "Timer"
-        case .stopwatch: "Stopwatch"
+        case .music: String(localized: "Music")
+        case .timer: timerName ?? String(localized: "Timer")
+        case .stopwatch: String(localized: "Stopwatch")
         case .airplay: "AirPlay"
         case .airdrop: "AirDrop"
         }
@@ -395,7 +395,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded != nil:
                 (
                     ExpandedTimerView.width(
-                        for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? "Timer",
+                        for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? String(localized: "Timer"),
                         restingHeight: closedSize.height, camera: camera)
                         + pull * 0.35,
                     TimerLayout.tallHeight(closedSize.height) + pull
@@ -597,7 +597,7 @@ struct NotchView: View {
                 clock: model.activity || model.folded ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
-                timerName: model.activities.first.map(model.name(of:)) ?? "Timer",
+                timerName: model.activities.first.map(model.name(of:)) ?? String(localized: "Timer"),
                 leadingOnly: model.detached != nil, grown: isOpen && grownFrom != nil, hoveredButton: model.hoveredButton,
                 open: { model.openNotch() },
                 extended: model.alertExtended,
@@ -762,7 +762,7 @@ struct NotchView: View {
             shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
-            name: activity.map(model.name(of:)) ?? "Timer", open: { model.openBubble() },
+            name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
             hidden: model.state == .open,
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
@@ -779,7 +779,7 @@ struct NotchView: View {
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
         if let clock = model.expandedClock {
             let h = model.closedSize.height
-            let name = model.expanded.map(model.name(of:)) ?? "Timer"
+            let name = model.expanded.map(model.name(of:)) ?? String(localized: "Timer")
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
             ExpandedTimerView(
                 shown: clock, name: name, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom

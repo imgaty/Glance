@@ -44,9 +44,9 @@ struct HeroWaveform: View {
             .buttonStyle(IslandPress(highlight: false))
             .keyRing(.lyrics)
             .disabled(!button)
-            .help(button ? (lyricsShown ? "Hide Lyrics" : "Show Lyrics") : "")
+            .help(button ? (lyricsShown ? String(localized: "Hide Lyrics") : String(localized: "Show Lyrics")) : "")
             // Only a picture of the sound, unless it shows the lyrics.
-            .accessibilityLabel(lyricsShown ? "Hide Lyrics" : "Show Lyrics")
+            .accessibilityLabel(lyricsShown ? String(localized: "Hide Lyrics") : String(localized: "Show Lyrics"))
             .accessibilityHidden(!button)
             .onHover { hovering = $0 }
             .notchControl(enabled: button)

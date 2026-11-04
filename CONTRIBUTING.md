@@ -95,6 +95,18 @@ and can load a library, so Glance runs its Now Playing reader inside it.
 
 <br>
 
+## Translations
+
+Glance's words live in String Catalogs, `Resources/Localizable.xcstrings` and
+`Resources/InfoPlist.xcstrings`, which `build.sh` compiles into the app. SwiftUI's
+`Text("…")` and the like are translatable as they are; anything else the user sees or
+hears goes through `String(localized: "…")`. After changing the words, this adds the
+new ones to the catalog, and the tests name anything still to translate:
+
+```sh
+Tools/sync-strings.sh
+```
+
 ## Before a pull request
 
 1. Run the tests with `swift test`, or `Cmd U` in Xcode.

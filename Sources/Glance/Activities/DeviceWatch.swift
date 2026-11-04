@@ -268,14 +268,14 @@ final class DeviceWatch {
     static func lowBattery(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int) -> NotchAlert {
         NotchAlert(
             kind: .deviceBattery, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
-            spoken: "\(name) battery low, \(battery) percent", name: name)
+            spoken: String(localized: "\(name) battery low, \(battery) percent"), name: name)
     }
 
     /// A case running low: on its own, closed, without its earbuds, its ring red.
     static func caseLowBattery(name: String, symbol: String, model: Headphones? = nil, battery: Int) -> NotchAlert {
         NotchAlert(
             kind: .caseBattery, content: .device(symbol: symbol, model: model, battery: battery),
-            spoken: "\(name) Case battery low, \(battery) percent", name: "\(name) Case")
+            spoken: String(localized: "\(name) Case battery low, \(battery) percent"), name: String(localized: "\(name) Case"))
     }
 
     // MARK: Announcing
@@ -304,9 +304,8 @@ final class DeviceWatch {
 
     /// A device: its symbol and battery, as AirPods are shown.
     static func alert(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) -> NotchAlert {
-        let level = battery.map { ", \($0) percent" } ?? ""
         return NotchAlert(
             kind: .device, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
-            spoken: "\(name) connected\(level)", name: name)
+            spoken: battery.map { String(localized: "\(name) connected, \($0) percent") } ?? String(localized: "\(name) connected"), name: name)
     }
 }

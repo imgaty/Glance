@@ -92,7 +92,7 @@ extension SettingsPreview {
             await announce(song)
         case .charging:
             let level = BatteryLevel(percent: 64, charging: true)
-            await say(NotchAlert(kind: .charging, content: .battery(title: "Charging", level: level), spoken: "Charging, 64 percent"))
+            await say(NotchAlert(kind: .charging, content: .battery(title: String(localized: "Charging"), level: level), spoken: String(localized: "Charging, 64 percent")))
         case .lowBattery:
             await say(BatteryWatch.lowBattery(BatteryWatch.Reading(percent: 20, onPower: false, charging: false)))
         case .device:

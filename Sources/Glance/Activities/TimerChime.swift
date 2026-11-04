@@ -53,7 +53,8 @@ final class TimerChime {
     nonisolated static func file(for tone: String?, in folder: URL = tones) -> URL? {
         guard let tone, tone.hasPrefix("system:") else { return nil }
         let wanted = String(tone.dropFirst("system:".count))
-        let places = [folder.appendingPathComponent("Ringtones")]
+        let places =
+            [folder.appendingPathComponent("Ringtones")]
             + ((try? FileManager.default.contentsOfDirectory(at: folder.appendingPathComponent("AlertTones"), includingPropertiesForKeys: nil)) ?? [])
         func find(_ name: String) -> URL? {
             for place in places {

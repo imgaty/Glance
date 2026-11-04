@@ -33,7 +33,7 @@ final class OnboardingWindowController {
             let window = NSWindow(
                 contentRect: NSRect(origin: .zero, size: OnboardingView.size), styleMask: [.titled, .closable, .fullSizeContentView],
                 backing: .buffered, defer: false)
-            window.title = "Welcome to Glance"
+            window.title = String(localized: "Welcome to Glance")
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.isReleasedWhenClosed = false

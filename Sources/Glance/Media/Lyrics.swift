@@ -424,10 +424,10 @@ struct LyricsView: View {
                     InterludeDots(progress: 0, isCurrent: true, breathing: isVisible)
                         .position(x: proxy.size.width / 2, y: middle)
                 case .instrumental, .unavailable:
-                    message("No lyrics available for this song")
+                    message(String(localized: "No lyrics available for this song"))
                         .position(x: proxy.size.width / 2, y: middle)
                 case .unreachable:
-                    message("Lyrics can't be reached right now")
+                    message(String(localized: "Lyrics can't be reached right now"))
                         .position(x: proxy.size.width / 2, y: middle)
                 case .none:
                     Color.clear
@@ -794,7 +794,7 @@ private struct CreditsView: View {
     }
 
     private var sources: String {
-        [LyricsStore.lyricsSource, credits.source].compactMap { $0 }.joined(separator: " and ")
+        [LyricsStore.lyricsSource, credits.source].compactMap { $0 }.formatted(.list(type: .and))
     }
 }
 

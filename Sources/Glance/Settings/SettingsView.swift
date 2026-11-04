@@ -272,13 +272,13 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: "General"
-        case .appearance: "Appearance"
-        case .player: "Player"
-        case .tray: "Tray"
-        case .activities: "Live Activities"
-        case .opening: "Opening"
-        case .displays: "Displays"
+        case .general: String(localized: "General")
+        case .appearance: String(localized: "Appearance")
+        case .player: String(localized: "Player")
+        case .tray: String(localized: "Tray")
+        case .activities: String(localized: "Live Activities")
+        case .opening: String(localized: "Opening")
+        case .displays: String(localized: "Displays")
         }
     }
 
@@ -316,15 +316,20 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// Words a search in the sidebar finds the page by.
     var keywords: String {
         switch self {
-        case .general: "login launch startup permissions privacy accessibility about build version source update updates automatically"
-        case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color cover artwork background spotlight display preview"
+        case .general: String(localized: "login launch startup permissions privacy accessibility about build version source update updates automatically")
+        case .appearance: String(localized: "look glass system black clear dark blur opaque liquid transparency accent color cover artwork background spotlight display preview")
         case .player:
-            "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art artwork"
-        case .tray: "shelf files drop drag clipboard copy copies paste history screenshots recordings private passwords keep clear share quick look"
+            String(
+                localized:
+                    "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art artwork")
+        case .tray: String(localized: "shelf files drop drag clipboard copy copies paste history screenshots recordings private passwords keep clear share quick look")
         case .activities:
-            "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
-        case .opening: "hover click delay hold haptic feedback gestures swipe slide tool tools scrolling trackpad keyboard shortcut hotkey"
-        case .displays: "monitor external virtual notch full screen menu bar"
+            String(
+                localized:
+                    "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
+            )
+        case .opening: String(localized: "hover click delay hold haptic feedback gestures swipe slide tool tools scrolling trackpad keyboard shortcut hotkey")
+        case .displays: String(localized: "monitor external virtual notch full screen menu bar")
         }
     }
 

@@ -113,7 +113,7 @@ struct NotchPreview: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Preview of the notch")
-        .accessibilityHint(interactive ? "Try opening the notch." : "")
+        .accessibilityHint(interactive ? String(localized: "Try opening the notch.") : "")
         .accessibilityAddTraits(.isImage)
     }
 

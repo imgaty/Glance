@@ -90,8 +90,8 @@ final class BatteryWatch {
     static func alert(from old: Reading, to new: Reading, lowPower: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled) -> NotchAlert? {
         let level = BatteryLevel(percent: new.percent, charging: new.charging, lowPower: lowPower)
         if new.onPower, !old.onPower {
-            let title = new.charging ? "Charging" : "Plugged In"
-            return NotchAlert(kind: .charging, content: .battery(title: title, level: level), spoken: "\(title), \(new.percent) percent")
+            let title = new.charging ? String(localized: "Charging") : String(localized: "Plugged In")
+            return NotchAlert(kind: .charging, content: .battery(title: title, level: level), spoken: String(localized: "\(title), \(new.percent) percent"))
         }
         if !new.onPower, warnings.contains(where: { new.percent <= $0 && old.percent > $0 }) {
             return lowBattery(new)
@@ -100,7 +100,7 @@ final class BatteryWatch {
     }
 
     static func lowBattery(_ reading: Reading) -> NotchAlert {
-        NotchAlert(kind: .lowBattery, content: .lowBattery(percent: reading.percent), spoken: "Low battery, \(reading.percent) percent", seconds: 5.6)
+        NotchAlert(kind: .lowBattery, content: .lowBattery(percent: reading.percent), spoken: String(localized: "Low battery, \(reading.percent) percent"), seconds: 5.6)
     }
 
     /// The Mac's own battery, if it has one.

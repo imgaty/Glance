@@ -34,6 +34,9 @@ cp Resources/Info.plist "$PLIST"
 # beside the camera as they connect.
 mkdir -p "$APP/Contents/Resources"
 cp -R Resources/Headphones "$APP/Contents/Resources/"
+# Glance's words in every language macOS comes in, from the String Catalogs. macOS picks the language.
+xcrun xcstringstool compile Resources/Localizable.xcstrings --output-directory "$APP/Contents/Resources" >/dev/null
+xcrun xcstringstool compile Resources/InfoPlist.xcstrings --output-directory "$APP/Contents/Resources" >/dev/null
 # The app icon's layers, which macOS lights as glass and redraws in each icon style.
 xcrun actool Resources/AppIcon.icon --compile "$APP/Contents/Resources" --platform macosx \
     --target-device mac --minimum-deployment-target 26.0 --app-icon AppIcon \

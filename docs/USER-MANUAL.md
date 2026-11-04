@@ -58,6 +58,15 @@ brings up macOS's own question. To see its permissions page again, use
 
 <br>
 
+## Language
+
+Glance speaks the language macOS shows it in, so there's nothing to set in Glance,
+and it comes in every language macOS does. To use another one for Glance alone,
+choose it in **System Settings > General > Language & Region > Applications**, then
+open Glance again. The same words macOS uses, such as those for its own settings,
+are taken from macOS. Names like AirDrop and Spotify stay as they are, and so does
+what a song or a file calls itself.
+
 ## Opening and closing
 
 Hover over the notch or click it, depending on

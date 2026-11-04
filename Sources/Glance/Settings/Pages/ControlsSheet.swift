@@ -122,10 +122,10 @@ struct ControlsSheet: View {
                         }
                         .gesture(drag(control, from: place))
                         .pointerStyle(control == .empty ? .link : .grabIdle)
-                        .help(control == .empty ? "No button here" : control.summary)
+                        .help(control == .empty ? String(localized: "No button here") : control.summary)
                         .position(x: frame.midX, y: frame.midY)
                         .accessibilityElement()
-                        .accessibilityLabel("\(place == .left ? "Left" : "Right") button: \(control.title)")
+                        .accessibilityLabel(place == .left ? String(localized: "First button: \(control.title)") : String(localized: "Last button: \(control.title)"))
                         .accessibilityAddTraits(selected == place ? [.isButton, .isSelected] : .isButton)
                         .accessibilityAction { selected = place }
                     if control != .empty, places.lifted != place {

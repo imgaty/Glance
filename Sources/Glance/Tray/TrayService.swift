@@ -29,10 +29,10 @@ final class TrayService: NSObject {
 
     @objc func addToTray(_ pasteboard: NSPasteboard, userData: String?, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
         guard Tray.isOn else {
-            error.pointee = "The tray is turned off in Glance's settings." as NSString
+            error.pointee = String(localized: "The tray is turned off in Glance's settings.") as NSString
             return
         }
-        if !tray.drop(pasteboard) { error.pointee = "The tray can't keep what's chosen." as NSString }
+        if !tray.drop(pasteboard) { error.pointee = String(localized: "The tray can't keep what's chosen.") as NSString }
     }
 
     /// Whether Glance Tray is on in the Share menu. macOS lists a new app's Share extension

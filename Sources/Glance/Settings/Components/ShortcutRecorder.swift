@@ -42,7 +42,7 @@ struct ShortcutRecorder: View {
         Button {
             recording ? stop() : start()
         } label: {
-            Text(recording ? "Type Shortcut" : shortcuts.combos[action]?.symbols ?? "")
+            Text(recording ? String(localized: "Type Shortcut") : shortcuts.combos[action]?.symbols ?? "")
                 .frame(minWidth: 96)
         }
         .buttonStyle(.bordered)

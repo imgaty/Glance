@@ -25,7 +25,7 @@ struct TrayPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.tray, "Keeps files you drop on the notch, what you copy, and your screenshots and screen recordings.") {
+                PageIntro(.tray, String(localized: "Keeps files you drop on the notch, what you copy, and your screenshots and screen recordings.")) {
                     Toggle("Tray", isOn: $trayOn)
                         .toggleStyle(.switch)
                         .labelsHidden()
@@ -59,7 +59,7 @@ struct TrayPage: View {
             Section {
                 // Follows the stored list, so an app added shows at once; by name, as the player's list is.
                 AppList(
-                    title: "Never keep copies from", detail: "What you copy in these apps doesn't join the tray.",
+                    title: String(localized: "Never keep copies from"), detail: String(localized: "What you copy in these apps doesn't join the tray."),
                     prompt: "Choose apps whose copies the tray never keeps.",
                     apps: ignored, add: TrayApps.add, remove: TrayApps.remove
                 ) { app in
@@ -67,7 +67,7 @@ struct TrayPage: View {
                         .accessibilityLabel("Remove \(MusicApps.name(of: app))")
                 }
             } header: {
-                SectionTitle("Apps")
+                SectionTitle(String(localized: "Apps"))
             }
             .disabled(!trayOn || !keepsCopies)
             if !shareOn {

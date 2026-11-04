@@ -1,0 +1,422 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAppleEventsUsageDescription": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يغيّر Glance الترتيب العشوائي والتكرار والمفضلة ومستوى الصوت في الموسيقى وSpotify، ويعثر على علامة تبويب المتصفح التي تشغّل الصوت."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El Glance canvia l’aleatori, la repetició, els preferits i el volum a Música i Spotify, i troba la pestanya del navegador que reprodueix."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mění náhodné přehrávání, opakování, oblíbené a hlasitost v Hudbě a Spotify a najde panel prohlížeče, který hraje."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ændrer bland, gentag, favoritter og lydstyrke i Musik og Spotify og finder den browserfane, der spiller."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ändert Zufallswiedergabe, Wiederholen, Favoriten und Lautstärke in Musik und Spotify und findet den Browser-Tab, der gerade spielt."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Glance αλλάζει την τυχαία σειρά, την επανάληψη, τα αγαπημένα και την ένταση στη Μουσική και στο Spotify, και βρίσκει την καρτέλα του προγράμματος περιήγησης που παίζει."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance cambia el modo aleatorio, la repetición, los favoritos y el volumen en Música y Spotify, y encuentra la pestaña del navegador que está reproduciendo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance muuttaa sekoitusta, toistoa, suosikkeja ja äänenvoimakkuutta Musiikissa ja Spotifyssa ja löytää soittavan selainvälilehden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance modifie la lecture aléatoire, la répétition, les favoris et le volume dans Musique et Spotify, et trouve l’onglet du navigateur qui joue."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance משנה ערבוב, חזרה, מועדפים ועוצמת קול במוזיקה וב-Spotify, ומוצא את כרטיסיית הדפדפן שמנגנת."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance संगीत और Spotify में शफ़ल, दोहराएँ, पसंदीदा और वॉल्यूम बदलता है, और चल रहा ब्राउज़र टैब ढूँढता है।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mijenja nasumičnu reprodukciju, ponavljanje, omiljene i glasnoću u Glazbi i Spotifyju te pronalazi karticu preglednika koja svira."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Glance módosítja a véletlen sorrendet, az ismétlést, a kedvenceket és a hangerőt a Zene és a Spotify appban, és megtalálja a lejátszó böngészőlapot."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mengubah acak, ulangi, favorit, dan volume di Musik dan Spotify, serta menemukan tab browser yang sedang memutar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance cambia riproduzione casuale, ripetizione, preferiti e volume in Musica e Spotify, e trova il pannello del browser in riproduzione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GlanceはミュージックとSpotifyのシャッフル、リピート、お気に入り、音量を変更し、再生中のブラウザのタブを見つけます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance는 음악 및 Spotify의 임의 재생, 반복, 즐겨찾기, 음량을 변경하고 재생 중인 브라우저 탭을 찾습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance menukar kocok, ulang, kegemaran dan kelantangan dalam Muzik dan Spotify, dan mencari tab pelayar yang sedang dimainkan."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance endrer tilfeldig rekkefølge, gjenta, favoritter og volum i Musikk og Spotify, og finner nettleserfanen som spiller."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance wijzigt willekeurig, herhalen, favorieten en volume in Muziek en Spotify, en vindt het browsertabblad dat afspeelt."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance zmienia losowanie, powtarzanie, ulubione i głośność w Muzyce i Spotify oraz znajduje kartę przeglądarki, w której gra dźwięk."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance altera o aleatório, a repetição, os favoritos e o volume no Música e no Spotify, e encontra a aba do navegador que está tocando."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance altera o aleatório, a repetição, os favoritos e o volume na Música e no Spotify, e encontra o separador do navegador que está a reproduzir."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance schimbă amestecarea, repetarea, favoritele și volumul în Muzică și Spotify și găsește fila browserului care redă."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance меняет перемешивание, повтор, избранное и громкость в Музыке и Spotify и находит вкладку браузера, где идёт воспроизведение."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mení náhodné prehrávanie, opakovanie, obľúbené a hlasitosť v Hudbe a Spotify a nájde panel prehliadača, ktorý hrá."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance spreminja naključno predvajanje, ponavljanje, priljubljene in glasnost v aplikacijah Glasba in Spotify ter najde zavihek brskalnika, ki predvaja."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ändrar blandning, upprepning, favoriter och volym i Musik och Spotify, och hittar webbläsarfliken som spelar."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance เปลี่ยนการสุ่ม การเล่นซ้ำ รายการโปรด และระดับเสียงในเพลงและ Spotify และค้นหาแถบเบราว์เซอร์ที่กำลังเล่น"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance, Müzik ve Spotify’da karıştırma, tekrarlama, sık kullanılanlar ve sesi değiştirir, çalan tarayıcı sekmesini bulur."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance змінює перемішування, повтор, вподобання і гучність у Музиці та Spotify і знаходить вкладку браузера, де йде відтворення."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance thay đổi trộn bài, lặp lại, yêu thích và âm lượng trong Nhạc và Spotify, đồng thời tìm tab trình duyệt đang phát."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 可更改音乐和 Spotify 中的随机播放、重复、个人收藏和音量，并查找正在播放的浏览器标签页。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 可更改音樂和 Spotify 中的隨機播放、重複、喜好項目和音量，並尋找正在播放的瀏覽器標籤頁。"
+          }
+        }
+      }
+    },
+    "NSAudioCaptureUsageDescription": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يقيس Glance ارتفاع صوت التطبيق قيد التشغيل لتحريك الموجة الصوتية، ويخفض صوت التطبيقات لشريط مستوى الصوت. لا يتم تسجيل أي شيء ولا يغادر جهاز Mac."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El Glance mesura el volum de l’app que sona per moure la forma d’ona, i abaixa les apps per al regulador de volum. No es grava res ni surt del teu Mac."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance měří hlasitost hrající aplikace, aby hýbal vlnou, a ztišuje aplikace pro jezdec hlasitosti. Nic se nenahrává ani neopouští váš Mac."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance måler, hvor højt den spillende app lyder, for at bevæge bølgeformen, og skruer ned for apps til lydstyrkeknappen. Intet optages eller forlader din Mac."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance misst, wie laut die spielende App ist, um die Wellenform zu bewegen, und regelt Apps für den Lautstärkeregler herunter. Nichts wird aufgezeichnet oder verlässt deinen Mac."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Glance μετρά πόσο δυνατά παίζει η εφαρμογή για να κινεί την κυματομορφή, και χαμηλώνει τις εφαρμογές για το ρυθμιστικό έντασης. Τίποτα δεν εγγράφεται ούτε φεύγει από το Mac σας."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mide el volumen de la app que suena para mover la forma de onda, y baja el volumen de las apps para el regulador. Nada se graba ni sale de tu Mac."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mittaa soittavan apin äänenvoimakkuuden liikuttaakseen aaltomuotoa ja hiljentää appeja äänenvoimakkuuden liukusäätimelle. Mitään ei tallenneta eikä mikään poistu Macilta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mesure le volume de l’app en lecture pour animer la forme d’onde, et baisse le son des apps pour le curseur de volume. Rien n’est enregistré ni ne quitte votre Mac."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance מודד עד כמה חזק היישום המנגן כדי להניע את צורת הגל, ומנמיך יישומים עבור מחוון עוצמת הקול. שום דבר לא מוקלט או יוצא מה-Mac."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance वेवफ़ॉर्म चलाने के लिए चल रहे ऐप की आवाज़ मापता है, और वॉल्यूम स्लाइडर के लिए ऐप्स की आवाज़ कम करता है। कुछ भी रिकॉर्ड नहीं होता और न ही आपके Mac से बाहर जाता है।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mjeri koliko je glasan app koji svira kako bi pomicao valni oblik, i stišava appove za klizač glasnoće. Ništa se ne snima niti napušta vaš Mac."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Glance méri a lejátszó app hangerejét a hullámforma mozgatásához, és lehalkítja az appokat a hangerőszabályzóhoz. Semmi sem kerül rögzítésre, és nem hagyja el a Macet."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mengukur kerasnya app yang memutar untuk menggerakkan bentuk gelombang, dan mengecilkan app untuk penggeser volume. Tidak ada yang direkam atau keluar dari Mac Anda."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance misura il volume dell’app in riproduzione per muovere la forma d’onda, e abbassa le app per il cursore del volume. Nulla viene registrato o lascia il tuo Mac."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glanceは再生中のアプリの音の大きさを測って波形を動かし、音量スライダーのためにアプリの音量を下げます。何も録音されず、Macの外に送信されることもありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance는 재생 중인 앱의 소리 크기를 측정하여 파형을 움직이고, 음량 슬라이더를 위해 앱의 음량을 낮춥니다. 아무것도 녹음되거나 Mac 밖으로 나가지 않습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mengukur kekuatan bunyi app yang dimainkan untuk menggerakkan bentuk gelombang, dan memperlahankan app untuk peleret kelantangan. Tiada apa-apa dirakam atau meninggalkan Mac anda."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance måler hvor høyt appen som spiller er, for å bevege bølgeformen, og demper apper for volumkontrollen. Ingenting tas opp eller forlater Macen."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance meet hoe luid de spelende app is om de golfvorm te bewegen, en zet apps zachter voor de volumeregelaar. Niets wordt opgenomen of verlaat je Mac."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mierzy głośność grającej aplikacji, aby poruszać falą dźwiękową, i ścisza aplikacje dla suwaka głośności. Nic nie jest nagrywane ani nie opuszcza Twojego Maca."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance mede o volume do app que está tocando para mover a forma de onda, e abaixa os apps para o controle de volume. Nada é gravado nem sai do seu Mac."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance mede o volume da app em reprodução para mover a forma de onda, e baixa o volume das apps para o nível de volume. Nada é gravado nem sai do seu Mac."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance măsoară cât de tare este aplicația care redă pentru a mișca forma de undă și reduce volumul aplicațiilor pentru glisorul de volum. Nimic nu este înregistrat și nu părăsește Mac-ul."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance измеряет громкость играющего приложения, чтобы двигать волну, и приглушает приложения для регулятора громкости. Ничего не записывается и не покидает ваш Mac."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance meria hlasitosť hrajúcej aplikácie, aby hýbal vlnou, a stišuje aplikácie pre posuvník hlasitosti. Nič sa nenahráva ani neopúšťa váš Mac."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance meri, kako glasna je aplikacija, ki predvaja, da premika valovno obliko, in utiša aplikacije za drsnik glasnosti. Nič se ne snema in ne zapusti vašega Maca."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mäter hur högt den spelande appen låter för att flytta vågformen, och sänker appar för volymreglaget. Inget spelas in eller lämnar din Mac."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance วัดความดังของแอปที่กำลังเล่นเพื่อขยับรูปคลื่น และลดเสียงแอปสำหรับแถบเลื่อนระดับเสียง ไม่มีการบันทึกหรือส่งสิ่งใดออกจาก Mac ของคุณ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance, dalga biçimini hareket ettirmek için çalan uygulamanın ses yüksekliğini ölçer ve ses sürgüsü için uygulamaların sesini kısar. Hiçbir şey kaydedilmez ve Mac’inizden çıkmaz."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance вимірює гучність програми, що грає, щоб рухати хвилю, і приглушує програми для регулятора гучності. Нічого не записується й не залишає ваш Mac."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance đo độ lớn của ứng dụng đang phát để di chuyển dạng sóng, và giảm âm lượng các ứng dụng cho thanh trượt âm lượng. Không có gì được ghi lại hay rời khỏi máy Mac của bạn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 测量正在播放的 App 的响度以驱动波形，并为音量滑块调低 App 音量。不会录制任何内容，也不会传出你的 Mac。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 測量正在播放的 App 的音量以帶動波形，並為音量滑桿調低 App 音量。不會錄製任何內容，也不會傳出你的 Mac。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

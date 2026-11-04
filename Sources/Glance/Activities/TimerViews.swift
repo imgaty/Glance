@@ -200,7 +200,7 @@ struct StopwatchReading: View {
 struct ExpandedTimerView: View {
     let shown: ClockShown
     /// Its name beside the time: Timer, the label Clock's timer was given, or Stopwatch.
-    var name = "Timer"
+    var name = String(localized: "Timer")
     let restingHeight: CGFloat
     /// The camera housing's width, which the row goes either side of.
     let camera: CGFloat
@@ -250,7 +250,8 @@ struct ExpandedTimerView: View {
         let stopwatch = { if case .stopwatch = shown { return true } else { return false } }()
         return HStack(spacing: h * TimerLayout.buttonGap) {
             IslandCircleButton(
-                control: .activityFirst, height: h, tint: TimerLayout.ink, label: running ? (stopwatch ? "Stop" : "Pause") : (stopwatch ? "Start" : "Resume"),
+                control: .activityFirst, height: h, tint: TimerLayout.ink,
+                label: running ? (stopwatch ? String(localized: "Stop") : String(localized: "Pause")) : (stopwatch ? String(localized: "Start") : String(localized: "Resume")),
                 fill: stopwatch ? TimerLayout.stopwatchPauseFill : nil
             ) {
                 stopwatch ? clock.startStopStopwatch() : clock.toggleTimer()
@@ -264,7 +265,7 @@ struct ExpandedTimerView: View {
                 }
             }
             IslandCircleButton(
-                control: .activitySecond, height: h, tint: .white, label: stopwatch ? (running ? "Restart" : "Reset") : "Cancel",
+                control: .activitySecond, height: h, tint: .white, label: stopwatch ? (running ? String(localized: "Restart") : String(localized: "Reset")) : String(localized: "Cancel"),
                 fill: stopwatch ? TimerLayout.stopwatchResetFill : nil
             ) {
                 stopwatch ? clock.resetStopwatch() : clock.cancelTimer()
@@ -278,7 +279,7 @@ struct ExpandedTimerView: View {
             }
         }
         .opacity(clock.canControl ? 1 : 0.45)
-        .accessibilityHint(clock.canControl ? "" : "Needs Accessibility")
+        .accessibilityHint(clock.canControl ? "" : String(localized: "Needs Accessibility"))
     }
 
     /// The time, large, its name small before it, on one line: under the camera, beside it, as far
@@ -329,7 +330,7 @@ struct ExpandedTimerView: View {
     /// Either side of the camera, as wide as the wider of the buttons and the time needs, each from
     /// its end. For the time as it reads then: it narrows or widens as it loses or gains a digit.
     @MainActor
-    static func width(for shown: ClockShown, name: String = "Timer", restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
+    static func width(for shown: ClockShown, name: String = String(localized: "Timer"), restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now) -> CGFloat {
         let buttons = TimerLayout.buttonEdge(h) + TimerLayout.content(h) * 2 + h * TimerLayout.buttonGap
         let time = timeWidth(shown, h, at: date) + timeEdge(h)
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
@@ -393,7 +394,7 @@ struct GrownFade: ViewModifier {
 struct TimerDoneView: View {
     let length: TimeInterval
     /// Timer, or the label it was given in Clock.
-    var name = "Timer"
+    var name = String(localized: "Timer")
     let restingHeight: CGFloat
     /// Each wing's width beside the camera (see `wing(length:name:restingHeight:)`).
     var wing: CGFloat = 0
@@ -437,7 +438,7 @@ struct TimerDoneView: View {
 
     /// Each wing: as wide as the wider side, the name or the buttons, each from its end. A long
     /// label is cut short at its limit.
-    static func wing(length: TimeInterval, name: String = "Timer", restingHeight h: CGFloat) -> CGFloat {
+    static func wing(length: TimeInterval, name: String = String(localized: "Timer"), restingHeight h: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let words = min(
             ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 2,

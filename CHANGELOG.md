@@ -60,6 +60,8 @@
   it folds to rest before opening for the next, and the pointer on it folds it
   away at once, the notch opening once it has. With Reduce Motion on, the notch
   widens without bouncing and nothing blurs.
+- Added every language macOS comes in, 36 in all: Glance follows the language
+  macOS shows it in, and its words for macOS's own settings are macOS's.
 - Added the keyboard to live activities, lyrics and the sound: with the notch
   opened from its shortcut, the up and down arrows go from the player to a timer's,
   the stopwatch's, AirDrop's or AirPlay's own view and back, where Tab and Space

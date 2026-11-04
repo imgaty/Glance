@@ -120,7 +120,7 @@ struct TrayItemPicture: View {
     static func title(of item: TrayItem) -> String {
         switch item.kind {
         case .files: item.title
-        case .image: item.origin == .screenshot ? "Screenshot" : "Image"
+        case .image: item.origin == .screenshot ? String(localized: "Screenshot") : String(localized: "Image")
         case .link:
             item.text.flatMap(URLComponents.init(string:)).map { link in
                 let path = link.path.split(separator: "/").joined(separator: "/")
@@ -129,7 +129,7 @@ struct TrayItemPicture: View {
         case .text:
             (item.text ?? "").split(whereSeparator: \.isNewline).first.map {
                 String($0.trimmingCharacters(in: .whitespaces).prefix(48))
-            } ?? "Text"
+            } ?? String(localized: "Text")
         }
     }
 
@@ -138,21 +138,21 @@ struct TrayItemPicture: View {
     static func detail(of item: TrayItem, in tray: Tray) -> String {
         // As Notification Center says it: "now", "2m ago".
         let when = item.added.formatted(.relative(presentation: .named, unitsStyle: .narrow))
-        let count = item.kind == .files && item.names.count > 1 ? "\(item.names.count) Items · " : ""
-        return (item.keptCopy ? "Kept · " : "") + count + source(of: item, in: tray) + " · " + when
+        let count = item.kind == .files && item.names.count > 1 ? String(localized: "\(item.names.count) Items") + " · " : ""
+        return (item.keptCopy ? String(localized: "Kept") + " · " : "") + count + source(of: item, in: tray) + " · " + when
     }
 
     private static func source(of item: TrayItem, in tray: Tray) -> String {
         switch item.origin {
         case .copied:
-            return item.app.flatMap(InstalledApps.name).map { "Copied from \($0)" } ?? "Copied"
+            return item.app.flatMap(InstalledApps.name).map { String(localized: "Copied from \($0)") } ?? String(localized: "Copied")
         case .screenshot:
             let isMovie = item.names.first.flatMap { UTType(filenameExtension: ($0 as NSString).pathExtension) }?.conforms(to: .movie) == true
-            return isMovie ? "Screen Recording" : "Screenshot"
+            return isMovie ? String(localized: "Screen Recording") : String(localized: "Screenshot")
         case .dropped:
             // As last looked, away from the notch (see Tray.checkFiles): never looked for here, as
             // the tray is drawn.
-            return tray.folders[item.id].map { "In " + $0 } ?? "Dropped"
+            return tray.folders[item.id].map { String(localized: "In \($0)") } ?? String(localized: "Dropped")
         }
     }
 }

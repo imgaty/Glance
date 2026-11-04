@@ -476,7 +476,10 @@ private struct MenuBarPicture: View {
     let shown: CGFloat
     @ObservedObject private var wallpapers = Wallpapers.shared
 
-    private static let menus = ["File", "Edit", "View", "History", "Bookmarks", "Window", "Help"]
+    private static let menus = [
+        String(localized: "File"), String(localized: "Edit"), String(localized: "View"), String(localized: "History"), String(localized: "Bookmarks"), String(localized: "Window"),
+        String(localized: "Help"),
+    ]
     nonisolated private static let space = "menuBar"
 
     var body: some View {

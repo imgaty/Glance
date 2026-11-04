@@ -166,13 +166,13 @@ struct TrayView: View {
     /// What shows up here besides what's dropped, as set in Settings.
     private var emptyLine: String {
         if keepsCopies, tray.pasteBlocked {
-            return "To keep what you copy, allow Glance in Privacy & Security, under Paste from Other Apps."
+            return String(localized: "To keep what you copy, allow Glance in Privacy & Security, under Paste from Other Apps.")
         }
         return switch (keepsCopies, keepsScreenshots) {
-        case (true, true): "Drop files here. Copies and screenshots show up too."
-        case (true, false): "Drop files here. Copies show up too."
-        case (false, true): "Drop files here. Screenshots show up too."
-        case (false, false): "Drop files here to keep them close."
+        case (true, true): String(localized: "Drop files here. Copies and screenshots show up too.")
+        case (true, false): String(localized: "Drop files here. Copies show up too.")
+        case (false, true): String(localized: "Drop files here. Screenshots show up too.")
+        case (false, false): String(localized: "Drop files here to keep them close.")
         }
     }
 
@@ -182,7 +182,7 @@ struct TrayView: View {
     /// let go over.
     private var dropZones: some View {
         HStack(spacing: 8) {
-            DropZone(title: "Keep in Tray", lit: !airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
+            DropZone(title: String(localized: "Keep in Tray"), lit: !airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
                 Image(systemName: "tray.and.arrow.down.fill").font(.system(size: Self.zoneGlyph))
             }
             // Both places in one style: a white symbol each, the same size.
@@ -221,7 +221,7 @@ private struct ItemTile: View {
         .accessibilityAction { tray.choose(item.id) }
         .accessibilityActions {
             if item.kind != .text {
-                Button(item.kind == .link ? "Open Link" : "Open") { tray.openable(item).forEach { NSWorkspace.shared.open($0) } }
+                Button(item.kind == .link ? String(localized: "Open Link") : String(localized: "Open")) { tray.openable(item).forEach { NSWorkspace.shared.open($0) } }
             }
             if item.kind == .files {
                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(tray.urls(of: item)) }
@@ -233,7 +233,7 @@ private struct ItemTile: View {
             Button("Paste") { tray.paste(tray.targets(of: item)) }
             // What's dropped is always kept.
             if item.origin != .dropped {
-                Button(item.keptCopy ? "Don't Keep" : "Keep") { tray.keep(Set(tray.targets(of: item).map(\.id)), !item.keptCopy) }
+                Button(item.keptCopy ? String(localized: "Don't Keep") : String(localized: "Keep")) { tray.keep(Set(tray.targets(of: item).map(\.id)), !item.keptCopy) }
             }
             Button("Remove from Tray") { tray.remove(Set(tray.targets(of: item).map(\.id))) }
         }

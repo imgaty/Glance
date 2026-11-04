@@ -23,7 +23,7 @@ struct PlayerPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.player, "Open the notch to see what almost any app is playing, with its cover, its controls and the lyrics.")
+                PageIntro(.player, String(localized: "Open the notch to see what almost any app is playing, with its cover, its controls and the lyrics."))
             }
             Section {
                 CenteredRow(alignment: .top) {
@@ -57,7 +57,7 @@ struct PlayerPage: View {
             Section {
                 // Follows the stored list, so an app that has just played appears at once.
                 AppList(
-                    title: "Show audio from", detail: "Turn an app off to keep it out of the notch.",
+                    title: String(localized: "Show audio from"), detail: String(localized: "Turn an app off to keep it out of the notch."),
                     prompt: "Choose apps to show in the notch.",
                     apps: MusicApps.listed(seen: seenApps.split(separator: ",").map(String.init)),
                     add: MusicApps.add, remove: MusicApps.forget, removable: MusicApps.removable
@@ -76,7 +76,7 @@ struct PlayerPage: View {
                     Text("Apps that start playing are added turned on.")
                 }
             } header: {
-                SectionTitle("Apps")
+                SectionTitle(String(localized: "Apps"))
             }
         }
         .sheet(isPresented: $customizing) {

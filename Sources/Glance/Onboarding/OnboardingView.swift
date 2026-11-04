@@ -79,11 +79,11 @@ struct OnboardingView: View {
                 }
                 HStack {
                     if pages.count > 1 {
-                        Button(place == 0 ? "Set Up Later" : "Back") { place == 0 ? onDone() : go(to: place - 1) }
+                        Button(place == 0 ? String(localized: "Set Up Later") : String(localized: "Back")) { place == 0 ? onDone() : go(to: place - 1) }
                             .buttonStyle(.glass)
                     }
                     Spacer()
-                    Button(start == .permissions ? "Done" : last ? "Get Started" : "Continue") {
+                    Button(start == .permissions ? String(localized: "Done") : last ? String(localized: "Get Started") : String(localized: "Continue")) {
                         last ? onDone() : go(to: place + 1)
                     }
                     .buttonStyle(.glassProminent)
@@ -225,7 +225,7 @@ private struct PageDots: View {
 /// highlight of each feature, its symbol in the accent color beside it.
 private struct WelcomePage: View {
     var body: some View {
-        PageLayout(title: "Welcome to Glance") {
+        PageLayout(title: String(localized: "Welcome to Glance")) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .frame(width: OnboardingMetrics.iconSize, height: OnboardingMetrics.iconSize)
@@ -362,13 +362,13 @@ private struct PermissionsPage: View {
     @ObservedObject private var loginItem = LoginItem.shared
 
     var body: some View {
-        PageLayout(title: "Allow Access") {
+        PageLayout(title: String(localized: "Allow Access")) {
             PageSymbol(name: "hand.raised.fill")
         } content: {
             VStack(spacing: OnboardingMetrics.groupGap) {
                 permissionList
                 SwitchList {
-                    SwitchRow(title: "Open at login", isOn: Binding(get: { loginItem.status == .enabled }, set: loginItem.set))
+                    SwitchRow(title: String(localized: "Open at login"), isOn: Binding(get: { loginItem.status == .enabled }, set: loginItem.set))
                 }
             }
         }
@@ -377,27 +377,27 @@ private struct PermissionsPage: View {
     private var permissionList: some View {
         VStack(spacing: 0) {
             PermissionRow(
-                symbol: "waveform", title: "Audio from apps",
-                detail: "For the waveform and the volume slider. Nothing is recorded or leaves your Mac.",
+                symbol: "waveform", title: String(localized: "Audio from apps"),
+                detail: String(localized: "For the waveform and the volume slider. Nothing is recorded or leaves your Mac."),
                 state: permissions.audio, allow: permissions.requestAudio,
                 openSettings: { permissions.openSettings(for: \.audio) })
             Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
-                symbol: "music.note", title: "Control Music",
-                detail: "For the shuffle, repeat, favorite and volume controls.",
+                symbol: "music.note", title: String(localized: "Control Music"),
+                detail: String(localized: "For the shuffle, repeat, favorite and volume controls."),
                 state: permissions.musicControl, allow: { permissions.requestControl(of: PlayerScripting.music) },
                 openSettings: { permissions.openSettings(for: \.musicControl) })
             Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
-                symbol: "music.quarternote.3", title: "Control Spotify",
-                detail: "For the shuffle, repeat and volume controls. Repeating one song also takes Accessibility.",
+                symbol: "music.quarternote.3", title: String(localized: "Control Spotify"),
+                detail: String(localized: "For the shuffle, repeat and volume controls. Repeating one song also takes Accessibility."),
                 state: permissions.spotify, allow: permissions.requestSpotify,
                 openSettings: { permissions.openSettings(for: permissions.spotifyControl == .denied ? \.spotifyControl : \.accessibility) })
             Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
-                symbol: "accessibility", title: "Accessibility",
+                symbol: "accessibility", title: String(localized: "Accessibility"),
                 detail:
-                    "To paste from the tray, swipe to it, press Clock's and AirDrop's buttons, find the tab a song plays in, and hide macOS's own banners and timer.",
+                    String(localized: "To paste from the tray, swipe to it, press Clock's and AirDrop's buttons, find the tab a song plays in, and hide macOS's own banners and timer."),
                 state: permissions.accessibility, allow: permissions.requestAccessibility,
                 openSettings: { permissions.openSettings(for: \.accessibility) })
         }

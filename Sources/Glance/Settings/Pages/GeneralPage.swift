@@ -32,7 +32,7 @@ struct GeneralPage: View {
                         .disabled(!updater.canCheck)
                 }
                 Toggle(
-                    "Update automatically",
+                    String(localized: "Update automatically"),
                     isOn: Binding(get: { updater.updatesAutomatically }, set: { updater.updatesAutomatically = $0 })
                 )
                 .disabled(!updater.isAvailable)

@@ -33,8 +33,8 @@ struct OnboardingHighlight: Identifiable {
 
     /// The last line, about the tour itself.
     static let personalize = OnboardingHighlight(
-        symbol: "slider.horizontal.3", title: "Make It Yours",
-        text: "Choose how the notch opens and looks.")
+        symbol: "slider.horizontal.3", title: String(localized: "Make It Yours"),
+        text: String(localized: "Choose how the notch opens and looks."))
 }
 
 /// A step of a feature's tour: the notch as it looks, a title that says what to do, and what to
@@ -83,29 +83,29 @@ struct OnboardingSwitch: Identifiable {
 extension OnboardingFeature {
     static var music: OnboardingFeature {
         OnboardingFeature(
-            id: "music", title: "Music", symbol: "music.note", color: .pink,
+            id: "music", title: String(localized: "Music"), symbol: "music.note", color: .pink,
             highlights: [
                 OnboardingHighlight(
-                    symbol: "music.note", title: "What's Playing",
-                    text: "Any app's song, with its cover and controls."),
+                    symbol: "music.note", title: String(localized: "What's Playing"),
+                    text: String(localized: "Any app's song, with its cover and controls.")),
                 OnboardingHighlight(
-                    symbol: "quote.bubble", title: "Lyrics", text: "The words, lit line by line as they're sung."),
+                    symbol: "quote.bubble", title: String(localized: "Lyrics"), text: String(localized: "The words, lit line by line as they're sung.")),
                 OnboardingHighlight(
-                    symbol: "waveform", title: "Live Activities",
-                    text: "Timers, AirDrop and more, beside the camera."),
+                    symbol: "waveform", title: String(localized: "Live Activities"),
+                    text: String(localized: "Timers, AirDrop and more, beside the camera.")),
             ],
             steps: [
                 OnboardingStep(
-                    id: "open", title: "Choose How the Notch Opens", scene: .tryOpening,
-                    settings: [.openTrigger, .switches([OnboardingSwitch(key: Preferences.haptics, title: "Haptic feedback")])]),
+                    id: "open", title: String(localized: "Choose How the Notch Opens"), scene: .tryOpening,
+                    settings: [.openTrigger, .switches([OnboardingSwitch(key: Preferences.haptics, title: String(localized: "Haptic feedback"))])]),
                 OnboardingStep(
-                    id: "look", title: "Choose a Layout and Background", scene: .layouts, settings: [.look]),
+                    id: "look", title: String(localized: "Choose a Layout and Background"), scene: .layouts, settings: [.look]),
                 OnboardingStep(
-                    id: "activity", title: "See What's Playing at a Glance", scene: .liveActivity,
+                    id: "activity", title: String(localized: "See What's Playing at a Glance"), scene: .liveActivity,
                     settings: [
                         .switches([
-                            OnboardingSwitch(key: Preferences.liveActivity, title: "Cover and waveform"),
-                            OnboardingSwitch(key: Preferences.musicTrackPop, title: "Announce new audio", needs: Preferences.liveActivity),
+                            OnboardingSwitch(key: Preferences.liveActivity, title: String(localized: "Cover and waveform")),
+                            OnboardingSwitch(key: Preferences.musicTrackPop, title: String(localized: "Announce new audio"), needs: Preferences.liveActivity),
                         ])
                     ]),
             ])
@@ -117,18 +117,18 @@ extension OnboardingFeature {
 extension OnboardingFeature {
     static var tray: OnboardingFeature {
         OnboardingFeature(
-            id: "tray", title: "Tray", symbol: "tray.full.fill", color: .indigo,
+            id: "tray", title: String(localized: "Tray"), symbol: "tray.full.fill", color: .indigo,
             highlights: [
                 OnboardingHighlight(
-                    symbol: "tray.and.arrow.down", title: "Tray", text: "Files you drop and what you copy, close at hand.")
+                    symbol: "tray.and.arrow.down", title: String(localized: "Tray"), text: String(localized: "Files you drop and what you copy, close at hand."))
             ],
             steps: [
                 OnboardingStep(
-                    id: "tray", title: "Keep Files and Copies in the Tray", scene: .tray,
+                    id: "tray", title: String(localized: "Keep Files and Copies in the Tray"), scene: .tray,
                     settings: [
                         .switches([
-                            OnboardingSwitch(key: Preferences.tray, title: "Tray"),
-                            OnboardingSwitch(key: Preferences.trayClipboard, title: "Keep what you copy", needs: Preferences.tray),
+                            OnboardingSwitch(key: Preferences.tray, title: String(localized: "Tray")),
+                            OnboardingSwitch(key: Preferences.trayClipboard, title: String(localized: "Keep what you copy"), needs: Preferences.tray),
                         ])
                     ])
             ])

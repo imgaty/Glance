@@ -162,27 +162,26 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         self.anchor = anchor
         super.init()
         let count = items.count
-        let many = count > 1 ? " \(count) Items" : ""
         let single = count == 1 ? items.first : nil
 
         if let single, single.kind != .text {
-            add(single.kind == .link ? "Open Link" : "Open", "arrow.up.forward.app", #selector(open))
+            add(single.kind == .link ? String(localized: "Open Link") : String(localized: "Open"), "arrow.up.forward.app", #selector(open))
             if let apps = openWith() {
-                add("Open With", "arrow.up.forward.square", nil).submenu = apps
+                add(String(localized: "Open With"), "arrow.up.forward.square", nil).submenu = apps
             }
         }
         if items.contains(where: { $0.kind == .files }) {
-            add("Show in Finder", "folder", #selector(reveal))
+            add(String(localized: "Show in Finder"), "folder", #selector(reveal))
         }
-        if !tray.files(of: items).isEmpty { add("Quick Look" + many, "eye", #selector(quickLook)) }
+        if !tray.files(of: items).isEmpty { add(count > 1 ? String(localized: "Quick Look \(count) Items") : String(localized: "Quick Look"), "eye", #selector(quickLook)) }
         separate()
-        add("Copy" + many, "doc.on.doc", #selector(copyItems))
+        add(count > 1 ? String(localized: "Copy \(count) Items") : String(localized: "Copy"), "doc.on.doc", #selector(copyItems))
         if CGPreflightPostEventAccess() {
-            let paste = add("Paste" + many, "doc.on.clipboard", #selector(pasteItems))
+            let paste = add(count > 1 ? String(localized: "Paste \(count) Items") : String(localized: "Paste"), "doc.on.clipboard", #selector(pasteItems))
             // With Option held, as in the Edit menu: only the words, in the style of where they land.
             if items.allSatisfy({ $0.kind == .text || $0.kind == .link }) {
                 paste.keyEquivalentModifierMask = []
-                let plain = add("Paste and Match Style", "doc.on.clipboard", #selector(pastePlain))
+                let plain = add(String(localized: "Paste and Match Style"), "doc.on.clipboard", #selector(pastePlain))
                 plain.keyEquivalentModifierMask = .option
                 plain.isAlternate = true
             }
@@ -190,16 +189,19 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         // As Finder's Share…: the share picker, with AirDrop, Messages, Mail and the rest. macOS's
         // own menu item for it shows the picker beside nothing in particular, which from the notch
         // was nowhere at all; this one shows it on the item.
-        if !tray.shareable(items).isEmpty, anchor != nil { add("Share…", "square.and.arrow.up", #selector(share)) }
+        if !tray.shareable(items).isEmpty, anchor != nil { add(String(localized: "Share…"), "square.and.arrow.up", #selector(share)) }
         separate()
         // Copies and screenshots, kept until they're removed rather than for as long as copies are.
         let copies = items.filter { $0.origin != .dropped }
         if !copies.isEmpty {
             let kept = copies.allSatisfy(\.kept)
-            let some = copies.count > 1 ? " \(copies.count) Items" : ""
-            add(kept ? "Don't Keep" + some : "Keep" + some, kept ? "pin.slash" : "pin", kept ? #selector(letGo) : #selector(keepItems))
+            let keep =
+                copies.count > 1
+                ? (kept ? String(localized: "Don't Keep \(copies.count) Items") : String(localized: "Keep \(copies.count) Items"))
+                : (kept ? String(localized: "Don't Keep") : String(localized: "Keep"))
+            add(keep, kept ? "pin.slash" : "pin", kept ? #selector(letGo) : #selector(keepItems))
         }
-        add(count > 1 ? "Remove\(many) from Tray" : "Remove from Tray", "minus.circle", #selector(remove))
+        add(count > 1 ? String(localized: "Remove \(count) Items from Tray") : String(localized: "Remove from Tray"), "minus.circle", #selector(remove))
         // The menu holds its items' target weakly; it keeps this alive while it's up.
         objc_setAssociatedObject(menu, &Self.key, self, .OBJC_ASSOCIATION_RETAIN)
         Self.shown = self
@@ -283,11 +285,11 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
             item.image = workspace.icon(forFile: url.path)
             item.image?.size = CGSize(width: 16, height: 16)
         }
-        if let standard { app(standard, name(standard) + " (default)") }
+        if let standard { app(standard, name(standard) + String(localized: " (default)")) }
         if standard != nil, !others.isEmpty { menu.addItem(.separator()) }
         others.forEach { app($0, name($0)) }
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Other…", action: #selector(openInOther), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Other…"), action: #selector(openInOther), keyEquivalent: "").target = self
         return menu
     }
 
@@ -304,8 +306,9 @@ final class TrayMenu: NSObject, NSSharingServicePickerDelegate {
         panel.allowedContentTypes = [.application]
         panel.canChooseDirectories = false
         panel.treatsFilePackagesAsDirectories = false
-        panel.prompt = "Open"
-        panel.message = "Choose an app to open \(items.first.map(TrayItemPicture.title) ?? "the item") with."
+        panel.prompt = String(localized: "Open")
+        panel.message =
+            items.first.map { String(localized: "Choose an app to open \(TrayItemPicture.title(of: $0)) with.") } ?? String(localized: "Choose an app to open the item with.")
         NSApp.activate()
         panel.begin { response in
             guard response == .OK, let app = panel.url else { return }

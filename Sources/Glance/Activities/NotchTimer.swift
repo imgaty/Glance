@@ -42,15 +42,15 @@ enum NotchTimer {
         let whole = Int(seconds.rounded(.up))
         if whole < 600 { return format(seconds) }
         let minutes = whole / 60
-        guard minutes >= 60 else { return "\(minutes)m" }
-        return minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(minutes % 60)m"
+        guard minutes >= 60 else { return String(localized: "\(minutes)m") }
+        return minutes % 60 == 0 ? String(localized: "\(minutes / 60)h") : String(localized: "\(minutes / 60)h \(minutes % 60)m")
     }
 
     /// As VoiceOver says it: its name, what's left in words, and that it's paused: "Timer, 4 minutes,
     /// 57 seconds left, paused".
-    static func spoken(_ state: State, name: String = "Timer", at date: Date = .now) -> String {
+    static func spoken(_ state: State, name: String = String(localized: "Timer"), at date: Date = .now) -> String {
         let left = words(state.left(at: date).rounded(.up)) ?? format(state.left(at: date))
-        return "\(name), \(left) left" + (state.isRunning ? "" : ", paused")
+        return String(localized: "\(name), \(left) left") + (state.isRunning ? "" : String(localized: ", paused"))
     }
 
     /// A length in words: "4 minutes, 57 seconds".
@@ -134,6 +134,6 @@ enum Stopwatch: Equatable {
     /// As VoiceOver says it: "Stopwatch, 1 minute, 7 seconds, stopped".
     static func spoken(_ watch: Stopwatch, at date: Date = .now) -> String {
         let time = NotchTimer.words(watch.elapsed(at: date).rounded(.down)) ?? format(watch.elapsed(at: date))
-        return "Stopwatch, \(time)" + (watch.isRunning ? "" : ", stopped")
+        return String(localized: "Stopwatch, \(time)") + (watch.isRunning ? "" : String(localized: ", stopped"))
     }
 }

@@ -84,10 +84,10 @@ private struct LookEditor: View {
             }
             if !followsSystem {
                 LabeledContent("Liquid Glass") {
-                    slider($darkness, from: "capsule.on.rectangle.liquid.glass", "Clear", to: "capsule.on.rectangle.fill", "Black")
+                    slider($darkness, from: "capsule.on.rectangle.liquid.glass", String(localized: "Clear"), to: "capsule.on.rectangle.fill", String(localized: "Black"))
                 }
                 LabeledContent("Blur") {
-                    slider($blur, from: "circle", "None", to: "circle.dotted", "Full")
+                    slider($blur, from: "circle", String(localized: "None"), to: "circle.dotted", String(localized: "Full"))
                 }
             }
         } footer: {
@@ -133,7 +133,7 @@ private struct LookEditor: View {
                         ? lowName
                         : value.wrappedValue > 0.95
                             ? highName
-                            : "\(Int(value.wrappedValue * 100))%")
+                            : Int(value.wrappedValue * 100).formatted(.percent))
             Image(systemName: high)
                 .frame(width: 24)
                 .accessibilityLabel(highName)

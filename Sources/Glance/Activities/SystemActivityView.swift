@@ -31,7 +31,7 @@ struct SystemActivityView: View {
     /// A file coming in over AirDrop, when that has the notch.
     var airdrop: AirDropShown? = nil
     /// The timer's name, as VoiceOver says it.
-    var timerName = "Timer"
+    var timerName = String(localized: "Timer")
     /// Another activity is detached: the trailing wing is folded away, and what's on it hidden, or it
     /// would show past the fold as the pointer swells the notch.
     var leadingOnly = false
@@ -271,7 +271,7 @@ struct SystemActivityView: View {
             EmptyView()
         case .battery(_, let level):
             HStack(spacing: restingHeight * BatteryGlyph.gap) {
-                Text("\(level.percent)%")
+                Text(level.percent.formatted(.percent))
                     .font(.system(size: size, weight: .semibold).monospacedDigit())
                     .foregroundStyle(level.color)
                     .fixedSize()
@@ -339,7 +339,7 @@ struct SystemActivityView: View {
             case .battery(let title, let level):
                 (
                     inset + width(title, size, .semibold) + gap,
-                    gap + digitsWidth("\(level.percent)%", size, .semibold) + restingHeight * BatteryGlyph.gap
+                    gap + digitsWidth(level.percent.formatted(.percent), size, .semibold) + restingHeight * BatteryGlyph.gap
                         + BatteryGlyph.width(height: restingHeight * BatteryGlyph.height) + outset
                 )
             case .status(_, _, let text):
@@ -772,6 +772,6 @@ struct BatteryGlyph: View {
                 .frame(width: height * Self.cap, height: height * 0.4)
         }
         .frame(width: Self.width(height: height), height: height)
-        .accessibilityLabel("\(level.percent) percent\(level.charging ? ", charging" : "")")
+        .accessibilityLabel(level.charging ? String(localized: "\(level.percent) percent, charging") : String(localized: "\(level.percent) percent"))
     }
 }

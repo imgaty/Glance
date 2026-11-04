@@ -38,7 +38,7 @@ enum InstalledApps {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.treatsFilePackagesAsDirectories = false
-        panel.prompt = "Add"
+        panel.prompt = String(localized: "Add")
         panel.message = message
         let chosen: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .OK else { return }

@@ -33,7 +33,7 @@ struct ActivitiesPage: View {
     var body: some View {
         Form {
             Section {
-                PageIntro(.activities, "Shows what's going on beside the camera while the notch is closed.")
+                PageIntro(.activities, String(localized: "Shows what's going on beside the camera while the notch is closed."))
             }
             Section {
                 Toggle(isOn: $liveActivity) {
@@ -104,7 +104,10 @@ struct ActivitiesPage: View {
             } footer: {
                 // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
                 Text(
-                    "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
+                    String(
+                        localized:
+                            "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
+                    )
                 )
             }
         }

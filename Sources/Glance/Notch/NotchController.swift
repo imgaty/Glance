@@ -1330,7 +1330,7 @@ final class NotchController {
             volume.set(volume.level + step)
             NSAccessibility.post(
                 element: NSApp as Any, notification: .announcementRequested,
-                userInfo: [.announcement: "Volume \(Int((volume.level * 100).rounded())) percent", .priority: NSAccessibilityPriorityLevel.high.rawValue])
+                userInfo: [.announcement: String(localized: "Volume \(Int((volume.level * 100).rounded())) percent"), .priority: NSAccessibilityPriorityLevel.high.rawValue])
         }
         return true
     }

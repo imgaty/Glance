@@ -125,7 +125,7 @@ struct HeroArtwork: View {
                         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
                         .notchControl(enabled: showsBadge && isOpen)
                         .accessibilityLabel(
-                            nowPlaying.appBundleID.flatMap(InstalledApps.name).map { "Open \($0)" } ?? "Open App"
+                            nowPlaying.appBundleID.flatMap(InstalledApps.name).map { String(localized: "Open \($0)") } ?? String(localized: "Open App")
                         )
                         .accessibilityHidden(!(showsBadge && isOpen))
                         .position(x: proxy.size.width + past - tile / 2, y: proxy.size.height + past - tile / 2)
@@ -190,7 +190,7 @@ extension HeroArtwork {
         .onHover { coverHovered = $0 && clickable }
         .notchControl(enabled: clickable)
         .allowsHitTesting(clickable)
-        .help(nowPlaying.appBundleID.flatMap(InstalledApps.name).map { "Show in \($0)" } ?? "Show Where It's Playing")
+        .help(nowPlaying.appBundleID.flatMap(InstalledApps.name).map { String(localized: "Show in \($0)") } ?? String(localized: "Show Where It's Playing"))
         .accessibilityLabel("Show Where It's Playing")
         .accessibilityHidden(!clickable)
     }
