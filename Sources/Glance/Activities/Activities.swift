@@ -21,10 +21,9 @@ struct NotchAlert: Identifiable, Equatable {
 
     /// What shows on either side of the camera.
     enum Content: Equatable {
-        /// A device connecting, as AirPods do: the device itself turning in on the left, AirPods and
-        /// Beats in 3D, others as macOS pictures them, or by their symbol; its battery as a ring on
-        /// the right, when it tells it.
-        case device(symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int?)
+        /// A device connecting, as AirPods do: the device itself turning in 3D on the left; its
+        /// battery as a ring on the right, when it tells it.
+        case device(model: Headphones, battery: Int?)
         /// The Mac's battery: a word on the left, its level and a battery on the right.
         case battery(title: String, level: BatteryLevel)
         /// The Mac's battery running low, as tall as the Alarm, with a button to turn on Low Power

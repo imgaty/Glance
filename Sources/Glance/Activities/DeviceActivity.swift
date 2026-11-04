@@ -25,11 +25,11 @@ enum ExpandedDeviceLayout {
     /// What a device's height is multiplied by to look that large: as far as it stays within what's
     /// as wide and tall as the ring at the other end, as it turns, clear of the words and the camera.
     @MainActor
-    static func fit(model: Headphones?, pictures: [String], restingHeight h: CGFloat) -> CGFloat {
+    static func fit(model: Headphones, restingHeight h: CGFloat) -> CGFloat {
         let usual = DeviceLayout(height: h, extended: true)
         let room = TimerLayout.content(h)
-        let looks = SystemActivityView.deviceSize(model: model, pictures: pictures, layout: usual) ?? h * size
-        let across = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: usual) * 2
+        let looks = SystemActivityView.deviceSize(model: model, layout: usual) ?? h * size
+        let across = SystemActivityView.deviceReach(model: model, layout: usual) * 2
         return min(h * size / looks, room / across, room / usual.picture)
     }
 
@@ -56,9 +56,7 @@ enum ExpandedDeviceLayout {
 /// layout to land on whole pixels, as the cover and the waveform grow into theirs as it opens; the
 /// words fade in as the player's do.
 struct DeviceActivityView: View {
-    let symbol: String
-    let model: Headphones?
-    let pictures: [String]
+    let model: Headphones
     let battery: Int?
     let name: String
     /// Running low, its ring a little larger, with its level in numbers in the middle.
@@ -77,15 +75,15 @@ struct DeviceActivityView: View {
 
     var body: some View {
         let h = restingHeight
-        let fit = ExpandedDeviceLayout.fit(model: model, pictures: pictures, restingHeight: h)
+        let fit = ExpandedDeviceLayout.fit(model: model, restingHeight: h)
         let small = DeviceLayout(height: h, low: low, fit: fit)
         let large = DeviceLayout(height: h, low: low, extended: true, fit: fit)
-        let axis = SystemActivityView.deviceAxis(model: model, pictures: pictures, layout: small)
-        let reach = SystemActivityView.deviceReach(model: model, pictures: pictures, layout: small)
-        let smallWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: small)
-        let largeWidth = SystemActivityView.deviceWidth(model: model, pictures: pictures, layout: large)
+        let axis = SystemActivityView.deviceAxis(model: model, layout: small)
+        let reach = SystemActivityView.deviceReach(model: model, layout: small)
+        let smallWidth = SystemActivityView.deviceWidth(model: model, layout: small)
+        let largeWidth = SystemActivityView.deviceWidth(model: model, layout: large)
         // Turning about the middle of its place, as wide as the ring's, from the padding.
-        let largeAxis = SystemActivityView.deviceAxis(model: model, pictures: pictures, layout: large)
+        let largeAxis = SystemActivityView.deviceAxis(model: model, layout: large)
         let middle = PlayerLayout.padding + TimerLayout.content(h) / 2 - (largeAxis - largeWidth / 2)
         let smallMiddle = small.edge + max(reach - axis, 0) + smallWidth / 2
         let ringScale = small.ring / large.ring
@@ -116,12 +114,8 @@ struct DeviceActivityView: View {
     }
 
     @ViewBuilder private func picture(height: CGFloat) -> some View {
-        if let model, let turn = DeviceTurn.cached(model) {
+        if let turn = DeviceTurn.cached(model) {
             TurningDevice(turn: turn, height: height, hold: model.isChargingCase ? TurningDevice.caseHold : 0)
-        } else if let images = DevicePictures.images(pictures) {
-            StillPictures(images: images, height: height)
-        } else {
-            StillSymbol(symbol: symbol, side: height)
         }
     }
 

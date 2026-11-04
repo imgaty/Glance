@@ -98,7 +98,7 @@ extension SettingsPreview {
         case .device:
             _ = await DeviceTurn.prepare(.airpodsPro2)
             guard !Task.isCancelled else { return }
-            await say(DeviceWatch.alert(name: "AirPods Pro", symbol: "airpodspro", model: .airpodsPro2, battery: 88))
+            await say(DeviceWatch.alert(name: "AirPods Pro", model: .airpodsPro2, battery: 88))
         case .airDrop:
             await hold(\.airdrop, AirDropShown(id: "preview", sender: "iPhone", preview: ActivityBench.photo(), fraction: 0.35))
         case .timer:

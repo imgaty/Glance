@@ -234,7 +234,7 @@ final class ActivityBench {
     }
 
     private static func headphones() -> [@MainActor () async -> NotchAlert] {
-        let airPods: [Headphones] = [.airpodsPro, .airpodsPro2, .airpodsPro3, .airpods, .airpods3]
+        let airPods: [Headphones] = [.airpodsPro, .airpodsPro2, .airpodsPro3, .airpods, .airpods3, .airpodsMax]
         let beats = Headphones.allCases.filter { !airPods.contains($0) && !$0.isChargingCase }
         func clips(_ models: [Headphones]) -> [@MainActor () async -> NotchAlert] {
             let levels = [88, 54, 21, 100, 12]
@@ -243,52 +243,37 @@ final class ActivityBench {
                     _ = await DeviceTurn.prepare(model)
                     let name = model.rawValue.replacingOccurrences(of: "-", with: " ").capitalized
                         .replacingOccurrences(of: "Airpods", with: "AirPods")
-                    return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count])
+                    return DeviceWatch.alert(name: name, model: model, battery: levels[index % levels.count])
                 }
-            }
-        }
-        // Those with no clip, as macOS pictures them: AirPods Max, then AirPods 2.
-        let pictured: [@MainActor () async -> NotchAlert] = [(0x200A, 72), (0x200F, 40)].map { product, level in
-            {
-                let symbol = SystemDevices.symbols(product: product)?.symbol ?? "airpods"
-                return DeviceWatch.alert(name: "AirPods", symbol: symbol, pictures: DevicePictures.names(product: product), battery: level)
             }
         }
         // Each kind in turn, the widest first, so that all of them come round soon.
         let order = beats.reversed().enumerated().flatMap { index, model in
             index < airPods.count ? [model, airPods[index]] : [model]
         }
-        return pictured + clips(order)
+        return clips(order)
     }
 
     private static func deviceBatteries() -> [@MainActor () async -> NotchAlert] {
-        [(Headphones.airpodsPro2, "airpodspro", 20), (.airpodsPro2, "airpodspro", 10), (.beatsSolo4, "headphones", 20), (.beatsSolo4, "headphones", 10)]
-            .map { model, symbol, level in
+        [(Headphones.airpodsPro2, 20), (.airpodsPro2, 10), (.beatsSolo4, 20), (.beatsSolo4, 10)]
+            .map { model, level in
                 {
                     _ = await DeviceTurn.prepare(model)
-                    return DeviceWatch.lowBattery(name: model.rawValue, symbol: symbol, model: model, battery: level)
+                    return DeviceWatch.lowBattery(name: model.rawValue, model: model, battery: level)
                 }
             }
     }
 
-    /// Each case in turn, at 20% or 10%: AirPods 1 and 2's, which have no model, as macOS draws them,
-    /// then those turning in 3D.
+    /// Each case in turn, at 20% or 10%.
     private static func caseBatteries() -> [@MainActor () async -> NotchAlert] {
-        let drawn: [@MainActor () async -> NotchAlert] = [("AirPods", 0x2002), ("AirPods 2", 0x200F)].map { name, product in
+        Headphones.allCases.filter(\.isChargingCase).enumerated().map { index, model in
             {
-                let symbol = SystemDevices.symbols(product: product)?.chargingCase ?? "airpods.chargingcase.fill"
-                return DeviceWatch.caseLowBattery(name: name, symbol: symbol, battery: 20)
+                _ = await DeviceTurn.prepare(model)
+                let name = model.rawValue.replacingOccurrences(of: "-case", with: "").replacingOccurrences(of: "-", with: " ").capitalized
+                    .replacingOccurrences(of: "Airpods", with: "AirPods")
+                return DeviceWatch.caseLowBattery(name: name, model: model, battery: index.isMultiple(of: 2) ? 20 : 10)
             }
         }
-        return drawn
-            + Headphones.allCases.filter(\.isChargingCase).enumerated().map { index, model in
-                {
-                    _ = await DeviceTurn.prepare(model)
-                    let name = model.rawValue.replacingOccurrences(of: "-case", with: "").replacingOccurrences(of: "-", with: " ").capitalized
-                        .replacingOccurrences(of: "Airpods", with: "AirPods")
-                    return DeviceWatch.caseLowBattery(name: name, symbol: "airpods.chargingcase.fill", model: model, battery: index.isMultiple(of: 2) ? 20 : 10)
-                }
-            }
     }
 
     /// One of macOS's own desktop pictures, as a photo sent over AirDrop would be.

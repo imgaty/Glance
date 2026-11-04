@@ -163,7 +163,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 Clips of AirPods and Beats turning, and of their charging cases, drawn from
 Apple's and Beats' own 3D models, © Apple Inc.: AirPods Pro, AirPods Pro 2 and 3,
-AirPods 3 and today's AirPods from the AirPods pages of
+AirPods 3, today's AirPods and AirPods Max from the AirPods pages of
 [apple.com](https://www.apple.com/airpods/), where they're shown in AR, and Beats
 from the product pages of [beatsbydre.com](https://www.beatsbydre.com). The
 models only come with the case open, so the clips of the cases close the lid, put

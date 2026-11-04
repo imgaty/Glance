@@ -21,8 +21,8 @@
   it off.
 - Added AirPods and Beats announced as they connect, as the iPhone shows them:
   in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
-  AirPods Max as macOS pictures them and others as their symbol, both still,
-  beside their battery as a ring. With the pointer on it, it extends to show its
+  beside their battery as a ring. A device with no such model, such as AirPods 1
+  and 2 and older Beats, isn't shown, and macOS's own banner stays for it. With the pointer on it, it extends to show its
   name and its level in numbers, the device and its ring growing into place.
   One whose battery runs down past 20% or 10% is announced the same way, its
   ring red with its level in numbers inside, in place of macOS's own banner,
@@ -32,9 +32,8 @@
 - Added a low battery alert of its own for the charging case of AirPods and
   Beats earbuds: at 20% and again at 10%, the case on its own, closed and turning
   in 3D, from Apple's and Beats' own models, beside its red ring. It starts from
-  the front, holding still a moment. AirPods 1 and 2's case, which has no 3D model,
-  shows as macOS draws it, still. It's the only time the case shows, never as the
-  earbuds connect.
+  the front, holding still a moment. It's the only time the case shows, never as
+  the earbuds connect.
 - Changed everything open or tall in the notch to one set of bottom corners,
   concentric with what's round at its ends, top corners that grow with its
   height, and one padding all around. Closed, the notch keeps the camera housing's

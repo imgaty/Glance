@@ -10,7 +10,8 @@ import ApplicationServices
 
 /// macOS's banner under the menu bar for AirPods, which Control Center shows in a window of the menu
 /// bar's own app and no setting turns off. It's taken off the screen the moment it's made, where the
-/// notch says the same, through Accessibility; without it, it shows as before. The menu bar tells of
+/// notch says the same, through Accessibility; without it, or for a device the notch doesn't show,
+/// it shows as before. The menu bar tells of
 /// the window as it's made, on a thread of its own here: its first frames are a matter of
 /// milliseconds, and the main thread may be drawing.
 final class MenuBarBanners: @unchecked Sendable {
@@ -122,10 +123,25 @@ final class MenuBarBanners: @unchecked Sendable {
         else { return }
         for _ in 0..<25 {
             let words = SystemNotices.findAll(in: banner) { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }
-            if Self.showsBattery(words.compactMap { SystemNotices.value($0, kAXValueAttribute) as? String }) { return }
+            let said = words.compactMap { SystemNotices.value($0, kAXValueAttribute) as? String }
+            if Self.showsBattery(said) {
+                // This thread can wait: the banner's out of sight meanwhile.
+                if Self.notchShows(said, connected: DeviceWatch.readBluetoothReport()) { return }
+                break
+            }
             usleep(20_000)
         }
         AXUIElementSetAttributeValue(banner, kAXPositionAttribute as CFString, place)
+    }
+
+    /// Whether the notch shows the device a banner names, by its name with or without its owner's.
+    /// Named by none that's connected, as the report and the banner may call it differently, it goes
+    /// by every connected device of Apple's or Beats'.
+    static func notchShows(_ words: [String], connected: [String: DeviceWatch.BluetoothInfo]) -> Bool {
+        let said = Set(words.map { DeviceWatch.shortName($0).lowercased() })
+        let named = connected.filter { said.contains(DeviceWatch.shortName($0.key).lowercased()) }.values
+        if !named.isEmpty { return named.allSatisfy { $0.model != nil } }
+        return connected.values.filter(\.announced).allSatisfy { $0.model != nil }
     }
 
     /// AirPods connecting or running low show their level, which is what the notch says; offering

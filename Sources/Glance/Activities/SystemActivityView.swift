@@ -79,9 +79,9 @@ struct SystemActivityView: View {
                     .transition(IslandMotion.fade)
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
-            } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
+            } else if let alert = shownAlert, case .device(let model, let battery) = alert.content {
                 DeviceActivityView(
-                    symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
+                    model: model, battery: battery, name: alert.name ?? "",
                     low: alert.kind.runsLow, closedWidth: closedWidth, restingHeight: restingHeight, leaving: self.alert == nil,
                     extended: extended, notch: notch
                 )
@@ -317,11 +317,11 @@ struct SystemActivityView: View {
         let gap = LiveActivityView.cameraGap
         // A device's wings as wide as it turns, against the camera, with none of it going under the
         // camera; or as its ring or its word needs.
-        if case .device(_, let model, let pictures, let battery) = alert.content {
-            let fit = ExpandedDeviceLayout.fit(model: model, pictures: pictures, restingHeight: restingHeight)
+        if case .device(let model, let battery) = alert.content {
+            let fit = ExpandedDeviceLayout.fit(model: model, restingHeight: restingHeight)
             let layout = DeviceLayout(height: restingHeight, low: alert.kind.runsLow, fit: fit)
-            let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
-            let reach = deviceReach(model: model, pictures: pictures, layout: layout)
+            let axis = deviceAxis(model: model, layout: layout)
+            let reach = deviceReach(model: model, layout: layout)
             let device = layout.edge + max(axis, reach) + reach + gap
             let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
@@ -352,30 +352,28 @@ struct SystemActivityView: View {
 
     /// A device's width face on.
     @MainActor
-    static func deviceWidth(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
-        model.flatMap(DeviceTurn.cached).map { TurningDevice.width($0, height: layout.picture) }
-            ?? DevicePictures.images(pictures).map { StillPictures.width($0, height: layout.picture) } ?? layout.picture
+    static func deviceWidth(model: Headphones, layout: DeviceLayout) -> CGFloat {
+        DeviceTurn.cached(model).map { TurningDevice.width($0, height: layout.picture) } ?? layout.picture
     }
 
     /// How large a device looks at that height, on average over a turn, if it's known.
     @MainActor
-    static func deviceSize(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat? {
-        model.flatMap(DeviceTurn.cached).map { TurningDevice.size($0, height: layout.picture) }
-            ?? DevicePictures.size(pictures, height: layout.picture)
+    static func deviceSize(model: Headphones, layout: DeviceLayout) -> CGFloat? {
+        DeviceTurn.cached(model).map { TurningDevice.size($0, height: layout.picture) }
     }
 
     /// The furthest a device reaches from the middle it turns about, either side, all the way round.
     @MainActor
-    static func deviceReach(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
-        model.flatMap(DeviceTurn.cached).map { TurningDevice.reach($0, height: layout.picture) }
-            ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
+    static func deviceReach(model: Headphones, layout: DeviceLayout) -> CGFloat {
+        DeviceTurn.cached(model).map { TurningDevice.reach($0, height: layout.picture) }
+            ?? deviceWidth(model: model, layout: layout) / 2
     }
 
     /// From a device's left face on to the middle it turns about.
     @MainActor
-    static func deviceAxis(model: Headphones?, pictures: [String], layout: DeviceLayout) -> CGFloat {
-        model.flatMap(DeviceTurn.cached).map { TurningDevice.axis($0, height: layout.picture) }
-            ?? deviceWidth(model: model, pictures: pictures, layout: layout) / 2
+    static func deviceAxis(model: Headphones, layout: DeviceLayout) -> CGFloat {
+        DeviceTurn.cached(model).map { TurningDevice.axis($0, height: layout.picture) }
+            ?? deviceWidth(model: model, layout: layout) / 2
     }
 
     /// As wide as the ring and the time need, each from its end, the time as it reads now, its
@@ -633,47 +631,6 @@ struct RingArrival: ViewModifier {
         content
             .animation(.init(IslandCurve(shown ? .ringIn : .ringOut))) { $0.opacity(shown ? 1 : 0) }
             .onAppear { arrived = true }
-    }
-}
-
-/// A device with no 3D model, as its symbol: flat, so it stays still.
-struct StillSymbol: View {
-    let symbol: String
-    let side: CGFloat
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: side * 0.8, weight: .medium))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.white)
-            .frame(width: side, height: side)
-    }
-}
-
-/// Headphones as macOS pictures them, AirPods Max, or AirPods when their 3D model can't be drawn:
-/// flat, so they stay still.
-struct StillPictures: View {
-    let images: [NSImage]
-    let height: CGFloat
-
-    /// The earbuds overlap a little, as they're pictured side by side.
-    static func overlap(_ height: CGFloat) -> CGFloat { height * 0.1 }
-
-    static func width(_ images: [NSImage], height: CGFloat) -> CGFloat {
-        let widths = images.map { $0.size.height > 0 ? $0.size.width / $0.size.height * height : height }
-        return widths.reduce(0, +) - overlap(height) * CGFloat(max(images.count - 1, 0))
-    }
-
-    var body: some View {
-        HStack(spacing: -Self.overlap(height)) {
-            ForEach(images.indices, id: \.self) { index in
-                Image(nsImage: images[index])
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: height)
-            }
-        }
     }
 }
 

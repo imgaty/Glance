@@ -11,7 +11,7 @@ import CoreImage
 
 /// AirPods and Beats that Glance shows turning as they connect, as the Dynamic Island shows AirPods:
 /// each from its maker's own 3D model, drawn once into a clip among Glance's resources (see
-/// Tools/DeviceClips). The raw value is the clip's name.
+/// Tools/DeviceClips). The raw value is the clip's name. A device with no such model isn't shown.
 enum Headphones: String, CaseIterable {
     case airpodsPro = "airpods-pro"
     case airpodsPro2 = "airpods-pro-2"
@@ -20,6 +20,7 @@ enum Headphones: String, CaseIterable {
     /// AirPods as they are now, with or without noise cancellation, whichever generation: they all
     /// look the same, and are the same model here.
     case airpods = "airpods"
+    case airpodsMax = "airpods-max"
     case beatsSoloBuds = "beats-solo-buds"
     /// Beats Studio Buds and Studio Buds +, which Beats shows alike.
     case beatsStudioBudsPlus = "beats-studio-buds-plus"
@@ -42,7 +43,7 @@ enum Headphones: String, CaseIterable {
     case powerbeatsFitCase = "powerbeats-fit-case"
 
     /// The model macOS knows a product ID as, or the nearest it's a kind of that has a clip; none
-    /// for AirPods 1 and 2, which Apple never modelled, AirPods Max, older Beats and the rest.
+    /// for AirPods 1 and 2, which Apple never modelled, older Beats and the rest.
     init?(product: Int) {
         guard let found = SystemDevices.lineage(product: product).lazy.compactMap({ Self.clips[$0] }).first else { return nil }
         self = found
@@ -52,6 +53,7 @@ enum Headphones: String, CaseIterable {
     private static let clips: [String: Headphones] = [
         "com.apple.airpods-pro": .airpodsPro, "com.apple.airpods-pro-gen2": .airpodsPro2, "com.apple.airpods-pro-2025": .airpodsPro3,
         "com.apple.airpods-gen3": .airpods3, "com.apple.airpods-gen4": .airpods, "com.apple.airpods-gen5": .airpods,
+        "com.apple.airpods-max": .airpodsMax,
         "com.apple.beats-flex": .beatsFlex, "com.apple.beats-studio-buds": .beatsStudioBudsPlus,
         "com.apple.beats-studio-buds-plus": .beatsStudioBudsPlus, "com.apple.beats-studio-pro": .beatsStudioPro,
         "com.apple.beats-pill": .beatsPill, "com.apple.power-beats-pro-gen2": .powerbeatsPro2, "com.apple.beats-solo-4": .beatsSolo4,

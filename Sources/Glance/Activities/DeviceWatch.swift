@@ -9,11 +9,11 @@ import AppKit
 import CoreAudio
 import UniformTypeIdentifiers
 
-/// Devices connecting, as the iPhone's Dynamic Island shows AirPods connecting, their symbol
-/// turning in beside their battery: Apple's and Beats' headphones and speakers over Bluetooth, as
-/// Core Audio sees them arrive, by their model and battery as System Information reports them.
-/// Nothing else is announced, as the Dynamic Island shows nothing else. None of it needs a
-/// permission. What's connected as Glance starts, or reconnects as the Mac wakes, isn't announced.
+/// Devices connecting, turning in 3D beside their battery: Apple's and Beats' headphones and speakers
+/// over Bluetooth with a 3D model of their maker's, as Core Audio sees them arrive, by their model and
+/// battery as System Information reports them. Nothing else is announced, and macOS's own banner stays
+/// for those (see `MenuBarBanners`). None of it needs a permission. What's connected as Glance starts,
+/// or reconnects as the Mac wakes, isn't announced.
 /// The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device whose battery
 /// runs down past 20% or 10% is announced the same way, its ring red, as the iPhone announces AirPods
 /// running low; macOS's own banner for it, and AirPods' notification, are taken away (see
@@ -56,13 +56,9 @@ final class DeviceWatch {
                     try? await Task.sleep(for: .seconds(1.5))
                     info = await Self.bluetooth(named: device.name) ?? info
                 }
-                guard info?.announced == true else { return }
-                let symbol = info?.modelSymbols?.symbol ?? device.symbol
-                let pictures = info?.product.map(DevicePictures.names(product:)) ?? []
-                // AirPods and Beats turn in 3D, from a clip read once, before they're shown.
-                let model = info?.product.flatMap(Headphones.init(product:))
-                if let model { _ = await DeviceTurn.prepare(model) }
-                self?.announce(device.name, symbol: symbol, model: model, pictures: pictures, battery: info?.battery)
+                // They turn in 3D, from a clip read once, before they're shown.
+                guard let model = info?.model, await DeviceTurn.prepare(model) != nil else { return }
+                self?.announce(device.name, model: model, battery: info?.battery)
             }
         }
     }
@@ -82,18 +78,21 @@ final class DeviceWatch {
 
     /// Every connected device in System Information's report, by its name in lowercase.
     nonisolated static func bluetoothReport() async -> [String: BluetoothInfo] {
-        await Task.detached(priority: .utility) {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
-            process.arguments = ["SPBluetoothDataType", "-json"]
-            let output = Pipe()
-            process.standardOutput = output
-            process.standardError = FileHandle.nullDevice
-            guard (try? process.run()) != nil else { return [:] }
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            return connected(in: data)
-        }.value
+        await Task.detached(priority: .utility) { readBluetoothReport() }.value
+    }
+
+    /// The report, waiting for it, which takes about a tenth of a second.
+    nonisolated static func readBluetoothReport() -> [String: BluetoothInfo] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
+        process.arguments = ["SPBluetoothDataType", "-json"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return [:] }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return connected(in: data)
     }
 
     struct BluetoothInfo: Equatable, Sendable {
@@ -112,6 +111,12 @@ final class DeviceWatch {
         /// knows is one of theirs.
         var announced: Bool {
             vendor == 0x4C || (vendor == nil && product.flatMap(SystemDevices.symbols(product:)) != nil)
+        }
+
+        /// What the notch shows it turning as. None for another maker's, or a model with no 3D model
+        /// of its maker's, and so those aren't shown.
+        var model: Headphones? {
+            announced ? product.flatMap(Headphones.init(product:)) : nil
         }
 
         /// How macOS pictures this model, or for another maker's, what it is.
@@ -191,19 +196,16 @@ final class DeviceWatch {
 
     /// A device's battery as read, with what it's shown as, and its case's, apart from its own.
     struct Battery: Equatable {
-        var symbol: String
-        var product: Int?
+        var model: Headphones
         var percent: Int?
-        var caseSymbol: String
         var casePercent: Int?
 
         /// From System Information's report. The earbuds' own level, or the one battery's: the
         /// case's isn't theirs, even when it's all that's told.
-        init(_ info: BluetoothInfo, symbol: String) {
-            self.symbol = symbol
-            product = info.product
+        init?(_ info: BluetoothInfo) {
+            guard let model = info.model else { return nil }
+            self.model = model
             percent = [info.levels.left, info.levels.right].compactMap { $0 }.min() ?? info.levels.main
-            caseSymbol = info.modelSymbols?.chargingCase ?? "airpods.chargingcase.fill"
             casePercent = info.levels.chargingCase
         }
     }
@@ -218,8 +220,7 @@ final class DeviceWatch {
             if !headphones.isEmpty {
                 let report = await Self.bluetoothReport()
                 for device in headphones {
-                    guard let info = report[device.name.lowercased()], info.announced else { continue }
-                    found[device.name] = Battery(info, symbol: info.modelSymbols?.symbol ?? device.symbol)
+                    found[device.name] = report[device.name.lowercased()].flatMap(Battery.init)
                 }
             }
             self?.batteriesRead(found)
@@ -236,14 +237,13 @@ final class DeviceWatch {
         }
         for (name, battery) in found {
             let short = Self.shortName(name)
-            let model = battery.product.flatMap(Headphones.init(product:))
             if let before = batteries[name], let percent = battery.percent, Self.runsLow(from: before, to: percent) {
-                let pictures = battery.product.map(DevicePictures.names(product:)) ?? []
-                announceLow(Self.lowBattery(name: short, symbol: battery.symbol, model: model, pictures: pictures, battery: percent), model: model)
+                announceLow(Self.lowBattery(name: short, model: battery.model, battery: percent), model: battery.model)
             }
-            if let before = caseBatteries[name], let percent = battery.casePercent, Self.runsLow(from: before, to: percent) {
-                let chargingCase = model?.chargingCase
-                announceLow(Self.caseLowBattery(name: short, symbol: battery.caseSymbol, model: chargingCase, battery: percent), model: chargingCase)
+            if let chargingCase = battery.model.chargingCase, let before = caseBatteries[name], let percent = battery.casePercent,
+                Self.runsLow(from: before, to: percent)
+            {
+                announceLow(Self.caseLowBattery(name: short, model: chargingCase, battery: percent), model: chargingCase)
             }
         }
     }
@@ -254,33 +254,34 @@ final class DeviceWatch {
     }
 
     /// A device or its case running low, its clip read once before it's shown.
-    private func announceLow(_ alert: NotchAlert, model: Headphones?) {
+    private func announceLow(_ alert: NotchAlert, model: Headphones) {
         Task {
-            if let model { _ = await DeviceTurn.prepare(model) }
-            guard !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else { return }
+            guard await DeviceTurn.prepare(model) != nil, !Activities.shared.settling,
+                UserDefaults.standard.bool(forKey: Preferences.activityDevices)
+            else { return }
             Activities.shared.post(alert)
             SystemNotices.hideBluetoothBanner()
-            if model != nil { SystemNotices.closeAirPodsReminder() }
+            SystemNotices.closeAirPodsReminder()
         }
     }
 
     /// Running low: as it connects, its ring red.
-    static func lowBattery(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int) -> NotchAlert {
+    static func lowBattery(name: String, model: Headphones, battery: Int) -> NotchAlert {
         NotchAlert(
-            kind: .deviceBattery, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
+            kind: .deviceBattery, content: .device(model: model, battery: battery),
             spoken: String(localized: "\(name) battery low, \(battery) percent"), name: name)
     }
 
     /// A case running low: on its own, closed, without its earbuds, its ring red.
-    static func caseLowBattery(name: String, symbol: String, model: Headphones? = nil, battery: Int) -> NotchAlert {
+    static func caseLowBattery(name: String, model: Headphones, battery: Int) -> NotchAlert {
         NotchAlert(
-            kind: .caseBattery, content: .device(symbol: symbol, model: model, battery: battery),
+            kind: .caseBattery, content: .device(model: model, battery: battery),
             spoken: String(localized: "\(name) Case battery low, \(battery) percent"), name: String(localized: "\(name) Case"))
     }
 
     // MARK: Announcing
 
-    private func announce(_ name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) {
+    private func announce(_ name: String, model: Headphones, battery: Int?) {
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
         guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
@@ -289,23 +290,23 @@ final class DeviceWatch {
         // A device is announced with its battery, as AirPods are; one that doesn't tell it, not at all.
         guard battery != nil else { return }
         recent[name] = now
-        Activities.shared.post(Self.alert(name: Self.shortName(name), symbol: symbol, model: model, pictures: pictures, battery: battery))
+        Activities.shared.post(Self.alert(name: Self.shortName(name), model: model, battery: battery))
         // macOS's own banner for it says the same.
         SystemNotices.hideBluetoothBanner()
     }
 
     /// Without its owner's name, as the iPhone names AirPods: Sam's AirPods Pro as AirPods Pro.
-    static func shortName(_ name: String) -> String {
+    nonisolated static func shortName(_ name: String) -> String {
         for mark in ["\u{2019}s ", "'s "] {
             if let range = name.range(of: mark), range.upperBound < name.endIndex { return String(name[range.upperBound...]) }
         }
         return name
     }
 
-    /// A device: its symbol and battery, as AirPods are shown.
-    static func alert(name: String, symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int? = nil) -> NotchAlert {
+    /// A device: turning, and its battery, as AirPods are shown.
+    static func alert(name: String, model: Headphones, battery: Int? = nil) -> NotchAlert {
         return NotchAlert(
-            kind: .device, content: .device(symbol: symbol, model: model, pictures: pictures, battery: battery),
+            kind: .device, content: .device(model: model, battery: battery),
             spoken: battery.map { String(localized: "\(name) connected, \($0) percent") } ?? String(localized: "\(name) connected"), name: name)
     }
 }

@@ -94,10 +94,10 @@ struct ActivitiesTests {
 
     @Test("A device is announced with its battery")
     func announced() {
-        let beats = DeviceWatch.alert(name: "Beats Solo 4", symbol: "headphones", battery: 15)
-        #expect(beats.content == .device(symbol: "headphones", pictures: [], battery: 15))
+        let beats = DeviceWatch.alert(name: "Beats Solo 4", model: .beatsSolo4, battery: 15)
+        #expect(beats.content == .device(model: .beatsSolo4, battery: 15))
         #expect(beats.spoken == "Beats Solo 4 connected, 15 percent")
-        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods").content == .device(symbol: "airpods", pictures: [], battery: nil))
+        #expect(DeviceWatch.alert(name: "AirPods", model: .airpods).content == .device(model: .airpods, battery: nil))
         // AirPlay's device, by its name, as Control Center draws it.
         #expect(AirPlayRoute.symbol(for: "Living Room Apple TV") == "appletv")
         #expect(AirPlayRoute.symbol(for: "Samsung TV") == "tv")
@@ -111,15 +111,15 @@ struct ActivitiesTests {
         #expect(DeviceWatch.runsLow(from: 12, to: 9))
         #expect(!DeviceWatch.runsLow(from: 20, to: 19))
         #expect(!DeviceWatch.runsLow(from: 9, to: 30))
-        let low = DeviceWatch.lowBattery(name: "AirPods Pro", symbol: "airpods.pro", battery: 10)
+        let low = DeviceWatch.lowBattery(name: "AirPods Pro", model: .airpodsPro2, battery: 10)
         #expect(low.kind == .deviceBattery)
-        #expect(low.content == .device(symbol: "airpods.pro", pictures: [], battery: 10))
+        #expect(low.content == .device(model: .airpodsPro2, battery: 10))
         #expect(low.spoken == "AirPods Pro battery low, 10 percent")
         // A case runs low on its own, in its own picture, and waits its turn beside its earbuds'.
-        let lowCase = DeviceWatch.caseLowBattery(name: "AirPods Pro", symbol: "airpodspro.chargingcase.fill", model: .airpodsPro2Case, battery: 20)
+        let lowCase = DeviceWatch.caseLowBattery(name: "AirPods Pro", model: .airpodsPro2Case, battery: 20)
         #expect(lowCase.kind == .caseBattery && lowCase.kind != low.kind && lowCase.kind.runsLow && low.kind.runsLow)
         #expect(!NotchAlert.Kind.device.runsLow)
-        #expect(lowCase.content == .device(symbol: "airpodspro.chargingcase.fill", model: .airpodsPro2Case, pictures: [], battery: 20))
+        #expect(lowCase.content == .device(model: .airpodsPro2Case, battery: 20))
         #expect(lowCase.spoken == "AirPods Pro Case battery low, 20 percent")
         #expect(lowCase.name == "AirPods Pro Case")
         #expect(DeviceWatch.shortName("MX Master 3S") == "MX Master 3S")
@@ -152,16 +152,12 @@ struct ActivitiesTests {
             twice["airpods pro"]
                 == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024, levels: .init(left: 31, right: 39, chargingCase: 42)))
         // The earbuds' battery and the case's stay apart, even when only the case's is told.
-        let both = DeviceWatch.Battery(twice["airpods pro"]!, symbol: "airpodspro")
-        #expect(both.percent == 31 && both.casePercent == 42)
+        let both = DeviceWatch.Battery(twice["airpods pro"]!)
+        #expect(both?.percent == 31 && both?.casePercent == 42)
         let caseAlone = DeviceWatch.connected(
             in: Data(#"{"SPBluetoothDataType":[{"device_connected":[{"Airpods Pro":{"device_batteryLevelCase":"42%","device_productID":"0x2024"}}]}]}"#.utf8))
-        let onlyCase = DeviceWatch.Battery(caseAlone["airpods pro"]!, symbol: "airpodspro")
-        #expect(onlyCase.percent == nil && onlyCase.casePercent == 42)
-        // Pictured as macOS pictures them, earbud by earbud, or a model it doesn't picture, none.
-        #expect(DevicePictures.names(product: 0x2024) == ["airpod_left", "airpod_right"])
-        #expect(DevicePictures.names(product: 0x201F) == ["B515d-Default"])
-        #expect(DevicePictures.names(product: 0x2019).isEmpty)
+        let onlyCase = DeviceWatch.Battery(caseAlone["airpods pro"]!)
+        #expect(onlyCase?.percent == nil && onlyCase?.casePercent == 42)
         #expect(connected["keychron q1 max"] == DeviceWatch.BluetoothInfo(battery: 80, product: nil, kind: "Keyboard", levels: .init(main: 80)))
         #expect(connected["ipad"] == nil)
         #expect(DeviceWatch.connected(in: Data("not json".utf8)).isEmpty)
@@ -268,16 +264,16 @@ struct ActivitiesTests {
         #expect(abs(island.ring - 59) < 0.5)
         #expect(abs(island.trailing - (110 - island.ring) / 2) < 0.001)
         // Its wings as wide as the ring and its level need, against the camera, and no wider.
-        let keyboard = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
+        let pill = NotchAlert(kind: .device, content: .device(model: .beatsPill, battery: 15), spoken: "")
         let layout = DeviceLayout(height: 32)
-        let wing = SystemActivityView.wing(for: keyboard, restingHeight: 32, closedWidth: 185)
+        let wing = SystemActivityView.wing(for: pill, restingHeight: 32, closedWidth: 185)
         #expect(wing < layout.ring + layout.trailing + 60)
     }
 
     @Test("Over a full-screen app, nothing shows beside the camera, and it still opens")
     func collapsedNotch() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
-        model.alert = DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 50)
+        model.alert = DeviceWatch.alert(name: "AirPods", model: .airpods, battery: 50)
         model.alertWing = 80
         model.alertExtended = true
         #expect(model.restingWidth > 185)
@@ -292,7 +288,7 @@ struct ActivitiesTests {
     @Test("A device extended is the iPhone's size under the pointer, with no swell on top, its device and ring grown")
     func deviceExtended() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
-        model.alert = DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 50)
+        model.alert = DeviceWatch.alert(name: "AirPods", model: .airpods, battery: 50)
         model.alertExtendedWing = 100
         model.alertExtended = true
         let peek = model.metrics(for: .peek)
@@ -327,10 +323,10 @@ struct ActivitiesTests {
         #expect(Headphones(product: 0x2026) == .beatsSoloBuds)
         #expect(Headphones(product: 0x202F) == .powerbeatsFit)
         #expect(Headphones(product: 0x2038) == .beats360)
-        // AirPods 2, AirPods Max, and nothing at all.
+        // AirPods Max, whichever. AirPods 2, and nothing at all, have no model.
+        #expect(Headphones(product: 0x200A) == .airpodsMax)
+        #expect(Headphones(product: 0x202D) == .airpodsMax)
         #expect(Headphones(product: 0x200F) == nil)
-        #expect(Headphones(product: 0x200A) == nil)
-        #expect(Headphones(product: 0x202D) == nil)
         #expect(Headphones(product: 0x1234) == nil)
     }
 
@@ -342,10 +338,8 @@ struct ActivitiesTests {
         #expect(Headphones.beatsFlex.chargingCase == nil)
         #expect(Headphones.beatsSolo4.chargingCase == nil)
         #expect(Headphones.allCases.filter(\.isChargingCase).count == 9)
-        // AirPods 1 and 2 have no model, so macOS draws each one's own case.
-        #expect(Headphones(product: 0x2002) == nil && Headphones(product: 0x200F) == nil)
-        #expect(SystemDevices.symbols(product: 0x2002)?.chargingCase == "airpods.chargingcase.fill")
-        #expect(SystemDevices.symbols(product: 0x200F)?.chargingCase == "airpods.chargingcase.wireless.fill")
+        // AirPods Max have a model but no case in it.
+        #expect(Headphones.airpodsMax.chargingCase == nil)
     }
 
     @Test("A case holds face on as it arrives, then gathers speed up to a steady turn")
@@ -393,7 +387,7 @@ struct ActivitiesTests {
     }
 
     @Test("The wings widen for an announcement over a song's, and for a timer, as far as their words need")
-    func wings() {
+    func wings() async {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         let resting = model.closedSize.height
         #expect(model.wing == 0)
@@ -406,8 +400,9 @@ struct ActivitiesTests {
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
+        _ = await DeviceTurn.prepare(.airpodsPro2, from: Self.clip(.airpodsPro2))
         let alert = NotchAlert(
-            kind: .device, content: .device(symbol: "airpods.pro", pictures: ["airpod_left", "airpod_right"], battery: 31),
+            kind: .device, content: .device(model: .airpodsPro2, battery: 31),
             spoken: "AirPods Pro connected")
         model.alertWing = SystemActivityView.wing(for: alert, restingHeight: resting, closedWidth: model.closedSize.width)
         model.alert = alert
@@ -500,11 +495,11 @@ struct ActivitiesTests {
         let stopped = SystemActivityView.wing(for: .stopwatch(.stopped(elapsed: 7)), restingHeight: resting)
         #expect(stopped > SystemActivityView.wing(for: .stopwatch(.running(since: .now - 7)), restingHeight: resting))
         let layout = DeviceLayout(height: resting)
-        let keyboard = NotchAlert(
-            kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "Magic Keyboard connected, 15 percent")
+        let pill = NotchAlert(
+            kind: .device, content: .device(model: .beatsPill, battery: 15), spoken: "Beats Pill connected, 15 percent")
         // Its battery as a ring alone, with no level in numbers beside it.
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, closedWidth: 185) >= layout.ring + layout.trailing)
-        #expect(SystemActivityView.wing(for: keyboard, restingHeight: resting, closedWidth: 185) < layout.ring + layout.trailing + 15)
+        #expect(SystemActivityView.wing(for: pill, restingHeight: resting, closedWidth: 185) >= layout.ring + layout.trailing)
+        #expect(SystemActivityView.wing(for: pill, restingHeight: resting, closedWidth: 185) < layout.ring + layout.trailing + 15)
         let long = "The Living Room Speaker Upstairs, By the Window"
         let speaker = NotchAlert(kind: .charging, content: .status(symbol: "airplay.audio", tint: .blue, text: long), spoken: long)
         #expect(SystemActivityView.wing(for: speaker, restingHeight: resting, closedWidth: 185) == SystemActivityView.maxWing)
@@ -556,7 +551,7 @@ struct ActivitiesTests {
         #expect(model.detached == nil)
         #expect(model.metrics.fold == 0)
         model.pop = false
-        model.alert = NotchAlert(kind: .device, content: .device(symbol: "keyboard", pictures: [], battery: 15), spoken: "")
+        model.alert = NotchAlert(kind: .device, content: .device(model: .beatsPill, battery: 15), spoken: "")
         #expect(model.detached == nil)
         model.alert = nil
         model.state = .open
@@ -727,6 +722,30 @@ struct ActivitiesTests {
 /// macOS's own banners, taken away only where the notch says the same.
 @Suite("System banners")
 struct SystemBannersTests {
+    @Test("A device is shown only with its maker's 3D model; the rest keep macOS's own banner")
+    func onlyWithModel() {
+        // AirPods 1 and 2 and the first Beats have none. All AirPods Max are one model.
+        for product in [0x2002, 0x200F, 0x2003, 0x2005] { #expect(Headphones(product: product) == nil) }
+        #expect(Headphones(product: 0x200A) == .airpodsMax)
+        #expect(Headphones(product: 0x201F) == .airpodsMax)
+        #expect(Headphones(product: 0x202D) == .airpodsMax)
+        let withModel = DeviceWatch.BluetoothInfo(product: 0x2024, vendor: 0x4C)
+        let withoutModel = DeviceWatch.BluetoothInfo(product: 0x200F, vendor: 0x4C)
+        let otherMaker = DeviceWatch.BluetoothInfo(product: 0x2024, vendor: 0x1234, kind: "Headphones")
+        #expect(withModel.model == .airpodsPro2)
+        #expect(withoutModel.model == nil && withoutModel.announced)
+        #expect(otherMaker.model == nil)
+        #expect(DeviceWatch.Battery(withModel) != nil)
+        #expect(DeviceWatch.Battery(withoutModel) == nil)
+        // The banner goes for the device it names, or by what's connected if it names none.
+        let connected = ["sam\u{2019}s airpods pro": withModel, "airpods": withoutModel]
+        #expect(MenuBarBanners.notchShows(["AirPods Pro", "88", "Connected"], connected: connected))
+        #expect(!MenuBarBanners.notchShows(["AirPods", "88", "Connected"], connected: connected))
+        #expect(!MenuBarBanners.notchShows(["Other Name", "88"], connected: connected))
+        #expect(MenuBarBanners.notchShows(["Other Name", "88"], connected: ["airpods pro": withModel]))
+        #expect(MenuBarBanners.notchShows(["Other Name", "88"], connected: [:]))
+    }
+
     @Test("AirPods connecting or running low show their level; a device's name or an offer doesn't count")
     func showsBattery() {
         #expect(MenuBarBanners.showsBattery(["Airpods Pro", "88", "Connected"]))
