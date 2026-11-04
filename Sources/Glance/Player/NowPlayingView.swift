@@ -134,16 +134,16 @@ struct NowPlayingView: View {
                 HStack(spacing: 5) {
                     MarqueeText(
                         text: nowPlaying.hasMedia ? nowPlaying.title : "Not Playing",
-                        font: .system(size: PlayerLayout.titleSize, weight: .semibold), active: isVisible, fills: false)
+                        font: NotchType.title, active: isVisible, fills: false)
                     if nowPlaying.explicit {
                         Image(systemName: "e.square.fill")
-                            .font(.system(size: PlayerLayout.titleSize * 0.8))
+                            .font(.system(size: NotchType.size * 0.8))
                             .transition(.opacity)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                MarqueeText(text: nowPlaying.artist, font: .system(size: PlayerLayout.titleSize), active: isVisible)
-                    .foregroundStyle(PlayerLayout.secondary)
+                MarqueeText(text: nowPlaying.artist, font: NotchType.detail, active: isVisible)
+                    .foregroundStyle(NotchType.detailColor)
             }
             Color.clear
                 .frame(width: PlayerLayout.waveform.width + PlayerLayout.waveformInset, height: PlayerLayout.waveform.height)
@@ -196,7 +196,7 @@ struct NowPlayingView: View {
                 Text(playing ? "-" + Self.time(duration - position) : "--:--")
                     .frame(minWidth: 30, alignment: .trailing)
             }
-            .font(.system(size: PlayerLayout.timeSize, weight: .semibold).monospacedDigit())
+            .font(NotchType.timeline)
             .foregroundStyle(buttonGray)
         }
         .frame(height: PlayerLayout.timelineHeight)

@@ -357,6 +357,12 @@ enum NotchType {
     static let title = Font.system(size: size, weight: .semibold)
     static let detail = Font.system(size: size)
     static let detailColor = PlayerLayout.secondary
+    /// The times either side of the player's progress bar.
+    static let timeline = Font.system(size: PlayerLayout.timeSize, weight: .semibold).monospacedDigit()
+    /// The words of a song, a size of their own, large enough to read along with, and their credits.
+    static let lyricSize: CGFloat = 19
+    static let lyric = Font.system(size: lyricSize, weight: .bold)
+    static let credits = Font.system(size: 12)
 
     /// The time, by the notch's height, with its digits all as wide as each other.
     static func time(_ h: CGFloat) -> Font { .system(size: h * TimerLayout.time, weight: .semibold).monospacedDigit() }

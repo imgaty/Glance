@@ -470,8 +470,8 @@ private enum LyricsStyle {
     /// How far ahead of the song the lyrics run, in seconds: a line is lit just as it starts to be
     /// sung, rather than a beat after.
     static let lead = 0.25
-    static let size: CGFloat = 19
-    static let font = Font.system(size: size, weight: .bold)
+    static let size = NotchType.lyricSize
+    static let font = NotchType.lyric
     /// Apple Music leaves a lot of air between lines.
     static let spacing: CGFloat = 16
     /// How bright lines are that aren't being sung.
@@ -728,7 +728,7 @@ private struct CreditsView: View {
             }
             Text("\(Text("Credits To:").fontWeight(.bold)) \(sources)")
         }
-        .font(.system(size: 12))
+        .font(NotchType.credits)
         .foregroundStyle(.white.opacity(0.5))
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
