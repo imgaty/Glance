@@ -243,7 +243,7 @@ struct PlayerOptionsTests {
     func accentTitles() {
         #expect(
             AccentSource.allCases.map(\.title) == [
-                "Artwork", "System", "Blue", "Purple", "Pink", "Red", "Orange", "Yellow", "Green", "Graphite",
+                "Cover", "System", "Blue", "Purple", "Pink", "Red", "Orange", "Yellow", "Green", "Graphite",
             ])
     }
 

@@ -101,7 +101,7 @@ private struct LookEditor: View {
         Section {
             // One choice, as Apple would make it: the cover's colors, or the Mac's own accent.
             Toggle(isOn: Binding(get: { accentSource == .artwork }, set: { accentSource = $0 ? .artwork : .system })) {
-                Text("Use artwork colors")
+                Text("Use cover colors")
                 Text("Tints the notch with the cover's colors, instead of your Mac's accent color.")
             }
             CenteredRow(alignment: .top) {

@@ -279,9 +279,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var keywords: String {
         switch self {
         case .general: "login launch startup permissions privacy accessibility about build version source update updates automatically"
-        case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight display preview"
+        case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color cover artwork background spotlight display preview"
         case .player:
-            "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art"
+            "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art artwork"
         case .tray: "shelf files drop drag clipboard copy copies paste history screenshots recordings private passwords keep clear share quick look"
         case .activities:
             "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"

@@ -135,7 +135,7 @@ the display are macOS's, as they are on the trackpad.
 
 The open notch shows the cover, the song's name and artist, a progress bar, and
 the controls. Drag the progress bar to move through the song. With
-**Show app icon on artwork** on, the playing app's icon sits on the cover's
+**Show app icon on cover** on, the playing app's icon sits on the cover's
 corner.
 
 The cover lifts gently under the pointer, with a soft shadow, squashes as it's
@@ -472,7 +472,7 @@ Settings opens on the page you last used.
 | `Match system Liquid Glass` | Follows the Liquid Glass style chosen in System Settings > Appearance |
 | `Liquid Glass` | From clear glass to black |
 | `Blur` | How much the glass blurs what's behind it |
-| `Use artwork colors` | Tints the notch with the cover's colors; off, with your Mac's accent color |
+| `Use cover colors` | Tints the notch with the cover's colors; off, with your Mac's accent color |
 | `Background` | `Replace glass`, `Spotlight`, or `None` behind the player |
 
 With **Reduce transparency** or **Increase contrast** on in **System Settings >
@@ -489,8 +489,8 @@ ellipsis instead of scrolling.
 | `Controls` | The two buttons beside the playback controls |
 | `Lyrics` | Whether clicking the waveform shows the words |
 | `Tint progress bar` | Colors the progress bar with the accent color |
-| `Animated art` | Plays an album's animated cover, when it has one |
-| `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
+| `Animated cover` | Plays an album's animated cover, when it has one |
+| `Show app icon on cover` | Shows the playing app's icon on the cover (off at first) |
 | `Show audio from` | Which apps' audio Glance shows; **Add App…** adds an app, and right-clicking one offers **Remove from List** |
 | `Show new apps` | Whether apps that start playing are added turned on |
 

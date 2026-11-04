@@ -152,7 +152,7 @@ enum AccentSource: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .artwork: "Artwork"
+        case .artwork: "Cover"
         case .system: "System"
         default: rawValue.capitalized
         }

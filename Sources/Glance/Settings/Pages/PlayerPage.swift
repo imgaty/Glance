@@ -49,10 +49,10 @@ struct PlayerPage: View {
             }
             Section {
                 Toggle(isOn: $animatedArtwork) {
-                    Text("Animated art")
+                    Text("Animated cover")
                     Text("Plays the album cover's animated version, if it has one.")
                 }
-                Toggle("Show app icon on artwork", isOn: $appBadge)
+                Toggle("Show app icon on cover", isOn: $appBadge)
             }
             Section {
                 // Follows the stored list, so an app that has just played appears at once.
