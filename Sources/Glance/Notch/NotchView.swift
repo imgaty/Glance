@@ -418,12 +418,19 @@ enum NotchMotion {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)
     }
+
+    /// A spring that bounces, or with Reduce Motion on, that settles straight where it's going.
+    static func spring(
+        response: Double, dampingFraction: Double, reduced: Bool = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    ) -> Animation {
+        .spring(response: response, dampingFraction: reduced ? 1 : dampingFraction)
+    }
 }
 
 /// How the notch moves between its states, the same on screen and in Settings' preview.
 extension NotchModel {
     func peek() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { state = .peek }
+        withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { state = .peek }
     }
 
     /// Closed → a device extended, the notch and what it shows in one motion.
@@ -437,7 +444,7 @@ extension NotchModel {
     /// Peek → closed, when the pointer slides off before the notch opens. A device extended folds with
     /// it, as an activity folds, without a bounce.
     func settle(closeness: CGFloat) {
-        withAnimation(alertExtended ? IslandMotion.fold : .spring(response: 0.35, dampingFraction: 0.8)) {
+        withAnimation(alertExtended ? IslandMotion.fold : NotchMotion.spring(response: 0.35, dampingFraction: 0.8)) {
             state = .closed
             alertExtended = false
             proximity = Self.eased(closeness)
@@ -454,7 +461,7 @@ extension NotchModel {
     }
 
     func close() {
-        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+        withAnimation(NotchMotion.spring(response: 0.36, dampingFraction: 0.88)) {
             state = .closed
             stretch = 0
         }
@@ -462,7 +469,7 @@ extension NotchModel {
 
     /// Squeezed while pressed; let go, it springs back.
     func press(_ down: Bool) {
-        withAnimation(down ? .spring(response: 0.2, dampingFraction: 0.7) : .spring(response: 0.4, dampingFraction: 0.5)) { pressed = down }
+        withAnimation(down ? NotchMotion.spring(response: 0.2, dampingFraction: 0.7) : NotchMotion.spring(response: 0.4, dampingFraction: 0.5)) { pressed = down }
     }
 
     /// The closed notch swells a little as the pointer comes near: `closeness` from 0, far, to 1,
@@ -873,7 +880,7 @@ struct NotchView: View {
     /// begun to open; the spotlight pops. Going, it just fades: the shape only resets once it's gone.
     private func lightGrowth(_ growing: Bool, fills: Bool) -> Animation {
         guard growing else { return .linear(duration: 0.01).delay(0.25) }
-        return fills ? .easeOut(duration: 0.7).delay(0.1) : .spring(response: 0.6, dampingFraction: 0.72)
+        return fills ? .easeOut(duration: 0.7).delay(0.1) : NotchMotion.spring(response: 0.6, dampingFraction: 0.72)
     }
 
     /// One circle: for the background, centered on the notch at the top, from the notch's own

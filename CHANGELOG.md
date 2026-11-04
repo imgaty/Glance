@@ -58,6 +58,11 @@
   it folds to rest before opening for the next, and the pointer on it folds it
   away at once, the notch opening once it has. With Reduce Motion on, the notch
   widens without bouncing and nothing blurs.
+- Changed everything else that moves to follow Reduce Motion: the notch's swell,
+  press and swipes, the bubbles, the buttons and the cover settle without
+  bouncing, the star glows without swelling, the skip arrows stay where they are,
+  Customize Controls fades rather than scales, and the welcome tour's pages fade
+  rather than slide.
 - Changed every live activity, closed or opened, to keep the notch only as wide
   as the wider side needs, both sides alike, with nothing under the camera. Each
   side sits at its own end, as far in from it as from the top and bottom, so it

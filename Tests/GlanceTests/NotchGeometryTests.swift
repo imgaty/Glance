@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SwiftUI
 import Testing
 
 @testable import Glance
@@ -334,6 +335,12 @@ struct SettingsPaneTests {
         ])
     func searchFinds(query: String, pane: SettingsPane) {
         #expect(SettingsPane.matching(query) == [pane])
+    }
+
+    @Test("With Reduce Motion on, the notch's springs settle without a bounce")
+    func reducedSprings() {
+        #expect(NotchMotion.spring(response: 0.3, dampingFraction: 0.6, reduced: false) == .spring(response: 0.3, dampingFraction: 0.6))
+        #expect(NotchMotion.spring(response: 0.3, dampingFraction: 0.6, reduced: true) == .spring(response: 0.3, dampingFraction: 1))
     }
 
     @Test("The View menu has Back, Forward, Search and every page, and comes before Window and Help")

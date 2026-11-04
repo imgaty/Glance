@@ -470,6 +470,7 @@ final class ControlPlaces {
 /// a faint disc, or, with nothing there, a dashed ring with a plus. It says where it is, so the
 /// sheet can put its ring, its − and its click there.
 struct ControlMark: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let place: ControlPlace
     let control: PlayerSlot
     /// What the control shows now, as the player draws it.
@@ -488,14 +489,14 @@ struct ControlMark: View {
                 }
                 .font(.system(size: PlayerLayout.optionGlyph, weight: .medium))
                 .foregroundStyle(.white)
-                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
             } else {
                 Circle()
                     .strokeBorder(.white.opacity(0.5), style: StrokeStyle(lineWidth: 1.2, dash: [3, 2.5]))
                 Image(systemName: "plus")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.6))
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
             }
         }
         .frame(width: NowPlayingView.hitbox, height: NowPlayingView.hitbox)
@@ -518,6 +519,7 @@ struct SkipSymbol: View {
     let forward: Bool
     /// Presses so far.
     let skips: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// forward.fill at the skip buttons' size: 28 by 18 points at 18.
     private static let image: NSImage? = NSImage(systemSymbolName: "forward.fill", accessibilityDescription: nil)?
@@ -528,8 +530,9 @@ struct SkipSymbol: View {
             SkipArrows(phase: Double(skips), image: image)
                 .frame(width: image.size.width, height: image.size.height)
                 .scaleEffect(x: forward ? 1 : -1)
-                // Settling without overshoot: past the end, the motion would start over.
-                .animation(.spring(response: 0.36, dampingFraction: 1), value: skips)
+                // Settling without overshoot: past the end, the motion would start over. With Reduce
+                // Motion on, the arrows stay where they are.
+                .animation(reduceMotion ? nil : .spring(response: 0.36, dampingFraction: 1), value: skips)
         }
     }
 }

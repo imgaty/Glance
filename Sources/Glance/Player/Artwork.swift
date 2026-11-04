@@ -161,11 +161,12 @@ struct HeroArtwork: View {
 
 /// How the open cover answers the pointer, as a soft button does: it lifts gently, with a little
 /// bounce; pressed, it squashes down quickly, a little more in height than in width; let go, it
-/// springs back on a looser spring, past its lift, and settles.
+/// springs back on a looser spring, past its lift, and settles. With Reduce Motion on, none of it
+/// bounces.
 enum CoverMotion {
-    static let hover = Animation.spring(response: 0.45, dampingFraction: 0.55)
-    static let press = Animation.spring(response: 0.16, dampingFraction: 0.82)
-    static let release = Animation.spring(response: 0.48, dampingFraction: 0.45)
+    static var hover: Animation { NotchMotion.spring(response: 0.45, dampingFraction: 0.55) }
+    static var press: Animation { NotchMotion.spring(response: 0.16, dampingFraction: 0.82) }
+    static var release: Animation { NotchMotion.spring(response: 0.48, dampingFraction: 0.45) }
     /// The light on it and its shadow.
     static let light = Animation.easeOut(duration: 0.3)
 

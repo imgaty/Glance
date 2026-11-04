@@ -26,6 +26,7 @@ struct IslandButton: View {
     var label: String? = nil
     var value: String? = nil
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let glyph = size, glowColor = burstColor
@@ -37,10 +38,11 @@ struct IslandButton: View {
                 .modifier(Slashed(progress: slashed ? 1 : 0, color: color, weight: size * 0.075))
                 .animation(.spring(response: 0.32, dampingFraction: 0.9), value: slashed)
                 // Saving: the star swells once, slowly and smoothly, with a soft glow in the accent
-                // color behind it, then settles back with no overshoot.
+                // color behind it, then settles back with no overshoot. With Reduce Motion on, only
+                // the glow.
                 .keyframeAnimator(initialValue: SaveEffect(), trigger: burst) { icon, effect in
                     icon
-                        .scaleEffect(effect.scale)
+                        .scaleEffect(reduceMotion ? 1 : effect.scale)
                         .background {
                             Circle()
                                 .fill(glowColor)
@@ -142,7 +144,7 @@ struct IslandPress: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.85 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+            .animation(NotchMotion.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
             .frame(width: contactSize, height: contactSize)
             .background {
                 Circle()

@@ -65,7 +65,10 @@ Hover over the notch or click it, depending on
 notch closes when the pointer leaves it. The player, the tray and the lyrics
 come and go as the Dynamic Island's activities do, fading in out of a blur and
 away into one, as the notch opens, closes, or switches between them. With
-Reduce Motion on, they only fade.
+Reduce Motion on, they only fade, and nothing bounces: the notch, the bubbles and
+the cover settle straight where they're going, the star glows without swelling,
+the skip arrows stay where they are, and the welcome tour's pages fade rather
+than slide.
 
 | Gesture | Operation |
 | --- | --- |

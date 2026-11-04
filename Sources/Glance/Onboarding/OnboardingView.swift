@@ -33,7 +33,17 @@ struct OnboardingView: View {
     /// page to page rather than starting over.
     @StateObject private var preview = SettingsPreview()
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     static let size = CGSize(width: 450, height: 600)
+
+    /// Pages slide one way or the other, or with Reduce Motion on, only fade.
+    private var pageTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+            removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity))
+    }
 
     private var pages: [OnboardingPage] {
         guard start == .welcome else { return [.permissions] }
@@ -50,10 +60,7 @@ struct OnboardingView: View {
                 ZStack {
                     content(page)
                         .id(place)
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                                removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)))
+                        .transition(pageTransition)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .clipped()
@@ -63,10 +70,7 @@ struct OnboardingView: View {
                 if case .step(_, let step) = page {
                     StepPicture(scene: step.scene)
                         .padding(.top, OnboardingMetrics.top)
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                                removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)))
+                        .transition(pageTransition)
                 }
             }
             ZStack {
@@ -446,7 +450,7 @@ private struct RoundPress: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+            .animation(NotchMotion.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
@@ -592,7 +596,7 @@ private struct NotchScenePicture: View {
     private func announce() async {
         let model = preview.model
         guard scene == .liveActivity, announces else {
-            if model.pop { withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false } }
+            if model.pop { withAnimation(NotchMotion.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false } }
             return
         }
         try? await Task.sleep(for: .seconds(0.3))
@@ -604,7 +608,7 @@ private struct NotchScenePicture: View {
             // No wider than the picture: a longer title or artist scrolls, as it does on screen.
             let scale = NotchPreview.scale(for: PreviewHeader.width, model: model)
             let room = (OnboardingMetrics.picture.width / scale - model.closedSize.width) / 2 - 12
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            withAnimation(NotchMotion.spring(response: 0.5, dampingFraction: 0.8)) {
                 model.popWing = min(
                     LiveActivityView.popWing(
                         title: nowPlaying.title, artist: nowPlaying.artist, restingHeight: model.closedSize.height), room)
@@ -612,7 +616,7 @@ private struct NotchScenePicture: View {
             }
             try? await Task.sleep(for: .seconds(3.5))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false }
+            withAnimation(NotchMotion.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false }
             try? await Task.sleep(for: .seconds(2))
         }
     }

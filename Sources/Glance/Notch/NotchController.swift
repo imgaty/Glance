@@ -856,7 +856,7 @@ final class NotchController {
         if on, model.state == .peek { settle(at: p) }
         openTask?.cancel()
         restPoint = nil
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
+        withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
         if on {
             startPolling()
         } else if model.state == .closed {
@@ -897,7 +897,7 @@ final class NotchController {
             restPoint = nil
         }
         if model.bubbleHovered {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
+            withAnimation(NotchMotion.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
         } else {
             model.press(true)
         }
@@ -916,7 +916,7 @@ final class NotchController {
         guard pressBeganClosed else { return }
         let onBubble = model.bubblePressed
         if onBubble {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
+            withAnimation(NotchMotion.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
         } else {
             model.press(false)
         }
@@ -1638,7 +1638,7 @@ final class NotchController {
         pull = 0
         swipe = 0
         scrollAxis = nil
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.5)) {
+        withAnimation(NotchMotion.spring(response: 0.45, dampingFraction: 0.5)) {
             model.stretch = 0
             model.nudge = 0
             model.pageNudge = 0
@@ -1786,7 +1786,7 @@ final class NotchController {
             pullFired = true
             if swipe < 0 { nowPlaying.next() } else { nowPlaying.previous() }
             Opening.tap()
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) { model.nudge = 0 }
+            withAnimation(NotchMotion.spring(response: 0.4, dampingFraction: 0.6)) { model.nudge = 0 }
             return
         }
         let lean = (swipe >= 0 ? 1 : -1) * 14 * (1 - 1 / (abs(swipe) * 0.04 + 1))

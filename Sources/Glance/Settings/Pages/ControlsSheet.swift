@@ -18,6 +18,7 @@ struct ControlsSheet: View {
     let display: String
     let top: ScreenTop
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Preferences.musicLeftButton) private var left = PlayerSlot.favorite
     @AppStorage(Preferences.musicRightButton) private var right = PlayerSlot.output
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
@@ -67,7 +68,7 @@ struct ControlsSheet: View {
             .frame(height: 136)
             HStack {
                 Button("Restore Defaults") {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.8)) {
                         left = ControlPlace.left.standard
                         right = ControlPlace.right.standard
                     }
@@ -147,7 +148,7 @@ struct ControlsSheet: View {
                         .help("Remove \(control.title)")
                         .accessibilityLabel("Remove \(control.title)")
                         .position(x: frame.minX + 7, y: frame.minY + 7)
-                        .transition(.scale(scale: 0.3).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .scale(scale: 0.3).combined(with: .opacity))
                     }
                 }
             }
@@ -166,18 +167,18 @@ struct ControlsSheet: View {
                                 .background(Capsule().fill(.black.opacity(0.72)))
                                 .fixedSize()
                                 .offset(y: -28)
-                                .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .bottom)))
+                                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9, anchor: .bottom)))
                         }
                     }
                     .position(location)
                     .allowsHitTesting(false)
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
                     .animation(.easeOut(duration: 0.15), value: removing)
             }
         }
-        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: places.dragging)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: left)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: right)
+        .animation(NotchMotion.spring(response: 0.25, dampingFraction: 0.8), value: places.dragging)
+        .animation(NotchMotion.spring(response: 0.3, dampingFraction: 0.8), value: left)
+        .animation(NotchMotion.spring(response: 0.3, dampingFraction: 0.8), value: right)
         .animation(.easeOut(duration: 0.15), value: selected)
     }
 
@@ -223,7 +224,7 @@ struct ControlsSheet: View {
 
     /// A control chosen for the selected button.
     private func choose(_ control: PlayerSlot) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.8)) {
             if control == .empty { set(.empty, at: selected) } else { put(control, at: selected) }
         }
     }
@@ -265,6 +266,7 @@ struct ControlsSheet: View {
 /// color. The pointer over one also shows the Controls Gallery's green +; a click adds it to the
 /// selected button, and it can be dragged into the player.
 private struct ControlGallery<Drag: Gesture>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let chosen: PlayerSlot
     @Binding var hovered: PlayerSlot?
     let choose: (PlayerSlot) -> Void
@@ -291,7 +293,7 @@ private struct ControlGallery<Drag: Gesture>: View {
                                     .foregroundStyle(.white, .green)
                                     .shadow(color: .black.opacity(0.25), radius: 1.5, y: 0.5)
                                     .offset(x: -2, y: -2)
-                                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+                                    .transition(reduceMotion ? .opacity : .scale(scale: 0.5).combined(with: .opacity))
                             }
                         }
                     Text(control.title)

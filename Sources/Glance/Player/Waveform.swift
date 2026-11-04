@@ -143,7 +143,7 @@ struct WaveformGlyph: View {
             .opacity(folded ? 1 : 0)
             .animation(
                 folded
-                    ? .spring(response: 0.36, dampingFraction: 0.6).delay(0.06)
+                    ? NotchMotion.spring(response: 0.36, dampingFraction: 0.6).delay(0.06)
                     : .spring(response: 0.24, dampingFraction: 0.95), value: folded)
     }
 
