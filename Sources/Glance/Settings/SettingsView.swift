@@ -279,10 +279,10 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "login launch startup permissions privacy accessibility about build version source update updates automatically"
         case .appearance: "look glass system black clear dark blur opaque liquid transparency accent color artwork background spotlight display preview"
         case .player:
-            "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art announce songs"
+            "music apps sources apple spotify safari browser layout cover progress bar tint controls customize buttons favorite shuffle repeat sound output volume lyrics animated art"
         case .tray: "shelf files drop drag clipboard copy copies paste history screenshots recordings private passwords keep clear share quick look"
         case .activities:
-            "live activity activities music cover waveform closed battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
+            "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
         case .opening: "hover click delay hold haptic feedback gestures swipe slide tool natural scrolling trackpad keyboard shortcut hotkey"
         case .displays: "monitor external virtual notch full screen menu bar"
         }

@@ -10,9 +10,6 @@ import SwiftUI
 
 struct PlayerPage: View {
     @EnvironmentObject private var preview: SettingsPreview
-    /// What the picture plays, for its announcement.
-    @EnvironmentObject private var nowPlaying: NowPlaying
-    @Environment(\.shownPage) private var shownPage
     @State private var customizing = false
     @AppStorage(Preferences.lyrics) private var lyrics = true
     @AppStorage(Preferences.musicHiddenApps) private var hiddenApps = ""
@@ -22,8 +19,6 @@ struct PlayerPage: View {
     @AppStorage(Preferences.musicAccentTimeline) private var accentTimeline = true
     @AppStorage(Preferences.musicAppBadge) private var appBadge = false
     @AppStorage(Preferences.musicAnimatedArtwork) private var animatedArtwork = true
-    @AppStorage(Preferences.liveActivity) private var liveActivity = true
-    @AppStorage(Preferences.musicTrackPop) private var trackPop = true
 
     var body: some View {
         Form {
@@ -58,8 +53,6 @@ struct PlayerPage: View {
                     Text("Plays the album cover's animated version, if it has one.")
                 }
                 Toggle("Show app icon on artwork", isOn: $appBadge)
-                Toggle("Announce new audio", isOn: $trackPop)
-                    .disabled(!liveActivity)
             }
             Section {
                 // Follows the stored list, so an app that has just played appears at once.
@@ -99,10 +92,6 @@ struct PlayerPage: View {
         }
         .sheet(isPresented: $customizing) {
             ControlsSheet(display: preview.display, top: preview.top)
-        }
-        // Turned on, the picture shows what it does.
-        .onChange(of: trackPop) {
-            if trackPop, shownPage?.page == .player { preview.announce(nowPlaying) }
         }
     }
 }

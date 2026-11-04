@@ -301,8 +301,8 @@ ended, AirDrop with the next file, and AirPlay with the next speaker. Opened to
 a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the notch and
 swipes that away too.
 
-Turn these off with **Cover and waveform** in **Settings > Live Activities** and
-**Announce new audio** in **Settings > Player**.
+Turn these off with `Cover and waveform` and `Announce new audio` in
+**Settings > Live Activities**.
 
 ### What the Mac announces
 
@@ -491,7 +491,6 @@ ellipsis instead of scrolling.
 | `Tint progress bar` | Colors the progress bar with the accent color |
 | `Animated art` | Plays an album's animated cover, when it has one |
 | `Show app icon on artwork` | Shows the playing app's icon on the cover (off at first) |
-| `Announce new audio` | Briefly shows what starts playing |
 | `Apps` | Which apps' audio Glance shows |
 | `Show new apps` | Whether apps that start playing are added turned on |
 | `Other apps` | **Add App…** adds an app to the list |
@@ -514,6 +513,7 @@ ellipsis instead of scrolling.
 | Setting | Operation |
 | --- | --- |
 | `Cover and waveform` | What's playing beside the camera while the notch is closed |
+| `Announce new audio` | Briefly shows what starts playing |
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect, and sound going to AirPlay |

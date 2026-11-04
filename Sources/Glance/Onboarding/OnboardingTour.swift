@@ -89,8 +89,8 @@ extension OnboardingFeature {
                 OnboardingHighlight(
                     symbol: "quote.bubble", title: "Lyrics", text: "The words, lit line by line as they're sung."),
                 OnboardingHighlight(
-                    symbol: "waveform", title: "Live Activity",
-                    text: "The cover and a waveform beside the camera."),
+                    symbol: "waveform", title: "Live Activities",
+                    text: "Timers, AirDrop and more, beside the camera."),
             ],
             steps: [
                 OnboardingStep(
@@ -102,7 +102,7 @@ extension OnboardingFeature {
                     id: "activity", title: "See What's Playing at a Glance", scene: .liveActivity,
                     settings: [
                         .switches([
-                            OnboardingSwitch(key: Preferences.liveActivity, title: "Live Activities"),
+                            OnboardingSwitch(key: Preferences.liveActivity, title: "Cover and waveform"),
                             OnboardingSwitch(key: Preferences.musicTrackPop, title: "Announce new audio"),
                         ])
                     ]),

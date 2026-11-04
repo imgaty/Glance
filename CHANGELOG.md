@@ -212,7 +212,10 @@
 - Changed `Background` to sit beside its name, as `Layout` does.
 - Changed the Displays page to show the display first, with `Hide in full screen`
   and, on an external display, `Show the notch` for that display alone.
-- Moved `Cover and waveform` to **Settings > Live Activities**.
+- Moved `Cover and waveform` and `Announce new audio` to
+  **Settings > Live Activities**.
+- Changed the welcome tour's `Live Activities` switch to `Cover and waveform`,
+  its name in Settings, and its list to say what else shows beside the camera.
 - Changed the pages to fade as they scroll under the picture of the notch,
   rather than being cut off at its edge.
 - Fixed the player's size in the Tray page's picture with the tray off, and the

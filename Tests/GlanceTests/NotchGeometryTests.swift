@@ -329,6 +329,7 @@ struct SettingsPaneTests {
             ("update", .general),
             ("volume", .player),
             ("recordings", .tray),
+            ("announce", .activities),
         ])
     func searchFinds(query: String, pane: SettingsPane) {
         #expect(SettingsPane.matching(query) == [pane])

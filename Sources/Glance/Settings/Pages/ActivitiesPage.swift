@@ -13,6 +13,7 @@ import SwiftUI
 /// show only on a Mac with one.
 struct ActivitiesPage: View {
     @AppStorage(Preferences.liveActivity) private var liveActivity = true
+    @AppStorage(Preferences.musicTrackPop) private var trackPop = true
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
@@ -34,6 +35,11 @@ struct ActivitiesPage: View {
                     Text("Cover and waveform")
                     Text("Shows what's playing beside the camera while the notch is closed.")
                 }
+                Toggle(isOn: $trackPop) {
+                    Text("Announce new audio")
+                    Text("Briefly shows what starts playing.")
+                }
+                .disabled(!liveActivity)
             }
             if hasBattery {
                 Section {
