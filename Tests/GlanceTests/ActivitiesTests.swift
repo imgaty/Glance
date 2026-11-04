@@ -66,6 +66,14 @@ struct ActivitiesTests {
         // One of each, wherever a battery shows.
         #expect(BatteryRing.color(for: 20) == BatteryColor.red)
         #expect(BatteryRing.color(for: 21) == BatteryColor.green)
+        // Its level takes the same room whatever its digits, so 15% stays on one line.
+        func wing(_ percent: Int) -> CGFloat {
+            let level = BatteryLevel(percent: percent, charging: true)
+            let alert = NotchAlert(kind: .charging, content: .battery(title: "Charging", level: level), spoken: "")
+            return SystemActivityView.wing(for: alert, restingHeight: 32, closedWidth: 185)
+        }
+        #expect(wing(15) == wing(64))
+        #expect(wing(11) == wing(64))
         #expect(LowBatteryLayout.red.level == BatteryColor.red)
         #expect(LowBatteryLayout.yellow.level == BatteryColor.yellow)
         let saving = BatteryWatch.alert(

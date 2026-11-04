@@ -274,6 +274,7 @@ struct SystemActivityView: View {
                 Text("\(level.percent)%")
                     .font(.system(size: size, weight: .semibold).monospacedDigit())
                     .foregroundStyle(level.color)
+                    .fixedSize()
                 BatteryGlyph(level: level, color: level.color, height: restingHeight * BatteryGlyph.height)
             }
         case .status(_, _, let text):
@@ -338,7 +339,7 @@ struct SystemActivityView: View {
             case .battery(let title, let level):
                 (
                     inset + width(title, size, .semibold) + gap,
-                    gap + width("\(level.percent)%", size, .semibold) + restingHeight * BatteryGlyph.gap
+                    gap + digitsWidth("\(level.percent)%", size, .semibold) + restingHeight * BatteryGlyph.gap
                         + BatteryGlyph.width(height: restingHeight * BatteryGlyph.height) + outset
                 )
             case .status(_, _, let text):
@@ -424,6 +425,12 @@ struct SystemActivityView: View {
     private static func width(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
         // A point to spare, so rounding never sets text that fits scrolling.
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
+    }
+
+    /// As numbers are drawn, their digits all as wide as each other: a 1 measured narrower would
+    /// leave them too little room.
+    private static func digitsWidth(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
+        ceil((text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight)]).width) + 2
     }
 }
 
