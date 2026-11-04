@@ -18,7 +18,7 @@ try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: 
 let wanted = Set(CommandLine.arguments.dropFirst())
 for model in models where wanted.isEmpty || wanted.contains(model.name) {
     // The maker's model, downloaded once.
-    let file = cache.appending(path: "\(model.name).usdz")
+    let file = cache.appending(path: "\(model.source ?? model.name).usdz")
     if !FileManager.default.fileExists(atPath: file.path) {
         let (downloaded, response) = try await URLSession.shared.download(from: model.url)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {

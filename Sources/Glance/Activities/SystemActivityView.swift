@@ -79,10 +79,10 @@ struct SystemActivityView: View {
                     .transition(IslandMotion.fade)
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
-            } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery, let chargingCase) = alert.content {
+            } else if let alert = shownAlert, case .device(let symbol, let model, let pictures, let battery) = alert.content {
                 DeviceActivityView(
-                    symbol: symbol, model: model, pictures: pictures, battery: battery, chargingCase: chargingCase, name: alert.name ?? "",
-                    low: alert.kind == .deviceBattery, closedWidth: closedWidth, restingHeight: restingHeight, leaving: self.alert == nil,
+                    symbol: symbol, model: model, pictures: pictures, battery: battery, name: alert.name ?? "",
+                    low: alert.kind.runsLow, closedWidth: closedWidth, restingHeight: restingHeight, leaving: self.alert == nil,
                     extended: extended, notch: notch
                 )
                 .islandFade(self.alert != nil)
@@ -317,13 +317,13 @@ struct SystemActivityView: View {
         let gap = LiveActivityView.cameraGap
         // A device's wings as wide as it turns, against the camera, with none of it going under the
         // camera; or as its ring or its word needs.
-        if case .device(_, let model, let pictures, let battery, let chargingCase) = alert.content {
+        if case .device(_, let model, let pictures, let battery) = alert.content {
             let fit = ExpandedDeviceLayout.fit(model: model, pictures: pictures, restingHeight: restingHeight)
-            let layout = DeviceLayout(height: restingHeight, low: alert.kind == .deviceBattery, fit: fit)
+            let layout = DeviceLayout(height: restingHeight, low: alert.kind.runsLow, fit: fit)
             let axis = deviceAxis(model: model, pictures: pictures, layout: layout)
             let reach = deviceReach(model: model, pictures: pictures, layout: layout)
             let device = layout.edge + max(axis, reach) + reach + gap
-            let end = (battery == nil ? 0 : layout.ring + layout.trailing) + (chargingCase == nil ? 0 : layout.ring + layout.ringGap)
+            let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
         if case .lowBattery(let percent) = alert.content {
@@ -453,8 +453,6 @@ struct DeviceLayout {
     var number: CGFloat { extended ? height * ExpandedDeviceLayout.number : ring * 0.42 }
     /// From the left end to the device, as it reaches furthest turning.
     var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
-    /// Between the earbuds' ring and the case's: extended, as far apart as the Timer's two buttons.
-    var ringGap: CGFloat { height * (extended ? TimerLayout.buttonGap : 0.14) }
     var trailing: CGFloat { extended ? PlayerLayout.padding : LiveActivityView.concentric(ring, in: height) }
 }
 
@@ -679,8 +677,6 @@ struct BatteryRing: View {
     var number: CGFloat = 0
     var numberScale: CGFloat = 1
     var numberShown = false
-    /// What it's the battery of, over its number, when there are two to tell apart.
-    var symbol: String? = nil
 
     static func color(for percent: Int) -> Color { percent <= 20 ? BatteryColor.red : BatteryColor.green }
 
@@ -697,15 +693,6 @@ struct BatteryRing: View {
                 .foregroundStyle(color)
                 .scaleEffect(numberScale)
                 .opacity(numberShown ? 1 : 0)
-                .offset(y: symbol == nil ? 0 : diameter * 0.13)
-            if let symbol {
-                Image(systemName: symbol)
-                    .font(.system(size: diameter * 0.26, weight: .semibold))
-                    .foregroundStyle(color)
-                    .opacity(numberShown ? 1 : 0)
-                    .offset(y: -diameter * 0.17)
-                    .accessibilityHidden(true)
-            }
         }
         .frame(width: diameter, height: diameter)
         .accessibilityLabel("\(percent) percent")

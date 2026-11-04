@@ -1,6 +1,6 @@
 # Contributing
 
-`Created: 11 October 2026` | `Last updated: 31 October 2026`
+`Created: 11 October 2026` | `Last updated: 4 November 2026`
 
 A guide to contributing to the Glance project.
 
@@ -72,9 +72,9 @@ open build/Glance.app --args --bench airdrop
 ```
 
 The scenes are `airdrop`, `airdropSend`, `airdropReal`, `timer`, `stopwatch`,
-`airplay`, `charging`, `lowBattery`, `lowBatteryReal`, `headphones` and
-`deviceBattery`. In `lowBatteryReal` the button changes the Mac's Low Power
-Mode. A number after the name is how long each round lasts, in seconds, 300
+`airplay`, `charging`, `lowBattery`, `lowBatteryReal`, `headphones`,
+`deviceBattery` and `caseBattery`. In `lowBatteryReal` the button changes the
+Mac's Low Power Mode. A number after the name is how long each round lasts, in seconds, 300
 unless said. Open Glance again without it to go back.
 
 Alternatively, right-click the notch and choose a scene from

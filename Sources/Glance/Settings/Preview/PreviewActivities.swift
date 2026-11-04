@@ -13,9 +13,6 @@ import SwiftUI
 enum PreviewActivity: CaseIterable {
     case announcement, charging, lowBattery, device, airDrop, timer, stopwatch
 
-    /// The made-up AirPods' case, as macOS pictures AirPods Pro 2's.
-    static let caseSymbol = SystemDevices.symbols(product: 0x2014)?.chargingCase ?? "airpods.chargingcase.fill"
-
     private var key: String {
         switch self {
         case .announcement: Preferences.musicTrackPop
@@ -101,8 +98,7 @@ extension SettingsPreview {
         case .device:
             _ = await DeviceTurn.prepare(.airpodsPro2)
             guard !Task.isCancelled else { return }
-            let chargingCase = CaseBattery(level: 64, symbol: PreviewActivity.caseSymbol)
-            await say(DeviceWatch.alert(name: "AirPods Pro", symbol: "airpodspro", model: .airpodsPro2, battery: 88, chargingCase: chargingCase))
+            await say(DeviceWatch.alert(name: "AirPods Pro", symbol: "airpodspro", model: .airpodsPro2, battery: 88))
         case .airDrop:
             await hold(\.airdrop, AirDropShown(id: "preview", sender: "iPhone", preview: ActivityBench.photo(), fraction: 0.35))
         case .timer:

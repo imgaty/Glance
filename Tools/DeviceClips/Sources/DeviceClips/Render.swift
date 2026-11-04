@@ -45,6 +45,9 @@ enum Render {
                 bud.position.y = level - middle.y
                 pair.addChildNode(bud)
             }
+        case .chargingCase:
+            guard let chargingCase = chargingCase(in: scene.rootNode) else { return nil }
+            pair.addChildNode(chargingCase)
         case .whole:
             for part in parts(of: scene.rootNode) {
                 let copy = SCNNode(geometry: part.geometry)
@@ -96,10 +99,13 @@ enum Render {
         // Earbuds stand a little in front of the middle they turn about, as the iPhone turns AirPods:
         // the pair drifts in and out by a fifth of its height as it turns.
         var turning = reach
-        if case .whole = model.kind {} else {
+        switch model.kind {
+        case .pair, .mirrored:
             let forward = (standing.top - standing.bottom) * 0.19
             pair.position.z += forward
             turning = [low.x, high.x].flatMap { x in [low.z, high.z].map { z in hypot(x - middle.x, z - middle.z + forward) } }.max() ?? reach
+        case .whole, .chargingCase:
+            break
         }
         let scale = pixelHeight / (standing.top - standing.bottom)
         // Even, as video wants.
@@ -163,6 +169,153 @@ enum Render {
     /// middle on its side within reach of the biggest there, its shell; the case's own parts off the
     /// middle, such as a lanyard loop, are further away.
     static func earbuds(in root: SCNNode) -> (left: SCNNode, right: SCNNode)? {
+        guard let (left, right, _) = sorted(root) else { return nil }
+        return (gathered(left), gathered(right))
+    }
+
+    /// The case: every part that isn't one of the earbuds', with its lid closed, as their makers only
+    /// model it open. The lid is what stands above the base's rim or behind it; it's turned about the
+    /// hinge's axis until its rim lies on the base's, front to front.
+    static func chargingCase(in root: SCNNode) -> SCNNode? {
+        guard let (_, _, rest) = sorted(root), let bottom = rest.map(\.low.y).min(), let top = rest.map(\.high.y).max() else { return nil }
+        // Some models keep a box round everything, which draws nothing.
+        let height = top - bottom
+        let parts = rest.filter { $0.low.y > bottom + height * 0.01 || $0.high.y < top - height * 0.01 }
+        guard let shell = parts.filter({ $0.low.y < bottom + height * 0.01 }).max(by: { $0.size < $1.size }) else { return nil }
+        let isLid = { (part: Part) in part.middle.y > shell.high.y + height * 0.01 || part.middle.z < shell.low.z }
+        let lid = parts.filter(isLid), base = parts.filter { !isLid($0) }
+        guard let open = rim(ofLid: lid), let closed = rim(ofBase: base) else { return nil }
+        let angle = atan2(open.front.y - open.back.y, open.front.z - open.back.z) - atan2(closed.front.y - closed.back.y, closed.front.z - closed.back.z)
+        let shift = (y: closed.front.y - (open.front.y * cos(angle) - open.front.z * sin(angle)), z: closed.front.z - (open.front.y * sin(angle) + open.front.z * cos(angle)))
+        // Bits of the hinge meant for an open lid would stick out behind it, closed.
+        let behind = closed.back.z - (closed.front.z - closed.back.z) * 0.02
+        let lidNode = gathered(
+            lid.filter { part in
+                vertices(of: part.node).allSatisfy { corner in
+                    let z: CGFloat = corner.y * sin(angle) + corner.z * cos(angle)
+                    return z + shift.z >= behind
+                }
+            })
+        lidNode.eulerAngles.x = angle
+        lidNode.position.y = shift.y
+        lidNode.position.z = shift.z
+        let whole = SCNNode()
+        whole.addChildNode(gathered(base))
+        whole.addChildNode(lidNode)
+        return whole
+    }
+
+    /// A point seen from the side.
+    private struct Side {
+        let z: CGFloat
+        let y: CGFloat
+    }
+
+    private static func sidePoints(of parts: [Part]) -> [Side] {
+        parts.flatMap { vertices(of: $0.node) }.map { Side(z: $0.z, y: $0.y) }
+    }
+
+    /// The base's rim seen from the side: as high as it stands at its back and its front, as the
+    /// earbuds' cradle can stand higher between them, and as far as the wall goes there.
+    private static func rim(ofBase parts: [Part]) -> (back: Side, front: Side)? {
+        let points = sidePoints(of: parts)
+        guard let low = points.map(\.z).min(), let high = points.map(\.z).max() else { return nil }
+        let depth = high - low
+        guard let backY = points.filter({ $0.z < low + depth * 0.04 }).map(\.y).max(), let frontY = points.filter({ $0.z > high - depth * 0.04 }).map(\.y).max(),
+            let back = points.filter({ $0.y > backY - depth * 0.03 && $0.z < low + depth * 0.5 }).map(\.z).min(),
+            let front = points.filter({ $0.y > frontY - depth * 0.03 && $0.z > low + depth * 0.5 }).map(\.z).max()
+        else { return nil }
+        return (Side(z: back, y: backY), Side(z: front, y: frontY))
+    }
+
+    /// The open lid's rim seen from the side, from the hinge up: the line most of its corners lie on,
+    /// near the longest straight side facing forward, as a lip can stand out beyond it. The lowest
+    /// part of the lid is left out, where the hinge stands out from it; the rim goes on as far as the
+    /// wall does.
+    private static func rim(ofLid parts: [Part]) -> (back: Side, front: Side)? {
+        let points = sidePoints(of: parts)
+        guard let low = points.map(\.y).min(), let high = points.map(\.y).max() else { return nil }
+        let size = high - low
+        let upper = points.filter { $0.y > low + size * 0.4 }
+        let hull = hull(of: upper)
+        guard hull.count > 2 else { return nil }
+        var longest: (back: Side, front: Side)?
+        var length: CGFloat = 0
+        // It goes counterclockwise, so a side going up has what's outside it ahead, facing forward.
+        for (index, from) in hull.enumerated() {
+            let to = hull[(index + 1) % hull.count]
+            if to.y - from.y > abs(to.z - from.z) / 2, hypot(to.z - from.z, to.y - from.y) > length {
+                (longest, length) = ((from, to), hypot(to.z - from.z, to.y - from.y))
+            }
+        }
+        guard let longest else { return nil }
+        let slope = atan2(longest.front.y - longest.back.y, longest.front.z - longest.back.z)
+        var line = (angle: slope, ahead: CGFloat(0), corners: 0)
+        for step in -32...32 {
+            let angle = slope + CGFloat(step) * .pi / 720
+            var rows: [Int: Int] = [:]
+            for point in upper {
+                let ahead = (point.z - longest.back.z) * sin(angle) - (point.y - longest.back.y) * cos(angle)
+                if ahead > -size * 0.06 { rows[Int((ahead / (size * 0.004)).rounded(.down)), default: 0] += 1 }
+            }
+            if let row = rows.max(by: { $0.value < $1.value }), row.value > line.corners {
+                line = (angle, (CGFloat(row.key) + 0.5) * size * 0.004, row.value)
+            }
+        }
+        let along = (z: cos(line.angle), y: sin(line.angle))
+        let back = Side(z: longest.back.z + along.y * line.ahead, y: longest.back.y - along.z * line.ahead)
+        let near = upper.filter { abs(($0.z - back.z) * along.y - ($0.y - back.y) * along.z) < size * 0.03 }
+        guard let reach = near.map({ ($0.z - back.z) * along.z + ($0.y - back.y) * along.y }).max() else { return nil }
+        return (back, Side(z: back.z + along.z * reach, y: back.y + along.y * reach))
+    }
+
+    /// What goes round the points, counterclockwise.
+    private static func hull(of points: [Side]) -> [Side] {
+        let sorted = points.sorted { ($0.z, $0.y) < ($1.z, $1.y) }
+        func half(_ points: some Sequence<Side>) -> [Side] {
+            var kept: [Side] = []
+            for point in points {
+                while kept.count > 1 {
+                    let (a, b) = (kept[kept.count - 2], kept[kept.count - 1])
+                    if (b.z - a.z) * (point.y - a.y) - (b.y - a.y) * (point.z - a.z) > 0 { break }
+                    kept.removeLast()
+                }
+                kept.append(point)
+            }
+            return kept.dropLast()
+        }
+        return half(sorted) + half(sorted.reversed())
+    }
+
+    /// Where a part's corners stand in the model.
+    private static func vertices(of node: SCNNode) -> [SCNVector3] {
+        guard let source = node.geometry?.sources(for: .vertex).first else { return [] }
+        return source.data.withUnsafeBytes { bytes in
+            (0..<source.vectorCount).map { index in
+                let at = source.dataOffset + index * source.dataStride
+                func component(_ number: Int) -> CGFloat {
+                    let offset = at + number * source.bytesPerComponent
+                    return source.bytesPerComponent == 4
+                        ? CGFloat(bytes.loadUnaligned(fromByteOffset: offset, as: Float.self))
+                        : CGFloat(bytes.loadUnaligned(fromByteOffset: offset, as: Double.self))
+                }
+                return node.convertPosition(SCNVector3(component(0), component(1), component(2)), to: nil)
+            }
+        }
+    }
+
+    private static func gathered(_ parts: [Part]) -> SCNNode {
+        let node = SCNNode()
+        for part in parts {
+            let copy = SCNNode(geometry: part.node.geometry)
+            copy.transform = part.node.worldTransform
+            node.addChildNode(copy)
+        }
+        return node
+    }
+
+    /// A model's parts, each earbud's and what's left.
+    private static func sorted(_ root: SCNNode) -> (left: [Part], right: [Part], rest: [Part])? {
         let parts = parts(of: root).map { node in
             let (low, high) = node.boundingBox
             let corners = [low.x, high.x].flatMap { x in
@@ -175,24 +328,19 @@ enum Render {
         // Off the middle: by a twenty-fifth of the whole model's width, whatever it's measured in.
         guard let widest = parts.map(\.high.x).max(), let narrowest = parts.map(\.low.x).min() else { return nil }
         let off = (widest - narrowest) * 0.04
-        func earbud(left: Bool) -> SCNNode? {
+        func earbud(left: Bool) -> [Part]? {
             let side = parts.filter { left ? $0.middle.x < -off : $0.middle.x > off }
             guard let shell = side.max(by: { $0.size < $1.size }) else { return nil }
             let reach = shell.size * 0.25
-            let earbud = SCNNode()
-            for part in side
-            where (shell.low.x - reach...shell.high.x + reach).contains(part.middle.x)
-                && (shell.low.y - reach...shell.high.y + reach).contains(part.middle.y)
-                && (shell.low.z - reach...shell.high.z + reach).contains(part.middle.z)
-            {
-                let copy = SCNNode(geometry: part.node.geometry)
-                copy.transform = part.node.worldTransform
-                earbud.addChildNode(copy)
+            return side.filter { part in
+                (shell.low.x - reach...shell.high.x + reach).contains(part.middle.x)
+                    && (shell.low.y - reach...shell.high.y + reach).contains(part.middle.y)
+                    && (shell.low.z - reach...shell.high.z + reach).contains(part.middle.z)
             }
-            return earbud
         }
         guard let left = earbud(left: true), let right = earbud(left: false) else { return nil }
-        return (left, right)
+        let taken = Set((left + right).map { ObjectIdentifier($0.node) })
+        return (left, right, parts.filter { !taken.contains(ObjectIdentifier($0.node)) })
     }
 
     /// A picture's pixels, red, green, blue and how solid, a row at a time from the top.

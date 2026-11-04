@@ -29,6 +29,16 @@ enum Headphones: String, CaseIterable {
     case beatsStudioPro = "beats-studio-pro"
     case beats360 = "beats-360"
     case beatsPill = "beats-pill"
+    // Earbuds' cases, closed, each from the same model: shown only when the case runs low.
+    case airpodsProCase = "airpods-pro-case"
+    case airpodsPro2Case = "airpods-pro-2-case"
+    case airpodsPro3Case = "airpods-pro-3-case"
+    case airpods3Case = "airpods-3-case"
+    case airpods4Case = "airpods-4-case"
+    case beatsSoloBudsCase = "beats-solo-buds-case"
+    case beatsStudioBudsPlusCase = "beats-studio-buds-plus-case"
+    case powerbeatsPro2Case = "powerbeats-pro-2-case"
+    case powerbeatsFitCase = "powerbeats-fit-case"
 
     /// The model macOS knows a product ID as, or the nearest it's a kind of that has a clip; none
     /// for AirPods 1 and 2, which Apple never modelled, AirPods Max, older Beats and the rest.
@@ -46,6 +56,11 @@ enum Headphones: String, CaseIterable {
         "com.apple.beats-pill": .beatsPill, "com.apple.power-beats-pro-gen2": .powerbeatsPro2, "com.apple.beats-solo-4": .beatsSolo4,
         "com.apple.beats-solo-buds": .beatsSoloBuds, "com.apple.beats-fit-pro-2025": .powerbeatsFit, "com.apple.beats-360": .beats360,
     ]
+
+    /// The case they charge in, for earbuds whose maker's model has one.
+    var chargingCase: Headphones? { Headphones(rawValue: rawValue + "-case") }
+
+    var isChargingCase: Bool { rawValue.hasSuffix("-case") }
 
     /// Its clip, among Glance's resources.
     var url: URL? { Bundle.main.url(forResource: rawValue, withExtension: "mov", subdirectory: "Headphones") }

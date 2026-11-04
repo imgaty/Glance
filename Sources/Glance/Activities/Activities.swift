@@ -13,7 +13,10 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, deviceBattery, timerDone
+        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone
+
+        /// A device or its case running low: its ring red.
+        var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
     }
 
     /// What shows on either side of the camera.
@@ -21,7 +24,7 @@ struct NotchAlert: Identifiable, Equatable {
         /// A device connecting, as AirPods do: the device itself turning in on the left, AirPods and
         /// Beats in 3D, others as macOS pictures them, or by their symbol; its battery as a ring on
         /// the right, when it tells it.
-        case device(symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int?, chargingCase: CaseBattery? = nil)
+        case device(symbol: String, model: Headphones? = nil, pictures: [String] = [], battery: Int?)
         /// The Mac's battery: a word on the left, its level and a battery on the right.
         case battery(title: String, level: BatteryLevel)
         /// The Mac's battery running low, as tall as the Alarm, with a button to turn on Low Power
@@ -55,18 +58,7 @@ struct NotchAlert: Identifiable, Equatable {
     /// A device's name, as it extends under the pointer.
     var name: String?
 
-    /// A device's case's battery, when it tells it.
-    var chargingCase: CaseBattery? {
-        if case .device(_, _, _, _, let chargingCase) = content { chargingCase } else { nil }
-    }
-
     static func == (a: NotchAlert, b: NotchAlert) -> Bool { a.id == b.id }
-}
-
-/// A charging case's battery, beside its earbuds': how full, and the case's symbol for this model.
-struct CaseBattery: Equatable {
-    let level: Int
-    let symbol: String
 }
 
 /// A battery, as its symbol shows it: how full, and whether it's charging.

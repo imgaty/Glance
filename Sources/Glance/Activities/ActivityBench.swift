@@ -19,14 +19,14 @@ final class ActivityBench {
     static let shared = ActivityBench()
 
     enum Scene: String, CaseIterable {
-        case music, airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery
+        case music, airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery, caseBattery
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
         /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
         case lowBatteryReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery].contains(self) }
 
         /// What can be tried beside another: all but those that touch something real.
         static var seconds: [Scene] { allCases.filter { $0 != .airdropReal && $0 != .lowBatteryReal } }
@@ -122,6 +122,7 @@ final class ActivityBench {
         case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
         case .deviceBattery: await announce(Self.deviceBatteries(), every: 6)
+        case .caseBattery: await announce(Self.caseBatteries(), every: 6)
         }
     }
 
@@ -235,7 +236,7 @@ final class ActivityBench {
     private static func headphones() -> [@MainActor () async -> NotchAlert] {
         // AirPods 5 are modelled as AirPods 4.
         let airPods: [Headphones] = [.airpodsPro, .airpodsPro2, .airpodsPro3, .airpods4, .airpods3]
-        let beats = Headphones.allCases.filter { !airPods.contains($0) }
+        let beats = Headphones.allCases.filter { !airPods.contains($0) && !$0.isChargingCase }
         func clips(_ models: [Headphones]) -> [@MainActor () async -> NotchAlert] {
             let levels = [88, 54, 21, 100, 12]
             return models.enumerated().map { index, model in
@@ -243,9 +244,7 @@ final class ActivityBench {
                     _ = await DeviceTurn.prepare(model)
                     let name = model.rawValue.replacingOccurrences(of: "-", with: " ").capitalized
                         .replacingOccurrences(of: "Airpods", with: "AirPods")
-                    // Earbuds have a case with a battery of its own.
-                    let chargingCase = airPods.contains(model) ? CaseBattery(level: levels[(index + 2) % levels.count], symbol: PreviewActivity.caseSymbol) : nil
-                    return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count], chargingCase: chargingCase)
+                    return DeviceWatch.alert(name: name, symbol: "airpods", model: model, battery: levels[index % levels.count])
                 }
             }
         }
@@ -271,6 +270,18 @@ final class ActivityBench {
                     return DeviceWatch.lowBattery(name: model.rawValue, symbol: symbol, model: model, battery: level)
                 }
             }
+    }
+
+    /// Each case in turn, at 20% or 10%.
+    private static func caseBatteries() -> [@MainActor () async -> NotchAlert] {
+        Headphones.allCases.filter(\.isChargingCase).enumerated().map { index, model in
+            {
+                _ = await DeviceTurn.prepare(model)
+                let name = model.rawValue.replacingOccurrences(of: "-case", with: "").replacingOccurrences(of: "-", with: " ").capitalized
+                    .replacingOccurrences(of: "Airpods", with: "AirPods")
+                return DeviceWatch.caseLowBattery(name: name, symbol: "airpods.chargingcase.fill", model: model, battery: index.isMultiple(of: 2) ? 20 : 10)
+            }
+        }
     }
 
     /// One of macOS's own desktop pictures, as a photo sent over AirDrop would be.

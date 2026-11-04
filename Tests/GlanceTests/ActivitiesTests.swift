@@ -114,30 +114,14 @@ struct ActivitiesTests {
         let low = DeviceWatch.lowBattery(name: "AirPods Pro", symbol: "airpods.pro", battery: 10)
         #expect(low.kind == .deviceBattery)
         #expect(low.content == .device(symbol: "airpods.pro", pictures: [], battery: 10))
-
-        // With its case's level, a ring of its own, said too.
-        let chargingCase = CaseBattery(level: 64, symbol: "airpods.chargingcase.fill")
-        let withCase = DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 88, chargingCase: chargingCase)
-        #expect(withCase.chargingCase == chargingCase)
-        #expect(withCase.spoken == "AirPods connected, 88 percent, case 64 percent")
-        #expect(DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 88).chargingCase == nil)
-        // Room for the second ring, closed and extended; no wider for a device without a case.
-        let plain = DeviceWatch.alert(name: "AirPods", symbol: "airpods", battery: 88)
-        #expect(
-            SystemActivityView.wing(for: withCase, restingHeight: 32, closedWidth: 185)
-                > SystemActivityView.wing(for: plain, restingHeight: 32, closedWidth: 185))
-        #expect(
-            ExpandedDeviceLayout.wing(name: "AirPods", hasCase: true, restingHeight: 32, closedWidth: 185)
-                > ExpandedDeviceLayout.wing(name: "AirPods", restingHeight: 32, closedWidth: 185))
-
-        // The case's level shows beside the earbuds' or the headphones'; with nothing else told, it's
-        // already what the one ring says.
-        var info = DeviceWatch.BluetoothInfo(battery: 88)
-        info.levels = DeviceWatch.Levels(left: 88, right: 90, chargingCase: 64)
-        #expect(info.caseBattery?.level == 64)
-        info.levels = DeviceWatch.Levels(chargingCase: 64)
-        #expect(info.caseBattery == nil)
         #expect(low.spoken == "AirPods Pro battery low, 10 percent")
+        // A case runs low on its own, in its own picture, and waits its turn beside its earbuds'.
+        let lowCase = DeviceWatch.caseLowBattery(name: "AirPods Pro", symbol: "airpodspro.chargingcase.fill", model: .airpodsPro2Case, battery: 20)
+        #expect(lowCase.kind == .caseBattery && lowCase.kind != low.kind && lowCase.kind.runsLow && low.kind.runsLow)
+        #expect(!NotchAlert.Kind.device.runsLow)
+        #expect(lowCase.content == .device(symbol: "airpodspro.chargingcase.fill", model: .airpodsPro2Case, pictures: [], battery: 20))
+        #expect(lowCase.spoken == "AirPods Pro Case battery low, 20 percent")
+        #expect(lowCase.name == "AirPods Pro Case")
         #expect(DeviceWatch.shortName("MX Master 3S") == "MX Master 3S")
         #expect(DeviceWatch.isBluetooth(kAudioDeviceTransportTypeBluetoothLE))
         #expect(!DeviceWatch.isBluetooth(kAudioDeviceTransportTypeAirPlay))
@@ -167,6 +151,13 @@ struct ActivitiesTests {
         #expect(
             twice["airpods pro"]
                 == DeviceWatch.BluetoothInfo(battery: 31, product: 0x2024, levels: .init(left: 31, right: 39, chargingCase: 42)))
+        // The earbuds' battery and the case's stay apart, even when only the case's is told.
+        let both = DeviceWatch.Battery(twice["airpods pro"]!, symbol: "airpodspro")
+        #expect(both.percent == 31 && both.casePercent == 42)
+        let caseAlone = DeviceWatch.connected(
+            in: Data(#"{"SPBluetoothDataType":[{"device_connected":[{"Airpods Pro":{"device_batteryLevelCase":"42%","device_productID":"0x2024"}}]}]}"#.utf8))
+        let onlyCase = DeviceWatch.Battery(caseAlone["airpods pro"]!, symbol: "airpodspro")
+        #expect(onlyCase.percent == nil && onlyCase.casePercent == 42)
         // Pictured as macOS pictures them, earbud by earbud, or a model it doesn't picture, none.
         #expect(DevicePictures.names(product: 0x2024) == ["airpod_left", "airpod_right"])
         #expect(DevicePictures.names(product: 0x201F) == ["B515d-Default"])
@@ -341,6 +332,16 @@ struct ActivitiesTests {
         #expect(Headphones(product: 0x200A) == nil)
         #expect(Headphones(product: 0x202D) == nil)
         #expect(Headphones(product: 0x1234) == nil)
+    }
+
+    @Test("Earbuds with a case in their maker's model have their own closed clip of it; others none")
+    func chargingCases() {
+        #expect(Headphones.airpodsPro2.chargingCase == .airpodsPro2Case)
+        #expect(Headphones.powerbeatsFit.chargingCase == .powerbeatsFitCase)
+        #expect(Headphones.airpodsPro2Case.chargingCase == nil)
+        #expect(Headphones.beatsFlex.chargingCase == nil)
+        #expect(Headphones.beatsSolo4.chargingCase == nil)
+        #expect(Headphones.allCases.filter(\.isChargingCase).count == 9)
     }
 
     /// The clips, as the repository keeps them.

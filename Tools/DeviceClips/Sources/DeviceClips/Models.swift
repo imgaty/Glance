@@ -19,6 +19,8 @@ struct Model {
     /// How close a pair's earbuds stand, of how far apart the model stands them: as the iPhone shows
     /// AirPods, or further for earbuds with wings that would touch.
     var spacing: Double = 0.83
+    /// The name its maker's model is kept under, when it's drawn from another's: earbuds' case.
+    var source: String? = nil
 
     enum Kind {
         /// Two earbuds, taken from beside their case, side by side, facing you.
@@ -28,6 +30,8 @@ struct Model {
         case mirrored(left: Bool)
         /// The whole thing, as it stands: headphones, a neckband, a speaker.
         case whole
+        /// Their case alone, all that's left of the model without the earbuds, its lid closed.
+        case chargingCase
     }
 }
 
@@ -40,7 +44,19 @@ private func model(_ name: String, _ url: String, _ kind: Model.Kind, brightness
     Model(name: name, url: URL(string: url)!, kind: kind, brightness: brightness, spacing: spacing)
 }
 
-let models: [Model] = [
+/// Earbuds, and their case from the same model of their maker's.
+let models: [Model] =
+    devices
+    + devices.compactMap { device in
+        switch device.kind {
+        case .pair, .mirrored:
+            Model(name: device.name + "-case", url: device.url, kind: .chargingCase, brightness: device.brightness, source: device.name)
+        case .whole, .chargingCase:
+            nil
+        }
+    }
+
+private let devices: [Model] = [
     // Apple's, from the AirPods pages' "View in AR".
     model("airpods-pro", "\(apple)/airpods-pro/2021/8d0b339b-f0f9-4522-aaa5-e047097ea8ec/ar/airpods_pro_ios15.usdz", .pair, brightness: 198),
     model(
