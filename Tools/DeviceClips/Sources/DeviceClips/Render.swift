@@ -46,7 +46,7 @@ enum Render {
                 pair.addChildNode(bud)
             }
         case .chargingCase:
-            guard let chargingCase = chargingCase(in: scene.rootNode) else { return nil }
+            guard let chargingCase = chargingCase(in: scene.rootNode, white: (model.brightness ?? 0) > 128) else { return nil }
             pair.addChildNode(chargingCase)
         case .whole:
             for part in parts(of: scene.rootNode) {
@@ -176,7 +176,7 @@ enum Render {
     /// The case: every part that isn't one of the earbuds', with its lid closed, as their makers only
     /// model it open. The lid is what stands above the base's rim or behind it; it's turned about the
     /// hinge's axis until its rim lies on the base's, front to front.
-    static func chargingCase(in root: SCNNode) -> SCNNode? {
+    static func chargingCase(in root: SCNNode, white: Bool) -> SCNNode? {
         guard let (_, _, rest) = sorted(root), let bottom = rest.map(\.low.y).min(), let top = rest.map(\.high.y).max() else { return nil }
         // Some models keep a box round everything, which draws nothing.
         let height = top - bottom
@@ -186,22 +186,71 @@ enum Render {
         let lid = parts.filter(isLid), base = parts.filter { !isLid($0) }
         guard let open = rim(ofLid: lid), let closed = rim(ofBase: base) else { return nil }
         let angle = atan2(open.front.y - open.back.y, open.front.z - open.back.z) - atan2(closed.front.y - closed.back.y, closed.front.z - closed.back.z)
-        let shift = (y: closed.front.y - (open.front.y * cos(angle) - open.front.z * sin(angle)), z: closed.front.z - (open.front.y * sin(angle) + open.front.z * cos(angle)))
-        // Bits of the hinge meant for an open lid would stick out behind it, closed.
-        let behind = closed.back.z - (closed.front.z - closed.back.z) * 0.02
-        let lidNode = gathered(
-            lid.filter { part in
-                vertices(of: part.node).allSatisfy { corner in
-                    let z: CGFloat = corner.y * sin(angle) + corner.z * cos(angle)
-                    return z + shift.z >= behind
+        let shift = (
+            y: closed.front.y - (open.front.y * cos(angle) - open.front.z * sin(angle)),
+            z: closed.front.z - (open.front.y * sin(angle) + open.front.z * cos(angle))
+        )
+        func placed(_ part: Part, isOnLid: Bool) -> [SCNVector3] {
+            vertices(of: part.node).map { corner in
+                guard isOnLid else { return corner }
+                let y: CGFloat = corner.y * cos(angle) - corner.z * sin(angle) + shift.y
+                let z: CGFloat = corner.y * sin(angle) + corner.z * cos(angle) + shift.z
+                return SCNVector3(corner.x, y, z)
+            }
+        }
+        // The hinge: the small parts at the back of the seam. They stand as they do with the lid open,
+        // crooked with it closed, so one plate takes their place in the gap the shells leave for it.
+        let depth = closed.front.z - closed.back.z
+        func isHinge(_ corners: [SCNVector3], of part: Part) -> Bool {
+            guard part.size < shell.size * 0.6, let nearest = corners.map(\.z).min(), let farthest = corners.map(\.z).max(),
+                let low = corners.map(\.y).min(), let high = corners.map(\.y).max()
+            else { return false }
+            return nearest < closed.back.z + depth * 0.12 && (nearest + farthest) / 2 < closed.back.z + depth * 0.3
+                && abs((low + high) / 2 - closed.front.y) < depth * 0.4
+        }
+        let lidKept = lid.filter { !isHinge(placed($0, isOnLid: true), of: $0) }
+        let baseKept = base.filter { !isHinge(placed($0, isOnLid: false), of: $0) }
+        // The light and shadows painted on them are for the case open, around the hinge most of all.
+        // The white ones are all painted light, so they take the studio's instead, glossy as they
+        // are; the status light keeps its glow.
+        for part in lidKept + baseKept {
+            guard let geometry = part.node.geometry else { continue }
+            geometry.materials = geometry.materials.map { material in
+                let copy = material.copy() as! SCNMaterial
+                copy.ambientOcclusion.contents = nil
+                if white, part.size > shell.size * 0.1 {
+                    if !(copy.emission.contents is NSColor) { copy.emission.contents = nil }
+                    copy.metalness.contents = 0.2
+                    copy.roughness.contents = 0.16
                 }
-            })
+                return copy
+            }
+        }
+        let hinge =
+            lid.filter { isHinge(placed($0, isOnLid: true), of: $0) }.flatMap { placed($0, isOnLid: true) }
+            + base.filter { isHinge(placed($0, isOnLid: false), of: $0) }.flatMap { placed($0, isOnLid: false) }
+        let lidNode = gathered(lidKept)
         lidNode.eulerAngles.x = angle
         lidNode.position.y = shift.y
         lidNode.position.z = shift.z
         let whole = SCNNode()
-        whole.addChildNode(gathered(base))
+        whole.addChildNode(gathered(baseKept))
         whole.addChildNode(lidNode)
+        if let left = hinge.map(\.x).min(), let right = hinge.map(\.x).max(), let low = hinge.map(\.y).min(), let high = hinge.map(\.y).max() {
+            // A little lower than the parts it replaces, to the foot of the gap: below the seam, the
+            // shell's wall hides what's left over.
+            let height = min(high - low, depth * 0.5) * 1.5
+            let plate = SCNBox(width: right - left, height: height, length: depth * 0.1, chamferRadius: depth * 0.02)
+            let metal = SCNMaterial()
+            metal.lightingModel = .physicallyBased
+            metal.diffuse.contents = NSColor(white: white ? 0.62 : 0.14, alpha: 1)
+            metal.metalness.contents = 0.2
+            metal.roughness.contents = 0.45
+            plate.materials = [metal]
+            let node = SCNNode(geometry: plate)
+            node.position = SCNVector3((left + right) / 2, high - height / 2, closed.back.z + depth * 0.065)
+            whole.addChildNode(node)
+        }
         return whole
     }
 

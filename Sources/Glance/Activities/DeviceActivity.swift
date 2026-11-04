@@ -117,7 +117,7 @@ struct DeviceActivityView: View {
 
     @ViewBuilder private func picture(height: CGFloat) -> some View {
         if let model, let turn = DeviceTurn.cached(model) {
-            TurningDevice(turn: turn, height: height)
+            TurningDevice(turn: turn, height: height, hold: model.isChargingCase ? TurningDevice.caseHold : 0)
         } else if let images = DevicePictures.images(pictures) {
             StillPictures(images: images, height: height)
         } else {

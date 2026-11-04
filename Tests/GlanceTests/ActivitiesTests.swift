@@ -344,6 +344,16 @@ struct ActivitiesTests {
         #expect(Headphones.allCases.filter(\.isChargingCase).count == 9)
     }
 
+    @Test("A case holds face on as it arrives, then gathers speed up to a steady turn")
+    func caseHolds() {
+        let hold = TurningDevice.caseHold, speed = TurningDevice.degreesPerSecond, gathering = TurningDevice.gathering
+        #expect(TurningDevice.degrees(after: 0, holding: hold) == 0)
+        #expect(TurningDevice.degrees(after: hold, holding: hold) == 0)
+        #expect(TurningDevice.degrees(after: hold + gathering / 2, holding: hold) < speed * gathering / 2)
+        let up = TurningDevice.degrees(after: hold + gathering, holding: hold)
+        #expect(abs(TurningDevice.degrees(after: hold + gathering + 1, holding: hold) - up - speed) < 0.001)
+    }
+
     /// The clips, as the repository keeps them.
     static func clip(_ headphones: Headphones) -> URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

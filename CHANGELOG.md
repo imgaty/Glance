@@ -31,8 +31,9 @@
   connecting or running low is hidden too.
 - Added a low battery alert of its own for the charging case of AirPods and
   Beats earbuds: at 20% and again at 10%, the case on its own, closed and turning
-  in 3D, from Apple's and Beats' own models, beside its red ring. It's the only
-  time the case shows, never as the earbuds connect.
+  in 3D, from Apple's and Beats' own models, beside its red ring. It starts from
+  the front, holding still a moment. It's the only time the case shows, never as
+  the earbuds connect.
 - Changed everything open or tall in the notch to one set of bottom corners,
   concentric with what's round at its ends, top corners that grow with its
   height, and one padding all around. Closed, the notch keeps the camera housing's

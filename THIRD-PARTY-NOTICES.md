@@ -166,8 +166,9 @@ Apple's and Beats' own 3D models, © Apple Inc.: AirPods Pro, AirPods Pro 2 and 
 AirPods 3 and 4 from the AirPods pages of
 [apple.com](https://www.apple.com/airpods/), where they're shown in AR, and Beats
 from the product pages of [beatsbydre.com](https://www.beatsbydre.com). The
-models only come with the case open, so the clips of the cases close the lid. The
-models themselves aren't included; `Tools/DeviceClips` downloads them to draw the
+models only come with the case open, so the clips of the cases close the lid, put
+a plain plate where the hinge is, and light the white ones anew. The models
+themselves aren't included; `Tools/DeviceClips` downloads them to draw the
 clips again.
 
 <br>

@@ -463,11 +463,17 @@ struct TurningDevice: View {
     let turn: DeviceTurn
     /// The pair's height, face on.
     let height: CGFloat
+    /// How long it stays face on before it starts turning.
+    var hold: TimeInterval = 0
     @State private var start = Date.now
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A turn every five and a half seconds, measured frame by frame from the iPhone.
     static let degreesPerSecond = 66.1
+    /// A case stays face on while it arrives and a moment after, so it's seen from the front first.
+    static let caseHold: TimeInterval = 1
+    /// How long it takes to get up to speed, after a hold.
+    static let gathering: TimeInterval = 0.6
 
     /// The pair's width, face on.
     static func width(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.rest.width * height / turn.rest.height }
@@ -481,13 +487,18 @@ struct TurningDevice: View {
     /// How large it looks, on average over a turn.
     static func size(_ turn: DeviceTurn, height: CGFloat) -> CGFloat { turn.size * height / turn.rest.height }
 
-    /// How far round the pair has turned since it arrived.
-    static func degrees(after seconds: TimeInterval) -> Double { max(seconds, 0) * degreesPerSecond }
+    /// How far round the pair has turned since it arrived: straight away, or after holding still, when
+    /// it gathers speed.
+    static func degrees(after seconds: TimeInterval, holding hold: TimeInterval = 0) -> Double {
+        let moving = max(seconds - hold, 0)
+        guard hold > 0 else { return moving * degreesPerSecond }
+        return degreesPerSecond * (moving < gathering ? moving * moving / (2 * gathering) : moving - gathering / 2)
+    }
 
     var body: some View {
         let scale = height / turn.rest.height
         TimelineView(.animation(paused: reduceMotion)) { context in
-            Image(decorative: turn.frame(at: reduceMotion ? 0 : Self.degrees(after: context.date.timeIntervalSince(start))), scale: 1)
+            Image(decorative: turn.frame(at: reduceMotion ? 0 : Self.degrees(after: context.date.timeIntervalSince(start), holding: hold)), scale: 1)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: turn.canvas.width * scale, height: turn.canvas.height * scale)

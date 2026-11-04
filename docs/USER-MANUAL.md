@@ -321,7 +321,7 @@ sliding under the notch as it folds:
 | A MacBook's battery at 20%, again at 10%, and when macOS warns that it's low | The notch grows taller: its level, as `10% Battery`, and the battery in a capsule, a ripple running out of its level every two seconds. Click the capsule to turn on Low Power Mode: it turns yellow, the ripple stops, and the notch says `Low Power Mode enabled`. Click it again to turn it off |
 | AirPods or Beats connecting | The AirPods or Beats themselves in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods (AirPods Max as macOS pictures them, and AirPods 1 and 2 and older Beats as their symbol, both still), and their battery as a ring: the lower earbud's |
 | A device's battery at 20%, and again at 10% | The device as it shows connecting, its ring red, with its level in numbers inside |
-| The charging case's battery at 20%, and again at 10% | The case on its own, closed and turning in 3D, from Apple's and Beats' own models, its ring red, with its level in numbers inside. It's the only time the case shows, and it doesn't count towards the earbuds' ring |
+| The charging case's battery at 20%, and again at 10% | The case on its own, closed and turning in 3D from the front, from Apple's and Beats' own models, its ring red, with its level in numbers inside. It's the only time the case shows, and it doesn't count towards the earbuds' ring |
 
 Nothing else is announced: not other makers' headphones and speakers, nor
 keyboards, mice, trackpads or game controllers.
