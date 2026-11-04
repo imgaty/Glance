@@ -66,7 +66,7 @@ private let devices: [Model] = [
     model(
         "airpods-3", "\(apple)/airpods-3rd-generation/2021/3c0b27aa-a5fe-4365-a9ae-83c28d10fa21/ar/airpods_magsafe_charging_ios15.usdz", .pair,
         brightness: 198),
-    model("airpods-4", "\(apple)/airpods-5/2026/1bae77a6-82ef-46c2-875f-571e880dbfe2/ar/airpods-mid.usdz", .pair, brightness: 198),
+    model("airpods", "\(apple)/airpods-5/2026/1bae77a6-82ef-46c2-875f-571e880dbfe2/ar/airpods-mid.usdz", .pair, brightness: 198),
     // Beats', from their product pages' 3D views, in black.
     model("beats-solo-buds", "\(beats)/earbuds/solo-buds/global/3d/solobuds_black.usdz", .pair, brightness: black),
     model("beats-studio-buds-plus", "\(beats)/earbuds/studio-buds-plus/global/3d/studio-buds-plus-blackgold.usdz", .pair, brightness: black),

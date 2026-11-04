@@ -313,9 +313,9 @@ struct ActivitiesTests {
         #expect(Headphones(product: 0x2027) == .airpodsPro3)
         // AirPods 3, 4 with and without noise cancellation, and 5.
         #expect(Headphones(product: 0x2013) == .airpods3)
-        #expect(Headphones(product: 0x2019) == .airpods4)
-        #expect(Headphones(product: 0x201B) == .airpods4)
-        #expect(Headphones(product: 0x2030) == .airpods4)
+        #expect(Headphones(product: 0x2019) == .airpods)
+        #expect(Headphones(product: 0x201B) == .airpods)
+        #expect(Headphones(product: 0x2030) == .airpods)
         // Beats.
         #expect(Headphones(product: 0x2010) == .beatsFlex)
         #expect(Headphones(product: 0x2011) == .beatsStudioBudsPlus)
@@ -342,6 +342,10 @@ struct ActivitiesTests {
         #expect(Headphones.beatsFlex.chargingCase == nil)
         #expect(Headphones.beatsSolo4.chargingCase == nil)
         #expect(Headphones.allCases.filter(\.isChargingCase).count == 9)
+        // AirPods 1 and 2 have no model, so macOS draws each one's own case.
+        #expect(Headphones(product: 0x2002) == nil && Headphones(product: 0x200F) == nil)
+        #expect(SystemDevices.symbols(product: 0x2002)?.chargingCase == "airpods.chargingcase.fill")
+        #expect(SystemDevices.symbols(product: 0x200F)?.chargingCase == "airpods.chargingcase.wireless.fill")
     }
 
     @Test("A case holds face on as it arrives, then gathers speed up to a steady turn")

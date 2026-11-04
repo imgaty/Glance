@@ -17,8 +17,9 @@ enum Headphones: String, CaseIterable {
     case airpodsPro2 = "airpods-pro-2"
     case airpodsPro3 = "airpods-pro-3"
     case airpods3 = "airpods-3"
-    /// AirPods 4, with or without noise cancellation, and AirPods 5, which Apple models alike.
-    case airpods4 = "airpods-4"
+    /// AirPods as they are now, with or without noise cancellation, whichever generation: they all
+    /// look the same, and are the same model here.
+    case airpods = "airpods"
     case beatsSoloBuds = "beats-solo-buds"
     /// Beats Studio Buds and Studio Buds +, which Beats shows alike.
     case beatsStudioBudsPlus = "beats-studio-buds-plus"
@@ -34,7 +35,7 @@ enum Headphones: String, CaseIterable {
     case airpodsPro2Case = "airpods-pro-2-case"
     case airpodsPro3Case = "airpods-pro-3-case"
     case airpods3Case = "airpods-3-case"
-    case airpods4Case = "airpods-4-case"
+    case airpodsCase = "airpods-case"
     case beatsSoloBudsCase = "beats-solo-buds-case"
     case beatsStudioBudsPlusCase = "beats-studio-buds-plus-case"
     case powerbeatsPro2Case = "powerbeats-pro-2-case"
@@ -50,7 +51,7 @@ enum Headphones: String, CaseIterable {
     /// Each clip by the type macOS declares for the model.
     private static let clips: [String: Headphones] = [
         "com.apple.airpods-pro": .airpodsPro, "com.apple.airpods-pro-gen2": .airpodsPro2, "com.apple.airpods-pro-2025": .airpodsPro3,
-        "com.apple.airpods-gen3": .airpods3, "com.apple.airpods-gen4": .airpods4, "com.apple.airpods-gen5": .airpods4,
+        "com.apple.airpods-gen3": .airpods3, "com.apple.airpods-gen4": .airpods, "com.apple.airpods-gen5": .airpods,
         "com.apple.beats-flex": .beatsFlex, "com.apple.beats-studio-buds": .beatsStudioBudsPlus,
         "com.apple.beats-studio-buds-plus": .beatsStudioBudsPlus, "com.apple.beats-studio-pro": .beatsStudioPro,
         "com.apple.beats-pill": .beatsPill, "com.apple.power-beats-pro-gen2": .powerbeatsPro2, "com.apple.beats-solo-4": .beatsSolo4,
