@@ -99,7 +99,7 @@ struct TrayPage: View {
         .confirmationDialog("Clear the tray?", isPresented: $confirmingClear) {
             Button("Clear Tray", role: .destructive) { tray.clear() }
         } message: {
-            Text("Everything in the tray is removed.")
+            Text("Everything in the tray is removed. Files stay where they are.")
         }
     }
 

@@ -67,7 +67,7 @@ struct OpeningPage: View {
                 switch tick {
                 case ..<0.05: return SliderTick(tick) { Text("None") }
                 case 0.45..<0.55: return SliderTick(tick) { Text(0.5.formatted(.number.precision(.fractionLength(1))) + " s") }
-                case 0.95...: return SliderTick(tick) { Text("Slow") }
+                case 0.95...: return SliderTick(tick) { Text(1.formatted() + " s") }
                 default: return SliderTick(tick)
                 }
             }
