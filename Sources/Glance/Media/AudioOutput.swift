@@ -28,9 +28,9 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// As the Mac's Sound menu: Sound, the playing app's volume, then every output, each in a circle,
     /// the one playing in the accent color, and AirPods with each earbud's and their case's
-    /// battery, then Sound Settings. At the pointer.
-    func showMenu() {
-        menu().popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    /// battery, then Sound Settings. At the pointer, or from the keyboard, under the button.
+    func showMenu(at point: CGPoint? = nil) {
+        menu().popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
     }
 
     func menu() -> NSMenu {

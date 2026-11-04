@@ -234,6 +234,10 @@
 - Changed the menu bar icon to the app icon's shapes.
 - Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
   it while its menu is open.
+- Added the keyboard to the player opened with a shortcut: Tab and Shift-Tab go
+  from control to control, with a ring around the one they're on, Space or
+  Return presses it, and on the progress bar the arrows move ten seconds through
+  the song. The sound menu opens under its button.
 - Added the keyboard to the menu bar menu, as it works in any menu: the up and
   down arrows go from row to row, the switch among them, Return or Space chooses
   the one lit, a letter goes to the next row starting with it, and VoiceOver

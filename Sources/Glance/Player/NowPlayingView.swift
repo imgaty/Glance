@@ -28,6 +28,7 @@ struct NowPlayingView: View {
     @Environment(\.lyricsControl) private var lyricsControl
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.playerOnLight) private var onLight
+    @Environment(\.playerKeys) private var keys
     /// The clock and the scrolling titles only move, and options are only read, while it shows.
     let isVisible: Bool
     /// The artwork and the waveform are drawn by the notch, flying in from the closed notch; the
@@ -106,6 +107,9 @@ struct NowPlayingView: View {
         .foregroundStyle(.white)
         .onChange(of: isVisible) { if isVisible { nowPlaying.refreshOptions() } }
         .onChange(of: nowPlaying.title) { if isVisible { nowPlaying.refreshOptions() } }
+        .onChange(of: usableControls, initial: true) { keys?.usable = usableControls }
+        .onChange(of: keys?.presses) { if let control = keys?.focus { press(control, fromKeys: true) } }
+        .onChange(of: keys?.focus) { if let control = keys?.focus { announce(control) } }
         .task(id: isVisible) {
             // Keeps the clock, and the lyrics with it, exact while the player shows, and the star
             // true to Music.
@@ -188,6 +192,7 @@ struct NowPlayingView: View {
                     scrub = nil
                 }
                 .disabled(duration <= 0)
+                .keyRing(.position, in: Capsule(), outset: CGSize(width: 6, height: 0))
                 Text(playing ? "-" + Self.time(duration - position) : "--:--")
                     .frame(minWidth: 30, alignment: .trailing)
             }
@@ -207,29 +212,32 @@ struct NowPlayingView: View {
             } else if nowPlaying.djPlaying {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
                 DJButton(color: buttonGray, talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
+                    .keyRing(.left)
                     .transition(.opacity)
             } else {
                 slot(leftSlot)
+                    .keyRing(.left)
             }
             Group {
                 GlyphButton(label: "Previous") {
-                    skipsBack += 1
-                    nowPlaying.previous()
+                    press(.previous)
                 } glyph: {
                     SkipSymbol(forward: false, skips: skipsBack)
                 }
+                .keyRing(.previous)
                 IslandButton(
                     symbol: nowPlaying.isPlaying ? "pause.fill" : "play.fill", size: PlayerLayout.playGlyph,
                     label: nowPlaying.isPlaying ? "Pause" : "Play"
                 ) {
-                    nowPlaying.togglePlayPause()
+                    press(.playPause)
                 }
+                .keyRing(.playPause)
                 GlyphButton(label: "Next") {
-                    skipsForward += 1
-                    nowPlaying.next()
+                    press(.next)
                 } glyph: {
                     SkipSymbol(forward: true, skips: skipsForward)
                 }
+                .keyRing(.next)
             }
             .disabled(!nowPlaying.hasMedia)
             .opacity(nowPlaying.hasMedia ? 1 : 0.4)
@@ -238,6 +246,7 @@ struct NowPlayingView: View {
                 ControlMark(place: .right, control: rightSlot, symbol: symbol(for: rightSlot), places: places)
             } else {
                 slot(rightSlot)
+                    .keyRing(.right)
             }
         }
         .frame(height: Self.hitbox)
@@ -275,8 +284,7 @@ struct NowPlayingView: View {
                 color: optionColor(options.favorite), burst: favoriteBursts, burstColor: burstColor, swapsAtOnce: true,
                 label: slot.title, value: Self.spoken(options.favorite)
             ) {
-                if options.favorite == false { favoriteBursts += 1 }
-                nowPlaying.toggleFavorite()
+                use(.favorite)
             }
             .disabled(options.favorite == nil)
         case .shuffle:
@@ -285,7 +293,7 @@ struct NowPlayingView: View {
                 symbol: "shuffle", size: size, color: switchColor(options.shuffle), slashed: options.shuffle != true,
                 label: slot.title, value: Self.spoken(options.shuffle)
             ) {
-                nowPlaying.toggleShuffle()
+                use(.shuffle)
             }
             .disabled(options.shuffle == nil)
         case .repeatMode:
@@ -293,18 +301,18 @@ struct NowPlayingView: View {
                 symbol: symbol(for: .repeatMode), size: size, color: switchColor(options.repeatMode.map { $0 != .off }),
                 slashed: repeatSlashed, label: slot.title, value: options.repeatMode?.rawValue.capitalized
             ) {
-                nowPlaying.cycleRepeat()
+                use(.repeatMode)
             }
             .disabled(options.repeatMode == nil)
         case .output:
-            IslandButton(symbol: output.symbol, size: size, color: buttonGray, label: slot.title) { output.showMenu() }
+            IslandButton(symbol: output.symbol, size: size, color: buttonGray, label: slot.title) { use(.output) }
         case .lyrics:
             IslandButton(
                 symbol: symbol(for: .lyrics), size: size,
                 color: optionColor(lyricsControl.available ? lyricsControl.shown : nil),
                 label: slot.title, value: Self.spoken(lyricsControl.available ? lyricsControl.shown : nil)
             ) {
-                lyricsControl.toggle()
+                use(.lyrics)
             }
             .disabled(!lyricsControl.available)
         case .empty:
@@ -316,6 +324,98 @@ struct NowPlayingView: View {
     /// An option's state as VoiceOver says a switch's.
     private static func spoken(_ on: Bool?) -> String? {
         on.map { $0 ? "On" : "Off" }
+    }
+
+    // MARK: The keyboard
+
+    /// The controls that can be used now, in the order Tab goes through them.
+    private var usableControls: [PlayerControl] {
+        guard isVisible, places == nil else { return [] }
+        let media = nowPlaying.hasMedia
+        func usable(_ slot: PlayerSlot) -> Bool {
+            switch slot {
+            case .favorite: nowPlaying.options.favorite != nil
+            case .shuffle: nowPlaying.options.shuffle != nil
+            case .repeatMode: nowPlaying.options.repeatMode != nil
+            case .output: true
+            case .lyrics: lyricsControl.available
+            case .empty: false
+            }
+        }
+        var controls: [PlayerControl] = []
+        if media { controls.append(.cover) }
+        if lyricsControl.available { controls.append(.lyrics) }
+        if media, nowPlaying.duration > 0 { controls.append(.position) }
+        if nowPlaying.djPlaying || usable(leftSlot) { controls.append(.left) }
+        if media { controls += [.previous, .playPause, .next] }
+        if usable(rightSlot) { controls.append(.right) }
+        return controls
+    }
+
+    /// What a control does, by a click or from the keyboard. The progress bar is only moved.
+    private func press(_ control: PlayerControl, fromKeys: Bool = false) {
+        switch control {
+        case .cover: nowPlaying.openSource()
+        case .lyrics: lyricsControl.toggle()
+        case .position: break
+        case .left:
+            if nowPlaying.djPlaying { nowPlaying.openApp() } else { use(leftSlot, fromKeys: fromKeys) }
+        case .previous:
+            skipsBack += 1
+            nowPlaying.previous()
+        case .playPause: nowPlaying.togglePlayPause()
+        case .next:
+            skipsForward += 1
+            nowPlaying.next()
+        case .right: use(rightSlot, fromKeys: fromKeys)
+        }
+    }
+
+    private func use(_ slot: PlayerSlot, fromKeys: Bool = false) {
+        switch slot {
+        case .favorite:
+            if nowPlaying.options.favorite == false { favoriteBursts += 1 }
+            nowPlaying.toggleFavorite()
+        case .shuffle: nowPlaying.toggleShuffle()
+        case .repeatMode: nowPlaying.cycleRepeat()
+        case .output:
+            // From the keyboard the pointer can be anywhere: the menu opens under the button.
+            output.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil)
+        case .lyrics: lyricsControl.toggle()
+        case .empty: break
+        }
+    }
+
+    /// Where the keys went, said to VoiceOver, as the same control is called anywhere else.
+    private func announce(_ control: PlayerControl) {
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: words(for: control), .priority: NSAccessibilityPriorityLevel.high.rawValue])
+    }
+
+    private func words(for control: PlayerControl) -> String {
+        func named(_ slot: PlayerSlot) -> String {
+            let options = nowPlaying.options
+            let state: String? =
+                switch slot {
+                case .favorite: Self.spoken(options.favorite)
+                case .shuffle: Self.spoken(options.shuffle)
+                case .repeatMode: options.repeatMode?.rawValue.capitalized
+                case .lyrics: Self.spoken(lyricsControl.shown)
+                case .output, .empty: nil
+                }
+            return [slot.title, state].compactMap { $0 }.joined(separator: ", ")
+        }
+        return switch control {
+        case .cover: "Show Where It's Playing"
+        case .lyrics: lyricsControl.shown ? "Hide Lyrics" : "Show Lyrics"
+        case .position: "Track Position"
+        case .left: nowPlaying.djPlaying ? "DJ" : named(leftSlot)
+        case .previous: "Previous"
+        case .playPause: nowPlaying.isPlaying ? "Pause" : "Play"
+        case .next: "Next"
+        case .right: named(rightSlot)
+        }
     }
 
     /// Shuffle and repeat: the artist's gray, on or off (off, they're struck through); faint when the

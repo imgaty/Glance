@@ -96,9 +96,10 @@ keyboard the same way:
 | Key | Operation |
 | --- | --- |
 | Escape or ⌘W | Closes the notch |
-| Space | Plays or pauses; on the tray, shows the selected items in Quick Look |
-| Left or right arrow | Goes to the song before or after; on the tray, selects the item before or after it, or with Shift, a run of them |
-| Return | On the tray, pastes the selected items where you were typing (with `Accessibility` allowed) |
+| Tab or Shift-Tab | On the player, goes from control to control, with a ring around the one it's on |
+| Space | Presses the control with the ring; otherwise plays or pauses; on the tray, shows the selected items in Quick Look |
+| Left or right arrow | Goes to the song before or after, or with the ring on the progress bar, ten seconds back or ahead; on the tray, selects the item before or after it, or with Shift, a run of them |
+| Return | Presses the control with the ring; on the tray, pastes the selected items where you were typing (with `Accessibility` allowed) |
 | ⌘C | On the tray, copies the selected items |
 | ⌘A | On the tray, selects everything |
 | ⌘Delete | On the tray, removes the selected items |

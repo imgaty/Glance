@@ -158,6 +158,8 @@ final class NotchModel: ObservableObject {
     @Published var demoPointer: CGPoint?
     /// Which page the open notch shows: the player, or the tray.
     @Published var page: NotchPage = .player
+    /// Where the keyboard is in the open player.
+    let keys = PlayerKeys()
     /// Something is being dragged over the notch, to be dropped in the tray.
     @Published var dropping = false
     /// How far the tray's row is scrolled.
@@ -670,6 +672,7 @@ struct NotchView: View {
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
         .environment(\.lyricsControl, LyricsControl(shown: model.showsLyrics, available: model.songPlaying && lyricsOn, toggle: toggleLyrics))
+        .environment(\.playerKeys, model.keys)
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
             if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }

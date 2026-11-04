@@ -42,6 +42,7 @@ struct HeroWaveform: View {
             }
             // It shrinks when pressed, like the others, but without the circle behind it.
             .buttonStyle(IslandPress(highlight: false))
+            .keyRing(.lyrics)
             .disabled(!button)
             .help(button ? (lyricsShown ? "Hide Lyrics" : "Show Lyrics") : "")
             // Only a picture of the sound, unless it shows the lyrics.

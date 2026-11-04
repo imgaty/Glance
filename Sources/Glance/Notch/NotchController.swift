@@ -265,6 +265,10 @@ final class NotchController {
         }
         // Opened without the pointer, as VoiceOver opens a bubble: it stays open with the keyboard, as
         // when opened with a shortcut, until Escape, or the pointer has been on it and gone.
+        model.keys.screenPoint = { [weak self] frame in
+            guard let panel = self?.panel else { return nil }
+            return CGPoint(x: panel.frame.minX + frame.minX, y: panel.frame.maxY - Layout.pastTop - frame.maxY)
+        }
         model.openBubble = { [weak self] in
             guard let self, self.model.detached != nil, !self.tucked else { return }
             self.model.bubbleHovered = true
@@ -1165,9 +1169,14 @@ final class NotchController {
         hasKeys = true
         panel.takesKeys = true
         panel.makeKey()
-        keyWatch = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        keyWatch = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { [weak self] event in
             let used = MainActor.assumeIsolated { () -> Bool in
                 guard let self, self.hasKeys, event.window === self.panel else { return false }
+                // A click goes where it's aimed, and the ring goes.
+                guard event.type == .keyDown else {
+                    self.model.keys.clear()
+                    return false
+                }
                 if !self.typed(event) { NSSound.beep() }
                 return true
             }
@@ -1179,6 +1188,7 @@ final class NotchController {
     private func giveBackKeys() {
         guard hasKeys else { return }
         hasKeys = false
+        model.keys.clear()
         if let keyWatch { NSEvent.removeMonitor(keyWatch) }
         keyWatch = nil
         lookWatch = nil
@@ -1231,10 +1241,11 @@ final class NotchController {
         }
     }
 
-    /// A key typed while the notch has the keyboard, as Finder and Music take them: Escape closes
-    /// it. On the player, Space plays or pauses, and the arrows go to the song before or after. On
-    /// the tray, the arrows choose an item (with Shift, a run of them), Space shows the chosen ones
-    /// in Quick Look, Return pastes them, ⌘C copies them, ⌘A chooses everything, ⌘Delete removes
+    /// A key typed while the notch has the keyboard: Escape closes it. On the player, Tab goes from
+    /// control to control, Space or Return presses the one it's on, and otherwise Space plays or
+    /// pauses and the arrows go to the song before or after, or through the song on the progress
+    /// bar. On the tray, the arrows choose an item (with Shift, a run of them), Space shows the
+    /// chosen ones in Quick Look, Return pastes them, ⌘C copies them, ⌘A chooses everything, ⌘Delete removes
     /// them, and ⌘Z brings back what was last removed. Returns whether the notch had a use for the
     /// key.
     private func typed(_ event: NSEvent) -> Bool {
@@ -1248,14 +1259,8 @@ final class NotchController {
             return true
         }
         guard model.page == .tray else {
-            guard !command, nowPlaying.hasMedia else { return false }
-            switch key {
-            case kVK_Space: nowPlaying.togglePlayPause()
-            case kVK_LeftArrow: nowPlaying.previous()
-            case kVK_RightArrow: nowPlaying.next()
-            default: return false
-            }
-            return true
+            guard !command, flags.isDisjoint(with: [.control, .option]) else { return false }
+            return typedOnPlayer(key: key, shift: shift)
         }
         let tray = Tray.shared
         switch (key, letter) {
@@ -1286,6 +1291,21 @@ final class NotchController {
             tray.remove(Set(tray.chosen.map(\.id)))
         default:
             return choose(typing: event)
+        }
+        return true
+    }
+
+    /// A key on the player: the ring moves and presses by itself, and the rest is the song's.
+    private func typedOnPlayer(key: Int, shift: Bool) -> Bool {
+        let step = PlayerKeys.seekStep
+        switch model.keys.typed(key: key, shift: shift, hasMedia: nowPlaying.hasMedia) {
+        case .moved, .pressed: break
+        case .playPause: nowPlaying.togglePlayPause()
+        case .previous: nowPlaying.previous()
+        case .next: nowPlaying.next()
+        case .seekBack: nowPlaying.seek(to: max(nowPlaying.position(at: .now) - step, 0))
+        case .seekAhead: nowPlaying.seek(to: min(nowPlaying.position(at: .now) + step, nowPlaying.duration))
+        case .none: return false
         }
         return true
     }

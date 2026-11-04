@@ -183,6 +183,9 @@ extension HeroArtwork {
             Color.clear.contentShape(Rectangle())
         }
         .buttonStyle(PressReporting(pressed: $coverPressed))
+        .keyRing(
+            .cover, in: RoundedRectangle(cornerRadius: layout.artworkRadius + 3, style: .continuous), outset: CGSize(width: 3, height: 3)
+        )
         .onHover { coverHovered = $0 && clickable }
         .notchControl(enabled: clickable)
         .allowsHitTesting(clickable)
