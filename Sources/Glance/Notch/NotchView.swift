@@ -168,6 +168,8 @@ final class NotchModel: ObservableObject {
     @Published var pageNudge: CGFloat = 0
     /// How many items the tray holds, which its width follows.
     @Published var trayItems = 0
+    /// Some item's name in the tray takes two lines, which its height follows.
+    @Published var trayNamesWrap = true
     /// The widest the tray grows: room for six items and half the next, or less on a narrow display.
     var trayMaxWidth = Shelf.peekWidth
     /// The tray on the player's grid: the padding either side of its first and last icons, as of the
@@ -198,10 +200,8 @@ final class NotchModel: ObservableObject {
     }
 
     /// Its row just below the camera, as the player's column below it starts, and the padding under it.
-    var trayHeight: CGFloat { Self.trayHeight(closed: closedSize) }
-
-    static func trayHeight(closed: CGSize) -> CGFloat {
-        closed.height + PlayerLayout.cameraGap + Shelf.tile.height + PlayerLayout.padding
+    var trayHeight: CGFloat {
+        closedSize.height + PlayerLayout.cameraGap + Shelf.rowHeight(wrapping: trayNamesWrap || dropping) + PlayerLayout.padding
     }
     /// Where AirDrop's place to drop is, in the notch's points, while it shows; and whether something
     /// dragged is over it.

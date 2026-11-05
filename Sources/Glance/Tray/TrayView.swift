@@ -15,8 +15,27 @@ enum Shelf {
     /// The icon's square.
     static let icon: CGFloat = 56
     static let spacing: CGFloat = 10
+    /// A name's second line. A row whose names all fit on one line leaves it out, so that the notch
+    /// is as far below them as beside them.
+    static let secondLine: CGFloat = 14
+    /// How wide a name can be, within an item's place.
+    private static let nameWidth = tile.width - 8
     /// At the row's ends: the first icon lines up with the player's artwork.
     static let inset: CGFloat = PlayerLayout.padding - (tile.width - icon) / 2
+
+    /// How tall the row is, with its items' names taking one line or two.
+    static func rowHeight(wrapping: Bool) -> CGFloat {
+        wrapping ? tile.height : tile.height - secondLine
+    }
+
+    /// Whether a name takes two lines in an item's place.
+    static func wraps(_ name: String) -> Bool {
+        let font = NSFont.systemFont(ofSize: 11)
+        let box = (name as NSString).boundingRect(
+            with: NSSize(width: nameWidth, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font])
+        return box.height > font.boundingRectForFont.height * 1.5
+    }
 
     /// The row of items, from the first to the last, with its insets at both ends.
     static func width(count: Int) -> CGFloat {
@@ -108,7 +127,7 @@ struct TrayView: View {
                     .transition(.opacity)
             } else {
                 row(width: proxy.size.width)
-                    .frame(maxHeight: .infinity)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, top)
                     .padding(.bottom, Self.bottomRoom)
                     .transition(.opacity)

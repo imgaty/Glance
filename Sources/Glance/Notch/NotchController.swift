@@ -145,6 +145,7 @@ final class NotchController {
     private var menuWatches: [AnyCancellable] = []
     private var pasteWatch: AnyCancellable?
     private var trayWatch: AnyCancellable?
+    private var trayNamesWatch: AnyCancellable?
     private var trayTouch: AnyCancellable?
     /// A sideways swipe on the tray was let go and the row glides on.
     private var trayGliding = false
@@ -310,6 +311,16 @@ final class NotchController {
                 Task { @MainActor in self.settleTray() }
             }
         }
+        // And it's as tall as its names need, or as the words an empty one shows.
+        trayNamesWatch = Tray.shared.$items
+            .map { items in items.isEmpty || items.contains { Shelf.wraps(TrayItemPicture.title(of: $0)) } }
+            .removeDuplicates()
+            .sink { [weak self] wrapping in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    withAnimation(.smooth(duration: 0.3)) { self.model.trayNamesWrap = wrapping }
+                }
+            }
         // A click in the tray gives it the keyboard, as a click in a Finder window does: the arrows,
         // Space, ⌘C and ⌘Z work it from then on, until it closes.
         trayTouch = NotificationCenter.default.publisher(for: Tray.didTouch).sink { [weak self] note in

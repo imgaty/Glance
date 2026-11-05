@@ -375,6 +375,10 @@ struct TrayTests {
 
     @Test("The shelf scrolls only as far as its last tile")
     func shelf() {
+        // As tall as its names need.
+        #expect(!Shelf.wraps("Big Sur.jpg"))
+        #expect(Shelf.wraps("Dinner on Friday at eight, booked by the window"))
+        #expect(Shelf.rowHeight(wrapping: false) == Shelf.rowHeight(wrapping: true) - Shelf.secondLine)
         #expect(Shelf.width(count: 0) == 0)
         #expect(Shelf.width(count: 2) == Shelf.tile.width * 2 + Shelf.spacing + Shelf.inset * 2)
         #expect(Shelf.reach(count: 2, in: 400) == 0)

@@ -274,6 +274,8 @@
 
 ### Tray
 
+- Changed the tray to be only as tall as its items' names need, so that it's as far
+  below them as beside them.
 - Added `When dragged out` in **Settings > Tray**, to keep an item in the tray
   or take it out once something takes it.
 - Added screen recordings to the tray, which join as soon as they're saved, as
