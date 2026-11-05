@@ -148,8 +148,8 @@
 
 ### Touch
 
-- Changed three fingers on the open notch, and Shift and a scroll, to drag the page along
-  and stretch the notch, as pulling it down does, springing into place as you let go.
+- Changed three fingers on the open notch, and Shift and a scroll, to stretch the notch
+  and what's in it, as pulling it down does, springing into place as you let go.
 - Added the notch on a MacBook Pro with Touch, and on an iPad's display over
   Sidecar. Tap the notch to open it, whatever `Open with` is set to, or a
   bubble to open its activity. Drag down to open it, up to close it, and

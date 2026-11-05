@@ -1165,7 +1165,6 @@ final class NotchController {
             model.bubblePressed = false
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
             model.page = page
-            model.pageNudge = 0
             model.pageStretch = 0
             if !forDrop {
                 model.dropping = false
@@ -1744,7 +1743,6 @@ final class NotchController {
         withAnimation(NotchMotion.spring(response: 0.45, dampingFraction: 0.5)) {
             model.stretch = 0
             model.nudge = 0
-            model.pageNudge = 0
             model.pageStretch = 0
         }
     }
@@ -1834,8 +1832,9 @@ final class NotchController {
     private static let swipeTravel: CGFloat = 520
 
     /// Shift and a scroll, or three fingers: the pages move as a page scrolled sideways does, the
-    /// way this Mac scrolls, the tray to the right of the player. The page drags along and the notch
-    /// stretches with it, then it turns, and goes on dragging; past the last page, it only drags.
+    /// way this Mac scrolls, the tray to the right of the player. The notch stretches, and what's in
+    /// it with it, then the page turns, and it goes on stretching; past the last page, it only
+    /// stretches.
     private func swipedPage(by delta: CGFloat) {
         swipe += delta
         // Scrolled toward the right, which macOS's scroll values already say the way this Mac
@@ -1846,18 +1845,16 @@ final class NotchController {
             turn(to: target)
             Opening.tap()
         }
-        let lean = Self.pageLean(swipe)
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) {
-            model.pageNudge = lean
-            model.pageStretch = abs(lean) * 0.8
+            model.pageStretch = abs(Self.pageLean(swipe))
         }
     }
 
     /// How far a swipe goes before the page turns.
     private static let pageTurn: CGFloat = 56
 
-    /// How far the page has dragged along, more and more slowly, up to a limit, as the notch
-    /// stretches when pulled down.
+    /// How far the notch has stretched sideways, more and more slowly, up to a limit, as it stretches
+    /// when pulled down.
     nonisolated static func pageLean(_ swipe: CGFloat) -> CGFloat {
         (swipe >= 0 ? 1 : -1) * 30 * (1 - 1 / (abs(swipe) * 0.012 + 1))
     }
@@ -1869,7 +1866,6 @@ final class NotchController {
         withAnimation(NotchMotion.expand) {
             model.expanded = nil
             model.page = page
-            model.pageNudge = 0
             model.pageStretch = 0
         }
     }

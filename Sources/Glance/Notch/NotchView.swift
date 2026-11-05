@@ -166,9 +166,8 @@ final class NotchModel: ObservableObject {
     @Published var dropping = false
     /// How far the tray's row is scrolled.
     @Published var trayScroll: CGFloat = 0
-    /// How far a swipe to the other page has pushed this one, before it goes.
-    @Published var pageNudge: CGFloat = 0
-    /// How far that has stretched the notch's width.
+    /// How far a swipe to the other page has stretched the notch's width, and what's in it with it,
+    /// before it goes.
     @Published var pageStretch: CGFloat = 0
     /// How many items the tray holds, which its width follows.
     @Published var trayItems = 0
@@ -663,7 +662,7 @@ struct NotchView: View {
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
-                .offset(x: (onTray ? -pageShift : 0) + (playerShown ? model.pageNudge : 0))
+                .offset(x: onTray ? -pageShift : 0)
                 .modifier(PageFade(hidden: !playerShown))
             TrayView(
                 tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
@@ -671,7 +670,7 @@ struct NotchView: View {
             )
             .frame(width: model.trayWidth, height: model.trayHeight)
             .environment(\.notchControls, trayShown)
-            .offset(x: (onTray ? 0 : pageShift) + (trayShown ? model.pageNudge : 0))
+            .offset(x: onTray ? 0 : pageShift)
             .modifier(PageFade(hidden: !trayShown))
             .allowsHitTesting(places == nil && trayShown)
             restingPlaces(m, swell: swell)
@@ -716,6 +715,8 @@ struct NotchView: View {
         .modifier(SteppedFrame(width: m.bodyWidth, height: m.height, corners: model.corners))
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
+        // Stretched sideways, what's in it stretches with it, staying where it is.
+        .scaleEffect(x: m.bodyWidth / max(m.bodyWidth - model.pageStretch, 1), y: 1, anchor: .top)
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
         // end, all of it is hidden there, under what the notch shows.
