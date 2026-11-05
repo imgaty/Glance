@@ -263,7 +263,7 @@ struct PlayerScriptingTests {
 
     // MARK: - Where it plays from
 
-    @Test("Spotify's song opens in the playlist it plays from: after it in the history, else what was asked to play")
+    @Test("Spotify's song opens in the playlist it plays from: what was asked to play, else after it in the history")
     @MainActor
     func spotifyContext() {
         let track = "spotify:track:1Q3t9fWvHUXKsMmpD2XpUu"
@@ -274,9 +274,13 @@ struct PlayerScriptingTests {
         // Liked Songs, whose address runs longer.
         let liked = "spotify:user:someone:collection"
         #expect(PlayingSource.context(of: track, history: [track, liked], request: []) == liked)
-        // Not in the history: what was asked to play, if the song came with it.
+        // What was asked to play, with any of its songs playing by now, and over a history that's behind.
         #expect(PlayingSource.context(of: track, history: [], request: [playlist, track]) == playlist)
-        #expect(PlayingSource.context(of: track, history: [], request: [playlist, "spotify:track:CCC"]) == nil)
+        #expect(PlayingSource.context(of: track, history: [], request: [playlist, "spotify:track:CCC"]) == playlist)
+        #expect(PlayingSource.context(of: track, history: [track, album], request: [playlist, "spotify:track:CCC"]) == playlist)
+        // The song asked for on its own: the history, or nothing to go on.
+        #expect(PlayingSource.context(of: track, history: [track, album], request: [track]) == album)
+        #expect(PlayingSource.context(of: track, history: [], request: [track]) == nil)
     }
 
     @Test("A browser's tab is found by what's playing, its title kept whole in the script")

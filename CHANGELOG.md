@@ -152,6 +152,8 @@
 
 ### Player
 
+- Fixed clicking the cover opening a Spotify song's own page, rather than the
+  playlist or album it plays from, for songs Spotify hadn't yet written down.
 - Fixed the lyrics saying a song has none when LRCLIB can't be reached. They
   say so instead, and ask again by themselves.
 - Changed the sound output menu to look like the Mac's Sound menu: Sound above

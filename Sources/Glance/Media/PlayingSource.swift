@@ -48,8 +48,8 @@ enum PlayingSource {
     // MARK: Spotify
 
     /// The playlist, album, artist or show Spotify plays the song from. Its scripting doesn't say,
-    /// but Spotify keeps every song it has played beside where it was played from, the latest
-    /// first, and what was last asked to play.
+    /// but Spotify keeps what was last asked to play, and every song it has played beside where it
+    /// was played from, the latest first.
     static func spotifyContext(of track: String) -> URL? {
         let users = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Application Support/Spotify/PersistentCache/Users")
         let folders = (try? FileManager.default.contentsOfDirectory(at: users, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
@@ -64,16 +64,15 @@ enum PlayingSource {
         return context(of: track, history: history, request: request).flatMap(URL.init(string:))
     }
 
-    /// Where the song was played from: after it in the history; otherwise what was last asked to
-    /// play, if the song was asked for with it.
+    /// Where the song is played from: what was last asked to play, whichever of its songs has come
+    /// round by now. The history comes second, for a song asked for on its own: Spotify only writes
+    /// it now and then, so it may not have this song yet, or have it from another playlist.
     static func context(of track: String, history: [String], request: [String]) -> String? {
+        if let asked = request.first(where: isContext) { return asked }
         let id = track.split(separator: ":").last.map(String.init) ?? track
         func isSong(_ address: String) -> Bool { address.hasSuffix(":" + id) && !isContext(address) }
-        if let index = history.firstIndex(where: isSong), let context = history[(index + 1)...].prefix(1).first(where: isContext) {
-            return context
-        }
-        if request.contains(where: isSong) { return request.first(where: isContext) }
-        return nil
+        guard let index = history.firstIndex(where: isSong) else { return nil }
+        return history[(index + 1)...].prefix(1).first(where: isContext)
     }
 
     private static func isContext(_ address: String) -> Bool {
