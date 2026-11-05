@@ -25,6 +25,8 @@ struct CallShown: Equatable {
     /// The app it's in, to go to.
     var app: String?
     var phase: Phase
+    /// Its app shows a button to end it that Glance can press.
+    var canEnd = false
 
     /// As an unknown caller shows, in a gray circle.
     var initial: String { name.first.map { String($0).uppercased() } ?? "" }
@@ -239,74 +241,114 @@ struct IncomingCallView: View {
     }
 }
 
-/// Opened, a call shows who it's with, how long it's been, and the waveform larger; and a button
-/// to go to the app it's in.
+/// Opened, a call shows as its popup does, as tall as one coming in: the caller, and while it rings,
+/// what it's over and buttons to decline or accept it; once connected, its time, a button for the
+/// sound output and, where its app's own can be pressed, one to end it. Clicked anywhere else, it
+/// goes to the app it's in.
 struct ExpandedCallView: View {
     let call: CallShown
     let restingHeight: CGFloat
     let width: CGFloat
     var revealed = true
-    @State private var hovering = false
+    @Environment(\.playerKeys) private var keys
 
     var body: some View {
         let h = restingHeight
-        VStack(spacing: h * AirPlayLayout.buttonGap) {
-            HStack(spacing: h * IncomingCallView.gap) {
-                CallAvatar(call: call, side: h * AirPlayLayout.header)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(call.name)
-                        .font(NotchType.title)
-                        .foregroundStyle(.white)
-                    if case .connected(let since) = call.phase {
-                        CallTime(since: since)
-                            .font(NotchType.detail)
-                            .foregroundStyle(CallLook.green)
-                    } else {
-                        Text(call.over)
-                            .font(NotchType.detail)
-                            .foregroundStyle(NotchType.detailColor)
-                    }
-                }
-                .lineLimit(1)
-                .truncationMode(.tail)
-                Spacer(minLength: h * 0.3)
-                if call.isConnected { CallWaveform(height: h * CallLook.barHeight) }
-            }
-            .frame(height: h * AirPlayLayout.header)
-            .padding(.horizontal, PlayerLayout.padding)
+        ZStack {
             Button {
                 CallWatch.shared.goToApp()
             } label: {
-                Text("Show in \(call.over)")
-                    .font(NotchType.title)
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: TimerLayout.content(h))
-                    .background(CallLook.green.opacity(hovering ? 1 : 0.85), in: Capsule())
-                    .contentShape(Capsule())
+                HStack(spacing: h * IncomingCallView.gap) {
+                    CallAvatar(call: call, side: TimerLayout.content(h))
+                    VStack(alignment: .leading, spacing: 0) {
+                        if case .connected(let since) = call.phase {
+                            CallTime(since: since)
+                                .font(NotchType.detail)
+                                .foregroundStyle(CallLook.green)
+                        } else {
+                            Text(call.over)
+                                .font(NotchType.detail)
+                                .foregroundStyle(NotchType.detailColor)
+                        }
+                        Text(call.name)
+                            .font(NotchType.title)
+                            .foregroundStyle(.white)
+                    }
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: h * IncomingCallView.nameLimit, alignment: .leading)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
-            .onHover { hovering = $0 }
             .notchControl()
-            .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: String(localized: "Show in \(call.over)")) {
-                CallWatch.shared.goToApp()
-            }
-            .padding(.horizontal, PlayerLayout.padding)
+            .help(String(localized: "Show in \(call.over)"))
+            .accessibilityLabel(call.isConnected ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
+            .accessibilityHint(String(localized: "Show in \(call.over)"))
+            .padding(.leading, TimerLayout.buttonEdge(h))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: h * TimerLayout.buttonGap) { buttons(h) }
+                .padding(.trailing, TimerLayout.buttonEdge(h))
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .modifier(PageFade(hidden: !revealed))
-        .padding(.top, h + LiveActivityView.cameraGap)
-        .padding(.bottom, PlayerLayout.padding)
-        .frame(width: width, height: AirPlayLayout.height(h), alignment: .top)
+        .frame(width: width, height: TimerLayout.tallHeight(h))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(call.isConnected ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
+    }
+
+    @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
+        if call.isConnected {
+            IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output")) {
+                // From the keyboard the pointer can be anywhere: the menu opens under the button.
+                let fromKeys = NSApp.currentEvent?.type == .keyDown
+                AudioOutput.shared.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil, withVolume: false)
+            } glyph: {
+                glyph("speaker.wave.2.fill", h)
+            }
+            if call.canEnd {
+                IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.decline) {
+                    CallWatch.shared.end()
+                } glyph: {
+                    glyph("phone.down.fill", h)
+                }
+            }
+        } else {
+            IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Decline"), fill: CallLook.decline) {
+                CallWatch.shared.decline()
+            } glyph: {
+                glyph("phone.down.fill", h)
+            }
+            IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Accept"), fill: CallLook.accept) {
+                CallWatch.shared.accept()
+            } glyph: {
+                glyph("phone.fill", h)
+            }
+        }
+    }
+
+    private func glyph(_ symbol: String, _ h: CGFloat) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: TimerLayout.content(h) * 0.42, weight: .semibold))
+            .foregroundStyle(.white)
+    }
+
+    /// Each side of the camera: as wide as the wider of the caller and the buttons, each from its end.
+    @MainActor
+    static func wing(for call: CallShown, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
+        guard case .connected(let since) = call.phase else { return IncomingCallView.wing(for: call, restingHeight: h) }
+        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        let name = ceil((call.name as NSString).size(withAttributes: [.font: font]).width)
+        let time = SystemActivityView.digitsWidth(ClockText.of(max(Int(date.timeIntervalSince(since)), 0)), NotchType.size, .regular)
+        let side = TimerLayout.content(h)
+        let left = TimerLayout.buttonEdge(h) + side + h * IncomingCallView.gap + min(max(name, time), h * IncomingCallView.nameLimit) + LiveActivityView.cameraGap
+        let buttons: CGFloat = call.canEnd ? 2 : 1
+        let right = LiveActivityView.cameraGap + side * buttons + h * TimerLayout.buttonGap * (buttons - 1) + TimerLayout.buttonEdge(h)
+        return max(left, right)
     }
 
     @MainActor
-    static func width(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
-        let name = ceil((call.name as NSString).size(withAttributes: [.font: font]).width)
-        let needs = PlayerLayout.padding * 2 + h * (AirPlayLayout.header + IncomingCallView.gap + 0.3) + name + CallLook.waveWidth
-        return min(max(h * AirPlayLayout.wide, needs), h * 14)
+    static func width(for call: CallShown, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
+        closedWidth + wing(for: call, restingHeight: h) * 2
     }
 }
 
@@ -486,7 +528,7 @@ final class CallWatch: ObservableObject {
         if connected, banner == nil {
             let started = since ?? .now
             since = started
-            show(CallShown(name: name, over: over, app: app, phase: .connected(since: started)))
+            show(CallShown(name: name, over: over, app: app, phase: .connected(since: started), canEnd: CallEnd.button() != nil))
         } else if ringing {
             show(CallShown(name: name, over: over, app: app, phase: .ringing))
         } else {
@@ -533,6 +575,12 @@ final class CallWatch: ObservableObject {
     func decline() {
         Activities.shared.dismiss(.incomingCall)
         CallBanners.shared.press(CallBanners.declineWords)
+    }
+
+    /// Ends it, as its app's own End button does, pressed through Accessibility.
+    func end() {
+        CallEnd.press()
+        refresh()
     }
 
     /// To the call, in its app.
@@ -585,6 +633,62 @@ final class SystemCalls: NSObject {
     func callObserver(_ observer: NSObject, callChanged call: NSObject) {
         read()
         changed?()
+    }
+}
+
+/// The End button macOS shows during a FaceTime or phone call, in FaceTime's or Phone's window or in
+/// the call's notification, found by the words macOS itself gives it in the Mac's language, and
+/// pressed through Accessibility. Other apps' calls have their own, which aren't looked for.
+@MainActor
+enum CallEnd {
+    private static let apps = ["com.apple.FaceTime", "com.apple.mobilephone"]
+
+    /// macOS's own names for it.
+    static let words: Set<String> = {
+        let kit = URL(fileURLWithPath: "/System/Library/PrivateFrameworks/ConversationKit.framework")
+        let found = ["DRAWER_END_AX", "IN_CALL_CONTROLS_END_LABEL", "AX_HANG_UP"].map { SystemNotices.words($0, table: "ConversationKit", of: kit) }
+        let named = Set(found.filter { !$0.isEmpty && !$0.hasPrefix("DRAWER_") && !$0.hasPrefix("IN_CALL_") && !$0.hasPrefix("AX_") })
+        return named.isEmpty ? ["End", "Hang Up"] : named
+    }()
+
+    /// Where it is: a button in a window, or a notification with it as one of its actions.
+    enum Place {
+        case button(AXUIElement)
+        case action(AXUIElement, String)
+    }
+
+    static func button() -> Place? {
+        guard AXIsProcessTrusted() else { return nil }
+        for bundle in apps {
+            for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundle) {
+                let element = AXUIElementCreateApplication(app.processIdentifier)
+                AXUIElementSetMessagingTimeout(element, 0.5)
+                for window in SystemNotices.value(element, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+                    let found = SystemNotices.findAll(in: window) { item in
+                        SystemNotices.value(item, kAXRoleAttribute) as? String == kAXButtonRole as String
+                            && [kAXDescriptionAttribute, kAXTitleAttribute].contains { words.contains(SystemNotices.value(item, $0) as? String ?? "") }
+                    }
+                    if let first = found.first { return .button(first) }
+                }
+            }
+        }
+        let calls = ["FaceTime", "Phone"].map { SystemNotices.name(of: URL(fileURLWithPath: "/System/Applications/\($0).app")) }
+        for notification in calls.flatMap(SystemNotices.showing(from:)) {
+            var names: CFArray?
+            AXUIElementCopyActionNames(notification, &names)
+            if let action = (names as? [String] ?? []).first(where: { action in words.contains { action.hasPrefix("Name:" + $0 + "\n") || action == "Name:" + $0 } }) {
+                return .action(notification, action)
+            }
+        }
+        return nil
+    }
+
+    static func press() {
+        switch button() {
+        case .button(let button): AXUIElementPerformAction(button, kAXPressAction as CFString)
+        case .action(let notification, let action): AXUIElementPerformAction(notification, action as CFString)
+        case nil: break
+        }
     }
 }
 

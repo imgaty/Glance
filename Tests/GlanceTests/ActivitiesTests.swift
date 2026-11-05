@@ -750,6 +750,27 @@ struct SystemBannersTests {
         #expect(alert.tall && alert.stays)
     }
 
+    @Test("Opened, a call is as tall and as wide as one coming in, with room for ending it only where that can be done")
+    @MainActor
+    func openedCall() {
+        let h: CGFloat = 32
+        let ringing = CallShown(name: "Alex Morgan", over: "Phone", phase: .ringing)
+        #expect(ExpandedCallView.wing(for: ringing, restingHeight: h) == IncomingCallView.wing(for: ringing, restingHeight: h))
+        let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
+        model.call = CallShown(name: "Alex Morgan", over: "Phone", phase: .connected(since: .now))
+        model.expanded = .call
+        model.state = .open
+        #expect(model.metrics.height == TimerLayout.tallHeight(h))
+        #expect(model.metrics.bodyWidth == 185 + 2 * ExpandedCallView.wing(for: model.call!, restingHeight: h))
+        // With a short name the buttons decide its width, and a second one takes more.
+        let short = CallShown(name: "Al", over: "Phone", phase: .connected(since: .now))
+        var ending = short
+        ending.canEnd = true
+        #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: short, restingHeight: h))
+        // macOS's own words for its End button are read from it.
+        #expect(!CallEnd.words.isEmpty)
+    }
+
     @Test("The waveform shows whoever's louder at each moment, in their color")
     func callVoices() {
         #expect(CallVoices.sample(theirs: 0.6, yours: 0.2) == .init(level: 0.6, mine: false))

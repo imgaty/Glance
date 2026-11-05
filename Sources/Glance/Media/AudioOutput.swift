@@ -29,17 +29,19 @@ final class AudioOutput: NSObject, ObservableObject {
     /// As the Mac's Sound menu: Sound, the playing app's volume, then every output, each in a circle,
     /// the one playing in the accent color, and AirPods with each earbud's and their case's
     /// battery, then Sound Settings. At the pointer, or from the keyboard, under the button.
-    func showMenu(at point: CGPoint? = nil) {
-        menu().popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
+    /// `withVolume` false leaves the playing app's volume out, where it isn't what's heard, as on a
+    /// call.
+    func showMenu(at point: CGPoint? = nil, withVolume: Bool = true) {
+        menu(withVolume: withVolume).popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
     }
 
-    func menu() -> NSMenu {
+    func menu(withVolume: Bool = true) -> NSMenu {
         let menu = NSMenu()
         // No check marks: the output playing is filled in.
         menu.showsStateColumn = false
         let volume = AppVolume.shared
         var views: [NSView] = [SoundMenuHeading(title: String(localized: "Sound"), main: true)]
-        if volume.app != nil { views.append(VolumeMenuSlider(volume: volume)) }
+        if withVolume, volume.app != nil { views.append(VolumeMenuSlider(volume: volume)) }
         for view in views {
             let item = NSMenuItem()
             item.view = view

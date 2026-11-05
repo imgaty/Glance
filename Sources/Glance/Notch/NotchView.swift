@@ -400,8 +400,10 @@ final class NotchModel: ObservableObject {
                 )
             case .open where expanded == .call:
                 (
-                    ExpandedCallView.width(for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height) + pull * 0.35,
-                    AirPlayLayout.height(closedSize.height) + pull
+                    ExpandedCallView.width(
+                        for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height, closedWidth: closedSize.width)
+                        + pull * 0.35,
+                    TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where expanded == .airplay:
                 (
@@ -812,8 +814,10 @@ struct NotchView: View {
     @ViewBuilder private func expandedCall(shown: Bool) -> some View {
         if model.expanded == .call, let call = model.call {
             let h = model.closedSize.height
-            ExpandedCallView(call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h), revealed: shown)
-                .allowsHitTesting(places == nil && shown)
+            ExpandedCallView(
+                call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width), revealed: shown
+            )
+            .allowsHitTesting(places == nil && shown)
         }
     }
 
