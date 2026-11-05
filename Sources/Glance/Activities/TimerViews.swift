@@ -497,13 +497,15 @@ struct IslandCircle<Glyph: View>: View {
     var highlighted = false
     /// Its own solid fill, in place of its color showing faintly.
     var fill: Color?
+    /// Its own size, in place of as tall as the padding leaves.
+    var side: CGFloat?
     @ViewBuilder let glyph: Glyph
 
     /// Orange shows at a little over a third, white at a fifth, as the iPhone's.
     private var faint: Double { (tint == .white ? 0.2 : 0.35) + (highlighted ? 0.1 : 0) }
 
     var body: some View {
-        let side = TimerLayout.content(height)
+        let side = side ?? TimerLayout.content(height)
         glyph
             .frame(width: side, height: side)
             .background(
@@ -522,13 +524,14 @@ struct IslandCircleButton<Glyph: View>: View {
     let tint: Color
     let label: String
     var fill: Color?
+    var side: CGFloat?
     let action: () -> Void
     @ViewBuilder let glyph: Glyph
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            IslandCircle(height: height, tint: tint, highlighted: hovering, fill: fill) { glyph }
+            IslandCircle(height: height, tint: tint, highlighted: hovering, fill: fill, side: side) { glyph }
                 .contentShape(Circle())
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))

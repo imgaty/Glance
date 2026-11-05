@@ -150,6 +150,11 @@ final class NotchModel: ObservableObject {
     @Published var airplay: AirPlayRoute?
     /// A call, ringing or going on.
     @Published var call: CallShown?
+    /// A call has the notch to itself, closed or opened.
+    var showsCallRim: Bool {
+        guard call != nil else { return false }
+        return expanded == .call || (state != .open && activities.first == .call && !folded)
+    }
     /// A file coming in over AirDrop (see `AirDropWatch`).
     @Published var airdrop: AirDropShown?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
@@ -717,6 +722,14 @@ struct NotchView: View {
         .environment(\.demoPointer, model.demoPointer)
         // Stretched sideways, what's in it stretches with it, staying where it is.
         .scaleEffect(x: m.bodyWidth / max(m.bodyWidth - model.pageStretch, 1), y: 1, anchor: .top)
+        // A call's faint green outline, inside its edge and only where it can show, not at the top.
+        .overlay {
+            if model.showsCallRim {
+                shape.stroke(CallLook.rim, lineWidth: 2)
+                    .mask(Rectangle().padding(.top, 1))
+                    .allowsHitTesting(false)
+            }
+        }
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
         // end, all of it is hidden there, under what the notch shows.

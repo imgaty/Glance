@@ -727,8 +727,8 @@ struct SystemBannersTests {
     func calls() {
         let ringing = CallShown(name: "Alex Morgan", over: "FaceTime", app: nil, phase: .ringing)
         let connected = CallShown(name: "Alex Morgan", over: "FaceTime", app: nil, phase: .connected(since: .now))
-        #expect(ringing.initial == "A" && !ringing.isConnected && connected.isConnected)
-        #expect(CallShown(name: "", over: "", phase: .ringing).initial == "")
+        #expect(ringing.initials == "AM" && !ringing.isConnected && connected.isConnected)
+        #expect(CallShown(name: "", over: "", phase: .ringing).initials == "")
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.activity = true
         model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
@@ -805,6 +805,20 @@ struct SystemBannersTests {
         #expect(pixels.withUnsafeBufferPointer { CallPopup.lifted(pixels: $0, width: 0, height: 0, rowBytes: 0) }.isEmpty)
     }
 
+    @Test("Opened, a call is no wider for a long name, which runs on under the camera")
+    @MainActor
+    func openedCallName() {
+        let h: CGFloat = 32
+        func call(_ name: String, _ phase: CallShown.Phase) -> CallShown { CallShown(name: name, over: "Phone", phase: phase, canEnd: true) }
+        let since = Date.now - 14
+        #expect(
+            ExpandedCallView.wing(for: call("Alexandra Montgomery-Fitzgerald", .connected(since: since)), restingHeight: h)
+                == ExpandedCallView.wing(for: call("Al", .connected(since: since)), restingHeight: h))
+        #expect(
+            IncomingCallView.wing(for: call("Alexandra Montgomery-Fitzgerald", .ringing), restingHeight: h)
+                == IncomingCallView.wing(for: call("Al", .ringing), restingHeight: h))
+    }
+
     @Test("macOS's banners that say what the notch says are told from the rest, by their names")
     func systemBanners() {
         #expect(MenuBarBanners.Banner(identifier: "low-battery-system-banner") == .lowBattery)
@@ -820,6 +834,16 @@ struct SystemBannersTests {
     func notificationWindowAway() {
         #expect(NotificationWindow.away(from: .zero, height: 982) == CGPoint(x: 0, y: -981))
         #expect(NotificationWindow.away(from: CGPoint(x: 1512, y: -300), height: 1080) == CGPoint(x: 1512, y: -1379))
+    }
+
+    @Test("A caller's circle has the first letters of their first and last names, and none for a number")
+    func callInitials() {
+        func initials(_ name: String) -> String { CallShown(name: name, over: "Phone", phase: .ringing).initials }
+        #expect(initials("Silva") == "S")
+        #expect(initials("Alex Morgan") == "AM")
+        #expect(initials("Maria da Silva") == "MS")
+        #expect(initials("+351 912 345 678") == "")
+        #expect(initials("") == "")
     }
 
     @Test("Calling apps are known by their bundle IDs, their helpers too")
