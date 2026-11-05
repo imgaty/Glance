@@ -31,10 +31,9 @@ struct CallShown: Equatable {
     var isConnected: Bool { phase != .ringing }
 }
 
-/// How a call looks, as the iPhone's Dynamic Island draws one, measured from a screenshot of a real
-/// call: a green phone and its time on one side, on the other a thin waveform that runs along, green
-/// where the other person speaks and a paler yellow where you do. Ringing, the caller's initial in
-/// a gray circle, and a gray handset.
+/// How a call looks, measured from a screenshot of a real call: a green phone and its time on one
+/// side, on the other a thin waveform that runs along, green where the other person speaks and a
+/// paler yellow where you do. Ringing, the caller's initial in a gray circle, and a gray handset.
 enum CallLook {
     static let green = Color(red: 0x9A / 255, green: 0xEE / 255, blue: 0x9C / 255)
     static let theirVoice = Color(red: 0xBD / 255, green: 0xF5 / 255, blue: 0x8F / 255)
@@ -425,9 +424,9 @@ final class CallVoices {
 
 // MARK: - Which calls
 
-/// The calls there are, from everything that can tell: the system's own list, the same one the
-/// iPhone's Phone app goes by; macOS's popup for a call coming in; and, for apps like Zoom and
-/// Discord that tell the system nothing on a Mac, one of them using the microphone.
+/// The calls there are, from everything that can tell: the system's own list; macOS's popup for a
+/// call coming in; and, for apps like Zoom and Discord that tell the system nothing on a Mac, one of
+/// them using the microphone.
 @MainActor
 final class CallWatch: ObservableObject {
     static let shared = CallWatch()
@@ -550,8 +549,8 @@ final class CallWatch: ObservableObject {
     }
 }
 
-/// The system's own list of calls, which macOS keeps as the iPhone does. Its API is marked as for
-/// iPhone and Mac Catalyst apps, but it's there on the Mac and answers, so it's reached by name.
+/// The system's own list of calls. Its API is marked as for iOS and Mac Catalyst apps, but it's
+/// there on the Mac and answers, so it's reached by name.
 @MainActor
 final class SystemCalls: NSObject {
     struct Call: Equatable {

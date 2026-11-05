@@ -281,6 +281,20 @@ struct PlayerScriptingTests {
         #expect(DJHeard(levels: [1, 1, 1, 1, 1, 1]).all == 1)
     }
 
+    @Test("The quieter the DJ, the rounder its ring, and the louder, the deeper its corner, to Spotify's own")
+    func djRing() {
+        let quiet = DJCoverDrawing.dents(.silent)
+        #expect(quiet.front < 0.05)
+        let loud = DJCoverDrawing.dents(.loudest)
+        #expect(abs(loud.front - 0.3) < 1e-9 && abs(loud.teal - 0.12) < 1e-9 && abs(loud.paleBlue + 0.08) < 1e-9)
+        // Each crescent shows beyond the ring in front of it, however loud and in whichever bars.
+        for heard in [DJHeard.silent, .loudest, DJHeard(all: 0.5, low: 1, high: 0), DJHeard(all: 0.5, low: 0, high: 1)] {
+            let dents = DJCoverDrawing.dents(heard)
+            #expect(dents.front - dents.teal > 0.15 - 1e-9 && dents.teal - dents.paleBlue > 0.1 - 1e-9)
+        }
+        #expect(DJCoverDrawing.dents(DJHeard(all: 0.5, low: 0.5, high: 0.5)).front > quiet.front)
+    }
+
     @Test("While the DJ talks the cover is its own and it's no song, and the song's cover comes back after")
     @MainActor
     func djCover() throws {

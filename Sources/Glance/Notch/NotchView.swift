@@ -241,7 +241,7 @@ final class NotchModel: ObservableObject {
     /// Those showing now, in that order.
     var activities: [Activity] {
         var shown: [Activity] = []
-        // A call has the notch to itself, as a call does on the iPhone, music giving way to it.
+        // A call has the notch to itself, music giving way to it.
         if call != nil, !dismissed.contains(.call) { shown.append(.call) }
         if musicShown { shown.append(.music) }
         if airdrop != nil { shown.append(.airdrop) }
