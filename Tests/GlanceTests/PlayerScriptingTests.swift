@@ -262,6 +262,14 @@ struct PlayerScriptingTests {
         #expect(PlayerScripting.spotifyTrackID(uri) == nil)
     }
 
+    @Test("Spotify coming forward on the DJ's button is noticed, and only when another app was in front")
+    func djStaysBehind() {
+        #expect(NowPlaying.broughtForward(front: "com.apple.Safari", now: PlayerScripting.spotify))
+        #expect(!NowPlaying.broughtForward(front: PlayerScripting.spotify, now: PlayerScripting.spotify))
+        #expect(!NowPlaying.broughtForward(front: "com.apple.Safari", now: "com.apple.Safari"))
+        #expect(!NowPlaying.broughtForward(front: nil, now: PlayerScripting.spotify))
+    }
+
     @Test("The DJ's button leaves the DJ for the song on its own, then starts it anew, in Spotify")
     func djPicks() {
         let dj = #"tell application "Spotify" to play track "spotify:playlist:37i9dQZF1EYkqdzj48dyYq""#

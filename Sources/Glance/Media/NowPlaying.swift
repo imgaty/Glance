@@ -113,19 +113,37 @@ final class NowPlaying: ObservableObject {
         heldPlaying = (isPlaying, .now + 1.5)
     }
 
-    /// Different picks from Spotify's DJ; if Spotify can't be asked, Spotify, where its own button is.
+    /// Different picks from Spotify's DJ. Spotify is left where it is, behind whatever's in front:
+    /// told to play something, it may come forward, so what was in front is put back.
     func differentDJPicks() {
         guard !isDemo else { return }
+        let front = NSWorkspace.shared.frontmostApplication
+        let spotify = NSRunningApplication.runningApplications(withBundleIdentifier: PlayerScripting.spotify).first
+        let wasHidden = spotify?.isHidden == true
         Task {
             let script = PlayerScripting.tell(PlayerScripting.spotify, "return spotify url of current track")
-            guard let reply = await PlayerScripting.run(script) else { return openApp() }
+            guard let reply = await PlayerScripting.run(script) else { return }
             let steps = PlayerScripting.djPicksScripts(playing: reply.trimmingCharacters(in: .whitespacesAndNewlines))
             for (index, step) in steps.enumerated() {
-                // A moment on the song alone, for Spotify to take it that the DJ's been left.
-                if index > 0 { try? await Task.sleep(for: .seconds(1)) }
-                if await PlayerScripting.run(step) == nil { return openApp() }
+                // The briefest moment on the song alone, for Spotify to take it that the DJ's been left.
+                if index > 0 { try? await Task.sleep(for: .seconds(PlayerScripting.djPicksGap)) }
+                guard await PlayerScripting.run(step) != nil else { return }
+            }
+            // It comes forward a moment after it's told to, if it does.
+            for _ in 0..<10 {
+                if Self.broughtForward(front: front?.bundleIdentifier, now: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) {
+                    front?.activate()
+                    if wasHidden { spotify?.hide() }
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(100))
             }
         }
+    }
+
+    /// Whether Spotify has taken the place of the app that was in front.
+    nonisolated static func broughtForward(front: String?, now: String?) -> Bool {
+        now == PlayerScripting.spotify && front != nil && front != PlayerScripting.spotify
     }
 
     func next() { command("next", script: "next track") }
@@ -262,11 +280,6 @@ final class NowPlaying: ObservableObject {
         command("seek \(seconds)", script: "set player position to \(seconds)")
         elapsed = seconds
         reportedAt = .now
-    }
-
-    func openApp() {
-        guard let appBundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: appBundleID) else { return }
-        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
     /// Where it plays from: its tab, its playlist, or else the app (see `PlayingSource`).
