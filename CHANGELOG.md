@@ -152,6 +152,9 @@
 
 ### Player
 
+- Changed Spotify's DJ button to a blue circle with the DJ's green ring.
+- Added the DJ's own cover while it talks: its green ring on blue, moving with its
+  voice, with the colors behind the player turning blue and `--:--` for the times.
 - Fixed clicking the cover opening a Spotify song's own page, rather than the
   playlist or album it plays from, for songs Spotify hadn't yet written down.
 - Fixed the lyrics saying a song has none when LRCLIB can't be reached. They

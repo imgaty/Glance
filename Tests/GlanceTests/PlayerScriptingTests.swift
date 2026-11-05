@@ -5,6 +5,7 @@
 //  Created by Gaty on 10/10/2026.
 //
 
+import AppKit
 import Foundation
 import Testing
 
@@ -259,6 +260,34 @@ struct PlayerScriptingTests {
         ])
     func noSpotifyTrackID(uri: String) {
         #expect(PlayerScripting.spotifyTrackID(uri) == nil)
+    }
+
+    @Test("While the DJ talks the cover is its own and it's no song, and the song's cover comes back after")
+    @MainActor
+    func djCover() throws {
+        let player = NowPlaying()
+        let talking: [String: Any] = [
+            "direct": true, "app": PlayerScripting.spotify, "playing": true, "title": "Up next", "artist": "DJ X", "album": "DJ", "duration": 0.0,
+            "elapsed": 0.0, "mediaType": "music", "artwork": "",
+        ]
+        player.apply(talking)
+        #expect(player.djTalking && player.djPlaying)
+        #expect(!player.isSong)
+        #expect(player.artwork != nil && player.artwork === DJCover.picture)
+        // Said again, a second later, the same picture.
+        player.apply(talking)
+        #expect(player.artwork === DJCover.picture)
+        let picture = try #require(NSImage(size: NSSize(width: 4, height: 4), flipped: false) { _ in true }.tiffRepresentation)
+        var song = talking
+        // Marked as a video, so that nothing's looked up for it here.
+        song.merge(["title": "A Song", "album": "An Album", "duration": 200.0, "mediaType": "video", "artwork": picture.base64EncodedString()]) { _, new in new }
+        player.apply(song)
+        #expect(!player.djTalking)
+        #expect(player.artwork !== DJCover.picture)
+        player.apply(talking)
+        song["artwork"] = nil
+        player.apply(song)
+        #expect(player.artwork !== DJCover.picture)
     }
 
     // MARK: - Where it plays from

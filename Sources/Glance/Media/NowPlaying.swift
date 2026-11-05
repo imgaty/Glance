@@ -420,7 +420,7 @@ final class NowPlaying: ObservableObject {
         return owner
     }
 
-    private func apply(_ report: [String: Any]) {
+    func apply(_ report: [String: Any]) {
         // Every app that plays something is listed in Settings, to turn on or off.
         if let app = report["app"] as? String, report["direct"] == nil { MusicApps.remember(app) }
         // The system's Now Playing belongs to an app the user chose not to show: Music and Spotify,
@@ -454,8 +454,21 @@ final class NowPlaying: ObservableObject {
             elapsed = Self.pausedPosition(reported: reported, shown: shown)
             reportedAt = .now
         }
-        if let encoded = report["artwork"] as? String ?? latestArtwork, encoded != shownArtwork {
+        let app = report["app"] as? String
+        if app != appBundleID {
+            appBundleID = app
+            appIcon = app.flatMap(NSWorkspace.shared.icon(forApp:))
+            // What the last app offered isn't this one's, until it's read.
+            options = PlaybackOptions()
+            heldFavorite = nil
+        }
+        if djTalking {
+            // Spotify gives no picture while its DJ talks: its own, for the colors behind the player too.
+            if shownArtwork != DJCover.key { show(artwork: DJCover.picture, encoded: DJCover.key) }
+        } else if let encoded = report["artwork"] as? String ?? latestArtwork, encoded != shownArtwork {
             show(artwork: Data(base64Encoded: encoded).flatMap(NSImage.init(data:)), encoded: encoded)
+        } else if shownArtwork == DJCover.key {
+            show(artwork: nil, encoded: nil)
         }
         // A song, as opposed to a video, a podcast or an audiobook. Music players say what they
         // play; browsers say nothing, so there it takes an album and square artwork, as music on
@@ -465,15 +478,8 @@ final class NowPlaying: ObservableObject {
         let squareArtwork = artwork.map { abs($0.size.width / max($0.size.height, 1) - 1) < 0.25 } ?? true
         let looksLikeMusic = !kind.isEmpty || (!album.isEmpty && squareArtwork)
         // And it takes an artist: without one, its lyrics can't be told from another song's.
-        isSong = !title.isEmpty && !artist.isEmpty && !other && looksLikeMusic && duration <= 20 * 60
-        let app = report["app"] as? String
-        if app != appBundleID {
-            appBundleID = app
-            appIcon = app.flatMap(NSWorkspace.shared.icon(forApp:))
-            // What the last app offered isn't this one's, until it's read.
-            options = PlaybackOptions()
-            heldFavorite = nil
-        }
+        // Nor is what Spotify's DJ says a song, though it comes with an artist and an album.
+        isSong = !title.isEmpty && !artist.isEmpty && !other && looksLikeMusic && duration <= 20 * 60 && !djTalking
         // The waveforms listen to the process making the sound while it plays, and the volume
         // slider turns it up and down.
         let pid = (report["pid"] as? NSNumber)?.int32Value ?? 0

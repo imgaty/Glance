@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 4 November 2026`
+`Created: 11 October 2026` | `Last updated: 5 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -195,10 +195,13 @@ button.
 | `Lyrics` | Shows the song's words |
 | `None` | Leaves the place empty |
 
-While Spotify's DJ chooses the music, its symbol takes the left button's place,
-as it takes shuffle's in Spotify, and its corner moves while the DJ talks. Click
-it to switch to Spotify. Shuffle and repeat show dimmed then, because Spotify
-doesn't offer them with the DJ or a podcast.
+While Spotify's DJ chooses the music, a blue DJ button takes the left button's
+place, as it takes shuffle's in Spotify, and its ring moves while the DJ talks. Click
+it to switch to Spotify. Shuffle and repeat show dimmed with the DJ or a podcast,
+because Spotify doesn't offer them then.
+
+While the DJ talks, the cover becomes its green ring on blue, moving with its voice,
+the colors behind the player turn blue, and the times show `--:--`.
 
 ### Sound output and volume
 

@@ -23,6 +23,7 @@ struct HeroArtwork: View {
     let restingSide: CGFloat
     @State private var motionReady = false
     @Environment(\.notchThumbnail) private var thumbnail
+    @Environment(\.notchPaused) private var paused
     /// With Reduce Motion on, the cover is its picture, never the moving one.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The pointer on the open cover, which lifts it a little and lights it, and a click held on it,
@@ -38,7 +39,7 @@ struct HeroArtwork: View {
     var body: some View {
         let size = layout.artwork
         let video =
-            animated && !nowPlaying.isDemo && !reduceMotion ? motion.video(artist: nowPlaying.artist, album: nowPlaying.album) : nil
+            animated && !nowPlaying.isDemo && !reduceMotion && !nowPlaying.djTalking ? motion.video(artist: nowPlaying.artist, album: nowPlaying.album) : nil
         // Under the pointer, it lights and rises, with a soft shadow that spreads as it lifts and
         // draws in close as it's pressed down.
         let light: Double = coverHovered ? (coverPressed ? 0.04 : 0.08) : 0
@@ -53,7 +54,11 @@ struct HeroArtwork: View {
                 // A new song's cover comes in as the last one goes, as the Dynamic Island's activities
                 // come and go.
                 ZStack {
-                    if let artwork = nowPlaying.artwork {
+                    if nowPlaying.djTalking {
+                        // Spotify gives no picture while its DJ talks: its ring, moving with its voice.
+                        DJCover(talking: nowPlaying.isPlaying && !paused)
+                            .transition(IslandMotion.fade)
+                    } else if let artwork = nowPlaying.artwork {
                         Image(nsImage: artwork).resizable().aspectRatio(contentMode: .fill)
                             .id(ObjectIdentifier(artwork))
                             .transition(IslandMotion.fade)

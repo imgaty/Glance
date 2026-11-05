@@ -177,10 +177,12 @@ struct NowPlayingView: View {
         TimelineView(.animation(minimumInterval: 0.5, paused: !(isVisible && nowPlaying.isPlaying))) { context in
             // With nothing playing, no times and an empty bar, as on the iPhone.
             let playing = nowPlaying.hasMedia
+            // What the DJ says has no length, so no times, as in Spotify.
+            let timed = playing && !nowPlaying.djTalking
             let duration = playing ? nowPlaying.duration : 0
             let position = scrub.map { $0 * duration } ?? (playing ? nowPlaying.position(at: context.date) : 0)
             HStack(spacing: 10) {
-                Text(playing ? Self.time(position) : "--:--")
+                Text(timed ? Self.time(position) : "--:--")
                     .frame(minWidth: 26, alignment: .leading)
                 Scrubber(
                     fraction: duration > 0 ? position / duration : 0,
@@ -196,7 +198,7 @@ struct NowPlayingView: View {
                 }
                 .disabled(duration <= 0)
                 .keyRing(.position, in: Capsule(), outset: CGSize(width: 6, height: 0))
-                Text(playing ? ClockText.left(Int(max(duration - position, 0).rounded())) : "--:--")
+                Text(timed ? ClockText.left(Int(max(duration - position, 0).rounded())) : "--:--")
                     .frame(minWidth: 30, alignment: .trailing)
             }
             .font(NotchType.timeline)
@@ -217,7 +219,7 @@ struct NowPlayingView: View {
                     .environment(\.layoutDirection, reading)
             } else if nowPlaying.djPlaying {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
-                DJButton(color: sideGray, talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
+                DJButton(talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
                     .keyRing(.left)
                     .transition(.opacity)
             } else {
