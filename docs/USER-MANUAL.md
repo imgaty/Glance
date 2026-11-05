@@ -195,15 +195,15 @@ button.
 | `Lyrics` | Shows the song's words |
 | `None` | Leaves the place empty |
 
-While Spotify's DJ chooses the music, a blue DJ button takes the left button's
-place, as it takes shuffle's in Spotify, and its ring moves while the DJ talks. Click
+While Spotify's DJ chooses the music, its symbol takes the left button's place, as it
+takes shuffle's in Spotify, moving for as long as the music plays. Click
 it for different picks. Spotify lets no other app press its own button for that, so
 the DJ is started anew: the song plays on for a moment and the DJ says a word, and
 within seconds it moves on to something else. Shuffle and repeat show dimmed with the
 DJ or a podcast, because Spotify doesn't offer them then.
 
-While the DJ talks, the cover becomes its green ring on blue, moving with its voice,
-the colors behind the player turn blue, and the times show `--:--`.
+While the DJ talks, the cover becomes its green ring on blue, following the same sound
+as the waveform, the colors behind the player turn blue, and the times show `--:--`.
 
 To keep the left button as it is while the DJ plays, turn off `DJ button` in
 Customize Controls.

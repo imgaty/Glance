@@ -15,55 +15,24 @@ enum DJLook {
     /// Behind the ring's pressed-in corner, nearest first.
     static let teal = Color(.displayP3, red: 0x5C / 255, green: 0xC1 / 255, blue: 0xBD / 255)
     static let paleBlue = Color(.displayP3, red: 0x37 / 255, green: 0x75 / 255, blue: 0xC1 / 255)
-    /// The fine broken line inside the button's edge.
-    static let edge = Color(.displayP3, red: 0x1F / 255, green: 0x4A / 255, blue: 0x9C / 255)
-
-    /// How far the DJ's voice has moved the corner, for one drawn `behind` seconds after it: 0 at
-    /// rest, or still, to 1.
-    @MainActor
-    static func voice(at date: Date, behind: Double = 0) -> Double {
-        loudness() * flap(at: date.timeIntervalSinceReferenceDate - behind)
-    }
-
-    /// A speaking voice's rise and fall, about four syllables a second, from 0 (at rest) to 1.
-    static func flap(at t: Double) -> Double {
-        let wave = 0.55 * sin(t * 2 * .pi * 4.1) + 0.3 * sin(t * 2 * .pi * 6.7 + 1.3) + 0.25 * sin(t * 2 * .pi * 2.3 + 0.4)
-        return min(max(0.35 + 0.6 * wave, 0), 1)
-    }
-
-    /// How loud the DJ is: still between its sentences. Without audio capture there's nothing to
-    /// listen to, so it moves as if talking steadily.
-    @MainActor
-    private static func loudness() -> Double {
-        guard Permissions.audioCapture == .granted else { return 0.8 }
-        let levels = AudioLevels.shared.levels
-        return min(Double(levels.reduce(0, +)) / Double(levels.count) * 2.2, 1)
-    }
 }
 
-/// Spotify's DJ, in the left button's place while it chooses the music: its ring on a blue circle,
-/// as in Spotify. Clicked, it gets different picks.
+/// Spotify's DJ, in the left button's place while it chooses the music. Clicked, it gets different
+/// picks.
 struct DJButton: View {
-    /// The DJ is talking, and its corner moves.
+    let color: Color
+    /// It moves whenever the music plays, the DJ talking or not.
+    let moving: Bool
+    /// The DJ is talking, as VoiceOver says.
     let talking: Bool
     let action: () -> Void
 
-    /// As large as the buttons' contact areas leave room for, the ring half of it across.
-    private static let side: CGFloat = 34
-
     var body: some View {
         Button(action: action) {
-            ZStack {
-                Circle().fill(DJLook.blue)
-                Circle()
-                    .inset(by: 2)
-                    .stroke(DJLook.edge, style: StrokeStyle(lineWidth: 0.5, dash: [3.5, 2]))
-                DJGlyph(talking: talking)
-                    .frame(width: Self.side / 2, height: Self.side / 2)
-            }
-            .frame(width: Self.side, height: Self.side)
+            DJGlyph(color: color, moving: moving)
+                .frame(width: PlayerLayout.optionGlyph * 1.2, height: PlayerLayout.optionGlyph * 1.2)
         }
-        .buttonStyle(IslandPress(highlight: false))
+        .buttonStyle(IslandPress())
         .notchControl()
         .help(String(localized: "Get different DJ picks"))
         .accessibilityLabel("DJ")
@@ -72,34 +41,62 @@ struct DJButton: View {
     }
 }
 
-/// The DJ in the button, as Spotify draws it small: a ring and, inside its top right, the curve of
-/// that corner pressed in. While the DJ talks, the curve moves out and back with its voice.
+/// The DJ drawn as Spotify draws it: a ring with its top right pressed in, and two fainter rings
+/// trailing behind that corner, the nearer pressed in less, the farther bowed out. It moves out and
+/// back a little, as a voice rises and falls, and the trailing rings follow it a moment later.
 struct DJGlyph: View {
-    let talking: Bool
+    let color: Color
+    let moving: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Front to back: how far each ring's corner is pressed in at rest, as a share of its radius
+    /// (bowed out below zero), how far it moves out, and how strongly it shows.
+    private static let rings: [(dent: Double, reach: Double, opacity: Double)] = [
+        (0.3, 0.16, 1), (0.12, 0.1, 0.6), (-0.08, 0.05, 0.35),
+    ]
+    /// How far behind the ring in front each one follows, in seconds.
+    private static let trail = 0.06
+
     var body: some View {
-        let moving = talking && !reduceMotion
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !moving)) { context in
-            let voice = moving ? DJLook.voice(at: context.date) : 0
+        let animates = moving && !reduceMotion
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animates)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let strength = animates ? Self.strength() : 0
             GeometryReader { proxy in
                 let side = min(proxy.size.width, proxy.size.height)
                 let line = side * 0.1
-                let style = StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round)
                 ZStack {
-                    DJRing(dent: 0, inset: line / 2).stroke(DJLook.green, style: style)
-                    DJRing(dent: 0.3 - 0.16 * voice, inset: line / 2).stroke(DJLook.green, style: style)
+                    ForEach(Self.rings.indices.reversed(), id: \.self) { index in
+                        let ring = Self.rings[index]
+                        let flap = strength * Self.flap(at: t - Double(index) * Self.trail)
+                        DJRing(dent: ring.dent - ring.reach * flap, inset: line / 2)
+                            .stroke(color.opacity(ring.opacity), style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
+                    }
                 }
                 .frame(width: side, height: side)
                 .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
             }
         }
     }
+
+    /// A speaking voice's rise and fall, about four syllables a second, from 0 (at rest) to 1.
+    static func flap(at t: Double) -> Double {
+        let wave = 0.55 * sin(t * 2 * .pi * 4.1) + 0.3 * sin(t * 2 * .pi * 6.7 + 1.3) + 0.25 * sin(t * 2 * .pi * 2.3 + 0.4)
+        return min(max(0.35 + 0.6 * wave, 0), 1)
+    }
+
+    /// How far it moves: never still while it animates, and further the louder the sound.
+    private static func strength() -> Double {
+        guard Permissions.audioCapture == .granted else { return 0.8 }
+        let levels = AudioLevels.shared.levels
+        return max(min(Double(levels.reduce(0, +)) / Double(levels.count) * 2.2, 1), 0.5)
+    }
 }
 
 /// The cover while the DJ talks, as Spotify shows it: its green ring on blue, the corner pressed in,
-/// with a teal and a paler blue crescent behind that corner. As it talks, the corner moves out and
-/// back with its voice, the crescents follow it a moment later, and the ring swells a little.
+/// with a teal and a paler blue crescent behind that corner. It follows the same sound the waveform
+/// shows, as the waveform does: the corner and the ring's size with all of it, one crescent with the
+/// low bars and the other with the high ones.
 struct DJCover: View {
     /// It's talking now, not paused.
     let talking: Bool
@@ -108,7 +105,7 @@ struct DJCover: View {
     /// What the rest of the app takes the cover's colors from, and how it's told apart.
     static let key = "dj"
     @MainActor static let picture: NSImage? = {
-        let renderer = ImageRenderer(content: DJCoverDrawing(voices: (0, 0, 0)).frame(width: 300, height: 300))
+        let renderer = ImageRenderer(content: DJCoverDrawing(heard: .silent).frame(width: 300, height: 300))
         renderer.scale = 1
         return renderer.nsImage
     }()
@@ -116,38 +113,65 @@ struct DJCover: View {
     var body: some View {
         let moving = talking && !reduceMotion
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !moving)) { context in
-            if moving {
-                DJCoverDrawing(
-                    voices: (
-                        DJLook.voice(at: context.date), DJLook.voice(at: context.date, behind: 0.06),
-                        DJLook.voice(at: context.date, behind: 0.12)
-                    ))
-            } else {
-                DJCoverDrawing(voices: (0, 0, 0))
-            }
+            DJCoverDrawing(heard: moving ? Self.heard(at: context.date) : .silent)
         }
+    }
+
+    /// As the waveform hears it. With audio capture off the waveform has nothing to show, so the
+    /// ring moves as a voice does.
+    private static func heard(at date: Date) -> DJHeard {
+        guard Permissions.audioCapture == .granted else {
+            let t = date.timeIntervalSinceReferenceDate
+            return DJHeard(all: 0.8 * DJGlyph.flap(at: t), low: 0.8 * DJGlyph.flap(at: t - 0.06), high: 0.8 * DJGlyph.flap(at: t - 0.12))
+        }
+        return DJHeard(levels: AudioLevels.shared.levels)
     }
 }
 
-private struct DJCoverDrawing: View {
-    /// How far its voice has moved each of the three, front to back.
-    let voices: (Double, Double, Double)
+/// The sound the DJ's ring follows, each from 0 to 1.
+struct DJHeard: Equatable {
+    var all: Double
+    var low: Double
+    var high: Double
+
+    static let silent = DJHeard(all: 0, low: 0, high: 0)
+
+    /// From the waveform's bars, low to high. Speech fills only part of them, so it's boosted to
+    /// move the ring as far as the bars move.
+    init(levels: [Float]) {
+        func loudness(_ bars: ArraySlice<Float>) -> Double {
+            bars.isEmpty ? 0 : min(Double(bars.reduce(0, +)) / Double(bars.count) * 1.8, 1)
+        }
+        let half = levels.count / 2
+        self.init(all: loudness(levels[...]), low: loudness(levels[..<half]), high: loudness(levels[half...]))
+    }
+
+    init(all: Double, low: Double, high: Double) {
+        self.all = all
+        self.low = low
+        self.high = high
+    }
+}
+
+struct DJCoverDrawing: View {
+    let heard: DJHeard
 
     var body: some View {
         GeometryReader { proxy in
             let side = min(proxy.size.width, proxy.size.height)
             let line = side * 0.045
+            let front = 0.3 - 0.26 * heard.all
             ZStack {
                 DJLook.blue
                 ZStack {
-                    DJRing(dent: -0.08 - 0.05 * voices.2, inset: line / 2).fill(DJLook.paleBlue)
-                    DJRing(dent: 0.12 - 0.1 * voices.1, inset: line / 2).fill(DJLook.teal)
-                    DJRing(dent: 0.3 - 0.16 * voices.0, inset: line / 2).fill(DJLook.blue)
-                    DJRing(dent: 0.3 - 0.16 * voices.0, inset: line / 2)
+                    DJRing(dent: -0.08 - 0.08 * heard.high, inset: line / 2).fill(DJLook.paleBlue)
+                    DJRing(dent: 0.12 - 0.14 * heard.low, inset: line / 2).fill(DJLook.teal)
+                    DJRing(dent: front, inset: line / 2).fill(DJLook.blue)
+                    DJRing(dent: front, inset: line / 2)
                         .stroke(DJLook.green, style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
                 }
                 .frame(width: side * 0.8, height: side * 0.8)
-                .scaleEffect(1 + 0.03 * voices.0)
+                .scaleEffect(1 + 0.05 * heard.all)
             }
         }
     }

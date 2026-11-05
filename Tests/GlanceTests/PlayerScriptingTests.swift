@@ -270,6 +270,17 @@ struct PlayerScriptingTests {
         #expect(PlayerScripting.djPicksScripts(playing: "spotify:media:AAA") == [#"tell application "Spotify" to play track "spotify:track:AAA""#, dj])
     }
 
+    @Test("The DJ's ring follows the waveform's bars: all of them, the low ones and the high ones")
+    func djHeard() {
+        #expect(DJHeard(levels: [0, 0, 0, 0, 0, 0]) == .silent)
+        let low = DJHeard(levels: [0.5, 0.5, 0.5, 0, 0, 0])
+        #expect(low.low > 0.8 && low.high == 0 && low.all > 0 && low.all < low.low)
+        let high = DJHeard(levels: [0, 0, 0, 0.5, 0.5, 0.5])
+        #expect(high.high > 0.8 && high.low == 0)
+        // However loud, no further than all the way.
+        #expect(DJHeard(levels: [1, 1, 1, 1, 1, 1]).all == 1)
+    }
+
     @Test("While the DJ talks the cover is its own and it's no song, and the song's cover comes back after")
     @MainActor
     func djCover() throws {

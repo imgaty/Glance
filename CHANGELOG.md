@@ -152,10 +152,11 @@
 
 ### Player
 
-- Changed Spotify's DJ button to a blue circle with the DJ's green ring, and clicking
-  it to get different picks, by starting the DJ anew, rather than switching to Spotify.
-- Added the DJ's own cover while it talks: its green ring on blue, moving with its
-  voice, with the colors behind the player turning blue and `--:--` for the times.
+- Changed Spotify's DJ button to move for as long as the music plays, and clicking it
+  to get different picks, by starting the DJ anew, rather than switching to Spotify.
+- Added the DJ's own cover while it talks: its green ring on blue, following the same
+  sound as the waveform, with the colors behind the player turning blue and `--:--`
+  for the times.
 - Added `DJ button` to Customize Controls, to keep the left button as it is while
   the DJ plays.
 - Fixed clicking the cover opening a Spotify song's own page, rather than the

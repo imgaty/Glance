@@ -220,9 +220,11 @@ struct NowPlayingView: View {
                     .environment(\.layoutDirection, reading)
             } else if showsDJ {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
-                DJButton(talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.differentDJPicks() }
-                    .keyRing(.left)
-                    .transition(.opacity)
+                DJButton(color: sideGray, moving: isVisible && nowPlaying.isPlaying, talking: nowPlaying.djTalking && nowPlaying.isPlaying) {
+                    nowPlaying.differentDJPicks()
+                }
+                .keyRing(.left)
+                .transition(.opacity)
             } else {
                 slot(leftSlot)
                     .environment(\.layoutDirection, reading)
