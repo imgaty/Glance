@@ -1144,6 +1144,7 @@ final class NotchController {
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
             model.page = page
             model.pageNudge = 0
+            model.pageStretch = 0
             if !forDrop {
                 model.dropping = false
                 model.airDropTargeted = false
@@ -1719,6 +1720,7 @@ final class NotchController {
             model.stretch = 0
             model.nudge = 0
             model.pageNudge = 0
+            model.pageStretch = 0
         }
     }
 
@@ -1780,31 +1782,59 @@ final class NotchController {
         return openZone
     }
 
-    /// Three fingers on the open notch: toward the page on the right, the tray, or back.
-    func swipe(right: Bool) {
-        let page: NotchPage = right != Self.readsRightToLeft ? .tray : .player
-        guard page != model.page else { return }
-        turn(to: page)
-        Opening.tap()
+    /// Three fingers on the open notch: the page follows them, and turns as a pull down opens the
+    /// notch, past a point on the way; let go, it springs back into place.
+    func swipe(_ motion: NotchSwipes.Motion) {
+        switch motion {
+        case .began:
+            swipeBegan()
+        case .moved(let share):
+            // Toward the page on the right counts down, as with a scroll.
+            let points = share * Self.swipeTravel
+            swipedPage(by: Self.readsRightToLeft ? points : -points)
+        case .ended(let flick):
+            // Flicked, without getting that far.
+            if !pullFired, let flick {
+                let page: NotchPage = flick != Self.readsRightToLeft ? .tray : .player
+                if page != model.page {
+                    turn(to: page)
+                    Opening.tap()
+                }
+            }
+            swipeEnded()
+        }
     }
 
-    /// Shift and a scroll: the pages move as a page scrolled sideways does, the way this Mac
-    /// scrolls, the tray to the right of the player. The page leans along, then turns; past the
-    /// last page, it only leans.
+    /// How many points a whole three-finger swipe is, on the scale of a scroll's.
+    private static let swipeTravel: CGFloat = 520
+
+    /// Shift and a scroll, or three fingers: the pages move as a page scrolled sideways does, the
+    /// way this Mac scrolls, the tray to the right of the player. The page drags along and the notch
+    /// stretches with it, then it turns, and goes on dragging; past the last page, it only drags.
     private func swipedPage(by delta: CGFloat) {
-        guard !pullFired else { return }
         swipe += delta
         // Scrolled toward the right, which macOS's scroll values already say the way this Mac
         // scrolls: the tray.
         let target: NotchPage = swipe < 0 ? .tray : .player
-        if abs(swipe) > 56, target != model.page {
+        if !pullFired, abs(swipe) > Self.pageTurn, target != model.page {
             pullFired = true
             turn(to: target)
             Opening.tap()
-            return
         }
-        let lean = (swipe >= 0 ? 1 : -1) * 14 * (1 - 1 / (abs(swipe) * 0.04 + 1))
-        withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) { model.pageNudge = lean }
+        let lean = Self.pageLean(swipe)
+        withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) {
+            model.pageNudge = lean
+            model.pageStretch = abs(lean) * 0.8
+        }
+    }
+
+    /// How far a swipe goes before the page turns.
+    private static let pageTurn: CGFloat = 56
+
+    /// How far the page has dragged along, more and more slowly, up to a limit, as the notch
+    /// stretches when pulled down.
+    nonisolated static func pageLean(_ swipe: CGFloat) -> CGFloat {
+        (swipe >= 0 ? 1 : -1) * 30 * (1 - 1 / (abs(swipe) * 0.012 + 1))
     }
 
     /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
@@ -1815,6 +1845,7 @@ final class NotchController {
             model.expanded = nil
             model.page = page
             model.pageNudge = 0
+            model.pageStretch = 0
         }
     }
 

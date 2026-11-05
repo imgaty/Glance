@@ -166,6 +166,8 @@ final class NotchModel: ObservableObject {
     @Published var trayScroll: CGFloat = 0
     /// How far a swipe to the other page has pushed this one, before it goes.
     @Published var pageNudge: CGFloat = 0
+    /// How far that has stretched the notch's width.
+    @Published var pageStretch: CGFloat = 0
     /// How many items the tray holds, which its width follows.
     @Published var trayItems = 0
     /// Some item's name in the tray takes two lines, which its height follows.
@@ -400,8 +402,8 @@ final class NotchModel: ObservableObject {
                         + pull * 0.35,
                     TimerLayout.tallHeight(closedSize.height) + pull
                 )
-            case .open where page == .tray: (trayWidth + pull * 0.35, trayHeight + pull)
-            case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35, openSize.height + pull)
+            case .open where page == .tray: (trayWidth + pull * 0.35 + pageStretch, trayHeight + pull)
+            case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35 + pageStretch, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
         // which the glass, sized afresh with the notch, doesn't follow.

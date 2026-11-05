@@ -154,6 +154,15 @@ struct PlayerKeysTests {
         #expect(!NotchController.bringsNextSong(-60, rightToLeft: true))
     }
 
+    @Test("A swipe drags the page along, more and more slowly, up to a limit, either way")
+    func pageDrags() {
+        #expect(NotchController.pageLean(0) == 0)
+        #expect(NotchController.pageLean(20) > 0 && NotchController.pageLean(-20) == -NotchController.pageLean(20))
+        #expect(NotchController.pageLean(100) > NotchController.pageLean(50))
+        #expect(NotchController.pageLean(100) - NotchController.pageLean(50) < NotchController.pageLean(50) - NotchController.pageLean(0))
+        #expect(NotchController.pageLean(100_000) <= 30)
+    }
+
     @Test("Up and down go to an activity, through the lyrics' lines, or turn the sound up and down")
     func upAndDown() {
         let keys = keys([.lyrics, .line, .position, .playPause, .right])

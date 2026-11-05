@@ -92,7 +92,7 @@ than slide.
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away (see [Live Activities](#live-activities)) |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
-| Swipe left or right with three fingers, on the open notch | Switches to the tray, and back to the player (with `Accessibility` allowed) |
+| Swipe left or right with three fingers, on the open notch | Drags the page along with your fingers and switches to the tray, and back to the player, springing into place as you let go (with `Accessibility` allowed) |
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead, and, scrolled on past the row's end, goes back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
 | Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |

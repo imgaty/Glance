@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemDevices.prepare()
         Activities.shared.start()
         ActivityBench.shared.start()
-        NotchSwipes.shared.onSwipe = { [notches] right in notches.swipe(right: right) }
+        NotchSwipes.shared.onSwipe = { [notches] motion in notches.swipe(motion) }
         NotchSwipes.shared.start()
         Shortcuts.shared.onAction = { [notches] action in notches.perform(action) }
         Shortcuts.shared.register()
@@ -395,6 +395,8 @@ final class NotchManager {
     var contextMenu: NSMenu?
 
     private var controllers: [NotchController] = []
+    /// The notch a three-finger swipe is going on.
+    private var swiped: NotchController?
     private var monitors: [Any] = []
 
     /// The displays the notches were last made for, and how each one's top is laid out.
@@ -563,10 +565,14 @@ final class NotchManager {
         dragChange = NSPasteboard(name: .drag).changeCount
     }
 
-    /// A three-finger swipe on the open notch under the pointer.
-    func swipe(right: Bool) {
-        let location = NSEvent.mouseLocation
-        controllers.first { $0.takesSwipe(at: location) }?.swipe(right: right)
+    /// A three-finger swipe, on the open notch under the pointer where it began.
+    func swipe(_ motion: NotchSwipes.Motion) {
+        if motion == .began {
+            let location = NSEvent.mouseLocation
+            swiped = controllers.first { $0.takesSwipe(at: location) }
+        }
+        swiped?.swipe(motion)
+        if case .ended = motion { swiped = nil }
     }
 
     /// A shortcut: the notch on the display under the pointer, or the first one.

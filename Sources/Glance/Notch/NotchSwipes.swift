@@ -22,8 +22,16 @@ import AppKit
 final class NotchSwipes: @unchecked Sendable {
     static let shared = NotchSwipes()
 
-    /// A swipe on the notch: toward the page on the right, or the left.
-    @MainActor var onSwipe: ((_ right: Bool) -> Void)?
+    /// A swipe on the notch as it goes, as a pull down on the notch is followed.
+    enum Motion: Equatable, Sendable {
+        case began
+        /// How far since last told, as a share of a whole swipe, toward the page on the right.
+        case moved(CGFloat)
+        /// Let go, flicked toward the page on the right, or the left, or not at all.
+        case ended(flick: Bool?)
+    }
+
+    @MainActor var onSwipe: ((Motion) -> Void)?
 
     private let lock = NSLock()
     /// Where each open notch takes swipes, in the session's points (from the top left of the main
@@ -31,10 +39,10 @@ final class NotchSwipes: @unchecked Sendable {
     private var regions: [ObjectIdentifier: CGRect] = [:]
     private var thread: Thread?
     private var tap: CFMachPort?
-    /// On the tap's thread only: a swipe on the notch is under way, and whether it has turned the
-    /// page yet.
+    /// On the tap's thread only: a swipe on the notch is under way, and how far it had come when
+    /// last told.
     private var tracking = false
-    private var fired = false
+    private var progress = 0.0
 
     private static let typeField = CGEventField(rawValue: 55)!
     private static let hidTypeField = CGEventField(rawValue: 110)!
@@ -106,8 +114,8 @@ final class NotchSwipes: @unchecked Sendable {
         isTwentySeven ? value < 0 : value > 0
     }
 
-    private func turn(right: Bool) {
-        DispatchQueue.main.async { MainActor.assumeIsolated { NotchSwipes.shared.onSwipe?(right) } }
+    private func tell(_ motion: Motion) {
+        DispatchQueue.main.async { MainActor.assumeIsolated { NotchSwipes.shared.onSwipe?(motion) } }
     }
 
     fileprivate func handle(_ type: CGEventType, _ event: CGEvent) -> CGEvent? {
@@ -128,22 +136,19 @@ final class NotchSwipes: @unchecked Sendable {
             case Self.began:
                 // Decided once, where the swipe starts: on the open notch, it's the notch's.
                 tracking = CGEvent(source: nil).map { claims($0.location) } ?? false
-                fired = false
+                progress = 0
+                if tracking { tell(.began) }
                 return tracking ? nil : event
             case Self.changed where tracking:
-                let progress = event.getDoubleValueField(Self.progressField)
-                if !fired, progress != 0 {
-                    fired = true
-                    turn(right: Self.isRight(progress))
-                }
+                let now = event.getDoubleValueField(Self.progressField)
+                let moved = now - progress
+                progress = now
+                if moved != 0 { tell(.moved(CGFloat(Self.isRight(moved) ? abs(moved) : -abs(moved)))) }
                 return nil
             case Self.ended where tracking:
-                if !fired {
-                    let velocity = event.getDoubleValueField(Self.velocityXField)
-                    if velocity != 0 { turn(right: Self.isRight(velocity)) }
-                }
+                let velocity = event.getDoubleValueField(Self.velocityXField)
+                tell(.ended(flick: velocity == 0 ? nil : Self.isRight(velocity)))
                 tracking = false
-                fired = false
                 guard Self.isTwentySeven else { return nil }
                 // Its end, made still, so the Dock closes the swipe without moving anywhere.
                 event.setDoubleValueField(Self.velocityXField, value: 0)
@@ -151,6 +156,7 @@ final class NotchSwipes: @unchecked Sendable {
                 event.setDoubleValueField(Self.progressField, value: 0)
                 return event
             case Self.cancelled where tracking:
+                tell(.ended(flick: nil))
                 tracking = false
                 return nil
             default:
