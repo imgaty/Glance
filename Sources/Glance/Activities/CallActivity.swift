@@ -8,6 +8,7 @@
 import AVFoundation
 import AppKit
 import ApplicationServices
+import Combine
 import CoreAudio
 import SwiftUI
 
@@ -30,7 +31,6 @@ struct CallShown: Equatable {
     var phase: Phase
     /// Its popup shows a button to end it that Glance can press.
     var canEnd = false
-
     /// As an unknown caller shows, in a gray circle.
     var initial: String { name.first.map { String($0).uppercased() } ?? "" }
     var rings: Bool { phase == .ringing }
@@ -553,7 +553,8 @@ final class CallWatch: ObservableObject {
             let app = Self.appleApp(detail: popup.detail, phoneRunning: Self.phoneRunning)
             let name = popup.name ?? who ?? app.name
             if Self.connected(popup, microphone: microphone != nil) {
-                let started = Self.started(since, elapsed: popup.elapsed)
+                // Until its popup's time is settled, as near as can be known.
+                let started = popup.started ?? since ?? popup.elapsed.map { .now - TimeInterval($0) } ?? .now
                 since = started
                 show(CallShown(name: name, over: app.name, app: app.bundle, phase: .connected(since: started), canEnd: popup.red != nil))
             } else if popup.readable, popup.green != nil {
@@ -578,15 +579,6 @@ final class CallWatch: ObservableObject {
     /// microphone says so, as long as there's no button to accept it.
     nonisolated static func connected(_ popup: CallPopup, microphone: Bool) -> Bool {
         popup.elapsed != nil || (microphone && popup.green == nil)
-    }
-
-    /// When it started: by the time its popup shows, as soon as that's read and if it's any
-    /// different, so the two never disagree.
-    nonisolated static func started(_ known: Date?, elapsed: Int?, at now: Date = .now) -> Date {
-        guard let elapsed else { return known ?? now }
-        let shown = now - TimeInterval(elapsed)
-        if let known, abs(known.timeIntervalSince(shown)) < 2 { return known }
-        return shown
     }
 
     private static var phoneRunning: Bool {
@@ -637,7 +629,7 @@ final class CallWatch: ObservableObject {
 
     func decline() {
         Activities.shared.dismiss(.incomingCall)
-        CallBanners.shared.press(.red)
+        end()
     }
 
     /// Ends it, with the popup's own End button.
@@ -774,6 +766,8 @@ final class CallBanners {
     private var reading = false
     private var pressing = false
     private var readCarefully = false
+    private var mustRead = false
+    private var checkedAt: Date?
     private var askedForScreen = false
     private lazy var wave = CallPopupWave { bars in
         DispatchQueue.main.async { MainActor.assumeIsolated { CallVoices.shared.saw(bars) } }
@@ -839,8 +833,16 @@ final class CallBanners {
             popup = CallPopup()
             changed?(popup)
         }
-        // Once it's connected and read, there's nothing new to read until a button's pressed.
-        if popup?.readable != true || popup?.elapsed == nil { read() }
+        // macOS puts its window back by itself now and then.
+        if let home, let place = position(of: now.window), place == home {
+            self.home = nil
+            conceal()
+        }
+        // Once it's connected and read, there's nothing new to read until a button's pressed, but
+        // for checking its time now and then, in case the Mac slept.
+        if popup?.readable != true || popup?.elapsed == nil || mustRead || popup?.started == nil || checkedAt.map({ Date.now.timeIntervalSince($0) > 60 }) ?? true {
+            read()
+        }
     }
 
     private func findPopup() -> (banner: AXUIElement, window: AXUIElement)? {
@@ -855,8 +857,14 @@ final class CallBanners {
         return nil
     }
 
-    private func frame(of element: AXUIElement) -> CGRect? {
-        guard let value = SystemNotices.value(element, "AXFrame") else { return nil }
+    private func position(of element: AXUIElement) -> CGPoint? {
+        guard let value = SystemNotices.value(element, kAXPositionAttribute) else { return nil }
+        var place = CGPoint.zero
+        return AXValueGetValue(value as! AXValue, .cgPoint, &place) ? place : nil
+    }
+
+    private func frame(of element: AXUIElement?) -> CGRect? {
+        guard let element, let value = SystemNotices.value(element, "AXFrame") else { return nil }
         var rect = CGRect.zero
         return AXValueGetValue(value as! AXValue, .cgRect, &rect) ? rect : nil
     }
@@ -875,8 +883,36 @@ final class CallBanners {
         reading = true
         Task {
             await readNow(rect)
-            reading = false
+            mustRead = false
+            checkedAt = .now
             conceal()
+            await settleTime(rect)
+            reading = false
+        }
+    }
+
+    /// Its time only changes once a second, so it's read over and over until it does, which says
+    /// when it started to within a tenth of a second or so. It's done again if it's ever a second out.
+    private func settleTime(_ rect: CGRect) async {
+        guard let shown = popup?.elapsed else { return }
+        if let started = popup?.started, abs(Date.now.timeIntervalSince(started) - TimeInterval(shown)) < 1.5 { return }
+        guard let window = await CallPopupCamera.window() else { return }
+        var before = Date.now
+        var last = shown
+        let giveUp = Date.now.addingTimeInterval(3)
+        while Date.now < giveUp, found != nil, !pressing {
+            guard let current = frame(of: found?.banner), let image = await CallPopupCamera.picture(of: current, in: window) else { return }
+            let seen = await Task.detached(priority: .userInitiated) { CallPopup.read(image, accurate: false) }.value
+            let after = Date.now
+            guard let time = seen.elapsed else { continue }
+            if time != last {
+                popup?.detail = seen.detail
+                popup?.started = CallPopup.started(changedBetween: before, and: after, to: time)
+                changed?(popup)
+                return
+            }
+            last = time
+            before = after
         }
     }
 
@@ -902,6 +938,7 @@ final class CallBanners {
         var next = seen
         if readCarefully, let name = popup?.name { next.name = name }
         next.name = next.name ?? popup?.name
+        next.started = popup?.started
         guard next != popup else { return }
         popup = next
         changed?(next)
@@ -910,9 +947,7 @@ final class CallBanners {
     /// Out of sight, if the notch has everything it needs to stand in for it.
     private func conceal() {
         guard hides, !pressing, home == nil, popup?.readable == true, let found else { return }
-        guard let position = SystemNotices.value(found.window, kAXPositionAttribute), let size = frame(of: found.window)?.height else { return }
-        var place = CGPoint.zero
-        guard AXValueGetValue(position as! AXValue, .cgPoint, &place) else { return }
+        guard let place = position(of: found.window), let size = frame(of: found.window)?.height else { return }
         var away = CGPoint(x: place.x, y: place.y - size + 1)
         guard let value = AXValueCreate(.cgPoint, &away), AXUIElementSetAttributeValue(found.window, kAXPositionAttribute as CFString, value) == .success
         else { return }
@@ -939,6 +974,8 @@ final class CallBanners {
         found = nil
         popup = nil
         readCarefully = false
+        mustRead = false
+        checkedAt = nil
         changed?(nil)
     }
 
@@ -959,7 +996,7 @@ final class CallBanners {
             await Self.click(at: CGPoint(x: rect.minX + rect.width * spot.x, y: rect.minY + rect.height * spot.y))
             try? await Task.sleep(for: .milliseconds(300))
             // Answered, its buttons have moved, so it's read again before it hides.
-            popup?.detail = nil
+            mustRead = true
         }
     }
 

@@ -808,13 +808,10 @@ struct SystemBannersTests {
         #expect(CallPopup.elapsed(in: "Using Your iPhone") == nil)
         #expect(CallPopup.elapsed(in: "Calling...") == nil)
         #expect(CallPopup.elapsed(in: nil) == nil)
-        // The time shown decides when it started, unless that's already about right.
-        let now = Date(timeIntervalSinceReferenceDate: 1000)
-        #expect(CallWatch.started(nil, elapsed: 60, at: now) == now - 60)
-        #expect(CallWatch.started(now - 61, elapsed: 60, at: now) == now - 61)
-        #expect(CallWatch.started(now - 1, elapsed: 60, at: now) == now - 60)
-        #expect(CallWatch.started(now - 5, elapsed: nil, at: now) == now - 5)
-        #expect(CallWatch.started(nil, elapsed: nil, at: now) == now)
+        // Between the two readings either side of its changing.
+        let before = Date(timeIntervalSinceReferenceDate: 1000)
+        let started = CallPopup.started(changedBetween: before, and: before + 0.2, to: 60)
+        #expect(started == before + 0.1 - 60)
     }
 
     @Test("A call's connected once it shows a time, or uses the microphone with nothing left to accept")

@@ -21,6 +21,8 @@ struct CallPopup: Equatable {
     /// popup from its top left.
     var red: CGPoint?
     var green: CGPoint?
+    /// When its time started, worked out from the moment that time changed, so the notch's ticks with it.
+    var started: Date?
 
     /// How long it's been going, by the time it shows.
     var elapsed: Int? { Self.elapsed(in: detail) }
@@ -55,6 +57,11 @@ struct CallPopup: Equatable {
         let numbers = parts.compactMap { Int($0) }
         guard numbers.count == parts.count else { return nil }
         return numbers.reduce(0) { $0 * 60 + $1 }
+    }
+
+    /// When a time started, from two readings either side of its changing to a number of seconds.
+    nonisolated static func started(changedBetween before: Date, and after: Date, to seconds: Int) -> Date {
+        before.addingTimeInterval(after.timeIntervalSince(before) / 2 - TimeInterval(seconds))
     }
 
     /// The middle of the red and of the green button, among 8-bit pixels with four channels each,
