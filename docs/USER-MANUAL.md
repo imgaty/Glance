@@ -203,6 +203,9 @@ because Spotify doesn't offer them then.
 While the DJ talks, the cover becomes its green ring on blue, moving with its voice,
 the colors behind the player turn blue, and the times show `--:--`.
 
+To keep the left button as it is while the DJ plays, turn off `DJ button` in
+Customize Controls.
+
 ### Sound output and volume
 
 The `Sound Output` button opens a menu laid out like the Mac's Sound menu. At

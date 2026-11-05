@@ -22,6 +22,7 @@ struct ControlsSheet: View {
     @AppStorage(Preferences.musicLeftButton) private var left = PlayerSlot.favorite
     @AppStorage(Preferences.musicRightButton) private var right = PlayerSlot.output
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
+    @AppStorage(Preferences.musicDJButton) private var djButton = true
     @State private var places = ControlPlaces()
     /// Where the pointer is while a control is dragged.
     @State private var location = CGPoint.zero
@@ -61,19 +62,26 @@ struct ControlsSheet: View {
                         drag(control, from: nil)
                     }
                 }
+                Section {
+                    Toggle(isOn: $djButton) {
+                        Text("DJ button")
+                        Text("Shows in the left button's place while Spotify's DJ plays, to get different picks.")
+                    }
+                }
             }
             .formStyle(.grouped)
             .scrollDisabled(true)
             .scrollContentBackground(.hidden)
-            .frame(height: 136)
+            .frame(height: 212)
             HStack {
                 Button("Restore Defaults") {
                     withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.8)) {
                         left = ControlPlace.left.standard
                         right = ControlPlace.right.standard
+                        djButton = true
                     }
                 }
-                .disabled(left == ControlPlace.left.standard && right == ControlPlace.right.standard)
+                .disabled(left == ControlPlace.left.standard && right == ControlPlace.right.standard && djButton)
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)

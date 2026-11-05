@@ -29,6 +29,7 @@ struct NowPlayingView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.playerOnLight) private var onLight
     @Environment(\.playerKeys) private var keys
+    @AppStorage(Preferences.musicDJButton) private var djButton = true
     /// The way the Mac's language reads, outside the rows that always run left to right.
     @Environment(\.layoutDirection) private var reading
     /// The clock and the scrolling titles only move, and options are only read, while it shows.
@@ -102,7 +103,7 @@ struct NowPlayingView: View {
         .animation(.easeInOut(duration: 0.4), value: accentSource)
         .animation(.easeInOut(duration: 0.4), value: accentTimeline)
         .animation(.easeInOut(duration: 0.4), value: leftSlot)
-        .animation(.easeInOut(duration: 0.4), value: nowPlaying.djPlaying)
+        .animation(.easeInOut(duration: 0.4), value: showsDJ)
         .animation(.easeInOut(duration: 0.4), value: rightSlot)
         .animation(.easeInOut(duration: 0.3), value: nowPlaying.explicit)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -217,7 +218,7 @@ struct NowPlayingView: View {
             if let places {
                 ControlMark(place: .left, control: leftSlot, symbol: symbol(for: leftSlot), places: places)
                     .environment(\.layoutDirection, reading)
-            } else if nowPlaying.djPlaying {
+            } else if showsDJ {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
                 DJButton(talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
                     .keyRing(.left)
@@ -340,9 +341,12 @@ struct NowPlayingView: View {
 
     // MARK: The keyboard
 
+    /// Spotify's DJ has the left button, unless it's turned off in Customize Controls.
+    private var showsDJ: Bool { djButton && nowPlaying.djPlaying }
+
     /// Which of the sides is Sound Output, for the arrows to turn the sound up and down there.
     private var soundControl: PlayerControl? {
-        if leftSlot == .output, !nowPlaying.djPlaying { return .left }
+        if leftSlot == .output, !showsDJ { return .left }
         return rightSlot == .output ? .right : nil
     }
 
@@ -365,7 +369,7 @@ struct NowPlayingView: View {
         if lyricsControl.available { controls.append(.lyrics) }
         if keys?.hasLines == true { controls.append(.line) }
         if media, nowPlaying.duration > 0 { controls.append(.position) }
-        if nowPlaying.djPlaying || usable(leftSlot) { controls.append(.left) }
+        if showsDJ || usable(leftSlot) { controls.append(.left) }
         if media { controls += [.previous, .playPause, .next] }
         if usable(rightSlot) { controls.append(.right) }
         return controls
@@ -379,7 +383,7 @@ struct NowPlayingView: View {
         // The lines and an activity's buttons see to their own.
         case .line, .position, .activityFirst, .activitySecond: break
         case .left:
-            if nowPlaying.djPlaying { nowPlaying.openApp() } else { use(leftSlot, fromKeys: fromKeys) }
+            if showsDJ { nowPlaying.openApp() } else { use(leftSlot, fromKeys: fromKeys) }
         case .previous:
             skipsBack += 1
             nowPlaying.previous()
@@ -431,7 +435,7 @@ struct NowPlayingView: View {
         case .lyrics: lyricsControl.shown ? String(localized: "Hide Lyrics") : String(localized: "Show Lyrics")
         case .line: String(localized: "Lyrics")
         case .position: String(localized: "Track Position")
-        case .left: nowPlaying.djPlaying ? "DJ" : named(leftSlot)
+        case .left: showsDJ ? "DJ" : named(leftSlot)
         case .previous: String(localized: "Previous")
         case .playPause: nowPlaying.isPlaying ? String(localized: "Pause") : String(localized: "Play")
         case .next: String(localized: "Next")

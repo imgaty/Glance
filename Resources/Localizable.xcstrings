@@ -20009,6 +20009,214 @@
       "localizations": {},
       "shouldTranslate": false
     },
+    "DJ button": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "زر DJ"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botó del DJ"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tlačítko DJ"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ-knap"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ-Taste"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Κουμπί DJ"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botón del DJ"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ-painike"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bouton DJ"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כפתור DJ"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ बटन"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipka DJ"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ gomb"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tombol DJ"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsante DJ"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJボタン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ 버튼"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Butang DJ"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ-knapp"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ-knop"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przycisk DJ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botão do DJ"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botão do DJ"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buton DJ"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кнопка DJ"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tlačidlo DJ"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gumb DJ"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ-knapp"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ปุ่ม DJ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ düğmesi"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кнопка DJ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nút DJ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ 按钮"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DJ 按鈕"
+          }
+        }
+      }
+    },
     "Delete": {
       "localizations": {
         "ar": {
@@ -55191,6 +55399,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示透過 AirDrop 傳入和傳出的檔案及其進度。"
+          }
+        }
+      }
+    },
+    "Shows in the left button's place while Spotify's DJ plays, to get different picks.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يظهر مكان الزر الأيسر أثناء تشغيل DJ في Spotify، للحصول على اختيارات مختلفة."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apareix al lloc del botó esquerre mentre sona el DJ de Spotify, per obtenir altres seleccions."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobrazuje se místo levého tlačítka, když hraje DJ ve Spotify, a nabízí jiný výběr."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vises i stedet for venstre knap, mens Spotifys DJ spiller, så du kan få andre valg."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheint anstelle der linken Taste, während Spotifys DJ spielt, für eine andere Auswahl."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εμφανίζεται στη θέση του αριστερού κουμπιού όσο παίζει το DJ του Spotify, για διαφορετικές επιλογές."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparece en lugar del botón izquierdo mientras suena el DJ de Spotify, para obtener otras selecciones."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näkyy vasemman painikkeen paikalla, kun Spotifyn DJ soittaa, ja hakee muita valintoja."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S’affiche à la place du bouton gauche pendant que le DJ de Spotify joue, pour obtenir d’autres choix."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מופיע במקום הכפתור השמאלי בזמן שה-DJ של Spotify מנגן, כדי לקבל בחירות אחרות."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotify का DJ चलने के दौरान बाएँ बटन की जगह दिखता है, ताकि आप अलग चयन पा सकें।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prikazuje se umjesto lijeve tipke dok svira Spotifyjev DJ, za druge odabire."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A bal oldali gomb helyén jelenik meg, amíg a Spotify DJ-je játszik, hogy más válogatást kérhess."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tampil di tempat tombol kiri saat DJ Spotify diputar, untuk mendapatkan pilihan lain."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appare al posto del pulsante sinistro mentre suona il DJ di Spotify, per ottenere altre scelte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SpotifyのDJが再生中、左のボタンの位置に表示され、別の選曲を頼めます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotify DJ가 재생되는 동안 왼쪽 버튼 자리에 표시되어 다른 선곡을 받을 수 있습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dipaparkan di tempat butang kiri semasa DJ Spotify dimainkan, untuk mendapatkan pilihan lain."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vises i stedet for venstre knapp mens Spotifys DJ spiller, så du kan få andre valg."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschijnt op de plaats van de linkerknop terwijl de DJ van Spotify speelt, voor andere keuzes."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pojawia się w miejscu lewego przycisku, gdy gra DJ w Spotify, aby uzyskać inny wybór."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparece no lugar do botão esquerdo enquanto o DJ do Spotify toca, para obter outras escolhas."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparece no lugar do botão esquerdo enquanto o DJ do Spotify toca, para obter outras escolhas."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apare în locul butonului din stânga cât timp cântă DJ-ul Spotify, pentru a obține alte alegeri."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Появляется вместо левой кнопки, пока играет DJ в Spotify, чтобы получить другой выбор."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobrazuje sa namiesto ľavého tlačidla, keď hrá DJ v Spotify, a ponúka iný výber."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prikaže se namesto levega gumba, medtem ko igra DJ v Spotifyju, za drug izbor."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visas i stället för vänster knapp medan Spotifys DJ spelar, så att du kan få andra val."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แสดงแทนปุ่มด้านซ้ายขณะที่ DJ ของ Spotify เล่น เพื่อรับตัวเลือกอื่น"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotify'ın DJ'i çalarken sol düğmenin yerinde görünür ve farklı seçimler almanızı sağlar."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "З'являється замість лівої кнопки, поки грає DJ у Spotify, щоб отримати інший вибір."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện ở vị trí nút bên trái khi DJ của Spotify phát, để nhận lựa chọn khác."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotify 的 DJ 播放时显示在左侧按钮的位置，可让它换一批选曲。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotify 的 DJ 播放時顯示在左側按鈕的位置，可讓它換一批選曲。"
           }
         }
       }

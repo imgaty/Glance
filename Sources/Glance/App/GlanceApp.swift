@@ -216,6 +216,7 @@ enum Preferences {
             swipeToSkip: true,
             lyrics: true,
             musicLayout: PlayerLayout.top.rawValue,
+            musicDJButton: true,
             openTrigger: OpenTrigger.both.rawValue,
             hoverDelay: 0.2,
             clickDelay: 0.0,
@@ -256,6 +257,7 @@ enum Preferences {
     /// waveform opens the lyrics.
     static let musicLeftButton = "musicLeftButton"
     static let musicRightButton = "musicRightButton"
+    static let musicDJButton = "musicDJButton"
     /// Lyrics, anywhere in the app: from the waveform, a lyrics button, and their lookups.
     static let lyrics = "lyrics"
     static let liveActivity = "liveActivity"
