@@ -20,6 +20,10 @@ final class ActivityBench {
 
     enum Scene: String, CaseIterable {
         case music, airdrop, airdropSend, timer, stopwatch, airplay, call, charging, lowBattery, headphones, deviceBattery, caseBattery
+        /// A call in one state, held for the round: coming in, swiped away while it rings, going out,
+        /// going on, with someone whose name is too long and for over an hour, with a number, in an app
+        /// that says nothing about it, and with nothing read from macOS's popup.
+        case callRinging, callSwiped, callOutgoing, callOngoing, callLong, callNumber, callOtherApp, callUnread
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
         /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
@@ -64,6 +68,7 @@ final class ActivityBench {
     /// What was stopped, from its own button or swiped away, each till its next round.
     private var ended: Set<NotchModel.Activity> = []
     private var runs: [Task<Void, Never>] = []
+    private var callAnswered = false
 
     /// Everything off but what's tried, unsaved.
     func isolate() {
@@ -119,6 +124,7 @@ final class ActivityBench {
         case .stopwatch: await stopwatch()
         case .airplay: await airPlay()
         case .call: await call()
+        case .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread: await callState(scene)
         case .charging: await announce(Self.charging(), every: 6)
         case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
@@ -190,17 +196,77 @@ final class ActivityBench {
     }
 
     /// The sound on one speaker after another, a round each.
-    /// A call made up: coming in, then going on, then over; again and again.
+    /// A call made up: coming in, then going on, then over; again and again. Its buttons do as they
+    /// would: Accept answers it at once, Decline and End finish it.
     private func call() async {
         let watch = CallWatch.shared
         while !Task.isCancelled {
-            watch.bench(CallShown(name: "Alex Morgan", over: "FaceTime", app: "com.apple.FaceTime", phase: .ringing))
-            await wait(8)
-            watch.bench(CallShown(name: "Alex Morgan", over: "FaceTime", app: "com.apple.FaceTime", phase: .connected(since: .now)))
-            await round(of: .call)
+            ended.remove(.call)
+            callAnswered = false
+            watch.bench(Self.madeUpCall(.ringing))
+            let answer = Date.now + 8
+            while !ended.contains(.call), !callAnswered, Date.now < answer, !Task.isCancelled { await wait(0.2) }
+            if !ended.contains(.call) {
+                Activities.shared.dismiss(.incomingCall)
+                watch.bench(Self.madeUpCall(.connected(since: .now), canEnd: true))
+                await round(of: .call)
+            }
             watch.bench(nil)
             await wait(2)
         }
+    }
+
+    /// One state of a call, held for the round. Coming in, Accept moves on to going on.
+    private func callState(_ scene: Scene) async {
+        let watch = CallWatch.shared
+        while !Task.isCancelled {
+            ended.remove(.call)
+            callAnswered = false
+            switch scene {
+            case .callRinging:
+                watch.bench(Self.madeUpCall(.ringing))
+                let end = Date.now + length
+                while !ended.contains(.call), !callAnswered, Date.now < end, !Task.isCancelled { await wait(0.2) }
+                if callAnswered {
+                    watch.bench(Self.madeUpCall(.connected(since: .now), canEnd: true))
+                    await round(of: .call)
+                }
+            case .callSwiped:
+                watch.bench(Self.madeUpCall(.ringing))
+                Activities.shared.dismiss(.incomingCall)
+                await round(of: .call)
+            case .callOutgoing:
+                watch.bench(Self.madeUpCall(.calling, canEnd: true))
+                await round(of: .call)
+            case .callOngoing:
+                watch.bench(Self.madeUpCall(.connected(since: .now), canEnd: true))
+                await round(of: .call)
+            case .callLong:
+                watch.bench(Self.madeUpCall(.connected(since: .now - 3_725), canEnd: true, name: "Alexandra Montgomery-Fitzgerald"))
+                await round(of: .call)
+            case .callNumber:
+                watch.bench(Self.madeUpCall(.connected(since: .now), canEnd: true, name: "+351 912 345 678"))
+                await round(of: .call)
+            case .callOtherApp:
+                watch.bench(CallShown(name: "Zoom", over: "Zoom", app: "us.zoom.xos", phase: .connected(since: .now)))
+                await round(of: .call)
+            case .callUnread:
+                watch.bench(CallShown(name: "Phone", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now)))
+                await round(of: .call)
+            default: return
+            }
+            watch.bench(nil)
+            await wait(2)
+        }
+    }
+
+    private static func madeUpCall(_ phase: CallShown.Phase, canEnd: Bool = false, name: String = "Alex Morgan") -> CallShown {
+        CallShown(name: name, over: "Phone", app: CallAudio.phone, phase: phase, canEnd: canEnd, line: phase == .ringing ? "mobile" : nil)
+    }
+
+    /// A made-up call's Accept was pressed.
+    func answered() {
+        callAnswered = true
     }
 
     private func airPlay() async {

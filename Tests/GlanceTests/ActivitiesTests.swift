@@ -846,6 +846,13 @@ struct SystemBannersTests {
         #expect(initials("") == "")
     }
 
+    @Test("Every state of a call can be tried on its own, each by its name")
+    func callScenes() {
+        for name in ["call", "callRinging", "callSwiped", "callOutgoing", "callOngoing", "callLong", "callNumber", "callOtherApp", "callUnread"] {
+            #expect(ActivityBench.parse(["Glance", "--bench", name])?.scenes.first?.rawValue == name)
+        }
+    }
+
     @Test("Calling apps are known by their bundle IDs, their helpers too")
     func callApps() {
         #expect(CallAudio.callApp(of: "us.zoom.xos")?.name == "Zoom")

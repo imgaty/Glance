@@ -709,6 +709,7 @@ final class CallWatch: ObservableObject {
 
     func accept() {
         Activities.shared.dismiss(.incomingCall)
+        guard ActivityBench.scene == nil else { return ActivityBench.shared.answered() }
         CallBanners.shared.press(.green)
     }
 
@@ -719,11 +720,13 @@ final class CallWatch: ObservableObject {
 
     /// Ends it, with the popup's own End button.
     func end() {
+        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped(.call) }
         CallBanners.shared.press(.red)
     }
 
     /// To the call, in its app.
     func goToApp() {
+        guard ActivityBench.scene == nil else { return }
         let bundle = call?.app ?? CallAudio.faceTime
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
