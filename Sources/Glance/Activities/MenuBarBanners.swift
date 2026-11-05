@@ -8,10 +8,11 @@
 import AppKit
 import ApplicationServices
 
-/// macOS's banner under the menu bar for AirPods, which Control Center shows in a window of the menu
-/// bar's own app and no setting turns off. It's taken off the screen the moment it's made, where the
-/// notch says the same, through Accessibility; without it, or for a device the notch doesn't show,
-/// it shows as before. The menu bar tells of
+/// macOS's banners under the menu bar, for AirPods, other accessories and a low battery, which Control
+/// Center shows in windows of the menu bar's own app and no setting turns off. They're taken off the
+/// screen the moment they're made, where the notch says the same, through Accessibility; without
+/// it, or for a device the notch doesn't show, they show as before. Its others, for the volume, the
+/// brightness, Focus and listening modes, have nothing to do with the notch. The menu bar tells of
 /// the window as it's made, on a thread of its own here: its first frames are a matter of
 /// milliseconds, and the main thread may be drawing.
 final class MenuBarBanners: @unchecked Sendable {
@@ -19,15 +20,33 @@ final class MenuBarBanners: @unchecked Sendable {
 
     /// The menu bar's own app.
     private static let menuBarAgent = "com.apple.MenuBarAgent"
-    /// The banner, by the name Accessibility knows it by: AirPods connecting, running low, or
-    /// offering the sound back from another device.
-    private static let airPodsBanner = "smart-routing-system-banner"
+    /// What the notch does with a banner, by the name Accessibility knows it by.
+    enum Banner: Equatable {
+        /// AirPods or another accessory connecting, running low, or offering the sound back from
+        /// another device: it depends what it says, and on the device.
+        case device
+        case lowBattery
+
+        init?(identifier: String?) {
+            guard let identifier else { return nil }
+            if identifier == "smart-routing-system-banner" || identifier.hasPrefix("accessory-system-banner-") {
+                self = .device
+            } else if identifier == "low-battery-system-banner" {
+                self = .lowBattery
+            } else {
+                return nil
+            }
+        }
+    }
+
     /// Past any arrangement of displays.
     private static let away = CGPoint(x: -20000, y: -20000)
 
     private let lock = NSLock()
     private var wokeAt = Date.distantPast
     private var shown: (@MainActor @Sendable () -> Void)?
+    /// macOS has just said the battery's low, in a banner.
+    private var saidLowBattery: (@MainActor @Sendable () -> Void)?
 
     // The thread's own, from here on.
     private var app: AXUIElement?
@@ -56,6 +75,12 @@ final class MenuBarBanners: @unchecked Sendable {
     /// Starts following the menu bar. `shown` is called for each banner, shown or not.
     func watch(shown: @escaping @MainActor @Sendable () -> Void) {
         lock.withLock { self.shown = shown }
+        follow()
+    }
+
+    /// Told when macOS says the battery's low, for the notch to say so if it hasn't.
+    func watchLowBattery(_ said: @escaping @MainActor @Sendable () -> Void) {
+        lock.withLock { saidLowBattery = said }
         follow()
     }
 
@@ -98,12 +123,21 @@ final class MenuBarBanners: @unchecked Sendable {
             var found: CFArray?
             let names = ["AXIdentifier", kAXPositionAttribute] as CFArray
             guard AXUIElementCopyMultipleAttributeValues(window, names, [], &found) == .success,
-                let values = found as? [AnyObject], values.count == 2, values[0] as? String == Self.airPodsBanner
+                let values = found as? [AnyObject], values.count == 2, let banner = Banner(identifier: values[0] as? String)
             else { continue }
             last = window
-            if hides { take(window, backTo: values[1]) }
-            let shown = lock.withLock { self.shown }
-            DispatchQueue.main.async { MainActor.assumeIsolated { shown?() } }
+            switch banner {
+            case .device:
+                if hides { take(window, backTo: values[1]) }
+                let shown = lock.withLock { self.shown }
+                DispatchQueue.main.async { MainActor.assumeIsolated { shown?() } }
+            case .lowBattery:
+                guard hidesLowBattery else { continue }
+                var point = Self.away
+                if let away = AXValueCreate(.cgPoint, &point) { AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, away) }
+                let said = lock.withLock { saidLowBattery }
+                DispatchQueue.main.async { MainActor.assumeIsolated { said?() } }
+            }
         }
     }
 
@@ -112,6 +146,11 @@ final class MenuBarBanners: @unchecked Sendable {
         // At the bench, devices are off, but what's tried isn't to be talked over.
         let devices = defaults.bool(forKey: Preferences.activityDevices) || ActivityBench.scene != nil
         return defaults.bool(forKey: Preferences.notchEnabled) && devices && lock.withLock { Date.now.timeIntervalSince(wokeAt) >= 10 }
+    }
+
+    private var hidesLowBattery: Bool {
+        let defaults = UserDefaults.standard
+        return defaults.bool(forKey: Preferences.notchEnabled) && (defaults.bool(forKey: Preferences.activityLowBattery) || ActivityBench.scene != nil)
     }
 
     /// Taken away before there's anything to read in it, and put back unless it turns out to be one

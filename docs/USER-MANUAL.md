@@ -375,8 +375,8 @@ top of the screen for a device connecting or running low is hidden while the
 notch says the same. With `Accessibility` allowed, so is its banner under the
 menu bar for AirPods connecting or running low, and AirPods' own notification
 that they need charging is taken away.
-With `Accessibility` allowed, macOS's own Low Battery notification is taken away
-as it shows, since the notch says so.
+With `Accessibility` allowed, macOS's own Low Battery notification and banner
+are taken away as it shows, since the notch says so.
 
 What's connected when Glance starts, or reconnects as the Mac wakes, isn't
 announced. With the pointer on the notch, an announcement stays, and the notch

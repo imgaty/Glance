@@ -730,19 +730,16 @@ enum CallAudio {
 /// Center's window, for the whole of the call. Accessibility finds it but can't see into it, so
 /// it's read from its picture (see `CallPopup`), and its buttons are clicked where they show.
 ///
-/// Once the notch can offer the same, that window is moved up until only its last row of points is
-/// on screen, which has nothing in it: the popup's out of sight and can still be read. Until then,
-/// or without Screen Recording, it's left alone. Every other notification hides with it, until the
-/// call's over. Without Accessibility, nothing's found and it shows as before.
+/// Once the notch can offer the same, that window is held out of sight (see `NotificationWindow`).
+/// Until then, or without Screen Recording, it's left alone. Without Accessibility, nothing's found
+/// and it shows as before.
 @MainActor
 final class CallBanners {
     static let shared = CallBanners()
 
-    static let center = "com.apple.notificationcenterui"
+    static let center = NotificationWindow.center
     /// The process drawing the popup, which runs only around a call.
     private static let popupProcess = "com.apple.FaceTime.FaceTimeNotificationExtension"
-    /// Where the window belongs while it's moved, kept in case Glance doesn't get to put it back.
-    private static let homeKey = "callPopupWindowHome"
 
     enum Button {
         case red, green
@@ -752,7 +749,7 @@ final class CallBanners {
     var hides = true {
         didSet {
             guard hides != oldValue, !hides else { return }
-            reveal()
+            NotificationWindow.shared.letGo(.call)
             scan()
         }
     }
@@ -762,7 +759,6 @@ final class CallBanners {
     private var timer: Timer?
     private var found: (banner: AXUIElement, window: AXUIElement)?
     private var popup: CallPopup?
-    private var home: CGPoint?
     private var reading = false
     private var pressing = false
     private var readCarefully = false
@@ -779,10 +775,7 @@ final class CallBanners {
             let pid = NSRunningApplication.runningApplications(withBundleIdentifier: Self.center).first?.processIdentifier
         else { return }
         if timer == nil {
-            putBackLeftOver(in: pid)
-            NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated { CallBanners.shared.reveal() }
-            }
+            NotificationWindow.shared.start()
             let made = Timer(timeInterval: 1, repeats: true) { _ in
                 MainActor.assumeIsolated { CallBanners.shared.scan() }
             }
@@ -792,28 +785,25 @@ final class CallBanners {
         }
         guard pid != centerPID else { return }
         var made: AXObserver?
+        // Anything Notification Center shows: a call's popup, or something the notch says already.
         let told: AXObserverCallback = { _, _, _, _ in
-            DispatchQueue.main.async { MainActor.assumeIsolated { CallBanners.shared.scan() } }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    NotificationWindow.shared.check()
+                    SystemNotices.sweep()
+                    CallBanners.shared.scan()
+                }
+            }
         }
         guard AXObserverCreate(pid, told, &made) == .success, let made else { return }
         if let observer { CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode) }
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.5)
+        AXObserverAddNotification(made, app, kAXWindowCreatedNotification as CFString, nil)
         AXObserverAddNotification(made, app, kAXCreatedNotification as CFString, nil)
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(made), .defaultMode)
         centerPID = pid
         observer = made
-    }
-
-    /// If Glance stopped with the window moved, it goes back, or no notification would ever show.
-    private func putBackLeftOver(in pid: pid_t) {
-        guard let left = UserDefaults.standard.string(forKey: Self.homeKey) else { return }
-        let app = AXUIElementCreateApplication(pid)
-        var place = NSPointFromString(left)
-        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-            if let back = AXValueCreate(.cgPoint, &place) { AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, back) }
-        }
-        UserDefaults.standard.removeObject(forKey: Self.homeKey)
     }
 
     private func scan() {
@@ -833,11 +823,6 @@ final class CallBanners {
             popup = CallPopup()
             changed?(popup)
         }
-        // macOS puts its window back by itself now and then.
-        if let home, let place = position(of: now.window), place == home {
-            self.home = nil
-            conceal()
-        }
         // Once it's connected and read, there's nothing new to read until a button's pressed, but
         // for checking its time now and then, in case the Mac slept.
         if popup?.readable != true || popup?.elapsed == nil || mustRead || popup?.started == nil || checkedAt.map({ Date.now.timeIntervalSince($0) > 60 }) ?? true {
@@ -855,12 +840,6 @@ final class CallBanners {
             if let banner = banners.first { return (banner, window) }
         }
         return nil
-    }
-
-    private func position(of element: AXUIElement) -> CGPoint? {
-        guard let value = SystemNotices.value(element, kAXPositionAttribute) else { return nil }
-        var place = CGPoint.zero
-        return AXValueGetValue(value as! AXValue, .cgPoint, &place) ? place : nil
     }
 
     private func frame(of element: AXUIElement?) -> CGRect? {
@@ -946,13 +925,8 @@ final class CallBanners {
 
     /// Out of sight, if the notch has everything it needs to stand in for it.
     private func conceal() {
-        guard hides, !pressing, home == nil, popup?.readable == true, let found else { return }
-        guard let place = position(of: found.window), let size = frame(of: found.window)?.height else { return }
-        var away = CGPoint(x: place.x, y: place.y - size + 1)
-        guard let value = AXValueCreate(.cgPoint, &away), AXUIElementSetAttributeValue(found.window, kAXPositionAttribute as CFString, value) == .success
-        else { return }
-        home = place
-        UserDefaults.standard.set(NSStringFromPoint(place), forKey: Self.homeKey)
+        guard hides, !pressing, popup?.readable == true, let found else { return }
+        NotificationWindow.shared.hold(.call)
         guard !wave.running, let rect = frame(of: found.banner) else { return }
         Task {
             guard let window = await CallPopupCamera.window() else { return }
@@ -960,17 +934,10 @@ final class CallBanners {
         }
     }
 
-    private func reveal() {
-        guard var place = home, let window = found?.window, let back = AXValueCreate(.cgPoint, &place) else { return }
-        AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, back)
-        home = nil
-        UserDefaults.standard.removeObject(forKey: Self.homeKey)
-    }
-
     /// It's gone: Notification Center's window goes back where it was, for every notification after.
     private func give() {
         wave.stop()
-        reveal()
+        NotificationWindow.shared.letGo(.call)
         found = nil
         popup = nil
         readCarefully = false
@@ -989,7 +956,8 @@ final class CallBanners {
             defer { pressing = false }
             if let rect = frame(of: found.banner) { await readNow(rect) }
             let spot = button == .green ? popup?.green : popup?.red
-            reveal()
+            NotificationWindow.shared.letGo(.call)
+            NotificationWindow.shared.bringBack()
             guard let spot else { return }
             try? await Task.sleep(for: .milliseconds(120))
             guard let rect = frame(of: found.banner) else { return }

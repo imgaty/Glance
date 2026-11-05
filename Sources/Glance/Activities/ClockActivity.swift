@@ -31,7 +31,16 @@ final class ClockActivity: ObservableObject {
     @Published private(set) var timerTitle: String?
     @Published private(set) var stopwatch: Stopwatch?
     /// The timer that rang last, while it says so, to start it again, and when it rang.
-    @Published private(set) var rang: (length: TimeInterval, title: String?, date: Date)?
+    /// Its alert stays out of sight for as long as the notch says it's rung, to be answered from there.
+    @Published private(set) var rang: (length: TimeInterval, title: String?, date: Date)? {
+        didSet {
+            if rang != nil, ActivityBench.scene == nil, UserDefaults.standard.bool(forKey: Preferences.notchEnabled) {
+                NotificationWindow.shared.hold(.timer)
+            } else if rang == nil {
+                NotificationWindow.shared.letGo(.timer)
+            }
+        }
+    }
     /// Rung in place of macOS's alert, when it's taken away.
     private let chime = TimerChime()
     /// When the timer whose alert Glance stopped, to ring itself, rang: macOS notes it as answered.

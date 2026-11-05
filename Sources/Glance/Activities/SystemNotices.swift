@@ -12,7 +12,8 @@ import ApplicationServices
 /// Accessibility, to be answered or taken away as they show, so nothing is said twice: Clock's
 /// alert for a timer that's done, Control Center's Low Battery, and AirPods' own when they run low;
 /// and Bluetooth's banner at the top of the screen for a device connecting or running low, hidden
-/// (see `MenuBarBanners` for AirPods' banner). macOS's settings for them stay as they are; without
+/// (see `MenuBarBanners` for the banners under the menu bar, and `NotificationWindow` for what's
+/// kept out of sight while it's answered). macOS's settings for them stay as they are; without
 /// Accessibility, they show as before.
 @MainActor
 enum SystemNotices {
@@ -67,6 +68,37 @@ enum SystemNotices {
             }
         }
     }
+
+    /// Takes away everything showing from an app.
+    static func closeAll(from app: String) {
+        for notification in showing(from: app) { press("Close", fromEnd: 1, on: notification) }
+    }
+
+    /// Takes away, the moment Notification Center shows them, those of its notifications that only say
+    /// what the notch says: Control Center's Low Battery, and AirPods wanting to be charged. Each
+    /// activity's own setting decides, and macOS's settings for them stay as they are.
+    static func sweep() {
+        let defaults = UserDefaults.standard
+        guard AXIsProcessTrusted(), defaults.bool(forKey: Preferences.notchEnabled) else { return }
+        if defaults.bool(forKey: Preferences.activityLowBattery) { sweep(sayings: lowBatterySaying) }
+        if defaults.bool(forKey: Preferences.activityDevices) { sweep(sayings: airPodsSaying) }
+    }
+
+    private static func sweep(sayings: (app: String, words: String)) {
+        let found = showing(from: sayings.app).first { Self.words(of: $0).localizedCaseInsensitiveContains(sayings.words) }
+        if let found { press("Close", fromEnd: 1, on: found) }
+    }
+
+    private static let lowBatterySaying: (app: String, words: String) = {
+        let center = URL(fileURLWithPath: "/System/Library/CoreServices/ControlCenter.app")
+        return (name(of: center), words("Low Battery", table: "Battery", of: center))
+    }()
+
+    private static let airPodsSaying: (app: String, words: String) = {
+        let bundle = URL(fileURLWithPath: "/System/Library/UserNotifications/Bundles/com.apple.AudioAccessoryUserNotification.bundle")
+        let app = Bundle(url: bundle)?.localizedInfoDictionary?["CFBundleDisplayName"] as? String ?? "AirPods"
+        return (app, words("CHARGING_REMINDER_TITLE", table: "Localizable", of: bundle))
+    }()
 
     /// Bluetooth's banners for devices, at the top of the screen: an app of their own, started for
     /// each while it shows.

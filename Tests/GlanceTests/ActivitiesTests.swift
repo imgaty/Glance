@@ -777,6 +777,23 @@ struct SystemBannersTests {
         #expect(CallVoices.running(&yours, &theirs, yours: 3, theirs: 3) == [0.5, 1, 1, 0.9])
     }
 
+    @Test("macOS's banners that say what the notch says are told from the rest, by their names")
+    func systemBanners() {
+        #expect(MenuBarBanners.Banner(identifier: "low-battery-system-banner") == .lowBattery)
+        #expect(MenuBarBanners.Banner(identifier: "smart-routing-system-banner") == .device)
+        #expect(MenuBarBanners.Banner(identifier: "accessory-system-banner-keyboard") == .device)
+        for other in ["volume-system-banner", "display-brightness-system-banner", "focus-system-banner", "listening-mode-system-banner"] {
+            #expect(MenuBarBanners.Banner(identifier: other) == nil)
+        }
+        #expect(MenuBarBanners.Banner(identifier: nil) == nil)
+    }
+
+    @Test("Notification Center's window keeps one row of points on screen while it's held")
+    func notificationWindowAway() {
+        #expect(NotificationWindow.away(from: .zero, height: 982) == CGPoint(x: 0, y: -981))
+        #expect(NotificationWindow.away(from: CGPoint(x: 1512, y: -300), height: 1080) == CGPoint(x: 1512, y: -1379))
+    }
+
     @Test("Calling apps are known by their bundle IDs, their helpers too")
     func callApps() {
         #expect(CallAudio.callApp(of: "us.zoom.xos")?.name == "Zoom")

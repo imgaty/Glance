@@ -50,6 +50,16 @@ final class BatteryWatch {
         notify_register_dispatch(kIOPSNotifyLowBattery, &warningToken, .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.warned() }
         }
+        MenuBarBanners.shared.watchLowBattery { [weak self] in self?.bannerSaidLow() }
+    }
+
+    /// macOS's banner has gone, out of sight: the notch says so, unless it just has.
+    private func bannerSaidLow() {
+        guard let now = Self.read(), !now.onPower, UserDefaults.standard.bool(forKey: Preferences.activityLowBattery) else { return }
+        if saidLow.map({ Date.now.timeIntervalSince($0) > 120 }) ?? true {
+            saidLow = .now
+            Activities.shared.post(Self.lowBattery(now))
+        }
     }
 
     private func changed() {

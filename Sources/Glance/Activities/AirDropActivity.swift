@@ -41,6 +41,7 @@ final class AirDropWatch: NSObject, ObservableObject {
     private var previews: [String: NSImage] = [:]
     private var ticker: Timer?
     private var finishing: Task<Void, Never>?
+    private var lettingGo: Task<Void, Never>?
     private let sends = AirDropSendWatch()
     /// What's going out, which shows when nothing's coming in.
     private var outgoing: AirDropShown?
@@ -82,6 +83,26 @@ final class AirDropWatch: NSObject, ObservableObject {
     /// What's shown at the bench (see `ActivityBench`).
     func bench(_ fake: AirDropShown?) {
         transfer = fake
+    }
+
+    /// macOS's own notice for a file coming in stays out of sight while the notch shows it, and for a
+    /// moment after, when macOS says it's in. What's waiting to be accepted isn't shown here, so its
+    /// notice stays, to be accepted.
+    private func hideNotice() {
+        guard ActivityBench.scene == nil else { return }
+        if let transfer, !transfer.sending {
+            lettingGo?.cancel()
+            lettingGo = nil
+            NotificationWindow.shared.hold(.airDrop)
+        } else if lettingGo == nil {
+            lettingGo = Task {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                SystemNotices.closeAll(from: "AirDrop")
+                NotificationWindow.shared.letGo(.airDrop)
+                self.lettingGo = nil
+            }
+        }
     }
 
     /// Stops the one showing, as its notice's Cancel does.
@@ -126,6 +147,7 @@ final class AirDropWatch: NSObject, ObservableObject {
         } else if next != transfer {
             transfer = next
         }
+        hideNotice()
         // Its progress read a few times a second while it comes in; macOS says less often.
         if let transfer, !transfer.sending, ticker == nil {
             let ticker = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.refresh() } }
