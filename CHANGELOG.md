@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 4 November 2026`
+`Created: 11 October 2026` | `Last updated: 5 November 2026`
 
 <br>
 
@@ -274,7 +274,8 @@
 
 - Added Glance's icon in the Dock and in Finder, in layers, so it takes on each
   icon style chosen in Appearance settings, clear included.
-- Changed the menu bar icon to the app icon's shapes.
+- Changed the menu bar icon to the app icon's shapes, nearly square, its outline
+  as thin as those of the Mac's own symbols.
 - Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
   it while its menu is open.
 - Added the keyboard to the player opened with a shortcut: Tab and Shift-Tab go
