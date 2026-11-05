@@ -19,7 +19,7 @@ final class ActivityBench {
     static let shared = ActivityBench()
 
     enum Scene: String, CaseIterable {
-        case music, airdrop, airdropSend, timer, stopwatch, airplay, charging, lowBattery, headphones, deviceBattery, caseBattery
+        case music, airdrop, airdropSend, timer, stopwatch, airplay, call, charging, lowBattery, headphones, deviceBattery, caseBattery
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
         /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
@@ -118,6 +118,7 @@ final class ActivityBench {
         case .timer: await timer()
         case .stopwatch: await stopwatch()
         case .airplay: await airPlay()
+        case .call: await call()
         case .charging: await announce(Self.charging(), every: 6)
         case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
@@ -189,6 +190,19 @@ final class ActivityBench {
     }
 
     /// The sound on one speaker after another, a round each.
+    /// A call made up: coming in, then going on, then over; again and again.
+    private func call() async {
+        let watch = CallWatch.shared
+        while !Task.isCancelled {
+            watch.bench(CallShown(name: "Alex Morgan", over: "FaceTime", app: "com.apple.FaceTime", phase: .ringing))
+            await wait(8)
+            watch.bench(CallShown(name: "Alex Morgan", over: "FaceTime", app: "com.apple.FaceTime", phase: .connected(since: .now)))
+            await round(of: .call)
+            watch.bench(nil)
+            await wait(2)
+        }
+    }
+
     private func airPlay() async {
         let watch = AirPlayWatch.shared
         var index = 0

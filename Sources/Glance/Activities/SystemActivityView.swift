@@ -30,6 +30,8 @@ struct SystemActivityView: View {
     var route: AirPlayRoute? = nil
     /// A file coming in over AirDrop, when that has the notch.
     var airdrop: AirDropShown? = nil
+    /// A call, when that has the notch.
+    var call: CallShown? = nil
     /// The timer's name, as VoiceOver says it.
     var timerName = String(localized: "Timer")
     /// Another activity is detached: the trailing wing is folded away, and what's on it hidden, or it
@@ -64,7 +66,20 @@ struct SystemActivityView: View {
         let shownRoute = shownAlert == nil && shownClock == nil && shownAirDrop == nil ? route ?? leavingRoute : nil
         let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight)
         ZStack {
-            if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
+            if let alert = shownAlert, case .incomingCall(let call) = alert.content {
+                IncomingCallView(call: call, restingHeight: restingHeight, hovered: hoveredButton)
+                    .islandFade(self.alert != nil)
+                    .id(alert.id)
+                    .transition(IslandMotion.fade)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(alert.spoken)
+            } else if shownAlert == nil, let call {
+                CallMark(call: call, restingHeight: restingHeight)
+                    .modifier(GrownAway(grown: grown))
+                    .transition(IslandMotion.fade)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction(.default, open)
+            } else if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
                 TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
                     .islandFade(self.alert != nil)
                     .id(alert.id)
@@ -259,8 +274,8 @@ struct SystemActivityView: View {
                 .lineLimit(1)
         case .status(let symbol, let tint, _):
             ArrivingSymbol(symbol: symbol, color: tint, size: size + 2, side: side)
-        // Laid out on their own (see `TimerDoneView` and `LowBatteryView`).
-        case .timerDone, .lowBattery:
+        // Laid out on their own (see `TimerDoneView`, `LowBatteryView` and `IncomingCallView`).
+        case .timerDone, .lowBattery, .incomingCall:
             EmptyView()
         }
     }
@@ -280,7 +295,7 @@ struct SystemActivityView: View {
         case .status(_, _, let text):
             MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
                 .foregroundStyle(.white)
-        case .timerDone, .lowBattery:
+        case .timerDone, .lowBattery, .incomingCall:
             EmptyView()
         }
     }
@@ -326,6 +341,9 @@ struct SystemActivityView: View {
             let end = battery == nil ? 0 : layout.ring + layout.trailing
             return min(max(device, gap + end), maxWing)
         }
+        if case .incomingCall(let call) = alert.content {
+            return IncomingCallView.wing(for: call, restingHeight: restingHeight)
+        }
         if case .lowBattery(let percent) = alert.content {
             return LowBatteryLayout.wing(percent: percent, restingHeight: restingHeight, closedWidth: closedWidth)
         }
@@ -334,7 +352,7 @@ struct SystemActivityView: View {
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device, .timerDone, .lowBattery:
+            case .device, .timerDone, .lowBattery, .incomingCall:
                 (0, 0)
             case .battery(let title, let level):
                 (
@@ -427,7 +445,7 @@ struct SystemActivityView: View {
 
     /// As numbers are drawn, their digits all as wide as each other: a 1 measured narrower would
     /// leave them too little room.
-    private static func digitsWidth(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
+    static func digitsWidth(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight) -> CGFloat {
         ceil((text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight)]).width) + 2
     }
 }

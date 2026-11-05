@@ -458,6 +458,8 @@ enum AlertButton: Hashable {
     case again, stop
     /// Low Battery's, which turns on Low Power Mode.
     case lowPower
+    /// A call coming in.
+    case accept, decline
 }
 
 /// Where the closed notch's buttons are, in the notch's points, while they show.

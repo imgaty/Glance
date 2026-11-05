@@ -230,6 +230,7 @@ enum Preferences {
             activityCharging: true,
             activityLowBattery: true,
             activityDevices: true,
+            activityCalls: true,
             activityAirDrop: true,
             activityClockTimers: true,
             // Off: macOS keeps its timer out of the menu bar once it's taken out, after Glance is gone.
@@ -332,6 +333,7 @@ enum Preferences {
     static let activityCharging = "activityCharging"
     static let activityLowBattery = "activityLowBattery"
     static let activityDevices = "activityDevices"
+    static let activityCalls = "activityCalls"
     static let activityAirDrop = "activityAirDrop"
     /// Clock's timers show (see ClockActivity), and while one does, the menu bar's own is taken out;
     /// and Clock's stopwatch shows.

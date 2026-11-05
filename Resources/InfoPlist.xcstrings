@@ -416,6 +416,214 @@
           }
         }
       }
+    },
+    "NSMicrophoneUsageDescription": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستمع Glance إلى الميكروفون أثناء المكالمات فقط، لعرض جانبك من الموجة الصوتية. لا يُسجَّل شيء ولا يغادر جهاز Mac."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance escolta el micròfon només durant les trucades, per mostrar la teva part de la forma d’ona. No es grava res ni surt del Mac."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance poslouchá mikrofon jen během hovoru, aby ukázal vaši část průběhu zvuku. Nic se nenahrává ani neopouští váš Mac."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance lytter kun til mikrofonen under opkald for at vise din del af lydbølgen. Intet optages eller forlader din Mac."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance hört das Mikrofon nur während Anrufen ab, um deinen Teil der Wellenform zu zeigen. Nichts wird aufgezeichnet oder verlässt deinen Mac."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Glance ακούει το μικρόφωνο μόνο στις κλήσεις, για να δείχνει το δικό σας μέρος της κυματομορφής. Τίποτα δεν καταγράφεται ούτε φεύγει από το Mac σας."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance escucha el micrófono solo durante las llamadas, para mostrar tu parte de la forma de onda. No se graba nada ni sale de tu Mac."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance kuuntelee mikrofonia vain puheluiden aikana näyttääkseen sinun osuutesi aaltomuodosta. Mitään ei tallenneta eikä mikään poistu Macista."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance écoute le micro uniquement pendant les appels, pour afficher votre part de la forme d’onde. Rien n’est enregistré ni ne quitte votre Mac."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance מאזין למיקרופון רק במהלך שיחות, כדי להציג את הצד שלך בצורת הגל. שום דבר לא מוקלט או יוצא מה-Mac."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance केवल कॉल के दौरान माइक्रोफ़ोन सुनता है, ताकि वेवफ़ॉर्म में आपकी ओर की आवाज़ दिखा सके। कुछ भी रिकॉर्ड नहीं होता और न आपके Mac से बाहर जाता है।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance sluša mikrofon samo tijekom poziva, kako bi prikazao vaš dio valnog oblika. Ništa se ne snima niti napušta vaš Mac."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Glance csak hívás közben figyeli a mikrofont, hogy megjelenítse a hullámformán az Ön részét. Semmit nem rögzít, és semmi sem hagyja el a Macet."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mendengarkan mikrofon hanya selama panggilan, untuk menampilkan bagian Anda pada bentuk gelombang. Tidak ada yang direkam atau keluar dari Mac Anda."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ascolta il microfono solo durante le chiamate, per mostrare la tua parte della forma d’onda. Non viene registrato nulla e nulla lascia il Mac."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glanceは通話中のみマイクを使い、波形にあなたの声を表示します。何も録音されず、Macの外にも送られません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance는 통화 중에만 마이크를 사용하여 파형에 사용자의 목소리를 표시합니다. 아무것도 녹음되거나 Mac 밖으로 나가지 않습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mendengar mikrofon semasa panggilan sahaja, untuk menunjukkan bahagian anda pada bentuk gelombang. Tiada apa dirakam atau meninggalkan Mac anda."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance lytter til mikrofonen bare under samtaler, for å vise din del av bølgeformen. Ingenting tas opp eller forlater Macen."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance luistert alleen tijdens gesprekken naar de microfoon, om jouw deel van de golfvorm te tonen. Er wordt niets opgenomen en niets verlaat je Mac."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance słucha mikrofonu tylko podczas połączeń, aby pokazać Twoją część fali dźwiękowej. Nic nie jest nagrywane ani nie opuszcza Maca."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance escuta o microfone só durante as chamadas, para mostrar o seu lado da forma de onda. Nada é gravado nem sai do seu Mac."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance escuta o microfone só durante as chamadas, para mostrar o seu lado da forma de onda. Nada é gravado nem sai do seu Mac."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ascultă microfonul doar în timpul apelurilor, pentru a arăta partea ta din forma de undă. Nimic nu este înregistrat și nu părăsește Mac-ul."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance слушает микрофон только во время звонка, чтобы показать вашу часть волны. Ничего не записывается и не покидает ваш Mac."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance počúva mikrofón len počas hovoru, aby ukázal vašu časť priebehu zvuku. Nič sa nenahráva ani neopúšťa váš Mac."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance posluša mikrofon samo med klici, da prikaže vaš del valovne oblike. Nič se ne snema in nič ne zapusti vašega Maca."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance lyssnar på mikrofonen bara under samtal, för att visa din del av vågformen. Inget spelas in eller lämnar din Mac."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ฟังไมโครโฟนเฉพาะระหว่างการโทร เพื่อแสดงเสียงฝั่งคุณในรูปคลื่น ไม่มีการบันทึกและไม่มีข้อมูลออกจาก Mac ของคุณ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mikrofonu yalnızca aramalar sırasında dinler ve dalga biçiminde sizin tarafınızı gösterir. Hiçbir şey kaydedilmez ve Mac’inizden çıkmaz."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance слухає мікрофон лише під час дзвінка, щоб показати вашу частину хвилі. Нічого не записується й не залишає ваш Mac."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance chỉ nghe micrô trong cuộc gọi để hiển thị phần của bạn trên dạng sóng. Không có gì được ghi lại hay rời khỏi máy Mac của bạn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 仅在通话时聆听麦克风，以在波形中显示你这一方的声音。不会录制任何内容，也不会离开你的 Mac。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 僅在通話時聆聽麥克風，以在波形中顯示你這一方的聲音。不會錄製任何內容，也不會離開你的 Mac。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

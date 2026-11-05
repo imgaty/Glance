@@ -19,6 +19,7 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCharging) private var charging = true
     @AppStorage(Preferences.activityLowBattery) private var lowBattery = true
     @AppStorage(Preferences.activityDevices) private var devices = true
+    @AppStorage(Preferences.activityCalls) private var calls = true
     @AppStorage(Preferences.activityAirDrop) private var airDrop = true
     @AppStorage(Preferences.activityClockTimers) private var timers = true
     @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
@@ -28,7 +29,7 @@ struct ActivitiesPage: View {
     private let hasBattery = BatteryWatch.hasBattery
 
     /// In the order of `PreviewActivity`.
-    private var switches: [Bool] { [trackPop, charging, lowBattery, devices, airDrop, timers, stopwatch] }
+    private var switches: [Bool] { [trackPop, charging, lowBattery, devices, calls, airDrop, timers, stopwatch] }
 
     var body: some View {
         Form {
@@ -62,6 +63,10 @@ struct ActivitiesPage: View {
                 Toggle(isOn: $devices) {
                     Text("Devices")
                     Text("Shows AirPods and Beats as they connect, and sound going to AirPlay.")
+                }
+                Toggle(isOn: $calls) {
+                    Text("Calls")
+                    Text("Shows calls coming in and the call you're on, in place of macOS's popup.")
                 }
                 Toggle(isOn: $airDrop) {
                     Text("AirDrop")

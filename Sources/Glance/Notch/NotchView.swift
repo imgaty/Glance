@@ -148,6 +148,8 @@ final class NotchModel: ObservableObject {
     @Published var timerName: String?
     /// The speaker or TV the sound plays on over AirPlay (see `AirPlayWatch`).
     @Published var airplay: AirPlayRoute?
+    /// A call, ringing or going on.
+    @Published var call: CallShown?
     /// A file coming in over AirDrop (see `AirDropWatch`).
     @Published var airdrop: AirDropShown?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
@@ -226,10 +228,10 @@ final class NotchModel: ObservableObject {
     /// player: AirDrop, the timer, the stopwatch, or AirPlay.
     @Published var expanded: Activity?
 
-    /// What can show at once, in the order they take the notch: music, a file coming in over
+    /// What can show at once, in the order they take the notch: a call, music, a file coming in over
     /// AirDrop, Clock's timer, its stopwatch, AirPlay.
     enum Activity: Hashable {
-        case music, airdrop, timer, stopwatch, airplay
+        case call, music, airdrop, timer, stopwatch, airplay
     }
 
     /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop, AirPlay. Music's
@@ -239,7 +241,9 @@ final class NotchModel: ObservableObject {
     /// Those showing now, in that order.
     var activities: [Activity] {
         var shown: [Activity] = []
-        if activity { shown.append(.music) }
+        // A call has the notch to itself, as a call does on the iPhone, music giving way to it.
+        if call != nil, !dismissed.contains(.call) { shown.append(.call) }
+        if musicShown { shown.append(.music) }
         if airdrop != nil { shown.append(.airdrop) }
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
@@ -247,10 +251,13 @@ final class NotchModel: ObservableObject {
         return shown.filter { !dismissed.contains($0) }
     }
 
+    /// Music has its place beside the camera, with no call showing.
+    var musicShown: Bool { activity && (call == nil || dismissed.contains(.call)) }
+
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
         switch activity {
-        case .music, .airdrop, .airplay: nil
+        case .call, .music, .airdrop, .airplay: nil
         case .timer: timer.map(ClockShown.timer)
         case .stopwatch: stopwatch.map(ClockShown.stopwatch)
         }
@@ -267,7 +274,7 @@ final class NotchModel: ObservableObject {
     /// the notch is open, something else is announced, or a new song's name shows: it runs back into
     /// the notch while it does.
     var detached: Activity? {
-        guard state != .open, alert == nil, !folded, !(activity && pop) else { return nil }
+        guard state != .open, alert == nil, !folded, !(activity && pop), activities.first != .call else { return nil }
         return second
     }
 
@@ -289,6 +296,7 @@ final class NotchModel: ObservableObject {
         switch expanded {
         case .timer, .stopwatch: expandedClock == nil
         case .airplay: airplay == nil
+        case .call: call == nil
         case .airdrop: airdrop == nil
         case .music, nil: false
         }
@@ -297,6 +305,7 @@ final class NotchModel: ObservableObject {
     /// or Stopwatch.
     func name(of activity: Activity) -> String {
         switch activity {
+        case .call: call?.name ?? String(localized: "Call")
         case .music: String(localized: "Music")
         case .timer: timerName ?? String(localized: "Timer")
         case .stopwatch: String(localized: "Stopwatch")
@@ -340,6 +349,7 @@ final class NotchModel: ObservableObject {
         let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
         if folded { return 0 }
         if alert != nil { return max(alertExtended ? alertExtendedWing : alertWing, resting) }
+        if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
         if activity, pop { return max(popWing, resting) }
         // With another detached, the first has the leading side alone, as wide as the notch is tall,
         // the Dynamic Island's minimal presentation.
@@ -387,6 +397,11 @@ final class NotchModel: ObservableObject {
                 (
                     AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35,
                     TimerLayout.tallHeight(closedSize.height) + pull
+                )
+            case .open where expanded == .call:
+                (
+                    ExpandedCallView.width(for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height) + pull * 0.35,
+                    AirPlayLayout.height(closedSize.height) + pull
                 )
             case .open where expanded == .airplay:
                 (
@@ -596,9 +611,10 @@ struct NotchView: View {
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.collapsed ? nil : model.alert,
-                clock: model.activity || model.folded ? nil : model.notchClock,
+                clock: model.musicShown || model.folded ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
+                call: model.activities.first == .call && !model.folded ? model.call : nil,
                 timerName: model.activities.first.map(model.name(of:)) ?? String(localized: "Timer"),
                 leadingOnly: model.detached != nil, grown: isOpen && grownFrom != nil, hoveredButton: model.hoveredButton,
                 open: { model.openNotch() },
@@ -623,6 +639,7 @@ struct NotchView: View {
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
             expandedTimer(shown: expandedShown)
             expandedAirPlay(shown: expandedShown)
+            expandedCall(shown: expandedShown)
             expandedAirDrop(shown: expandedShown)
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
@@ -750,9 +767,9 @@ struct NotchView: View {
     private var musicAway: Bool { model.alert != nil || model.folded }
     /// In the closed notch: music's wings, its cover, and its waveform unless a new song's artist
     /// takes its place, or another activity is detached, which leaves music the leading side alone.
-    private var liveShown: Bool { model.activity && !musicAway && model.state != .open }
-    private var artworkShown: Bool { model.activity && !musicAway }
-    private var waveformShown: Bool { model.activity && !model.pop && !musicAway && model.detached == nil }
+    private var liveShown: Bool { model.musicShown && !musicAway && model.state != .open }
+    private var artworkShown: Bool { model.musicShown && !musicAway }
+    private var waveformShown: Bool { model.musicShown && !model.pop && !musicAway && model.detached == nil }
 
     private func bubble(_ m: NotchMetrics) -> some View {
         // Open, it stays where it was, under the notch, which came out over it.
@@ -788,6 +805,15 @@ struct NotchView: View {
             )
             .frame(width: width, height: TimerLayout.tallHeight(h))
             .allowsHitTesting(places == nil && shown)
+        }
+    }
+
+    /// Opened to a call: its own view, laid out at its open size, so the growing shape reveals it.
+    @ViewBuilder private func expandedCall(shown: Bool) -> some View {
+        if model.expanded == .call, let call = model.call {
+            let h = model.closedSize.height
+            ExpandedCallView(call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h), revealed: shown)
+                .allowsHitTesting(places == nil && shown)
         }
     }
 

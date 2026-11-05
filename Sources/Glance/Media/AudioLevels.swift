@@ -130,7 +130,7 @@ struct HeardLater {
 
 /// The tap, the private aggregate device that carries it, and the analysis, on one serial queue.
 /// The audio thread only writes into the ring.
-private final class TapPipeline: @unchecked Sendable {
+final class TapPipeline: @unchecked Sendable {
     enum Target {
         /// The process Now Playing names, and every process sharing its responsible app.
         case player(pid_t)

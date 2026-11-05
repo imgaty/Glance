@@ -722,6 +722,64 @@ struct ActivitiesTests {
 /// macOS's own banners, taken away only where the notch says the same.
 @Suite("System banners")
 struct SystemBannersTests {
+    @Test("A call shows the phone and its time, or the caller and a handset, and takes the notch from music")
+    @MainActor
+    func calls() {
+        let ringing = CallShown(name: "Alex Morgan", over: "FaceTime", app: nil, phase: .ringing)
+        let connected = CallShown(name: "Alex Morgan", over: "FaceTime", app: nil, phase: .connected(since: .now))
+        #expect(ringing.initial == "A" && !ringing.isConnected && connected.isConnected)
+        #expect(CallShown(name: "", over: "", phase: .ringing).initial == "")
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.activity = true
+        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
+        #expect(model.activities.first == .music)
+        model.call = connected
+        #expect(model.activities.first == .call && !model.activities.contains(.music) && !model.musicShown)
+        // Nothing detached beside it, and its wings as wide as it needs.
+        #expect(model.detached == nil)
+        #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32))
+        #expect(CallLayout.wing(for: connected, restingHeight: 32) > CallLook.waveWidth)
+        // An hour's time takes more room.
+        let longer = CallShown(name: "A", over: "F", phase: .connected(since: .now - 3_700))
+        #expect(CallLayout.wing(for: longer, restingHeight: 32) > CallLayout.wing(for: connected, restingHeight: 32))
+        // Swiped away, the rest come back.
+        model.dismissed.insert(.call)
+        #expect(model.activities.first == .music && model.musicShown)
+        // A call coming in is as tall as the Alarm, and stays.
+        let alert = NotchAlert(kind: .incomingCall, content: .incomingCall(ringing), spoken: "", stays: true)
+        #expect(alert.tall && alert.stays)
+    }
+
+    @Test("The waveform shows whoever's louder at each moment, in their color")
+    func callVoices() {
+        #expect(CallVoices.sample(theirs: 0.6, yours: 0.2) == .init(level: 0.6, mine: false))
+        #expect(CallVoices.sample(theirs: 0.1, yours: 0.5) == .init(level: 0.5, mine: true))
+        #expect(CallVoices.sample(theirs: 0, yours: 0) == .init(level: 0, mine: false))
+        #expect(CallVoices.sample(theirs: 3, yours: 0).level == 1)
+    }
+
+    @Test("Calling apps are known by their bundle IDs, their helpers too")
+    func callApps() {
+        #expect(CallAudio.callApp(of: "us.zoom.xos")?.name == "Zoom")
+        #expect(CallAudio.callApp(of: "com.hnc.Discord.helper.Renderer")?.name == "Discord")
+        #expect(CallAudio.callApp(of: "net.whatsapp.WhatsApp")?.name == "WhatsApp")
+        #expect(CallAudio.callApp(of: "com.apple.avconferenced")?.name == "FaceTime")
+        #expect(CallAudio.callApp(of: "com.spotify.client") == nil)
+        #expect(CallAudio.callApp(of: "com.apple.VoiceMemos") == nil)
+    }
+
+    @Test("macOS's popup for a call is told apart by its app and its Accept button")
+    func callPopup() {
+        let actions = ["AXPress", "Name:Accept", "Name:Decline", "Name:Close"]
+        #expect(
+            CallBanners.call(description: "FaceTime, Alex Morgan, Incoming FaceTime Audio", actions: actions)
+                == .init(name: "Alex Morgan", over: "FaceTime", app: "com.apple.FaceTime"))
+        #expect(CallBanners.call(description: "Phone, Mum, mobile", actions: actions)?.name == "Mum")
+        // Anything else from those apps, like a missed call, or from another app.
+        #expect(CallBanners.call(description: "FaceTime, Alex Morgan, Missed call", actions: ["Name:Close"]) == nil)
+        #expect(CallBanners.call(description: "Messages, Alex Morgan, Hello", actions: actions) == nil)
+    }
+
     @Test("A device is shown only with its maker's 3D model; the rest keep macOS's own banner")
     func onlyWithModel() {
         // AirPods 1 and 2 and the first Beats have none. All AirPods Max are one model.

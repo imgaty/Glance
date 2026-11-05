@@ -98,6 +98,8 @@ final class NotchController {
     private var timerWatch: AnyCancellable?
     private var clockNameWatch: AnyCancellable?
     private var airPlayWatch: AnyCancellable?
+    private var callWatch: AnyCancellable?
+    private var callMinutes: AnyCancellable?
     private var airDropWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
@@ -351,6 +353,15 @@ final class NotchController {
         // The sound going to AirPlay (see `AirPlayWatch`).
         airPlayWatch = AirPlayWatch.shared.$route.removeDuplicates().sink { [weak self] route in
             MainActor.assumeIsolated { self?.show(airplay: route) }
+        }
+        // A call (see `CallWatch`), refitting as its time gains a digit.
+        callWatch = CallWatch.shared.$call.removeDuplicates().sink { [weak self] call in
+            MainActor.assumeIsolated { self?.show(call: call) }
+        }
+        callMinutes = CallWatch.shared.$minutes.dropFirst().sink { [weak self] _ in
+            MainActor.assumeIsolated {
+                withAnimation(IslandMotion.open) { self?.model.objectWillChange.send() }
+            }
         }
         // A file coming in over AirDrop (see `AirDropWatch`).
         airDropWatch = AirDropWatch.shared.$transfer.removeDuplicates().sink { [weak self] transfer in
@@ -675,6 +686,15 @@ final class NotchController {
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
+    /// A call came in, connected or ended: its wings come, change, or go.
+    private func show(call: CallShown?) {
+        withAnimation(call == nil ? IslandMotion.fold : IslandMotion.open) {
+            if call?.isConnected != model.call?.isConnected || call == nil { model.dismissed.remove(.call) }
+            model.call = call
+        }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+    }
+
     /// Refits the notch whenever what it shows of a timer or the stopwatch gains or loses a digit,
     /// closed or opened, so it's never wider than they need: a timer from hours to minutes and from
     /// minutes to seconds, the stopwatch from minutes to hours.
@@ -945,6 +965,8 @@ final class NotchController {
         switch button {
         case .again: ClockActivity.shared.repeatTimer()
         case .stop: ClockActivity.shared.dismissRing()
+        case .accept: CallWatch.shared.accept()
+        case .decline: CallWatch.shared.decline()
         case .lowPower:
             LowPowerMode.shared.toggle()
             // Long enough to see it change.
@@ -1333,7 +1355,7 @@ final class NotchController {
     private var activityControls: [PlayerControl]? {
         switch model.expanded {
         case .timer, .stopwatch: [.activityFirst, .activitySecond]
-        case .airdrop, .airplay: [.activityFirst]
+        case .airdrop, .airplay, .call: [.activityFirst]
         case .music, nil: nil
         }
     }
