@@ -12,8 +12,8 @@
 
 - Added calls: one coming in shows as tall as the Alarm, with the caller, a red
   button to decline and a green one to accept, in place of macOS's popup; on a
-  call, a green phone and its time beside the camera, and a waveform with both
-  voices at once, orange into green. Opened, the caller and the call's time,
+  call, a green phone and its time beside the camera, and macOS's own waveform
+  for the call, with both voices at once. Opened, the caller and the call's time,
   with buttons for the sound output and, for FaceTime and Phone calls, to end
   it. FaceTime and Phone calls are read from macOS's own popup, which needs
   `Screen & System Audio Recording`; Zoom, Discord, WhatsApp and others show

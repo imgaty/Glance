@@ -30,10 +30,7 @@ struct CallPopup: Equatable {
     var readable: Bool { name != nil && red != nil }
 
     /// Where its waveform is, as shares of the popup.
-    static let wave = CGRect(x: 0.668, y: 0.225, width: 0.245, height: 0.135)
-    /// Its bars, half each voice, and how tall the tallest was as a share of `wave`'s height.
-    static let waveBars = 30
-    static let waveTallest: CGFloat = 0.75
+    static let wave = CGRect(x: 0.668, y: 0.225, width: 0.2381, height: 0.135)
 
     struct Line: Equatable {
         var text: String
@@ -91,33 +88,32 @@ struct CallPopup: Equatable {
         return (middle(red), middle(green))
     }
 
-    /// How tall each of its waveform's bars is, from 0 to 1, in a picture of just that. Anything lit
-    /// is a bar, whatever its color, so this reads the same in either order of color channels.
-    nonisolated static func bars(pixels: UnsafeBufferPointer<UInt8>, width: Int, height: Int, rowBytes: Int) -> [CGFloat] {
-        (0..<waveBars).map { bar in
-            let middle = (CGFloat(bar) + 0.5) / CGFloat(waveBars) * CGFloat(width)
-            var tallest = 0
-            for x in max(Int(middle) - 2, 0)...min(Int(middle) + 2, width - 1) {
-                var lit = 0
-                for y in 0..<height {
-                    let at = y * rowBytes + x * 4
-                    if max(pixels[at], pixels[at + 1], pixels[at + 2]) > 110 { lit += 1 }
-                }
-                tallest = max(tallest, lit)
+    /// Its waveform's pixels with the popup's background taken away, so they sit on the notch's black
+    /// and stay as lit as they are: four 8-bit channels each, in the order they came, alpha last, and
+    /// each channel made to reach as high as before. The background's the darkest corner, where
+    /// nothing's ever drawn.
+    nonisolated static func lifted(pixels: UnsafeBufferPointer<UInt8>, width: Int, height: Int, rowBytes: Int) -> [UInt8] {
+        guard width > 0, height > 0, pixels.count >= rowBytes * height else { return [] }
+        let corners = [0, width - 1, (height - 1) * rowBytes / 4, (height - 1) * rowBytes / 4 + width - 1]
+        func background(_ channel: Int) -> Int { corners.map { Int(pixels[$0 * 4 + channel]) }.min() ?? 0 }
+        let under = (background(0), background(1), background(2))
+        func lift(_ value: UInt8, _ under: Int) -> UInt8 {
+            guard under < 255 else { return 0 }
+            return UInt8(max(Int(value) - under, 0) * 255 / (255 - under))
+        }
+        var out = [UInt8](repeating: 0, count: width * height * 4)
+        for y in 0..<height {
+            for x in 0..<width {
+                let from = y * rowBytes + x * 4
+                let to = (y * width + x) * 4
+                let (a, b, c) = (lift(pixels[from], under.0), lift(pixels[from + 1], under.1), lift(pixels[from + 2], under.2))
+                out[to] = a
+                out[to + 1] = b
+                out[to + 2] = c
+                out[to + 3] = max(a, b, c)
             }
-            return min(CGFloat(tallest) / (CGFloat(height) * waveTallest), 1)
         }
-    }
-
-    /// Fewer bars, for a smaller waveform: each the tallest of those it stands for, half the voices
-    /// staying on each side.
-    nonisolated static func fold(_ bars: [CGFloat], into count: Int) -> [CGFloat] {
-        guard !bars.isEmpty, count > 0 else { return [] }
-        return (0..<count).map { index in
-            let start = index * bars.count / count
-            let end = max((index + 1) * bars.count / count, start + 1)
-            return bars[start..<min(end, bars.count)].max() ?? 0
-        }
+        return out
     }
 
     /// Reads its words and buttons from its picture.
@@ -173,13 +169,13 @@ enum CallPopupCamera {
 }
 
 /// The popup's own waveform as it moves, which shows both voices with nothing else listened to: the
-/// same bars macOS draws, only ever a small strip of that one window, a few times a second.
+/// same pixels macOS draws, only ever a small strip of that one window, a few times a second.
 final class CallPopupWave: NSObject, SCStreamOutput, @unchecked Sendable {
     private let queue = DispatchQueue(label: "Glance.CallPopupWave")
     private var stream: SCStream?
-    private let heard: @Sendable ([CGFloat]) -> Void
+    private let heard: @Sendable (CGImage) -> Void
 
-    init(heard: @escaping @Sendable ([CGFloat]) -> Void) {
+    init(heard: @escaping @Sendable (CGImage) -> Void) {
         self.heard = heard
     }
 
@@ -193,14 +189,17 @@ final class CallPopupWave: NSObject, SCStreamOutput, @unchecked Sendable {
         let wave = CGRect(
             x: popup.minX + popup.width * CallPopup.wave.minX - window.frame.minX,
             y: popup.minY + popup.height * CallPopup.wave.minY - window.frame.minY,
-            width: popup.width * CallPopup.wave.width, height: popup.height * CallPopup.wave.height)
+            width: (popup.width * CallPopup.wave.width).rounded(), height: (popup.height * CallPopup.wave.height).rounded())
         configuration.sourceRect = wave
+        // Any other shape would be fitted in with an edge.
+        configuration.preservesAspectRatio = false
         configuration.width = Int(wave.width * 2)
         configuration.height = Int(wave.height * 2)
-        configuration.minimumFrameInterval = CMTime(value: 1, timescale: 10)
+        configuration.minimumFrameInterval = CMTime(value: 1, timescale: 20)
         configuration.queueDepth = 3
         configuration.showsCursor = false
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
+        configuration.colorSpaceName = CGColorSpace.displayP3
         let made = SCStream(filter: SCContentFilter(desktopIndependentWindow: window), configuration: configuration, delegate: nil)
         guard (try? made.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)) != nil else { return }
         stream = made
@@ -223,9 +222,18 @@ final class CallPopupWave: NSObject, SCStreamOutput, @unchecked Sendable {
         CVPixelBufferLockBaseAddress(buffer, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(buffer) else { return }
-        let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
+        let width = CVPixelBufferGetWidth(buffer)
         let height = CVPixelBufferGetHeight(buffer)
+        let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
         let pixels = UnsafeBufferPointer(start: base.assumingMemoryBound(to: UInt8.self), count: rowBytes * height)
-        heard(CallPopup.bars(pixels: pixels, width: CVPixelBufferGetWidth(buffer), height: height, rowBytes: rowBytes))
+        let lifted = CallPopup.lifted(pixels: pixels, width: width, height: height, rowBytes: rowBytes)
+        guard !lifted.isEmpty, let space = CGColorSpace(name: CGColorSpace.displayP3),
+            let provider = CGDataProvider(data: Data(lifted) as CFData),
+            let image = CGImage(
+                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: space,
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
+                provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+        else { return }
+        heard(image)
     }
 }

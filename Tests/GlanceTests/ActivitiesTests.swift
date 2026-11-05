@@ -769,12 +769,40 @@ struct SystemBannersTests {
         #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: short, restingHeight: h))
     }
 
-    @Test("Each voice has its own half of the waveform, running out from the middle, both at once")
+    @Test("Drawn, both voices run over the same width: the other person's to the left, yours to the right")
     func callVoices() {
-        var yours: [CGFloat] = [0, 0.2]
-        var theirs: [CGFloat] = [0.3, 0]
-        #expect(CallVoices.running(&yours, &theirs, yours: 0.5, theirs: 0.9) == [0.2, 0.5, 0.9, 0.3])
-        #expect(CallVoices.running(&yours, &theirs, yours: 3, theirs: 3) == [0.5, 1, 1, 0.9])
+        let quiet = CallVoices.shaped(theirs: 0, yours: 0, at: 10)
+        #expect(quiet.theirs.allSatisfy { $0 == 0 } && quiet.yours.allSatisfy { $0 == 0 })
+        let both = CallVoices.shaped(theirs: 1, yours: 1, at: 10)
+        #expect(both.theirs.count == 30 && both.yours.count == 30)
+        #expect(both.theirs.prefix(10).allSatisfy { $0 > 0 } && both.theirs.suffix(10).allSatisfy { $0 == 0 })
+        #expect(both.yours.prefix(10).allSatisfy { $0 == 0 } && both.yours.suffix(10).allSatisfy { $0 > 0 })
+        // Moving in place, never all together, and never past the top.
+        #expect(Set(both.theirs.prefix(10)).count > 1)
+        #expect(CallVoices.shaped(theirs: 3, yours: 3, at: 10).theirs.allSatisfy { $0 <= 1 })
+        #expect(CallLook.drawnWave(theirs: both.theirs, yours: both.yours)?.width == 180)
+    }
+
+    @Test("A call's popup has its waveform's background taken away, its colors staying as lit")
+    func callPopupWave() {
+        let width = 4
+        let height = 3
+        let rowBytes = 20
+        var pixels = [UInt8](repeating: 33, count: rowBytes * height)
+        // A lit pixel, in the middle.
+        let at = 1 * rowBytes + 2 * 4
+        pixels[at] = 37
+        pixels[at + 1] = 160
+        pixels[at + 2] = 255
+        let lifted = pixels.withUnsafeBufferPointer { CallPopup.lifted(pixels: $0, width: width, height: height, rowBytes: rowBytes) }
+        #expect(lifted.count == width * height * 4)
+        // The background's nothing at all, and the brightest stays the brightest.
+        #expect(lifted[0] == 0 && lifted[1] == 0 && lifted[2] == 0 && lifted[3] == 0)
+        let to = (1 * width + 2) * 4
+        #expect(lifted[to + 2] == 255)
+        #expect(lifted[to + 3] == 255)
+        #expect(lifted[to] < 10)
+        #expect(pixels.withUnsafeBufferPointer { CallPopup.lifted(pixels: $0, width: 0, height: 0, rowBytes: 0) }.isEmpty)
     }
 
     @Test("macOS's banners that say what the notch says are told from the rest, by their names")
@@ -871,24 +899,6 @@ struct SystemBannersTests {
         let neither = picture([(CGRect(x: 5, y: 5, width: 20, height: 20), red), (CGRect(x: 60, y: 5, width: 2, height: 4), green)])
         #expect(neither.red == nil)
         #expect(neither.green == nil)
-    }
-
-    @Test("A call's popup has its waveform read as lit bars, whatever their color, and folded down")
-    func callPopupBars() {
-        let width = 180
-        let height = 36
-        var pixels = [UInt8](repeating: 30, count: width * height * 4)
-        // The first bar is as tall as the tallest measured, the rest dots.
-        for y in 4..<31 {
-            for x in 1..<5 { pixels[(y * width + x) * 4 + 1] = 200 }
-        }
-        let bars = pixels.withUnsafeBufferPointer { CallPopup.bars(pixels: $0, width: width, height: height, rowBytes: width * 4) }
-        #expect(bars.count == CallPopup.waveBars)
-        #expect(bars[0] == 1)
-        #expect(bars[10] == 0)
-        #expect(CallPopup.fold([0.2, 0.4, 0.1, 0.9], into: 2) == [0.4, 0.9])
-        #expect(CallPopup.fold(bars, into: CallLook.bars).count == CallLook.bars)
-        #expect(CallPopup.fold([], into: 2).isEmpty)
     }
 
     @Test("A call that can't be answered from the notch doesn't ring, and isn't connected yet")

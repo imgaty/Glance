@@ -40,40 +40,56 @@ struct CallShown: Equatable {
     }
 }
 
-/// How a call looks, measured from real calls: a green phone and its time on one side, on the other
-/// a waveform in both voices at once, orange into green, as macOS's own popup draws it. Ringing, the
-/// caller's initial in a gray circle, and a gray handset.
+/// How a call looks, measured from published screenshots of real iPhone calls and from macOS's own
+/// popup: a green phone and its time on one side, on the other a waveform in both voices at once.
+/// Ringing, the caller's initials in a gray circle, and a gray handset.
 enum CallLook {
     static let green = Color(red: 0x9A / 255, green: 0xEE / 255, blue: 0x9C / 255)
-    /// Along the waveform, by the share of its width, from a real call's popup on a P3 display.
-    static let voices: [(at: Double, red: Double, green: Double, blue: Double)] = [
-        (0, 0xFF, 0xA0, 0x25), (0.39, 0xFF, 0xAE, 0x29), (0.46, 0xFF, 0xFF, 0x9E), (0.5, 0xFF, 0xFF, 0xB5), (0.55, 0x6E, 0xFF, 0x7C), (1, 0x5E, 0xFF, 0x7A),
-    ]
-    /// The color at a share of the waveform's width.
-    static func voice(at share: Double) -> Color {
-        let after = voices.firstIndex { $0.at >= share } ?? voices.count - 1
-        let end = voices[after]
-        let start = voices[max(after - 1, 0)]
-        let part = end.at > start.at ? (share - start.at) / (end.at - start.at) : 0
-        func mix(_ a: Double, _ b: Double) -> Double { (a + (b - a) * part) / 255 }
-        return Color(.displayP3, red: mix(start.red, end.red), green: mix(start.green, end.green), blue: mix(start.blue, end.blue))
-    }
     static let handset = Color(red: 0x8F / 255, green: 0x8F / 255, blue: 0x91 / 255)
     static let accept = Color(red: 0x34 / 255, green: 0xC7 / 255, blue: 0x59 / 255)
     static let decline = Color(red: 0xFF / 255, green: 0x3B / 255, blue: 0x30 / 255)
 
-    /// The waveform's bars, as many as show at once, and their measures.
-    static let bars = 16
-    static let barWidth: CGFloat = 1.25
-    static let barGap: CGFloat = 1.25
-    static var waveWidth: CGFloat { CGFloat(bars) * (barWidth + barGap) - barGap }
-    /// As shares of the notch's height: the tallest bar, the phone, the circle, the handset.
-    static let barHeight: CGFloat = 0.36
+    /// How much room the waveform takes beside the camera: half the width of macOS's popup's, so its
+    /// bars stay sharp, and shorter by less, so they're as tall as they can be.
+    static let waveWidth: CGFloat = 45
+    /// As shares of the notch's height: the waveform, the phone, the circle, the handset.
+    static let waveHeight: CGFloat = 0.45
     static let phone: CGFloat = 0.42
     static let avatar: CGFloat = 0.68
     static let handsetSize: CGFloat = 0.52
     /// Between the phone and its time.
     static let timeGap: CGFloat = 5
+
+    /// A waveform drawn as macOS's popup draws its own, for a call that has no popup to show it, and
+    /// for trying it: the same bars twice over, the other person's darker and stronger to the left,
+    /// yours lighter and on top, stronger to the right. In the same size as the popup's picture.
+    nonisolated static func drawnWave(theirs: [CGFloat], yours: [CGFloat]) -> CGImage? {
+        let width = 180
+        let height = 36
+        guard let space = CGColorSpace(name: CGColorSpace.displayP3),
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { return nil }
+        func color(_ rgb: (CGFloat, CGFloat, CGFloat)) -> CGColor { CGColor(colorSpace: space, components: [rgb.0 / 255, rgb.1 / 255, rgb.2 / 255, 1])! }
+        func bar(_ index: Int, _ tall: CGFloat, _ fill: CGColor, _ glow: CGColor) {
+            let rect = CGRect(x: CGFloat(index) * 6 + 1, y: (CGFloat(height) - tall) / 2, width: 4, height: tall)
+            context.setShadow(offset: .zero, blur: 3, color: glow)
+            context.setFillColor(fill)
+            context.addPath(CGPath(roundedRect: rect, cornerWidth: 2, cornerHeight: min(2, tall / 2), transform: nil))
+            context.fillPath()
+        }
+        for (index, level) in theirs.enumerated() where level > 0.02 {
+            bar(index, max(level * 27, 5), color((0xFF, 0xAF, 0x28)), color((0xE8, 0x93, 0x3E)))
+        }
+        for (index, level) in yours.enumerated() {
+            // Dots of pale yellow with nothing to hear, going green as they get taller.
+            let part = min(max((level - 0.15) / 0.35, 0), 1)
+            let fill = (0xFF + (0x9C - 0xFF) * part, 0xFF as CGFloat, 0xB5 + (0x91 - 0xB5) * part)
+            bar(index, max(level * 27, 5), color(fill), color((0xCC + (0x78 - 0xCC) * part, 0xCB + (0xDB - 0xCB) * part, 0x75)))
+        }
+        return context.makeImage()
+    }
 }
 
 enum CallLayout {
@@ -123,28 +139,64 @@ struct CallTime: View {
     }
 }
 
-/// The waveform beside the camera on a call: both voices at once, a half each, each bar lit from its
-/// middle as it is in macOS's popup.
+/// The waveform beside the camera on a call: macOS's popup's own, or for a call without one, drawn
+/// as it draws it: both voices over the same width at once.
 struct CallWaveform: View {
     let height: CGFloat
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.notchOnScreen) private var onScreen
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 12, paused: reduceMotion)) { _ in
-            // Read out here, so the drawing is new each time and is drawn again.
-            let bars = CallVoices.shared.bars
-            Canvas { context, size in
-                let pitch = CallLook.barWidth + CallLook.barGap
-                for (index, level) in bars.enumerated() {
-                    let bar = max(level * size.height, CallLook.barWidth)
-                    let rect = CGRect(x: CGFloat(index) * pitch, y: (size.height - bar) / 2, width: CallLook.barWidth, height: bar)
-                    let color = CallLook.voice(at: (Double(index) + 0.5) / Double(max(bars.count, 1)))
-                    context.fill(Path(roundedRect: rect, cornerRadius: CallLook.barWidth / 2), with: .color(color))
+        Group {
+            if onScreen {
+                LiveCallWave()
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 12)) { _ in
+                    if let picture = CallVoices.shared.picture {
+                        Image(decorative: picture, scale: 1).resizable()
+                    }
                 }
             }
         }
         .frame(width: CallLook.waveWidth, height: height)
         .accessibilityHidden(true)
+    }
+}
+
+/// The waveform on the notch on the screen, shown by Core Animation: through SwiftUI each new picture
+/// would redraw the whole notch.
+private struct LiveCallWave: NSViewRepresentable {
+    func makeNSView(context: Context) -> CallWaveView { CallWaveView() }
+    func updateNSView(_ view: CallWaveView, context: Context) {}
+}
+
+final class CallWaveView: NSView {
+    private var hearing: AnyCancellable?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.contentsGravity = .resize
+        layer?.minificationFilter = .linear
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    /// The notch around it takes the clicks.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        hearing =
+            window == nil
+            ? nil
+            : CallVoices.shared.$picture.sink { [weak self] picture in
+                MainActor.assumeIsolated {
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
+                    self?.layer?.contents = picture
+                    CATransaction.commit()
+                }
+            }
     }
 }
 
@@ -178,7 +230,7 @@ struct CallMark: View {
                     .font(.system(size: LiveActivityView.textSize(for: h), weight: .semibold))
                     .foregroundStyle(CallLook.green)
                 Spacer(minLength: 0)
-                CallWaveform(height: h * CallLook.barHeight)
+                CallWaveform(height: h * CallLook.waveHeight)
             }
         }
         .padding(.horizontal, CallLayout.edge(h))
@@ -375,33 +427,30 @@ struct ExpandedCallView: View {
 
 // MARK: - Voices
 
-/// How each voice on the call moves, for the waveform: half for you and half for the other person.
-/// On a phone or FaceTime call, those are the bars of macOS's own popup, with nothing listened to.
-/// Otherwise, the other person from the sound the call's app makes, through the same process tap as
-/// the music's waveform, and you from the microphone, once it's allowed. Nothing is recorded or
-/// kept. It runs only during a call.
+/// The waveform's picture during a call. On a phone or FaceTime call, it's macOS's popup's own, as it
+/// shows, with nothing listened to. Otherwise, it's drawn the same way: the other person from the
+/// sound the call's app makes, through the same process tap as the music's waveform, and you from
+/// the microphone, once it's allowed. Nothing is recorded or kept. It runs only during a call.
 @MainActor
-final class CallVoices {
+final class CallVoices: ObservableObject {
     static let shared = CallVoices()
 
-    /// What the waveform draws, left to right.
-    private(set) var bars = [CGFloat](repeating: 0, count: CallLook.bars)
-    private var yourLevels = [CGFloat](repeating: 0, count: CallLook.bars / 2)
-    private var theirLevels = [CGFloat](repeating: 0, count: CallLook.bars / 2)
+    @Published private(set) var picture: CGImage?
+    private var seen = false
     private var theirs: CGFloat = 0
     private var yours: CGFloat = 0
-    private var seenAt: Date?
     private var pipeline: TapPipeline?
     private var engine: AVAudioEngine?
     private var clock: Timer?
     /// At the bench: both voices made up, turn about, with nothing listened to.
     var madeUp = false
 
-    /// The popup's own bars, as they just showed. They're sent only when they've changed.
-    func saw(_ popup: [CGFloat]) {
+    /// The popup's own, as it just showed: sent only when it changes, so a call gone quiet stays on
+    /// its last, which is flat.
+    func saw(_ popup: CGImage) {
         guard clock != nil else { return }
-        seenAt = .now
-        bars = CallPopup.fold(popup, into: CallLook.bars)
+        seen = true
+        picture = popup
     }
 
     func start(listeningTo pid: pid_t?, microphone: Bool) {
@@ -422,6 +471,7 @@ final class CallVoices {
         }
         RunLoop.main.add(timer, forMode: .common)
         clock = timer
+        tick()
     }
 
     func stop() {
@@ -434,31 +484,37 @@ final class CallVoices {
         engine = nil
         theirs = 0
         yours = 0
-        seenAt = nil
-        yourLevels = yourLevels.map { _ in 0 }
-        theirLevels = theirLevels.map { _ in 0 }
-        bars = bars.map { _ in 0 }
+        seen = false
+        picture = nil
     }
 
     private func tick() {
-        // The popup's unchanged only while there's nothing to hear, and then it's flat anyway.
-        if let seenAt, Date.now.timeIntervalSince(seenAt) < 1 { return }
+        guard !seen else { return }
         let t = Date.now.timeIntervalSinceReferenceDate
         if madeUp {
-            let theirTurn = Int(t / 2.5) % 2 == 0
-            theirs = theirTurn ? 0.9 * CGFloat(DJGlyph.flap(at: t)) : 0.1
-            yours = theirTurn ? 0.1 : 0.9 * CGFloat(DJGlyph.flap(at: t))
+            // They speak, you speak, both, neither.
+            let turn = Int(t / 2.5) % 4
+            let voice = 0.9 * CGFloat(DJGlyph.flap(at: t))
+            theirs = turn == 0 || turn == 2 ? voice : 0
+            yours = turn == 1 || turn == 2 ? voice : 0
         }
-        bars = Self.running(&yourLevels, &theirLevels, yours: yours, theirs: theirs)
+        let bars = Self.shaped(theirs: theirs, yours: yours, at: t)
+        picture = CallLook.drawnWave(theirs: bars.theirs, yours: bars.yours)
     }
 
-    /// Each voice runs along its own half, its newest moment in the middle.
-    nonisolated static func running(_ yourLevels: inout [CGFloat], _ theirLevels: inout [CGFloat], yours: CGFloat, theirs: CGFloat) -> [CGFloat] {
-        yourLevels.removeFirst()
-        yourLevels.append(min(yours, 1))
-        theirLevels.removeLast()
-        theirLevels.insert(min(theirs, 1), at: 0)
-        return yourLevels + theirLevels
+    /// The bars of each voice from how loud it is, over the same width: the other person's strongest
+    /// to the left, yours to the right, each dying away by the other side, as the popup's do. They
+    /// move in place, never all together.
+    nonisolated static func shaped(theirs: CGFloat, yours: CGFloat, count: Int = 30, at t: TimeInterval) -> (theirs: [CGFloat], yours: [CGFloat]) {
+        func voice(_ level: CGFloat, _ strength: (Double) -> Double) -> [CGFloat] {
+            (0..<count).map { bar in
+                let place = (Double(bar) + 0.5) / Double(count)
+                let wave = (sin(t * 9 + Double(bar) * 1.7) + sin(t * 5.3 + Double(bar) * 2.9)) / 2
+                return min(level * CGFloat(strength(place) * (0.65 + 0.35 * wave)), 1)
+            }
+        }
+        func fading(_ place: Double) -> Double { min(max((0.62 - place) / 0.22, 0), 1) }
+        return (voice(theirs, fading), voice(yours) { fading(1 - $0) })
     }
 
     private func startMicrophone() {
@@ -765,8 +821,9 @@ final class CallBanners {
     private var mustRead = false
     private var checkedAt: Date?
     private var askedForScreen = false
-    private lazy var wave = CallPopupWave { bars in
-        DispatchQueue.main.async { MainActor.assumeIsolated { CallVoices.shared.saw(bars) } }
+    private lazy var wave = CallPopupWave { picture in
+        nonisolated(unsafe) let picture = picture
+        DispatchQueue.main.async { MainActor.assumeIsolated { CallVoices.shared.saw(picture) } }
     }
 
     /// Follows Notification Center, as soon as Accessibility is allowed, and again if it's restarted.
