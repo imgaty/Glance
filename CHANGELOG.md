@@ -12,12 +12,12 @@
 
 - Added calls: one coming in shows as tall as the Alarm, with the caller, a red
   button to decline and a green one to accept, in place of macOS's popup; on a
-  call, a green phone and its time beside the camera, and a waveform running
-  along, green for the other person and a paler yellow for you. Opened, the
-  caller and the call's time, with buttons for the sound output and, for
-  FaceTime and Phone calls, to end it. FaceTime and Phone calls come from
-  macOS's own list and popup; Zoom, Discord, WhatsApp and others show once they
-  use the microphone. Turn it off with `Calls` in **Settings > Live
+  call, a green phone and its time beside the camera, and a waveform with both
+  voices at once, orange into green. Opened, the caller and the call's time,
+  with buttons for the sound output and, for FaceTime and Phone calls, to end
+  it. FaceTime and Phone calls are read from macOS's own popup, which needs
+  `Screen & System Audio Recording`; Zoom, Discord, WhatsApp and others show
+  once they use the microphone. Turn it off with `Calls` in **Settings > Live
   Activities**.
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on

@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 4 November 2026`
+`Created: 11 October 2026` | `Last updated: 5 November 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -104,9 +104,10 @@ apps can't read them. Clock's timer and stopwatch do.
 - [x] `Timed lyrics`: the words beside the player, line by line.
 - [x] `Tray`: files you drop and what you copy, on the notch.
 - [x] `Updates`: check for updates, and install them automatically.
+- [x] `Calls`: FaceTime and iPhone calls beside the camera, in place of macOS's
+  popup.
 - [ ] `AI overview`: AI usage and a chat box on the notch.
 - [ ] `Homebrew`: install with `brew install --cask glance`.
-- [ ] `Calls`: FaceTime and iPhone calls beside the camera.
 - [ ] `Notarized releases`: open the first time without the extra step.
 
 <br>

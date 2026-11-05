@@ -1355,7 +1355,7 @@ final class NotchController {
         switch model.expanded {
         case .timer, .stopwatch: [.activityFirst, .activitySecond]
         // Connected, the sound output, and ending it only where that can be done.
-        case .call where model.call?.isConnected == true && model.call?.canEnd != true: [.activityFirst]
+        case .call where model.call?.rings == false && model.call?.canEnd != true: [.activityFirst]
         case .call: [.activityFirst, .activitySecond]
         case .airdrop, .airplay: [.activityFirst]
         case .music, nil: nil

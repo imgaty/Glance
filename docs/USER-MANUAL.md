@@ -346,12 +346,28 @@ sliding under the notch as it folds:
 | A device's battery at 20%, and again at 10% | The device as it shows connecting, its ring red, with its level in numbers inside |
 | The charging case's battery at 20%, and again at 10% | The case on its own, closed and turning in 3D from the front, from Apple's and Beats' own models, its ring red, with its level in numbers inside. It's the only time the case shows, and it doesn't count towards the earbuds' ring |
 | A call coming in | The notch grows as tall as the Alarm: the caller and what the call is over, with a red button to decline and a green one to accept, in place of macOS's popup. Swiped up, the caller's initial and a gray handset stay beside the camera while it rings |
-| On a call | A green phone and the call's time beside the camera, and on the other side a thin waveform that runs along, green where the other person speaks and a paler yellow where you do. Click it and the notch grows as tall as the Alarm: the caller and the call's time, a gray button for the sound output and, for FaceTime and phone calls, a red one to end it. Click the caller to go to the call. It takes the notch from music for as long as the call lasts |
+| On a call | A green phone and the call's time beside the camera, and on the other side a waveform with both voices at once, orange into green, as macOS's own popup draws it. Click it and the notch grows as tall as the Alarm: the caller and the call's time, a gray button for the sound output and, for FaceTime and phone calls, a red one to end it. Click the caller to go to the call. It takes the notch from music for as long as the call lasts |
 
 Nothing else is announced: not other makers' headphones and speakers, nor
 keyboards, mice, trackpads or game controllers.
 
-Glance knows of a call from macOS's own list of calls, from its popup for one coming in, and, for apps that tell macOS nothing, such as Zoom, Discord, WhatsApp, Microsoft Teams, Slack, Telegram and Signal, from the app using the microphone. So those apps show once a call is going, not while it rings, and by the app's name rather than the person's. Your side of the waveform needs `Microphone`, which Glance asks for during your first call and uses only during calls; the other side needs `Audio from apps`. The red button presses macOS's own End button for the call, so it needs `Accessibility`; other apps' calls are ended in the app. Turn all this off with `Calls` in **Settings > Live Activities**.
+Glance knows of a FaceTime or phone call from macOS's own popup for it, and
+reads the caller, the time and where its buttons are from that popup's picture,
+so it needs `Screen & System Audio Recording`, which macOS asks for during your
+first call, and `Accessibility`. Only that popup is ever read, only during a
+call, and nothing is kept. Once the notch can offer the same, macOS's popup
+moves out of sight, and with it every other notification until the call's over.
+Without those permissions, or if the popup can't be read, the popup stays and
+the notch shows the call without the caller or its buttons. The buttons click
+macOS's own, so the popup shows and the pointer moves for an instant when you
+press one.
+
+Apps that tell macOS nothing, such as Zoom, Discord, WhatsApp, Microsoft Teams,
+Slack, Telegram and Signal, show once the app uses the microphone: not while it
+rings, by the app's name rather than the person's, and ended in the app. For
+those, your half of the waveform needs `Microphone`, which Glance asks for
+during that call and uses only during calls, and the other half needs `Audio
+from apps`. Turn all this off with `Calls` in **Settings > Live Activities**.
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 If macOS doesn't change Low Power Mode from the notch,
 **System Settings > Battery** opens, where you can. macOS's own banner at the
@@ -600,6 +616,8 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
 | `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; and switching to the tab that's playing in other browsers |
+| `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |
+| `Microphone` | Your half of the waveform on calls in other apps, during those calls |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 
 <br>

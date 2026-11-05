@@ -767,16 +767,14 @@ struct SystemBannersTests {
         var ending = short
         ending.canEnd = true
         #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: short, restingHeight: h))
-        // macOS's own words for its End button are read from it.
-        #expect(!CallEnd.words.isEmpty)
     }
 
-    @Test("The waveform shows whoever's louder at each moment, in their color")
+    @Test("Each voice has its own half of the waveform, running out from the middle, both at once")
     func callVoices() {
-        #expect(CallVoices.sample(theirs: 0.6, yours: 0.2) == .init(level: 0.6, mine: false))
-        #expect(CallVoices.sample(theirs: 0.1, yours: 0.5) == .init(level: 0.5, mine: true))
-        #expect(CallVoices.sample(theirs: 0, yours: 0) == .init(level: 0, mine: false))
-        #expect(CallVoices.sample(theirs: 3, yours: 0).level == 1)
+        var yours: [CGFloat] = [0, 0.2]
+        var theirs: [CGFloat] = [0.3, 0]
+        #expect(CallVoices.running(&yours, &theirs, yours: 0.5, theirs: 0.9) == [0.2, 0.5, 0.9, 0.3])
+        #expect(CallVoices.running(&yours, &theirs, yours: 3, theirs: 3) == [0.5, 1, 1, 0.9])
     }
 
     @Test("Calling apps are known by their bundle IDs, their helpers too")
@@ -789,16 +787,103 @@ struct SystemBannersTests {
         #expect(CallAudio.callApp(of: "com.apple.VoiceMemos") == nil)
     }
 
-    @Test("macOS's popup for a call is told apart by its app and its Accept button")
-    func callPopup() {
-        let actions = ["AXPress", "Name:Accept", "Name:Decline", "Name:Close"]
-        #expect(
-            CallBanners.call(description: "FaceTime, Alex Morgan, Incoming FaceTime Audio", actions: actions)
-                == .init(name: "Alex Morgan", over: "FaceTime", app: "com.apple.FaceTime"))
-        #expect(CallBanners.call(description: "Phone, Mum, mobile", actions: actions)?.name == "Mum")
-        // Anything else from those apps, like a missed call, or from another app.
-        #expect(CallBanners.call(description: "FaceTime, Alex Morgan, Missed call", actions: ["Name:Close"]) == nil)
-        #expect(CallBanners.call(description: "Messages, Alex Morgan, Hello", actions: actions) == nil)
+    @Test("The words on macOS's popup for a call are told from what else it reads, as a real call's were")
+    func callPopupWords() {
+        let lines = [
+            CallPopup.Line(text: "Ac", box: CGRect(x: 0.05, y: 0.62, width: 0.08, height: 0.2)),
+            CallPopup.Line(text: "Using Your iPhone - 0:11", box: CGRect(x: 0.2, y: 0.58, width: 0.39, height: 0.12)),
+            CallPopup.Line(text: "Silva", box: CGRect(x: 0.2, y: 0.71, width: 0.08, height: 0.09)),
+            CallPopup.Line(text: "si", box: CGRect(x: 0.25, y: 0.12, width: 0.05, height: 0.1)),
+        ]
+        let words = CallPopup.words(in: lines)
+        #expect(words.name == "Silva")
+        #expect(words.detail == "Using Your iPhone - 0:11")
+        #expect(CallPopup.words(in: []).name == nil)
+    }
+
+    @Test("A call's time is read from the end of its popup's line")
+    func callPopupTime() {
+        #expect(CallPopup.elapsed(in: "Using Your iPhone - 4:37") == 277)
+        #expect(CallPopup.elapsed(in: "Using Your iPhone - 1:02:03") == 3723)
+        #expect(CallPopup.elapsed(in: "Using Your iPhone") == nil)
+        #expect(CallPopup.elapsed(in: "Calling...") == nil)
+        #expect(CallPopup.elapsed(in: nil) == nil)
+        // The time shown decides when it started, unless that's already about right.
+        let now = Date(timeIntervalSinceReferenceDate: 1000)
+        #expect(CallWatch.started(nil, elapsed: 60, at: now) == now - 60)
+        #expect(CallWatch.started(now - 61, elapsed: 60, at: now) == now - 61)
+        #expect(CallWatch.started(now - 1, elapsed: 60, at: now) == now - 60)
+        #expect(CallWatch.started(now - 5, elapsed: nil, at: now) == now - 5)
+        #expect(CallWatch.started(nil, elapsed: nil, at: now) == now)
+    }
+
+    @Test("A call's connected once it shows a time, or uses the microphone with nothing left to accept")
+    func callPopupPhase() {
+        let shown = CallPopup(name: "Silva", detail: "Using Your iPhone - 0:11", red: CGPoint(x: 0.87, y: 0.65))
+        #expect(CallWatch.connected(shown, microphone: false))
+        #expect(shown.readable)
+        let ringing = CallPopup(name: "Silva", red: CGPoint(x: 0.7, y: 0.5), green: CGPoint(x: 0.87, y: 0.5))
+        #expect(!CallWatch.connected(ringing, microphone: true))
+        #expect(CallWatch.connected(CallPopup(), microphone: true))
+        #expect(!CallWatch.connected(CallPopup(), microphone: false))
+        #expect(!CallPopup(name: "Silva").readable)
+        #expect(CallWatch.appleApp(detail: "Using Your iPhone - 0:11", phoneRunning: true).name == "Phone")
+        #expect(CallWatch.appleApp(detail: "FaceTime Audio - 0:11", phoneRunning: true).name == "FaceTime")
+        #expect(CallWatch.appleApp(detail: nil, phoneRunning: false).name == "FaceTime")
+    }
+
+    @Test("A call's popup has its buttons found by color, big and on its right, nothing else")
+    func callPopupButtons() {
+        let width = 100
+        let height = 40
+        func picture(_ marks: [(CGRect, [UInt8])]) -> (red: CGPoint?, green: CGPoint?) {
+            var pixels = [UInt8](repeating: 30, count: width * height * 4)
+            for (rect, color) in marks {
+                for y in Int(rect.minY)..<Int(rect.maxY) {
+                    for x in Int(rect.minX)..<Int(rect.maxX) {
+                        for (channel, value) in color.enumerated() { pixels[(y * width + x) * 4 + channel] = value }
+                    }
+                }
+            }
+            return pixels.withUnsafeBufferPointer { CallPopup.buttons(pixels: $0, width: width, height: height) }
+        }
+        let red: [UInt8] = [196, 10, 10]
+        let green: [UInt8] = [40, 190, 80]
+        let both = picture([(CGRect(x: 60, y: 10, width: 10, height: 10), red), (CGRect(x: 80, y: 10, width: 10, height: 10), green)])
+        #expect(abs((both.red?.x ?? 0) - 0.645) < 0.01)
+        #expect(abs((both.red?.y ?? 0) - 0.3625) < 0.02)
+        #expect(abs((both.green?.x ?? 0) - 0.845) < 0.01)
+        // A red picture of the caller, on the left; the waveform's bright green, and small.
+        let neither = picture([(CGRect(x: 5, y: 5, width: 20, height: 20), red), (CGRect(x: 60, y: 5, width: 2, height: 4), green)])
+        #expect(neither.red == nil)
+        #expect(neither.green == nil)
+    }
+
+    @Test("A call's popup has its waveform read as lit bars, whatever their color, and folded down")
+    func callPopupBars() {
+        let width = 180
+        let height = 36
+        var pixels = [UInt8](repeating: 30, count: width * height * 4)
+        // The first bar is as tall as the tallest measured, the rest dots.
+        for y in 4..<31 {
+            for x in 1..<5 { pixels[(y * width + x) * 4 + 1] = 200 }
+        }
+        let bars = pixels.withUnsafeBufferPointer { CallPopup.bars(pixels: $0, width: width, height: height, rowBytes: width * 4) }
+        #expect(bars.count == CallPopup.waveBars)
+        #expect(bars[0] == 1)
+        #expect(bars[10] == 0)
+        #expect(CallPopup.fold([0.2, 0.4, 0.1, 0.9], into: 2) == [0.4, 0.9])
+        #expect(CallPopup.fold(bars, into: CallLook.bars).count == CallLook.bars)
+        #expect(CallPopup.fold([], into: 2).isEmpty)
+    }
+
+    @Test("A call that can't be answered from the notch doesn't ring, and isn't connected yet")
+    func callCalling() {
+        let calling = CallShown(name: "Silva", over: "Phone", phase: .calling)
+        #expect(!calling.rings)
+        #expect(!calling.isConnected)
+        #expect(CallShown(name: "Silva", over: "Phone", phase: .ringing).rings)
+        #expect(CallShown(name: "Silva", over: "Phone", phase: .connected(since: .now)).isConnected)
     }
 
     @Test("A device is shown only with its maker's 3D model; the rest keep macOS's own banner")

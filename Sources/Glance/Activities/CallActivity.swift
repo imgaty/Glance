@@ -14,7 +14,10 @@ import SwiftUI
 /// A call, as the notch shows it.
 struct CallShown: Equatable {
     enum Phase: Equatable {
+        /// Coming in, and it can be answered from the notch.
         case ringing
+        /// Going out, or coming in without a way to answer it from the notch.
+        case calling
         case connected(since: Date)
     }
 
@@ -25,21 +28,36 @@ struct CallShown: Equatable {
     /// The app it's in, to go to.
     var app: String?
     var phase: Phase
-    /// Its app shows a button to end it that Glance can press.
+    /// Its popup shows a button to end it that Glance can press.
     var canEnd = false
 
     /// As an unknown caller shows, in a gray circle.
     var initial: String { name.first.map { String($0).uppercased() } ?? "" }
-    var isConnected: Bool { phase != .ringing }
+    var rings: Bool { phase == .ringing }
+    var isConnected: Bool {
+        if case .connected = phase { return true }
+        return false
+    }
 }
 
-/// How a call looks, measured from a screenshot of a real call: a green phone and its time on one
-/// side, on the other a thin waveform that runs along, green where the other person speaks and a
-/// paler yellow where you do. Ringing, the caller's initial in a gray circle, and a gray handset.
+/// How a call looks, measured from real calls: a green phone and its time on one side, on the other
+/// a waveform in both voices at once, orange into green, as macOS's own popup draws it. Ringing, the
+/// caller's initial in a gray circle, and a gray handset.
 enum CallLook {
     static let green = Color(red: 0x9A / 255, green: 0xEE / 255, blue: 0x9C / 255)
-    static let theirVoice = Color(red: 0xBD / 255, green: 0xF5 / 255, blue: 0x8F / 255)
-    static let yourVoice = Color(red: 0xF5 / 255, green: 0xE6 / 255, blue: 0xA3 / 255)
+    /// Along the waveform, by the share of its width, from a real call's popup on a P3 display.
+    static let voices: [(at: Double, red: Double, green: Double, blue: Double)] = [
+        (0, 0xFF, 0xA0, 0x25), (0.39, 0xFF, 0xAE, 0x29), (0.46, 0xFF, 0xFF, 0x9E), (0.5, 0xFF, 0xFF, 0xB5), (0.55, 0x6E, 0xFF, 0x7C), (1, 0x5E, 0xFF, 0x7A),
+    ]
+    /// The color at a share of the waveform's width.
+    static func voice(at share: Double) -> Color {
+        let after = voices.firstIndex { $0.at >= share } ?? voices.count - 1
+        let end = voices[after]
+        let start = voices[max(after - 1, 0)]
+        let part = end.at > start.at ? (share - start.at) / (end.at - start.at) : 0
+        func mix(_ a: Double, _ b: Double) -> Double { (a + (b - a) * part) / 255 }
+        return Color(.displayP3, red: mix(start.red, end.red), green: mix(start.green, end.green), blue: mix(start.blue, end.blue))
+    }
     static let handset = Color(red: 0x8F / 255, green: 0x8F / 255, blue: 0x91 / 255)
     static let accept = Color(red: 0x34 / 255, green: 0xC7 / 255, blue: 0x59 / 255)
     static let decline = Color(red: 0xFF / 255, green: 0x3B / 255, blue: 0x30 / 255)
@@ -66,7 +84,7 @@ enum CallLayout {
     static func wing(for call: CallShown, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         switch call.phase {
-        case .ringing:
+        case .ringing, .calling:
             return max(edge(h) + h * CallLook.avatar + gap, gap + h * CallLook.handsetSize * 1.5 + edge(h))
         case .connected(let since):
             let time = ClockText.of(max(Int(date.timeIntervalSince(since)), 0))
@@ -105,8 +123,8 @@ struct CallTime: View {
     }
 }
 
-/// The waveform beside the camera on a call, running along: each bar is a moment, the newest at the
-/// right, in the color of whoever was speaking then.
+/// The waveform beside the camera on a call: both voices at once, a half each, each bar lit from its
+/// middle as it is in macOS's popup.
 struct CallWaveform: View {
     let height: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -114,16 +132,14 @@ struct CallWaveform: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 12, paused: reduceMotion)) { _ in
             // Read out here, so the drawing is new each time and is drawn again.
-            let samples = CallVoices.shared.samples
+            let bars = CallVoices.shared.bars
             Canvas { context, size in
                 let pitch = CallLook.barWidth + CallLook.barGap
-                for (index, sample) in samples.enumerated() {
-                    let bar = max(sample.level * size.height, CallLook.barWidth * 1.6)
-                    let rect = CGRect(
-                        x: CGFloat(index) * pitch, y: (size.height - bar) / 2, width: CallLook.barWidth, height: bar)
-                    context.fill(
-                        Path(roundedRect: rect, cornerRadius: CallLook.barWidth / 2),
-                        with: .color(sample.mine ? CallLook.yourVoice : CallLook.theirVoice))
+                for (index, level) in bars.enumerated() {
+                    let bar = max(level * size.height, CallLook.barWidth)
+                    let rect = CGRect(x: CGFloat(index) * pitch, y: (size.height - bar) / 2, width: CallLook.barWidth, height: bar)
+                    let color = CallLook.voice(at: (Double(index) + 0.5) / Double(max(bars.count, 1)))
+                    context.fill(Path(roundedRect: rect, cornerRadius: CallLook.barWidth / 2), with: .color(color))
                 }
             }
         }
@@ -133,7 +149,7 @@ struct CallWaveform: View {
 }
 
 /// A call beside the camera. Ringing, once its popup is swiped away: the caller and a gray handset.
-/// Connected: the green phone and the time, and the waveform.
+/// Connected: the green phone and the time, and the waveform. Before that, going out: the phone.
 struct CallMark: View {
     let call: CallShown
     let restingHeight: CGFloat
@@ -148,6 +164,11 @@ struct CallMark: View {
                 Image(systemName: "phone.down.fill")
                     .font(.system(size: h * CallLook.handsetSize, weight: .medium))
                     .foregroundStyle(CallLook.handset)
+            case .calling:
+                Image(systemName: "phone.fill")
+                    .font(.system(size: h * CallLook.phone, weight: .medium))
+                    .foregroundStyle(CallLook.green)
+                Spacer(minLength: 0)
             case .connected(let since):
                 Image(systemName: "phone.fill")
                     .font(.system(size: h * CallLook.phone, weight: .medium))
@@ -164,7 +185,7 @@ struct CallMark: View {
         .frame(maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            call.isConnected ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
+            !call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
     }
 }
 
@@ -243,7 +264,7 @@ struct IncomingCallView: View {
 
 /// Opened, a call shows as its popup does, as tall as one coming in: the caller, and while it rings,
 /// what it's over and buttons to decline or accept it; once connected, its time, a button for the
-/// sound output and, where its app's own can be pressed, one to end it. Clicked anywhere else, it
+/// sound output and, where its popup's own can be pressed, one to end it. Clicked anywhere else, it
 /// goes to the app it's in.
 struct ExpandedCallView: View {
     let call: CallShown
@@ -283,7 +304,7 @@ struct ExpandedCallView: View {
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
             .notchControl()
             .help(String(localized: "Show in \(call.over)"))
-            .accessibilityLabel(call.isConnected ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
+            .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
             .accessibilityHint(String(localized: "Show in \(call.over)"))
             .padding(.leading, TimerLayout.buttonEdge(h))
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -297,7 +318,7 @@ struct ExpandedCallView: View {
     }
 
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
-        if call.isConnected {
+        if !call.rings {
             IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output")) {
                 // From the keyboard the pointer can be anywhere: the menu opens under the button.
                 let fromKeys = NSApp.currentEvent?.type == .keyDown
@@ -354,34 +375,36 @@ struct ExpandedCallView: View {
 
 // MARK: - Voices
 
-/// Who's speaking on the call, for the waveform: the other person from the sound the call's app
-/// makes, through the same process tap as the music's waveform, and you from the microphone, once
-/// it's allowed. Nothing is recorded or kept. It runs only during a call.
+/// How each voice on the call moves, for the waveform: half for you and half for the other person.
+/// On a phone or FaceTime call, those are the bars of macOS's own popup, with nothing listened to.
+/// Otherwise, the other person from the sound the call's app makes, through the same process tap as
+/// the music's waveform, and you from the microphone, once it's allowed. Nothing is recorded or
+/// kept. It runs only during a call.
 @MainActor
 final class CallVoices {
     static let shared = CallVoices()
 
-    struct Sample: Equatable {
-        var level: CGFloat
-        var mine: Bool
-    }
-
-    /// Oldest first.
-    private(set) var samples = [Sample](repeating: Sample(level: 0, mine: false), count: CallLook.bars)
+    /// What the waveform draws, left to right.
+    private(set) var bars = [CGFloat](repeating: 0, count: CallLook.bars)
+    private var yourLevels = [CGFloat](repeating: 0, count: CallLook.bars / 2)
+    private var theirLevels = [CGFloat](repeating: 0, count: CallLook.bars / 2)
     private var theirs: CGFloat = 0
     private var yours: CGFloat = 0
+    private var seenAt: Date?
     private var pipeline: TapPipeline?
     private var engine: AVAudioEngine?
     private var clock: Timer?
     /// At the bench: both voices made up, turn about, with nothing listened to.
     var madeUp = false
 
-    /// One moment's bar: whoever's louder then, and how loud.
-    nonisolated static func sample(theirs: CGFloat, yours: CGFloat) -> Sample {
-        Sample(level: min(max(theirs, yours), 1), mine: yours > theirs)
+    /// The popup's own bars, as they just showed. They're sent only when they've changed.
+    func saw(_ popup: [CGFloat]) {
+        guard clock != nil else { return }
+        seenAt = .now
+        bars = CallPopup.fold(popup, into: CallLook.bars)
     }
 
-    func start(listeningTo pid: pid_t?) {
+    func start(listeningTo pid: pid_t?, microphone: Bool) {
         guard clock == nil else { return }
         if !madeUp, let pid, pid > 0, Permissions.audioCapture == .granted {
             pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
@@ -393,7 +416,7 @@ final class CallVoices {
                 }
             }
         }
-        if !madeUp { startMicrophone() }
+        if !madeUp, microphone { startMicrophone() }
         let timer = Timer(timeInterval: 1.0 / 12, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -411,20 +434,31 @@ final class CallVoices {
         engine = nil
         theirs = 0
         yours = 0
-        samples = [Sample](repeating: Sample(level: 0, mine: false), count: CallLook.bars)
+        seenAt = nil
+        yourLevels = yourLevels.map { _ in 0 }
+        theirLevels = theirLevels.map { _ in 0 }
+        bars = bars.map { _ in 0 }
     }
 
     private func tick() {
+        // The popup's unchanged only while there's nothing to hear, and then it's flat anyway.
+        if let seenAt, Date.now.timeIntervalSince(seenAt) < 1 { return }
         let t = Date.now.timeIntervalSinceReferenceDate
         if madeUp {
             let theirTurn = Int(t / 2.5) % 2 == 0
-            theirs = theirTurn ? 0.9 * CGFloat(DJGlyph.flap(at: t)) : 0
-            yours = theirTurn ? 0 : 0.9 * CGFloat(DJGlyph.flap(at: t))
+            theirs = theirTurn ? 0.9 * CGFloat(DJGlyph.flap(at: t)) : 0.1
+            yours = theirTurn ? 0.1 : 0.9 * CGFloat(DJGlyph.flap(at: t))
         }
-        // With audio capture off there's nothing to hear of them, so it moves as a voice does.
-        let heard = madeUp || Permissions.audioCapture == .granted ? theirs : 0.5 * CGFloat(DJGlyph.flap(at: t))
-        samples.removeFirst()
-        samples.append(Self.sample(theirs: heard, yours: yours))
+        bars = Self.running(&yourLevels, &theirLevels, yours: yours, theirs: theirs)
+    }
+
+    /// Each voice runs along its own half, its newest moment in the middle.
+    nonisolated static func running(_ yourLevels: inout [CGFloat], _ theirLevels: inout [CGFloat], yours: CGFloat, theirs: CGFloat) -> [CGFloat] {
+        yourLevels.removeFirst()
+        yourLevels.append(min(yours, 1))
+        theirLevels.removeLast()
+        theirLevels.insert(min(theirs, 1), at: 0)
+        return yourLevels + theirLevels
     }
 
     private func startMicrophone() {
@@ -466,9 +500,8 @@ final class CallVoices {
 
 // MARK: - Which calls
 
-/// The calls there are, from everything that can tell: the system's own list; macOS's popup for a
-/// call coming in; and, for apps like Zoom and Discord that tell the system nothing on a Mac, one of
-/// them using the microphone.
+/// The calls there are: a phone or FaceTime call from macOS's own popup for it, and apps like Zoom
+/// and Discord, which tell the system nothing on a Mac, from one of them using the microphone.
 @MainActor
 final class CallWatch: ObservableObject {
     static let shared = CallWatch()
@@ -477,11 +510,10 @@ final class CallWatch: ObservableObject {
     /// Counted a minute at a time during a call, so the notch refits as its time gains a digit.
     @Published private(set) var minutes = 0
 
-    private let system = SystemCalls()
     private var microphone: CallAudio.App?
-    private var banner: CallBanners.Banner?
-    /// Who the call is with, kept from its popup once that's gone.
-    private var who: CallBanners.Banner?
+    private var popup: CallPopup?
+    /// Who the call is with, kept from its popup in case that's closed during it.
+    private var who: String?
     private var since: Date?
     private var watch: Timer?
     private var minuteTimer: Timer?
@@ -489,11 +521,9 @@ final class CallWatch: ObservableObject {
 
     func start() {
         guard ActivityBench.scene == nil else { return }
-        system.changed = { [weak self] in self?.refresh() }
-        system.start()
-        CallBanners.shared.changed = { [weak self] banner in
-            self?.banner = banner
-            if let banner { self?.who = banner }
+        CallBanners.shared.changed = { [weak self] popup in
+            self?.popup = popup
+            if let name = popup?.name { self?.who = name }
             self?.refresh()
         }
         // Reading whether the microphone's in use costs next to nothing; it's read rarely.
@@ -519,23 +549,55 @@ final class CallWatch: ObservableObject {
     private func refresh() {
         CallBanners.shared.hides = turnedOn
         guard turnedOn else { return show(nil) }
-        let calls = system.calls
-        let connected = microphone != nil || calls.contains(where: \.connected)
-        let ringing = banner != nil || calls.contains { !$0.connected }
-        let app = microphone?.bundle ?? who?.app
-        let over = who?.over ?? microphone?.name ?? "FaceTime"
-        let name = who?.name ?? microphone?.name ?? String(localized: "Call")
-        if connected, banner == nil {
+        if let popup {
+            let app = Self.appleApp(detail: popup.detail, phoneRunning: Self.phoneRunning)
+            let name = popup.name ?? who ?? app.name
+            if Self.connected(popup, microphone: microphone != nil) {
+                let started = Self.started(since, elapsed: popup.elapsed)
+                since = started
+                show(CallShown(name: name, over: app.name, app: app.bundle, phase: .connected(since: started), canEnd: popup.red != nil))
+            } else if popup.readable, popup.green != nil {
+                show(CallShown(name: name, over: app.name, app: app.bundle, phase: .ringing))
+            } else {
+                show(CallShown(name: name, over: app.name, app: app.bundle, phase: .calling, canEnd: popup.red != nil))
+            }
+        } else if let microphone {
+            let apple = microphone.bundle == CallAudio.appleService
+            let app = apple ? Self.appleApp(detail: nil, phoneRunning: Self.phoneRunning) : (name: microphone.name, bundle: microphone.bundle)
             let started = since ?? .now
             since = started
-            show(CallShown(name: name, over: over, app: app, phase: .connected(since: started), canEnd: CallEnd.button() != nil))
-        } else if ringing {
-            show(CallShown(name: name, over: over, app: app, phase: .ringing))
+            show(CallShown(name: who ?? app.name, over: app.name, app: app.bundle, phase: .connected(since: started)))
         } else {
             who = nil
             since = nil
             show(nil)
         }
+    }
+
+    /// It's connected once it shows a time. Before it can be read, a call service using the
+    /// microphone says so, as long as there's no button to accept it.
+    nonisolated static func connected(_ popup: CallPopup, microphone: Bool) -> Bool {
+        popup.elapsed != nil || (microphone && popup.green == nil)
+    }
+
+    /// When it started: by the time its popup shows, as soon as that's read and if it's any
+    /// different, so the two never disagree.
+    nonisolated static func started(_ known: Date?, elapsed: Int?, at now: Date = .now) -> Date {
+        guard let elapsed else { return known ?? now }
+        let shown = now - TimeInterval(elapsed)
+        if let known, abs(known.timeIntervalSince(shown)) < 2 { return known }
+        return shown
+    }
+
+    private static var phoneRunning: Bool {
+        !NSRunningApplication.runningApplications(withBundleIdentifier: CallAudio.phone).isEmpty
+    }
+
+    /// Which of Apple's apps the call is in. Both go through the same popup, which names FaceTime
+    /// when it's FaceTime; Phone starts only for a phone call.
+    nonisolated static func appleApp(detail: String?, phoneRunning: Bool) -> (name: String, bundle: String) {
+        if detail?.contains("FaceTime") == true || !phoneRunning { return ("FaceTime", CallAudio.faceTime) }
+        return ("Phone", CallAudio.phone)
     }
 
     private func show(_ next: CallShown?) {
@@ -544,15 +606,16 @@ final class CallWatch: ObservableObject {
         showing = next
         call = next
         // A call coming in shows as tall as the Alarm, until it's answered, swiped away or over.
-        if next?.phase == .ringing, before?.phase != .ringing, let next {
+        if next?.rings == true, before?.rings != true, let next {
             Activities.shared.post(
                 NotchAlert(
                     kind: .incomingCall, content: .incomingCall(next), spoken: String(localized: "\(next.name), incoming call"), stays: true))
-        } else if next?.phase != .ringing {
+        } else if next?.rings != true {
             Activities.shared.dismiss(.incomingCall)
         }
         if next?.isConnected == true {
-            CallVoices.shared.start(listeningTo: CallAudio.pid(ofCallIn: microphone?.bundle))
+            // The popup's waveform has both voices; without one, they're listened to.
+            CallVoices.shared.start(listeningTo: popup?.readable == true ? nil : CallAudio.pid(ofCallIn: microphone?.bundle), microphone: popup?.readable != true)
             if minuteTimer == nil {
                 let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
                     MainActor.assumeIsolated { self?.minutes += 1 }
@@ -569,23 +632,22 @@ final class CallWatch: ObservableObject {
 
     func accept() {
         Activities.shared.dismiss(.incomingCall)
-        CallBanners.shared.press(CallBanners.acceptWords)
+        CallBanners.shared.press(.green)
     }
 
     func decline() {
         Activities.shared.dismiss(.incomingCall)
-        CallBanners.shared.press(CallBanners.declineWords)
+        CallBanners.shared.press(.red)
     }
 
-    /// Ends it, as its app's own End button does, pressed through Accessibility.
+    /// Ends it, with the popup's own End button.
     func end() {
-        CallEnd.press()
-        refresh()
+        CallBanners.shared.press(.red)
     }
 
     /// To the call, in its app.
     func goToApp() {
-        let bundle = call?.app ?? "com.apple.FaceTime"
+        let bundle = call?.app ?? CallAudio.faceTime
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
@@ -597,103 +659,13 @@ final class CallWatch: ObservableObject {
     }
 }
 
-/// The system's own list of calls. Its API is marked as for iOS and Mac Catalyst apps, but it's
-/// there on the Mac and answers, so it's reached by name.
-@MainActor
-final class SystemCalls: NSObject {
-    struct Call: Equatable {
-        var connected: Bool
-        var outgoing: Bool
-    }
-
-    var changed: (() -> Void)?
-    private(set) var calls: [Call] = []
-    private var observer: NSObject?
-
-    func start() {
-        _ = Bundle(path: "/System/Library/Frameworks/CallKit.framework")?.load()
-        guard let kind = NSClassFromString("CXCallObserver") as? NSObject.Type else { return }
-        let observer = kind.init()
-        let setDelegate = NSSelectorFromString("setDelegate:queue:")
-        guard observer.responds(to: setDelegate) else { return }
-        observer.perform(setDelegate, with: self, with: nil)
-        self.observer = observer
-        read()
-    }
-
-    private func read() {
-        let listed = observer?.value(forKey: "calls") as? [NSObject] ?? []
-        calls = listed.compactMap { call in
-            guard call.value(forKey: "hasEnded") as? Bool != true else { return nil }
-            return Call(connected: call.value(forKey: "hasConnected") as? Bool == true, outgoing: call.value(forKey: "isOutgoing") as? Bool == true)
-        }
-    }
-
-    @objc(callObserver:callChanged:)
-    func callObserver(_ observer: NSObject, callChanged call: NSObject) {
-        read()
-        changed?()
-    }
-}
-
-/// The End button macOS shows during a FaceTime or phone call, in FaceTime's or Phone's window or in
-/// the call's notification, found by the words macOS itself gives it in the Mac's language, and
-/// pressed through Accessibility. Other apps' calls have their own, which aren't looked for.
-@MainActor
-enum CallEnd {
-    private static let apps = ["com.apple.FaceTime", "com.apple.mobilephone"]
-
-    /// macOS's own names for it.
-    static let words: Set<String> = {
-        let kit = URL(fileURLWithPath: "/System/Library/PrivateFrameworks/ConversationKit.framework")
-        let found = ["DRAWER_END_AX", "IN_CALL_CONTROLS_END_LABEL", "AX_HANG_UP"].map { SystemNotices.words($0, table: "ConversationKit", of: kit) }
-        let named = Set(found.filter { !$0.isEmpty && !$0.hasPrefix("DRAWER_") && !$0.hasPrefix("IN_CALL_") && !$0.hasPrefix("AX_") })
-        return named.isEmpty ? ["End", "Hang Up"] : named
-    }()
-
-    /// Where it is: a button in a window, or a notification with it as one of its actions.
-    enum Place {
-        case button(AXUIElement)
-        case action(AXUIElement, String)
-    }
-
-    static func button() -> Place? {
-        guard AXIsProcessTrusted() else { return nil }
-        for bundle in apps {
-            for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundle) {
-                let element = AXUIElementCreateApplication(app.processIdentifier)
-                AXUIElementSetMessagingTimeout(element, 0.5)
-                for window in SystemNotices.value(element, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-                    let found = SystemNotices.findAll(in: window) { item in
-                        SystemNotices.value(item, kAXRoleAttribute) as? String == kAXButtonRole as String
-                            && [kAXDescriptionAttribute, kAXTitleAttribute].contains { words.contains(SystemNotices.value(item, $0) as? String ?? "") }
-                    }
-                    if let first = found.first { return .button(first) }
-                }
-            }
-        }
-        let calls = ["FaceTime", "Phone"].map { SystemNotices.name(of: URL(fileURLWithPath: "/System/Applications/\($0).app")) }
-        for notification in calls.flatMap(SystemNotices.showing(from:)) {
-            var names: CFArray?
-            AXUIElementCopyActionNames(notification, &names)
-            if let action = (names as? [String] ?? []).first(where: { action in words.contains { action.hasPrefix("Name:" + $0 + "\n") || action == "Name:" + $0 } }) {
-                return .action(notification, action)
-            }
-        }
-        return nil
-    }
-
-    static func press() {
-        switch button() {
-        case .button(let button): AXUIElementPerformAction(button, kAXPressAction as CFString)
-        case .action(let notification, let action): AXUIElementPerformAction(notification, action as CFString)
-        case nil: break
-        }
-    }
-}
-
 /// Who's using the microphone and making sound, from Core Audio's list of processes.
 enum CallAudio {
+    static let faceTime = "com.apple.FaceTime"
+    static let phone = "com.apple.mobilephone"
+    /// Apple's calls use the microphone through this.
+    static let appleService = "com.apple.avconferenced"
+
     struct App: Equatable {
         var bundle: String
         var name: String
@@ -762,38 +734,69 @@ enum CallAudio {
     }
 }
 
-/// macOS's popup for a call coming in, at the top right of the screen, in Notification Center: read
-/// through Accessibility, moved out of sight while the notch shows the same, and pressed from the
-/// notch's buttons. Without Accessibility, it shows as before.
+/// macOS's popup for a phone or FaceTime call, at the top right of the screen, in Notification
+/// Center's window, for the whole of the call. Accessibility finds it but can't see into it, so
+/// it's read from its picture (see `CallPopup`), and its buttons are clicked where they show.
+///
+/// Once the notch can offer the same, that window is moved up until only its last row of points is
+/// on screen, which has nothing in it: the popup's out of sight and can still be read. Until then,
+/// or without Screen Recording, it's left alone. Every other notification hides with it, until the
+/// call's over. Without Accessibility, nothing's found and it shows as before.
 @MainActor
 final class CallBanners {
     static let shared = CallBanners()
 
-    struct Banner: Equatable {
-        var name: String
-        var over: String
-        var app: String?
+    static let center = "com.apple.notificationcenterui"
+    /// The process drawing the popup, which runs only around a call.
+    private static let popupProcess = "com.apple.FaceTime.FaceTimeNotificationExtension"
+    /// Where the window belongs while it's moved, kept in case Glance doesn't get to put it back.
+    private static let homeKey = "callPopupWindowHome"
+
+    enum Button {
+        case red, green
     }
 
-    static let acceptWords = ["Accept", "Answer"]
-    static let declineWords = ["Decline"]
-    /// Past any arrangement of displays.
-    private static let away = CGPoint(x: -20000, y: -20000)
+    var changed: ((CallPopup?) -> Void)?
+    var hides = true {
+        didSet {
+            guard hides != oldValue, !hides else { return }
+            reveal()
+            scan()
+        }
+    }
 
-    var changed: ((Banner?) -> Void)?
-    var hides = true
-
-    private var center: pid_t = 0
+    private var centerPID: pid_t = 0
     private var observer: AXObserver?
-    private var showing: (notification: AXUIElement, window: AXUIElement, place: CGPoint?, banner: Banner)?
-    private var poll: Timer?
+    private var timer: Timer?
+    private var found: (banner: AXUIElement, window: AXUIElement)?
+    private var popup: CallPopup?
+    private var home: CGPoint?
+    private var reading = false
+    private var pressing = false
+    private var readCarefully = false
+    private var askedForScreen = false
+    private lazy var wave = CallPopupWave { bars in
+        DispatchQueue.main.async { MainActor.assumeIsolated { CallVoices.shared.saw(bars) } }
+    }
 
     /// Follows Notification Center, as soon as Accessibility is allowed, and again if it's restarted.
     func follow() {
         guard AXIsProcessTrusted(),
-            let pid = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.notificationcenterui").first?.processIdentifier,
-            pid != center
+            let pid = NSRunningApplication.runningApplications(withBundleIdentifier: Self.center).first?.processIdentifier
         else { return }
+        if timer == nil {
+            putBackLeftOver(in: pid)
+            NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { CallBanners.shared.reveal() }
+            }
+            let made = Timer(timeInterval: 1, repeats: true) { _ in
+                MainActor.assumeIsolated { CallBanners.shared.scan() }
+            }
+            made.tolerance = 0.2
+            RunLoop.main.add(made, forMode: .common)
+            timer = made
+        }
+        guard pid != centerPID else { return }
         var made: AXObserver?
         let told: AXObserverCallback = { _, _, _, _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { CallBanners.shared.scan() } }
@@ -802,84 +805,176 @@ final class CallBanners {
         if let observer { CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode) }
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.5)
-        AXObserverAddNotification(made, app, kAXWindowCreatedNotification as CFString, nil)
         AXObserverAddNotification(made, app, kAXCreatedNotification as CFString, nil)
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(made), .defaultMode)
-        center = pid
+        centerPID = pid
         observer = made
     }
 
-    /// What a notification tells of a call coming in, if it's one: its first words name the app,
-    /// and it has a button to accept. The next words are who's calling.
-    nonisolated static func call(description: String, actions: [String]) -> Banner? {
-        let apps = ["FaceTime": "com.apple.FaceTime", "Phone": "com.apple.mobilephone"]
-        let words = description.components(separatedBy: ", ")
-        guard words.count >= 2, let app = apps[words[0]] else { return nil }
-        guard actions.contains(where: { action in acceptWords.contains { action.hasPrefix("Name:" + $0) } }) else { return nil }
-        return Banner(name: words[1], over: words[0], app: app)
+    /// If Glance stopped with the window moved, it goes back, or no notification would ever show.
+    private func putBackLeftOver(in pid: pid_t) {
+        guard let left = UserDefaults.standard.string(forKey: Self.homeKey) else { return }
+        let app = AXUIElementCreateApplication(pid)
+        var place = NSPointFromString(left)
+        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            if let back = AXValueCreate(.cgPoint, &place) { AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, back) }
+        }
+        UserDefaults.standard.removeObject(forKey: Self.homeKey)
     }
 
     private func scan() {
-        guard center != 0 else { return }
-        let app = AXUIElementCreateApplication(center)
+        guard centerPID != 0, !pressing else { return }
+        guard hides else {
+            if found != nil { give() }
+            return
+        }
+        // Nothing's asked of Notification Center unless a call might be up.
+        guard found != nil || !NSRunningApplication.runningApplications(withBundleIdentifier: Self.popupProcess).isEmpty else { return }
+        guard let now = findPopup() else {
+            if found != nil { give() }
+            return
+        }
+        found = now
+        if popup == nil {
+            popup = CallPopup()
+            changed?(popup)
+        }
+        // Once it's connected and read, there's nothing new to read until a button's pressed.
+        if popup?.readable != true || popup?.elapsed == nil { read() }
+    }
+
+    private func findPopup() -> (banner: AXUIElement, window: AXUIElement)? {
+        let app = AXUIElementCreateApplication(centerPID)
         AXUIElementSetMessagingTimeout(app, 0.5)
-        let subroles: Set<String> = ["AXNotificationCenterAlert", "AXNotificationCenterBanner"]
         for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-            let found = SystemNotices.findAll(in: window) { subroles.contains(SystemNotices.value($0, kAXSubroleAttribute) as? String ?? "") }
-            for notification in found {
-                var names: CFArray?
-                AXUIElementCopyActionNames(notification, &names)
-                guard
-                    let banner = Self.call(
-                        description: SystemNotices.words(of: notification), actions: names as? [String] ?? [])
-                else { continue }
-                if showing == nil || showing?.banner != banner { take(notification, in: window, banner) }
-                return
+            let banners = SystemNotices.findAll(in: window) {
+                (SystemNotices.value($0, kAXIdentifierAttribute) as? String ?? "").contains("FACETIME")
+            }
+            if let banner = banners.first { return (banner, window) }
+        }
+        return nil
+    }
+
+    private func frame(of element: AXUIElement) -> CGRect? {
+        guard let value = SystemNotices.value(element, "AXFrame") else { return nil }
+        var rect = CGRect.zero
+        return AXValueGetValue(value as! AXValue, .cgRect, &rect) ? rect : nil
+    }
+
+    /// Takes a picture of it and reads that, off the main thread, then hides it if that's all that
+    /// was missing.
+    private func read() {
+        guard !reading, let found, let rect = frame(of: found.banner) else { return }
+        guard CGPreflightScreenCaptureAccess() else {
+            if !askedForScreen {
+                askedForScreen = true
+                CGRequestScreenCaptureAccess()
+            }
+            return
+        }
+        reading = true
+        Task {
+            await readNow(rect)
+            reading = false
+            conceal()
+        }
+    }
+
+    private func readNow(_ rect: CGRect) async {
+        guard let window = await CallPopupCamera.window(), let image = await CallPopupCamera.picture(of: rect, in: window) else { return }
+        let seen = await Task.detached(priority: .userInitiated) { CallPopup.read(image, accurate: false) }.value
+        guard found != nil else { return }
+        update(with: seen)
+        // Names read at once are in Latin letters only: the slower reading covers the Mac's languages.
+        if seen.name != nil, !readCarefully {
+            readCarefully = true
+            Task {
+                let careful = await Task.detached(priority: .utility) { CallPopup.read(image, accurate: true) }.value
+                if found != nil, let name = careful.name, name != popup?.name, popup != nil {
+                    popup?.name = name
+                    changed?(popup)
+                }
             }
         }
-        // It's gone: answered, declined or missed.
-        if showing != nil { give() }
     }
 
-    private func take(_ notification: AXUIElement, in window: AXUIElement, _ banner: Banner) {
-        var place: CGPoint?
-        if hides, let value = SystemNotices.value(window, kAXPositionAttribute) {
-            var point = CGPoint.zero
-            if AXValueGetValue(value as! AXValue, .cgPoint, &point) { place = point }
-            var off = Self.away
-            if let away = AXValueCreate(.cgPoint, &off) { AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, away) }
-        }
-        showing = (notification, window, place, banner)
-        changed?(banner)
-        poll?.invalidate()
-        let timer = Timer(timeInterval: 0.5, repeats: true) { _ in
-            MainActor.assumeIsolated { CallBanners.shared.scan() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        poll = timer
+    private func update(with seen: CallPopup) {
+        var next = seen
+        if readCarefully, let name = popup?.name { next.name = name }
+        next.name = next.name ?? popup?.name
+        guard next != popup else { return }
+        popup = next
+        changed?(next)
     }
 
+    /// Out of sight, if the notch has everything it needs to stand in for it.
+    private func conceal() {
+        guard hides, !pressing, home == nil, popup?.readable == true, let found else { return }
+        guard let position = SystemNotices.value(found.window, kAXPositionAttribute), let size = frame(of: found.window)?.height else { return }
+        var place = CGPoint.zero
+        guard AXValueGetValue(position as! AXValue, .cgPoint, &place) else { return }
+        var away = CGPoint(x: place.x, y: place.y - size + 1)
+        guard let value = AXValueCreate(.cgPoint, &away), AXUIElementSetAttributeValue(found.window, kAXPositionAttribute as CFString, value) == .success
+        else { return }
+        home = place
+        UserDefaults.standard.set(NSStringFromPoint(place), forKey: Self.homeKey)
+        guard !wave.running, let rect = frame(of: found.banner) else { return }
+        Task {
+            guard let window = await CallPopupCamera.window() else { return }
+            await wave.start(window: window, popup: rect)
+        }
+    }
+
+    private func reveal() {
+        guard var place = home, let window = found?.window, let back = AXValueCreate(.cgPoint, &place) else { return }
+        AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, back)
+        home = nil
+        UserDefaults.standard.removeObject(forKey: Self.homeKey)
+    }
+
+    /// It's gone: Notification Center's window goes back where it was, for every notification after.
     private func give() {
-        poll?.invalidate()
-        poll = nil
-        showing = nil
+        wave.stop()
+        reveal()
+        found = nil
+        popup = nil
+        readCarefully = false
         changed?(nil)
     }
 
-    /// Presses one of the popup's buttons. If it hasn't one of these names, the popup comes back for
-    /// a person to press.
-    func press(_ words: [String]) {
-        guard let showing else { return }
-        var names: CFArray?
-        AXUIElementCopyActionNames(showing.notification, &names)
-        let actions = names as? [String] ?? []
-        if let action = actions.first(where: { action in words.contains { action.hasPrefix("Name:" + $0) } }),
-            AXUIElementPerformAction(showing.notification, action as CFString) == .success
-        {
-            return
+    /// Clicks one of its buttons, where it shows right now, with the pointer put back after. The
+    /// popup comes back for that moment, as only what's on screen can be clicked; if the button
+    /// can't be found, it stays, for a person to press.
+    func press(_ button: Button) {
+        guard !pressing, let found else { return }
+        pressing = true
+        Task {
+            defer { pressing = false }
+            if let rect = frame(of: found.banner) { await readNow(rect) }
+            let spot = button == .green ? popup?.green : popup?.red
+            reveal()
+            guard let spot else { return }
+            try? await Task.sleep(for: .milliseconds(120))
+            guard let rect = frame(of: found.banner) else { return }
+            await Self.click(at: CGPoint(x: rect.minX + rect.width * spot.x, y: rect.minY + rect.height * spot.y))
+            try? await Task.sleep(for: .milliseconds(300))
+            // Answered, its buttons have moved, so it's read again before it hides.
+            popup?.detail = nil
         }
-        if var place = showing.place, let back = AXValueCreate(.cgPoint, &place) {
-            AXUIElementSetAttributeValue(showing.window, kAXPositionAttribute as CFString, back)
+    }
+
+    private static func click(at point: CGPoint) async {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let back = CGEvent(source: nil)?.location
+        func post(_ type: CGEventType) {
+            CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: .left)?.post(tap: .cghidEventTap)
         }
+        post(.mouseMoved)
+        try? await Task.sleep(for: .milliseconds(60))
+        post(.leftMouseDown)
+        try? await Task.sleep(for: .milliseconds(30))
+        post(.leftMouseUp)
+        try? await Task.sleep(for: .milliseconds(30))
+        if let back { CGWarpMouseCursorPosition(back) }
     }
 }
