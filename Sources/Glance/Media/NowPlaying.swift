@@ -113,6 +113,21 @@ final class NowPlaying: ObservableObject {
         heldPlaying = (isPlaying, .now + 1.5)
     }
 
+    /// Different picks from Spotify's DJ; if Spotify can't be asked, Spotify, where its own button is.
+    func differentDJPicks() {
+        guard !isDemo else { return }
+        Task {
+            let script = PlayerScripting.tell(PlayerScripting.spotify, "return spotify url of current track")
+            guard let reply = await PlayerScripting.run(script) else { return openApp() }
+            let steps = PlayerScripting.djPicksScripts(playing: reply.trimmingCharacters(in: .whitespacesAndNewlines))
+            for (index, step) in steps.enumerated() {
+                // A moment on the song alone, for Spotify to take it that the DJ's been left.
+                if index > 0 { try? await Task.sleep(for: .seconds(1)) }
+                if await PlayerScripting.run(step) == nil { return openApp() }
+            }
+        }
+    }
+
     func next() { command("next", script: "next track") }
     func previous() { command("previous", script: "previous track") }
 

@@ -262,6 +262,14 @@ struct PlayerScriptingTests {
         #expect(PlayerScripting.spotifyTrackID(uri) == nil)
     }
 
+    @Test("The DJ's button leaves the DJ for the song on its own, then starts it anew, in Spotify")
+    func djPicks() {
+        let dj = #"tell application "Spotify" to play track "spotify:playlist:37i9dQZF1EYkqdzj48dyYq""#
+        #expect(PlayerScripting.djPicksScripts(playing: "spotify:track:AAA") == [#"tell application "Spotify" to play track "spotify:track:AAA""#, dj])
+        // What the DJ says goes by the song it comes before.
+        #expect(PlayerScripting.djPicksScripts(playing: "spotify:media:AAA") == [#"tell application "Spotify" to play track "spotify:track:AAA""#, dj])
+    }
+
     @Test("While the DJ talks the cover is its own and it's no song, and the song's cover comes back after")
     @MainActor
     func djCover() throws {

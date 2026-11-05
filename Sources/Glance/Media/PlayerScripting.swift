@@ -165,6 +165,17 @@ enum MusicApps {
 enum PlayerScripting {
     static let music = "com.apple.Music"
     static let spotify = "com.spotify.client"
+    /// Spotify's DJ, at the same address for everyone.
+    static let djAddress = "spotify:playlist:37i9dQZF1EYkqdzj48dyYq"
+
+    /// What gets different picks from the DJ, in turn. Spotify's own button for that sends the DJ a
+    /// signal no other app can send, and asked to play while it's playing, the DJ only carries on
+    /// with the same song. So it's left, for the song on its own, and then started anew. What the DJ
+    /// says has the address of the song it comes before.
+    static func djPicksScripts(playing address: String) -> [String] {
+        let song = address.replacingOccurrences(of: "spotify:media:", with: "spotify:track:")
+        return [tell(spotify, "play track \"\(song)\""), tell(spotify, "play track \"\(djAddress)\"")]
+    }
     private static let queue = DispatchQueue(label: "Glance.PlayerScripting")
 
     /// Finds the song whose favorite counts, as `t`. A song streamed from Apple Music and its copy

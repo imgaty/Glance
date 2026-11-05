@@ -42,7 +42,7 @@ enum DJLook {
 }
 
 /// Spotify's DJ, in the left button's place while it chooses the music: its ring on a blue circle,
-/// as in Spotify. Clicked, it brings Spotify forward, where the DJ's own controls are.
+/// as in Spotify. Clicked, it gets different picks.
 struct DJButton: View {
     /// The DJ is talking, and its corner moves.
     let talking: Bool
@@ -65,9 +65,10 @@ struct DJButton: View {
         }
         .buttonStyle(IslandPress(highlight: false))
         .notchControl()
+        .help(String(localized: "Get different DJ picks"))
         .accessibilityLabel("DJ")
         .accessibilityValue(talking ? String(localized: "Talking") : "")
-        .accessibilityHint("Opens Spotify")
+        .accessibilityHint("Get different DJ picks")
     }
 }
 

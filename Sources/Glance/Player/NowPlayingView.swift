@@ -220,7 +220,7 @@ struct NowPlayingView: View {
                     .environment(\.layoutDirection, reading)
             } else if showsDJ {
                 // As Spotify puts its DJ where shuffle was, while the DJ chooses the music.
-                DJButton(talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.openApp() }
+                DJButton(talking: nowPlaying.djTalking && nowPlaying.isPlaying) { nowPlaying.differentDJPicks() }
                     .keyRing(.left)
                     .transition(.opacity)
             } else {
@@ -383,7 +383,7 @@ struct NowPlayingView: View {
         // The lines and an activity's buttons see to their own.
         case .line, .position, .activityFirst, .activitySecond: break
         case .left:
-            if showsDJ { nowPlaying.openApp() } else { use(leftSlot, fromKeys: fromKeys) }
+            if showsDJ { nowPlaying.differentDJPicks() } else { use(leftSlot, fromKeys: fromKeys) }
         case .previous:
             skipsBack += 1
             nowPlaying.previous()
