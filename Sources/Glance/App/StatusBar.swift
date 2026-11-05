@@ -278,17 +278,20 @@ final class StatusBarController: NSObject {
     // MARK: Icon
 
     /// A screen with its top filled in, the app icon's own shapes in the same proportions, nearly
-    /// square. Its outline is as thick as the outlines of the Mac's own symbols at this size, 1.25
-    /// points, and the top sits a point inside it, its corners following the outline's. A template,
-    /// so it follows the menu bar's appearance, as symbols do.
+    /// square. Its outline is 1.5 points, as heavy as the icons beside it in the menu bar read,
+    /// and the top sits a point inside it, its corners following the outline's. A template, so it
+    /// follows the menu bar's appearance, as symbols do.
     private static let notchIcon: NSImage = {
         let image = NSImage(size: NSSize(width: 17, height: 15), flipped: false) { rect in
             NSColor.black.set()
-            let line: CGFloat = 1.25
-            let screen = NSBezierPath(roundedRect: rect.insetBy(dx: line / 2, dy: line / 2), xRadius: 3, yRadius: 3)
+            let line: CGFloat = 1.5
+            let radius: CGFloat = 3
+            let screen = NSBezierPath(roundedRect: rect.insetBy(dx: line / 2, dy: line / 2), xRadius: radius, yRadius: radius)
             screen.lineWidth = line
             screen.stroke()
-            NSBezierPath(roundedRect: NSRect(x: 2.25, y: 9.75, width: 12.5, height: 3), xRadius: 1.375, yRadius: 1.375).fill()
+            let inside = line + 1
+            let top = radius - line / 2 - 1
+            NSBezierPath(roundedRect: NSRect(x: inside, y: rect.maxY - inside - 3, width: rect.width - inside * 2, height: 3), xRadius: top, yRadius: top).fill()
             return true
         }
         image.isTemplate = true

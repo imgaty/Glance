@@ -297,7 +297,8 @@
 - Added Glance's icon in the Dock and in Finder, in layers, so it takes on each
   icon style chosen in Appearance settings, clear included.
 - Changed the menu bar icon and the app icon to one drawing, nearly square, its
-  outline as thin as those of the Mac's own symbols, the top a point inside it.
+  outline as heavy as the icons beside it in the menu bar, the top a point inside
+  it.
 - Fixed the menu bar icon being wider than macOS's own, with a wider pill behind
   it while its menu is open.
 - Added the keyboard to the player opened with a shortcut: Tab and Shift-Tab go
