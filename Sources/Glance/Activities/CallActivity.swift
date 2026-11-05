@@ -865,8 +865,12 @@ final class CallBanners {
         else { return }
         if timer == nil {
             NotificationWindow.shared.start()
+            // As well as when it's told: a real notification can't be made to show, to prove it always is.
             let made = Timer(timeInterval: 1, repeats: true) { _ in
-                MainActor.assumeIsolated { CallBanners.shared.scan() }
+                MainActor.assumeIsolated {
+                    SystemNotices.sweep()
+                    CallBanners.shared.scan()
+                }
             }
             made.tolerance = 0.2
             RunLoop.main.add(made, forMode: .common)
