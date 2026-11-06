@@ -325,13 +325,14 @@ side sits at its own end, as far in from it as from the top and bottom, and on
 the taller views, both ends alike. Any room to spare is beside the camera. The
 notch widens or narrows as a timer or the stopwatch gains or loses a digit.
 
-Swipe up with two fingers on the closed notch to swipe away what it shows, as
-on the iPhone: an announcement folds away, a timer that's ringing stops, and a
-live activity stays away until it changes. Music comes back with the next song
-or when it plays again, a timer or the stopwatch when it's started, paused or
-ended, AirDrop with the next file, and AirPlay with the next speaker. Opened to
-a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the notch and
-swipes that away too.
+Swipe up with two fingers on the closed notch to swipe away what it shows, as on
+the iPhone: an announcement folds away, a timer that's ringing stops, and a live
+activity steps away for two seconds, then comes back while it's still going. It
+comes back sooner when it changes: music with the next song or when it plays
+again, a timer or the stopwatch when it's started, paused or ended, AirDrop with
+the next file, AirPlay with the next speaker, and a call when it's answered.
+Opened to a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the
+notch and swipes that away too.
 
 Turn these off with `Cover and waveform` and `Announce new audio` in
 **Settings > Live Activities**.

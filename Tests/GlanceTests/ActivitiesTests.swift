@@ -781,6 +781,11 @@ struct SystemBannersTests {
         // Swiped away, the rest come back.
         model.dismissed.insert(.call)
         #expect(model.activities.first == .music && model.musicShown)
+        // Still going, it comes back by itself a couple of seconds later.
+        #expect(NotchController.swipedAway == .seconds(2))
+        model.dismissed.remove(.call)
+        #expect(model.activities.first == .call)
+        model.dismissed.insert(.call)
         // A call coming in is as tall as the Alarm, and stays.
         let alert = NotchAlert(kind: .incomingCall, content: .incomingCall(ringing), spoken: "", stays: true)
         #expect(alert.tall && alert.stays)

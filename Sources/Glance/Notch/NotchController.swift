@@ -1779,9 +1779,10 @@ final class NotchController {
         close(holdUntilExit: true)
     }
 
-    /// A live activity swiped away, until it changes: music until the next song, or until it
-    /// plays again; a timer or the stopwatch until it's started, paused or ended; AirDrop until
-    /// the next file; AirPlay until the next speaker.
+    /// A live activity swiped away, for a moment: still going, it comes back by itself after
+    /// `swipedAway`, and sooner if it changes: music with the next song, or when it plays again; a
+    /// timer or the stopwatch when it's started, paused or ended; AirDrop with the next file;
+    /// AirPlay with the next speaker; a call when it's answered.
     private func dismiss(_ activity: NotchModel.Activity) {
         withAnimation(IslandMotion.fold) {
             if activity == .music {
@@ -1795,7 +1796,24 @@ final class NotchController {
                 ActivityBench.shared.stopped(activity)
             }
         }
+        returns[activity]?.cancel()
+        returns[activity] = Task { [weak self] in
+            try? await Task.sleep(for: Self.swipedAway)
+            guard let self, !Task.isCancelled else { return }
+            returns[activity] = nil
+            if activity == .music {
+                guard musicDismissed else { return }
+                musicDismissed = false
+                showActivity(nowPlaying.isPlaying, immediately: true)
+            } else if model.dismissed.contains(activity) {
+                withAnimation(IslandMotion.open) { _ = model.dismissed.remove(activity) }
+            }
+        }
     }
+
+    /// How long a swiped away live activity stays away while it's still going.
+    static let swipedAway: Duration = .seconds(2)
+    private var returns: [NotchModel.Activity: Task<Void, Never>] = [:]
 
     // MARK: The player and the tray
 
