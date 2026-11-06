@@ -65,7 +65,7 @@ enum CallLook {
     /// bars stay sharp, and shorter by less, so they're as tall as they can be.
     static let waveWidth: CGFloat = 45
     /// As shares of the notch's height: the waveform, the phone, the circle, the handset.
-    static let waveHeight: CGFloat = 0.45
+    static let waveHeight: CGFloat = 0.6
     static let phone: CGFloat = 0.42
     /// The caller's circle and the handset as large as every other activity's mark beside the camera.
     static let avatar: CGFloat = TimerLayout.ring
@@ -463,6 +463,10 @@ final class CallVoices: ObservableObject {
     private var seen = false
     private var theirs: CGFloat = 0
     private var yours: CGFloat = 0
+    /// What's drawn of each voice, easing towards what's heard: quickly up, more slowly down, as
+    /// the popup's bars do.
+    private var shownTheirs: CGFloat = 0
+    private var shownYours: CGFloat = 0
     private var pipeline: TapPipeline?
     private var engine: AVAudioEngine?
     private var clock: Timer?
@@ -490,7 +494,7 @@ final class CallVoices: ObservableObject {
             }
         }
         if !madeUp, microphone { startMicrophone() }
-        let timer = Timer(timeInterval: 1.0 / 12, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -508,6 +512,8 @@ final class CallVoices: ObservableObject {
         engine = nil
         theirs = 0
         yours = 0
+        shownTheirs = 0
+        shownYours = 0
         seen = false
         picture = nil
     }
@@ -522,8 +528,15 @@ final class CallVoices: ObservableObject {
             theirs = turn == 0 || turn == 2 ? voice : 0
             yours = turn == 1 || turn == 2 ? voice : 0
         }
-        let bars = Self.shaped(theirs: theirs, yours: yours, at: t)
+        shownTheirs = Self.eased(shownTheirs, towards: theirs)
+        shownYours = Self.eased(shownYours, towards: yours)
+        let bars = Self.shaped(theirs: shownTheirs, yours: shownYours, at: t)
         picture = CallLook.drawnWave(theirs: bars.theirs, yours: bars.yours)
+    }
+
+    /// A step of easing, thirty times a second.
+    nonisolated static func eased(_ shown: CGFloat, towards heard: CGFloat) -> CGFloat {
+        shown + (heard - shown) * (heard > shown ? 0.55 : 0.18)
     }
 
     /// The bars of each voice from how loud it is, over the same width: the other person's strongest
@@ -533,7 +546,7 @@ final class CallVoices: ObservableObject {
         func voice(_ level: CGFloat, _ strength: (Double) -> Double) -> [CGFloat] {
             (0..<count).map { bar in
                 let place = (Double(bar) + 0.5) / Double(count)
-                let wave = (sin(t * 9 + Double(bar) * 1.7) + sin(t * 5.3 + Double(bar) * 2.9)) / 2
+                let wave = (sin(t * 4.5 + Double(bar) * 1.7) + sin(t * 2.7 + Double(bar) * 2.9)) / 2
                 return min(level * CGFloat(strength(place) * (0.65 + 0.35 * wave)), 1)
             }
         }
@@ -645,12 +658,22 @@ final class CallWatch: ObservableObject {
         } else if let microphone {
             let apple = microphone.bundle == CallAudio.appleService
             let app = apple ? Self.appleApp(detail: nil, phoneRunning: Self.phoneRunning) : (name: microphone.name, bundle: microphone.bundle)
+            // Discord says who it's with and for how long.
+            let discord = microphone.bundle.hasPrefix(DiscordCall.bundle) ? DiscordCall.shared.read() : nil
+            if let elapsed = discord?.elapsed {
+                let shown = Date.now - TimeInterval(elapsed)
+                if since.map({ abs($0.timeIntervalSince(shown)) > 1.5 }) ?? true { since = shown }
+            }
             let started = since ?? .now
             since = started
-            show(CallShown(name: who ?? app.name, over: app.name, app: app.bundle, phase: .connected(since: started)))
+            show(
+                CallShown(
+                    name: discord?.name ?? who ?? app.name, over: app.name, app: app.bundle, phase: .connected(since: started),
+                    canEnd: discord != nil && DiscordCall.shared.canEnd))
         } else {
             who = nil
             since = nil
+            DiscordCall.shared.forget()
             show(nil)
         }
     }
@@ -713,9 +736,10 @@ final class CallWatch: ObservableObject {
         end()
     }
 
-    /// Ends it, with the popup's own End button.
+    /// Ends it, with the popup's own End button, or in Discord, with its own.
     func end() {
         guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped(.call) }
+        if popup == nil, microphone?.bundle.hasPrefix(DiscordCall.bundle) == true { return DiscordCall.shared.end() }
         CallBanners.shared.press(.red)
     }
 
@@ -731,6 +755,108 @@ final class CallWatch: ObservableObject {
     func bench(_ made: CallShown?) {
         CallVoices.shared.madeUp = true
         show(made)
+    }
+}
+
+/// Discord's own window, read through Accessibility, which Discord lets Glance turn on for it as an
+/// Electron app: its "Voice Connected" link names the call and shows its time, whatever language
+/// Discord is in, and the button beside it leaves the call. Only read during a call in Discord,
+/// and turned off again after.
+@MainActor
+final class DiscordCall {
+    static let shared = DiscordCall()
+    static let bundle = "com.hnc.Discord"
+
+    struct Reading: Equatable {
+        var name: String
+        var elapsed: Int?
+    }
+
+    private var askedPID: pid_t = 0
+    private var link: AXUIElement?
+    private var leave: AXUIElement?
+
+    var canEnd: Bool { leave != nil }
+
+    /// Who the call is with and how long it's been going, as Discord shows them now.
+    func read() -> Reading? {
+        guard AXIsProcessTrusted(), let app = NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundle).first else {
+            forget()
+            return nil
+        }
+        let element = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 0.3)
+        if askedPID != app.processIdentifier {
+            AXUIElementSetAttributeValue(element, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+            askedPID = app.processIdentifier
+            link = nil
+        }
+        if link.map({ SystemNotices.value($0, kAXRoleAttribute) == nil }) ?? true {
+            link = Self.findLink(in: element)
+            leave = link.flatMap(Self.leaveButton(beside:))
+        }
+        guard let link else { return nil }
+        let parts = Self.parts(of: link)
+        return Self.reading(name: parts.name, time: parts.time)
+    }
+
+    /// Leaves the call, as Discord's own button does.
+    func end() {
+        guard let leave else { return }
+        AXUIElementPerformAction(leave, kAXPressAction as CFString)
+    }
+
+    /// The call's over: Discord's accessibility goes back to how it was.
+    func forget() {
+        if askedPID != 0, let app = NSRunningApplication(processIdentifier: askedPID) {
+            AXUIElementSetAttributeValue(AXUIElementCreateApplication(app.processIdentifier), "AXManualAccessibility" as CFString, kCFBooleanFalse)
+        }
+        askedPID = 0
+        link = nil
+        leave = nil
+    }
+
+    /// The name, and the time when there's one, which comes as minutes and seconds.
+    nonisolated static func reading(name: String?, time: String?) -> Reading? {
+        guard let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return nil }
+        return Reading(name: name, elapsed: CallPopup.elapsed(in: time))
+    }
+
+    /// A link whose words end in a running time.
+    private static func findLink(in app: AXUIElement) -> AXUIElement? {
+        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            let links = SystemNotices.findAll(in: window) { element in
+                SystemNotices.value(element, kAXRoleAttribute) as? String == "AXLink"
+                    && CallPopup.elapsed(in: SystemNotices.value(element, kAXDescriptionAttribute) as? String) != nil
+            }
+            if let first = links.first { return first }
+        }
+        return nil
+    }
+
+    /// Its words: the status in a group of its own, the name on its own, the time last in a group.
+    private static func parts(of link: AXUIElement) -> (name: String?, time: String?) {
+        let children = SystemNotices.value(link, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        let name = children.first { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }
+            .flatMap { SystemNotices.value($0, kAXValueAttribute) as? String }
+        let time = children.last.flatMap { group in
+            SystemNotices.findAll(in: group) { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }.last
+        }
+        .flatMap { SystemNotices.value($0, kAXValueAttribute) as? String }
+        return (name, time)
+    }
+
+    /// The button to leave, among the call's controls beside the link: named so in English, or else
+    /// the one just before the camera's switch, where Discord keeps it in every language.
+    private static func leaveButton(beside link: AXUIElement) -> AXUIElement? {
+        guard let parent = SystemNotices.value(link, kAXParentAttribute), let row = SystemNotices.value(parent as! AXUIElement, kAXParentAttribute)
+        else { return nil }
+        let controls = SystemNotices.value(row as! AXUIElement, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        if let named = controls.first(where: { SystemNotices.value($0, kAXDescriptionAttribute) as? String == "Disconnect" }) { return named }
+        guard let camera = controls.firstIndex(where: { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXCheckBoxRole }), camera > 0,
+            SystemNotices.value(controls[camera - 1], kAXRoleAttribute) as? String == kAXButtonRole
+        else { return nil }
+        return controls[camera - 1]
     }
 }
 

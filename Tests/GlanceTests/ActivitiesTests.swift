@@ -820,6 +820,15 @@ struct SystemBannersTests {
                 == IncomingCallView.wing(for: call("Al", .ringing), restingHeight: h))
     }
 
+    @Test("Discord's call link gives the name and the time, in whatever words it's in")
+    @MainActor
+    func discordReading() {
+        #expect(DiscordCall.reading(name: "Gilberto Fuseta", time: "05:42") == .init(name: "Gilberto Fuseta", elapsed: 342))
+        #expect(DiscordCall.reading(name: "  ", time: "05:42") == nil)
+        #expect(DiscordCall.reading(name: "Gilberto", time: nil) == .init(name: "Gilberto", elapsed: nil))
+        #expect(CallVoices.eased(0, towards: 1) > CallVoices.eased(1, towards: 0) - 0.5)
+    }
+
     @Test("macOS's banners that say what the notch says are told from the rest, by their names")
     func systemBanners() {
         #expect(MenuBarBanners.Banner(identifier: "low-battery-system-banner") == .lowBattery)
