@@ -164,7 +164,7 @@ struct StopwatchReading: View {
                 Text(Stopwatch.format(elapsed))
                     .font(.system(size: size, weight: .semibold).monospacedDigit())
                 Text(Stopwatch.hundredths(elapsed))
-                    .font(.system(size: size * StopwatchReading.small, weight: .semibold).monospacedDigit())
+                    .font(.system(size: size * StopwatchReading.share(size), weight: .semibold).monospacedDigit())
                     .baselineOffset(StopwatchReading.raised(size))
             }
         }
@@ -177,8 +177,12 @@ struct StopwatchReading: View {
 
     /// How far above the seconds' baseline, for the tops of the two to be level.
     static func raised(_ size: CGFloat) -> CGFloat {
-        NSFont.systemFont(ofSize: size, weight: .semibold).capHeight * (1 - small)
+        NSFont.systemFont(ofSize: size, weight: .semibold).capHeight * (1 - share(size))
     }
+
+    /// The hundredths' share of the seconds' size, but never under the Mac's smallest text.
+    static func share(_ size: CGFloat) -> CGFloat { max(small, smallest / max(size, 1)) }
+    static let smallest: CGFloat = 10
 
     /// As wide as it reads with its widest digits.
     @MainActor
@@ -187,7 +191,7 @@ struct StopwatchReading: View {
         func measure(_ text: String, _ size: CGFloat) -> CGFloat {
             ceil((text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)]).width)
         }
-        return measure(shown, size) + size * gap + measure("00", size * small) + 1
+        return measure(shown, size) + size * gap + measure("00", size * share(size)) + 1
     }
 }
 

@@ -1214,6 +1214,12 @@ struct SystemBannersTests {
         #expect(CallLook.accept(.standard) == CallLook.accept)
     }
 
+    @Test("The stopwatch's hundredths are never under the Mac's smallest text")
+    func stopwatchSmallest() {
+        #expect(13.6 * StopwatchReading.share(13.6) >= 10)
+        #expect(StopwatchReading.share(30) == StopwatchReading.small)
+    }
+
     @Test("A call's own time always wins: a reading missed keeps it, and a relaunch takes it, never zero")
     func callClock() throws {
         let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
