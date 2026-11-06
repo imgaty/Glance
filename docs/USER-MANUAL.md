@@ -227,6 +227,11 @@ AirPods show each earbud's battery and the case's, and other headphones their
 one battery. Click one to play there. **Sound Settings…** opens
 **System Settings > Sound**.
 
+On a call, the sound button opens the outputs alone. If macOS moves the sound
+back to AirPods you're wearing within a few seconds, as their automatic
+switching does while a call plays on them, Glance puts your choice back, twice
+at most. The call's app follows only if its own output is set to its default.
+
 ### Lyrics
 
 Click the waveform to show the song's words beside the player, and click it

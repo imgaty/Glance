@@ -1139,6 +1139,18 @@ struct SystemBannersTests {
         #expect(CallAudio.appBundle(of: "us.zoom.xos") == "us.zoom.xos")
     }
 
+    @Test("On a call, an output chosen is put back twice at most, for a few seconds, if macOS takes it away")
+    func callOutputKept() {
+        let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let choice = AudioOutput.Choice(device: 72, at: t0, left: AudioOutput.Choice.putBacks)
+        #expect(choice.putsBack(84, at: t0 + 1.3))
+        #expect(!choice.putsBack(72, at: t0 + 1.3))
+        #expect(!choice.putsBack(84, at: t0 + AudioOutput.Choice.keptFor + 0.1))
+        var spent = choice
+        spent.left = 0
+        #expect(!spent.putsBack(84, at: t0 + 1))
+    }
+
     @Test("macOS's hidden aggregate, made while an app records and plays at once, isn't an output")
     func hiddenAggregateIsNoOutput() {
         #expect(AudioOutput.isSystemAggregate(uid: "CADefaultDeviceAggregate-4348-0"))

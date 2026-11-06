@@ -62,7 +62,7 @@ final class AudioOutput: NSObject, ObservableObject {
         let builtIn = outputs.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn }
         for device in builtIn + outputs.filter({ $0.transport != kAudioDeviceTransportTypeBuiltIn }) {
             let row = OutputRow(device: device, playing: device.id == current)
-            let item = NSMenuItem(title: device.name, action: #selector(choose(_:)), keyEquivalent: "")
+            let item = NSMenuItem(title: device.name, action: outputsOnly ? #selector(chooseForCall(_:)) : #selector(choose(_:)), keyEquivalent: "")
             item.target = self
             item.tag = Int(device.id)
             item.view = row
@@ -127,13 +127,52 @@ final class AudioOutput: NSObject, ObservableObject {
     static let modelRetries: [Double] = [0, 1, 2, 3, 5, 8]
 
     @objc private func choose(_ item: NSMenuItem) {
-        var id = AudioDeviceID(item.tag)
+        Self.use(AudioDeviceID(item.tag))
+    }
+
+    /// On a call, the choice is kept through AirPods' automatic switching, which takes the sound
+    /// back to AirPods being worn while a call plays on them, as it can't tell the choice was made
+    /// by hand: the call's app takes a second or so to follow the Mac's output, and its sound left on
+    /// the AirPods until then is what brings them back. Put back at most twice, for a few seconds,
+    /// so it never keeps on against anything else.
+    @objc private func chooseForCall(_ item: NSMenuItem) {
+        let id = AudioDeviceID(item.tag)
+        chosen = Choice(device: id, at: .now, left: Choice.putBacks)
+        Self.use(id)
+    }
+
+    struct Choice: Equatable {
+        var device: AudioDeviceID
+        var at: Date
+        var left: Int
+        static let putBacks = 2
+        static let keptFor: TimeInterval = 6
+
+        /// Whether the output's having changed to `current` is taken back to the choice.
+        func putsBack(_ current: AudioDeviceID, at now: Date) -> Bool {
+            current != device && left > 0 && now.timeIntervalSince(at) < Self.keptFor
+        }
+    }
+
+    private var chosen: Choice?
+
+    private static func use(_ device: AudioDeviceID) {
+        var id = device
         var address = AudioProperty.address(kAudioHardwarePropertyDefaultOutputDevice)
         AudioObjectSetPropertyData(AudioProperty.system, &address, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &id)
     }
 
     private func refresh() {
         let current = Self.defaultOutput
+        if var choice = chosen {
+            if choice.putsBack(current, at: .now), Self.outputs().contains(where: { $0.id == choice.device }) {
+                choice.left -= 1
+                chosen = choice
+                Self.use(choice.device)
+                return
+            }
+            if current != choice.device || Date.now.timeIntervalSince(choice.at) >= Choice.keptFor { chosen = nil }
+        }
         let device = Self.outputs().first { $0.id == current }
         symbol = device?.model?.symbol ?? device?.symbol ?? "speaker.wave.2.fill"
         // Bluetooth headphones are pictured as their model once System Information has told it,
