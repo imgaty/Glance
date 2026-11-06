@@ -112,9 +112,6 @@ enum CallLook {
     static let endSymbol: CGFloat = 0.458
     static let videoFill = Color(.displayP3, red: 0x1D / 255, green: 0x1D / 255, blue: 0x1F / 255)
     static let videoGlyph = Color(.displayP3, red: 0x61 / 255, green: 0x60 / 255, blue: 0x65 / 255)
-    /// The name's and the time's baselines in the caller's row, by its height, as the iPhone has them.
-    static let nameBaseline: CGFloat = 0.567
-    static let timeBaseline: CGFloat = 0.933
     /// Opened on a call, the name by the notch's height, and how far in it starts.
     static let name: CGFloat = 0.215
     static let nameEdge: CGFloat = 0.246
@@ -415,10 +412,11 @@ struct IncomingCallView: View {
     }
 }
 
-/// Opened, a call shows as the iPhone shows it. Connected: under the camera, the caller (a FaceTime or
-/// Phone caller in their colored circle), their name and the call's time; under them, the speaker,
-/// video, off, the microphone, more, which goes to the call's app, and, where its popup's own can be
-/// pressed, a red button to end it. Coming in or going out, as tall as the Alarm: the caller, what
+/// Opened, a call shows as the iPhone shows it, laid out as the player: the same padding all around.
+/// Connected: a FaceTime or Phone caller's colored circle up in the corner beside the camera, their
+/// name and the call's time below the camera; under them, spread end to end, the speaker, video, off,
+/// the microphone, more, which goes to the call's app, and, where its popup's own can be pressed, a
+/// red button to end it. Coming in or going out, as tall as the Alarm: the caller, what
 /// it's over, and buttons to decline or accept it. Clicked, the caller goes to the app it's in.
 struct ExpandedCallView: View {
     let call: CallShown
@@ -450,37 +448,41 @@ struct ExpandedCallView: View {
     private func connected(since: Date) -> some View {
         let h = restingHeight
         let side = CallLayout.round(h)
+        let edge = CallLayout.roundEdge(h)
         let out = revealed && arrived
         let picture = call.throughApple
-        let words = CallLayout.roundEdge(h) + (picture ? side + CallLayout.wordsGap(h) : 0)
-        let rowTop = h + LiveActivityView.cameraGap
-        let font = NSFont.systemFont(ofSize: NotchType.size)
+        let words = edge + (picture ? side + CallLayout.wordsGap(h) : 0)
+        let headerTop = Self.headerTop(restingHeight: h)
+        let name = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        let detail = NSFont.systemFont(ofSize: NotchType.size)
         // The time grows out of where it shows beside the camera, going from green to gray as it comes.
         let spread = ((closedWidth ?? width) - width) / 2
+        let timeBaseline = edge + headerTop + (name.ascender - name.descender + name.leading) + detail.ascender
         let timeFrom = CGSize(
             width: h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread,
-            height: h / 2 - (rowTop + side * CallLook.timeBaseline - font.capHeight / 2))
+            height: h / 2 - (timeBaseline - detail.capHeight / 2))
+        let count = CGFloat(3 + (microphone.available ? 1 : 0) + (call.canEnd ? 1 : 0))
         return VStack(alignment: .leading, spacing: CallLayout.roundGap(h)) {
             Button {
                 CallWatch.shared.goToApp()
             } label: {
-                HStack(spacing: CallLayout.wordsGap(h)) {
+                // As the player's cover and title: the circle up in the corner beside the camera, the
+                // name and the time below the camera, running on with nothing to stop them.
+                HStack(alignment: .top, spacing: CallLayout.wordsGap(h)) {
                     if picture {
                         CallAvatar(call: call, side: side)
                             .modifier(PageFade(hidden: !revealed))
                     }
-                    ZStack(alignment: .topLeading) {
+                    VStack(alignment: .leading, spacing: 0) {
                         Text(call.name)
                             .font(NotchType.title)
                             .foregroundStyle(.white)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                            .padding(.top, side * CallLook.nameBaseline - NSFont.systemFont(ofSize: NotchType.size, weight: .semibold).ascender)
                             .modifier(PageFade(hidden: !revealed))
                         CallTime(since: since)
                             .font(NotchType.detail)
                             .foregroundStyle(out || closedWidth == nil ? NotchType.detailColor : CallLook.green)
-                            .padding(.top, side * CallLook.timeBaseline - font.ascender)
                             .modifier(
                                 GrowsOut(
                                     out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
@@ -488,9 +490,10 @@ struct ExpandedCallView: View {
                             )
                             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.top, headerTop)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(height: side)
+                .frame(height: Self.topRow(restingHeight: h), alignment: .top)
                 .contentShape(Rectangle())
             }
             // Clicked, it goes to the app, and doesn't sink in as a button does.
@@ -499,11 +502,11 @@ struct ExpandedCallView: View {
             .help(String(localized: "Show in \(call.over)"))
             .accessibilityLabel(String(localized: "\(call.name), on a call"))
             .accessibilityHint(String(localized: "Show in \(call.over)"))
-            HStack(spacing: CallLayout.roundGap(h)) { buttons(h) }
+            // Spread from end to end, as the player's controls.
+            HStack(spacing: max(CallLayout.roundGap(h), (width - edge * 2 - side * count) / max(count - 1, 1))) { buttons(h) }
                 .modifier(PageFade(hidden: !revealed))
         }
-        .padding(.top, rowTop)
-        .padding(.horizontal, CallLayout.roundEdge(h))
+        .padding([.top, .horizontal], edge)
         .frame(width: width, height: Self.height(for: call, restingHeight: h), alignment: .top)
     }
 
@@ -633,9 +636,10 @@ struct ExpandedCallView: View {
         3 + (CallMicrophone.canMute ? 1 : 0) + (call.canEnd ? 1 : 0)
     }
 
-    /// Each side of the camera. Connected, as wide as the row of buttons under it, at the least as
-    /// wide as the camera with its gaps; otherwise as wide as the wider of the first line and the
-    /// buttons, each from its end.
+    /// Each side of the camera. Connected, as the player's: wide enough for the caller's circle, up in
+    /// the corner, to stay clear of the camera, and for the row of buttons, at least as wide as the
+    /// camera with its gaps; otherwise as wide as the wider of the first line and the buttons, each
+    /// from its end.
     @MainActor
     static func wing(for call: CallShown, restingHeight h: CGFloat, closedWidth: CGFloat = 185) -> CGFloat {
         guard call.isConnected else {
@@ -646,7 +650,8 @@ struct ExpandedCallView: View {
         }
         let buttons = CGFloat(connectedButtons(for: call))
         let row = CallLayout.roundEdge(h) * 2 + CallLayout.round(h) * buttons + CallLayout.roundGap(h) * (buttons - 1)
-        return max((row - closedWidth) / 2, LiveActivityView.cameraGap)
+        let circle = call.throughApple ? CallLayout.roundEdge(h) + CallLayout.round(h) + PlayerLayout.besideCamera : 0
+        return max((row - closedWidth) / 2, circle, LiveActivityView.cameraGap)
     }
 
     @MainActor
@@ -654,11 +659,22 @@ struct ExpandedCallView: View {
         closedWidth + wing(for: call, restingHeight: h, closedWidth: closedWidth) * 2
     }
 
-    /// Connected, the camera, the caller's row and the buttons' with a gap between, and the padding;
+    /// Where the name starts, from the top padding: centered on the circle, unless that puts it under
+    /// the camera, when it starts just below, as the player's title does.
+    static func headerTop(restingHeight h: CGFloat) -> CGFloat {
+        max((CallLayout.round(h) - PlayerLayout.headerHeight) / 2, h + PlayerLayout.cameraGap - PlayerLayout.padding)
+    }
+
+    /// The caller's row: the circle, or the name and time if they reach lower.
+    static func topRow(restingHeight h: CGFloat) -> CGFloat {
+        max(CallLayout.round(h), headerTop(restingHeight: h) + PlayerLayout.headerHeight)
+    }
+
+    /// Connected, the padding all around, the caller's row and the buttons' with a gap between;
     /// otherwise as tall as the Alarm.
     static func height(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
         guard call.isConnected else { return TimerLayout.tallHeight(h) }
-        return (h + LiveActivityView.cameraGap + CallLayout.round(h) * 2 + CallLayout.roundGap(h) + CallLayout.roundEdge(h)).rounded()
+        return (CallLayout.roundEdge(h) * 2 + topRow(restingHeight: h) + CallLayout.roundGap(h) + CallLayout.round(h)).rounded()
     }
 }
 

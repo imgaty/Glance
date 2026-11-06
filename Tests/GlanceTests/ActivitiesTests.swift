@@ -751,7 +751,7 @@ struct SystemBannersTests {
         #expect(alert.tall && alert.stays)
     }
 
-    @Test("Opened, a call has the caller's row under the camera and the iPhone's buttons under it, as wide as they are")
+    @Test("Opened, a call is laid out as the player: padded all around, the circle clear of the camera, the buttons under")
     @MainActor
     func openedCall() {
         let h: CGFloat = 32
@@ -762,9 +762,12 @@ struct SystemBannersTests {
         model.call = CallShown(name: "Alex Morgan", over: "Phone", phase: .connected(since: .now))
         model.expanded = .call
         model.state = .open
-        // The camera, two rows of 49 with the buttons' gap between, and the padding under them.
+        // The padding all around; the name and time start below the camera, as the player's title, so
+        // they reach lower than the circle; then the buttons' gap and the buttons.
         let side = TimerLayout.content(h)
-        let tall = (h + LiveActivityView.cameraGap + side * 2 + h * TimerLayout.buttonGap + TimerLayout.buttonEdge(h)).rounded()
+        let headerTop = h + PlayerLayout.cameraGap - PlayerLayout.padding
+        #expect(ExpandedCallView.headerTop(restingHeight: h) == headerTop)
+        let tall = (PlayerLayout.padding * 2 + max(side, headerTop + PlayerLayout.headerHeight) + h * TimerLayout.buttonGap + side).rounded()
         #expect(model.metrics.height == tall)
         #expect(ExpandedCallView.height(for: model.call!, restingHeight: h) == tall)
         #expect(model.metrics.bodyWidth == 185 + 2 * ExpandedCallView.wing(for: model.call!, restingHeight: h))
@@ -776,6 +779,12 @@ struct SystemBannersTests {
         #expect(
             abs(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185) - (28 + buttons * side + (buttons - 1) * h * TimerLayout.buttonGap)) < 0.01)
         #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: model.call!, restingHeight: h))
+        // A FaceTime or Phone caller's circle, up in the corner, stays as far from the camera as the
+        // player's cover.
+        var apple = ending
+        apple.app = CallAudio.phone
+        #expect(ExpandedCallView.wing(for: apple, restingHeight: h) >= PlayerLayout.padding + side + PlayerLayout.besideCamera)
+        #expect(ExpandedCallView.height(for: apple, restingHeight: h) == tall)
     }
 
     @Test("Only a FaceTime or Phone caller has a picture, as the iPhone pictures one; other apps' have none")
