@@ -168,39 +168,6 @@ enum PlayerScripting {
     /// Spotify's DJ, at the same address for everyone.
     static let djAddress = "spotify:playlist:37i9dQZF1EYkqdzj48dyYq"
 
-    /// What gets different picks from the DJ. Spotify's own button for that sends the DJ a signal no
-    /// other app can send. Asked to play the DJ within the DJ, it starts again with something else,
-    /// measured as 3 new songs in 4, where playing the song on its own and then the DJ gave 1 in 3
-    /// and left Spotify on the song's album.
-    static let djPicksScript = tell(spotify, "play track \"\(djAddress)\" in context \"\(djAddress)\"")
-    /// What Spotify plays now: its album, `DJ` while the DJ talks, and its address, which while the DJ
-    /// talks is the song it's about to play.
-    static let djStateScript = tell(spotify, #"return (album of current track) & "|" & (spotify url of current track)"#)
-    static let djSkipScript = tell(spotify, "next track")
-    /// How many times the DJ is asked again for something else, before skipping to its next pick.
-    static let djAttempts = 4
-
-    /// Whether the DJ, asked for something else, is coming back to the same song.
-    enum DJPick: Equatable {
-        /// Nothing's changed yet.
-        case waiting
-        case newSong
-        case same
-    }
-
-    /// A song's own number in its address, as a song or as what the DJ says before it.
-    nonisolated static func songID(_ address: String?) -> String? {
-        guard let address, address.hasPrefix("spotify:track:") || address.hasPrefix("spotify:media:") else { return nil }
-        return address.split(separator: ":").last.map(String.init)
-    }
-
-    /// Asked for something else while `before` played, or was about to: once the DJ talks, the song it
-    /// talks before says whether that's new; a different song playing without a word is new too.
-    nonisolated static func djOutcome(before: String, album: String, address: String) -> DJPick {
-        guard let id = songID(address) else { return .waiting }
-        if album == "DJ" { return id == before ? .same : .newSong }
-        return id == before ? .waiting : .newSong
-    }
     private static let queue = DispatchQueue(label: "Glance.PlayerScripting")
 
     /// Finds the song whose favorite counts, as `t`. A song streamed from Apple Music and its copy

@@ -262,33 +262,12 @@ struct PlayerScriptingTests {
         #expect(PlayerScripting.spotifyTrackID(uri) == nil)
     }
 
-    @Test("Spotify coming forward on the DJ's button is noticed, and only when another app was in front")
-    func djStaysBehind() {
-        #expect(NowPlaying.broughtForward(front: "com.apple.Safari", now: PlayerScripting.spotify))
-        #expect(!NowPlaying.broughtForward(front: PlayerScripting.spotify, now: PlayerScripting.spotify))
-        #expect(!NowPlaying.broughtForward(front: "com.apple.Safari", now: "com.apple.Safari"))
-        #expect(!NowPlaying.broughtForward(front: nil, now: PlayerScripting.spotify))
-    }
-
-    @Test("The DJ's button knows from what the DJ talks before whether it's coming back to the same song")
-    func djOutcome() {
-        #expect(PlayerScripting.songID("spotify:track:AAA") == "AAA" && PlayerScripting.songID("spotify:media:AAA") == "AAA")
-        #expect(PlayerScripting.songID("spotify:playlist:AAA") == nil && PlayerScripting.songID(nil) == nil)
-        // Before the DJ talks, the same song still playing: nothing's changed yet.
-        #expect(PlayerScripting.djOutcome(before: "AAA", album: "Arsenal", address: "spotify:track:AAA") == .waiting)
-        // The DJ talks before the same song: asked again. Before another: new music.
-        #expect(PlayerScripting.djOutcome(before: "AAA", album: "DJ", address: "spotify:media:AAA") == .same)
-        #expect(PlayerScripting.djOutcome(before: "AAA", album: "DJ", address: "spotify:media:BBB") == .newSong)
-        // Another song without a word: new too.
-        #expect(PlayerScripting.djOutcome(before: "AAA", album: "Compass", address: "spotify:track:BBB") == .newSong)
-        #expect(PlayerScripting.djAttempts >= 3)
-    }
-
-    @Test("The DJ's button plays the DJ within the DJ, in Spotify, and never a song on its own")
-    func djPicks() {
-        #expect(
-            PlayerScripting.djPicksScript
-                == #"tell application "Spotify" to play track "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" in context "spotify:playlist:37i9dQZF1EYkqdzj48dyYq""#)
+    @Test("The DJ's button is found by the name Spotify gives it in its own word lists")
+    func djButtonName() {
+        let list = Data(#"{"web-player.your-dj.jumpbutton.tooltip.hover": "Get some different DJ picks", "other": "x"}"#.utf8)
+        #expect(SpotifyDJ.name(in: list) == "Get some different DJ picks")
+        #expect(SpotifyDJ.name(in: Data("{}".utf8)) == nil)
+        #expect(SpotifyDJ.accessibilitySwitch == "--force-renderer-accessibility")
     }
 
     @Test("The DJ's ring follows the waveform's bars: all of them, the low ones and the high ones")
