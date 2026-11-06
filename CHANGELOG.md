@@ -174,7 +174,7 @@
 - Added the DJ's own cover while it talks: its green ring on blue, following the same
   sound as the waveform, with the colors behind the player turning blue and `--:--`
   for the times.
-- Added `DJ button` to Customize Controls, to keep the left button as it is while
+- Added `Spotify DJ` to Customize Controls, to keep the left button as it is while
   the DJ plays.
 - Fixed clicking the cover opening a Spotify song's own page, rather than the
   playlist or album it plays from, for songs Spotify hadn't yet written down.

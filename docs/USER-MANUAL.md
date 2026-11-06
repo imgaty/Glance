@@ -210,7 +210,7 @@ because Spotify doesn't offer them then.
 While the DJ talks, the cover becomes its green ring on blue, following the same sound
 as the waveform, the colors behind the player turn blue, and the times show `--:--`.
 
-To keep the left button as it is while the DJ plays, turn off `DJ button` in
+To keep the left button as it is while the DJ plays, turn off `Spotify DJ` in
 Customize Controls.
 
 ### Sound output and volume

@@ -64,7 +64,7 @@ struct ControlsSheet: View {
                 }
                 Section {
                     Toggle(isOn: $djButton) {
-                        Text("DJ button")
+                        Text("Spotify DJ")
                         Text("Shows in the left button's place while Spotify's DJ plays, to get different picks.")
                     }
                 }
