@@ -1196,6 +1196,15 @@ struct SystemBannersTests {
         #expect(DiscordCall.reading(name: "Gilberto Fuseta", time: "05:42") == .init(name: "Gilberto Fuseta", elapsed: 342))
         #expect(DiscordCall.reading(name: "  ", time: "05:42") == nil)
         #expect(DiscordCall.reading(name: "Gilberto", time: nil) == .init(name: "Gilberto", elapsed: nil))
+        // The link's words: with one person, their name on its own; on a group call, the names in
+        // one line beside the time.
+        let one = DiscordCall.words(afterStatus: 1, in: ["Voice Connected", "Gilberto Fuseta", "04:05"])
+        #expect(one.name == "Gilberto Fuseta" && one.time == "04:05")
+        let group = DiscordCall.words(afterStatus: 1, in: ["Voice Connected", "Alex Morgan, Sam Lee, sam_99", "19:28"])
+        #expect(group.name == "Alex Morgan, Sam Lee, sam_99" && group.time == "19:28")
+        let untimed = DiscordCall.words(afterStatus: 1, in: ["Voice Connected", "Alex Morgan"])
+        #expect(untimed.name == "Alex Morgan" && untimed.time == nil)
+        #expect(DiscordCall.words(afterStatus: 1, in: ["Voice Connected", "19:28"]).name == nil)
         // Discord's call coming in, by who it's from.
         #expect(DiscordCall.ringingName(from: "unread, Gilberto Fuseta (direct message), Incoming Call, Online") == "Gilberto Fuseta")
         #expect(DiscordCall.ringingName(from: "Gilberto Fuseta (direct message), Ongoing Call, Online") == nil)

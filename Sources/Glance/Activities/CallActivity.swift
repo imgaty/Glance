@@ -1350,16 +1350,26 @@ final class DiscordCall {
         return nil
     }
 
-    /// Its words: the status in a group of its own, the name on its own, the time last in a group.
+    /// Its words, in order: the status first, in a group of its own; then who it's with; the time
+    /// last. A call with one person has their name on its own; a group's has its names in one line,
+    /// in the same group as the time.
     private static func parts(of link: AXUIElement) -> (name: String?, time: String?) {
-        let children = SystemNotices.value(link, kAXChildrenAttribute) as? [AXUIElement] ?? []
-        let name = children.first { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }
-            .flatMap { SystemNotices.value($0, kAXValueAttribute) as? String }
-        let time = children.last.flatMap { group in
-            SystemNotices.findAll(in: group) { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }.last
+        func texts(in element: AXUIElement) -> [String] {
+            SystemNotices.findAll(in: element) { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }
+                .compactMap { SystemNotices.value($0, kAXValueAttribute) as? String }
         }
-        .flatMap { SystemNotices.value($0, kAXValueAttribute) as? String }
-        return (name, time)
+        let first = (SystemNotices.value(link, kAXChildrenAttribute) as? [AXUIElement])?.first
+        let status = first.map { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXGroupRole ? texts(in: $0).count : 0 } ?? 0
+        return words(afterStatus: status, in: texts(in: link))
+    }
+
+    /// Who it's with and how long, from the link's words in order, past as many as its status has.
+    nonisolated static func words(afterStatus status: Int, in texts: [String]) -> (name: String?, time: String?) {
+        var rest = Array(texts.dropFirst(status))
+        let time = rest.last.flatMap { CallPopup.elapsed(in: $0) != nil ? $0 : nil }
+        if time != nil { rest.removeLast() }
+        let name = rest.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: ", ")
+        return (name.isEmpty ? nil : name, time)
     }
 
     /// The button to leave, among the call's controls beside the link: named so in English, or else
