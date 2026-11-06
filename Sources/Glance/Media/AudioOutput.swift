@@ -256,8 +256,7 @@ private struct VolumeSlider: View {
                     volume.set($0)
                 })
         )
-        // As macOS's own sound slider: the accent color, light or dark.
-        .tint(.accentColor)
+        .tint(colorScheme == .dark ? Color.white : .accentColor)
         .environment(\.controlActiveState, .key)
         .disabled(!volume.canChange)
         .labelsHidden()
