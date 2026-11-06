@@ -136,11 +136,29 @@ enum CallLook {
         return CGRect(x: CGFloat(index) * (barWidth + barGap), y: (height - tall) / 2, width: barWidth, height: tall)
     }
 
+    /// How strong a voice still is at the far side, having crossed the waveform from its own: it
+    /// fades evenly on the way, as the user's iPhone shows it, rather than stopping at the middle.
+    static let farthest: CGFloat = 0.35
+
+    /// A voice's strength `across` the waveform from its own side, 0 there to 1 at the far side.
+    static func fade(across: CGFloat) -> CGFloat { pow(farthest, min(max(across, 0), 1)) }
+
+    /// A bar's two voices, overlapping: the taller behind, the shorter in front, each its color.
+    static func layers(_ bar: CallBar) -> (back: (level: CGFloat, theirs: Bool), front: (level: CGFloat, theirs: Bool)) {
+        bar.theirs >= bar.yours ? ((bar.theirs, true), (bar.yours, false)) : ((bar.yours, false), (bar.theirs, true))
+    }
+
     /// A bar's yellow middle.
     static func coreFrame(of bar: CGRect, core: CGFloat) -> CGRect {
         let tall = min(core, bar.height)
         return CGRect(x: bar.minX, y: bar.midY - tall / 2, width: bar.width, height: tall)
     }
+}
+
+/// A bar of the call's waveform: how loud each voice draws it, from 0 to 1.
+struct CallBar: Equatable, Sendable {
+    var theirs: CGFloat = 0
+    var yours: CGFloat = 0
 }
 
 enum CallLayout {
@@ -229,8 +247,8 @@ struct CallTime: View {
     }
 }
 
-/// The waveform beside the camera on a call: the other person's voice on the left, yours on the
-/// right, each bar a moment of that voice.
+/// The waveform beside the camera on a call: the other person's voice from the left, yours from the
+/// right, each crossing the whole of it and fading on the way, overlapping where they meet.
 struct CallWaveform: View {
     let height: CGFloat
     /// Each bar's yellow middle.
@@ -245,11 +263,14 @@ struct CallWaveform: View {
                 TimelineView(.animation(minimumInterval: 1.0 / 30)) { _ in
                     let bars = CallVoices.shared.bars
                     Canvas { context, size in
-                        for (index, level) in bars.enumerated() {
-                            let bar = CallLook.barFrame(index, level: level, height: size.height, core: core)
-                            let middle = CallLook.coreFrame(of: bar, core: core)
-                            let color = CallLook.voice(theirs: index < bars.count / 2)
-                            context.fill(Path(roundedRect: bar, cornerRadius: bar.width / 2), with: .color(Color(nsColor: color)))
+                        for (index, voices) in bars.enumerated() {
+                            let (back, front) = CallLook.layers(voices)
+                            for part in [back, front] {
+                                let bar = CallLook.barFrame(index, level: part.level, height: size.height, core: core)
+                                context.fill(
+                                    Path(roundedRect: bar, cornerRadius: bar.width / 2), with: .color(Color(nsColor: CallLook.voice(theirs: part.theirs))))
+                            }
+                            let middle = CallLook.coreFrame(of: CallLook.barFrame(index, level: 0, height: size.height, core: core), core: core)
                             context.fill(Path(roundedRect: middle, cornerRadius: middle.width / 2), with: .color(Color(nsColor: CallLook.yellow)))
                         }
                     }
@@ -270,7 +291,9 @@ private struct LiveCallBars: NSViewRepresentable {
 }
 
 final class CallBarsView: NSView {
-    private var parts: [CALayer] = []
+    /// Each bar's two voices, the taller behind.
+    private var backs: [CALayer] = []
+    private var fronts: [CALayer] = []
     private var cores: [CALayer] = []
     private let core: CGFloat
     private var hearing: AnyCancellable?
@@ -279,14 +302,14 @@ final class CallBarsView: NSView {
         self.core = core
         super.init(frame: .zero)
         wantsLayer = true
-        for index in 0..<CallLook.bars {
-            let bar = CALayer()
-            bar.backgroundColor = CallLook.voice(theirs: index < CallLook.bars / 2).cgColor
+        for _ in 0..<CallLook.bars {
+            let back = CALayer()
+            let front = CALayer()
             let middle = CALayer()
             middle.backgroundColor = CallLook.yellow.cgColor
-            layer?.addSublayer(bar)
-            layer?.addSublayer(middle)
-            parts.append(bar)
+            for part in [back, front, middle] { layer?.addSublayer(part) }
+            backs.append(back)
+            fronts.append(front)
             cores.append(middle)
         }
     }
@@ -311,14 +334,18 @@ final class CallBarsView: NSView {
         draw(CallVoices.shared.bars)
     }
 
-    private func draw(_ bars: [CGFloat]) {
+    private func draw(_ bars: [CallBar]) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        for (index, level) in bars.enumerated() where index < parts.count {
-            let bar = CallLook.barFrame(index, level: level, height: bounds.height, core: core)
-            let middle = CallLook.coreFrame(of: bar, core: core)
-            parts[index].frame = bar
-            parts[index].cornerRadius = bar.width / 2
+        for (index, voices) in bars.enumerated() where index < backs.count {
+            let (back, front) = CallLook.layers(voices)
+            for (layer, part) in [(backs[index], back), (fronts[index], front)] {
+                let bar = CallLook.barFrame(index, level: part.level, height: bounds.height, core: core)
+                layer.frame = bar
+                layer.cornerRadius = bar.width / 2
+                layer.backgroundColor = CallLook.voice(theirs: part.theirs).cgColor
+            }
+            let middle = CallLook.coreFrame(of: CallLook.barFrame(index, level: 0, height: bounds.height, core: core), core: core)
             cores[index].frame = middle
             cores[index].cornerRadius = middle.width / 2
         }
@@ -828,18 +855,19 @@ final class CallMicrophone: ObservableObject {
 final class CallVoices: ObservableObject {
     static let shared = CallVoices()
 
-    /// What the waveform draws, left to right: the other person's newest at the left end, yours at
-    /// the right.
-    @Published private(set) var bars = [CGFloat](repeating: 0, count: CallLook.bars)
+    /// What the waveform draws, left to right: each bar's two voices, the other person's newest at
+    /// the left end, yours at the right.
+    @Published private(set) var bars = [CallBar](repeating: CallBar(), count: CallLook.bars)
     private var seenAt: Date?
     private var theirs: CGFloat = 0
     private var yours: CGFloat = 0
     /// What's drawn of each voice, easing towards what's heard: quickly up, more slowly down.
     private var shownTheirs: CGFloat = 0
     private var shownYours: CGFloat = 0
-    /// How loud each voice has been, a thirtieth of a second at a time, newest first.
-    private var theirHistory = [CGFloat](repeating: 0, count: CallLook.bars / 2)
-    private var yourHistory = [CGFloat](repeating: 0, count: CallLook.bars / 2)
+    /// How loud each voice has been, a thirtieth of a second at a time, newest first: as many as
+    /// there are bars, as each voice crosses them all.
+    private var theirHistory = [CGFloat](repeating: 0, count: CallLook.bars)
+    private var yourHistory = [CGFloat](repeating: 0, count: CallLook.bars)
     private var pipeline: TapPipeline?
     private var engine: AVAudioEngine?
     private var clock: Timer?
@@ -890,7 +918,7 @@ final class CallVoices: ObservableObject {
         seenAt = nil
         theirHistory = theirHistory.map { _ in 0 }
         yourHistory = yourHistory.map { _ in 0 }
-        bars = bars.map { _ in 0 }
+        bars = bars.map { _ in CallBar() }
     }
 
     private func tick() {
@@ -920,9 +948,19 @@ final class CallVoices: ObservableObject {
     }
 
     /// The bars, left to right, from how loud each voice has just been: the other person's newest at
-    /// the left end, yours newest at the right. Nothing's made up: a bar is a moment of that voice.
-    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat]) -> [CGFloat] {
-        (theirs + yours.reversed()).map { min(max($0, 0), 1) }
+    /// the left end and older to the right, yours newest at the right end and older to the left,
+    /// each fading as it crosses, so they overlap rather than meet in the middle. Nothing's made up:
+    /// each part of a bar is a moment of that voice.
+    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat]) -> [CallBar] {
+        let count = CallLook.bars
+        return (0..<count).map { index in
+            let across = CGFloat(index) / CGFloat(max(count - 1, 1))
+            let their = index < theirs.count ? theirs[index] : 0
+            let your = count - 1 - index < yours.count ? yours[count - 1 - index] : 0
+            return CallBar(
+                theirs: min(max(their, 0), 1) * CallLook.fade(across: across),
+                yours: min(max(your, 0), 1) * CallLook.fade(across: 1 - across))
+        }
     }
 
     private func startMicrophone() {

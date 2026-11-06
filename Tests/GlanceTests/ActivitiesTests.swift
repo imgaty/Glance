@@ -1038,16 +1038,33 @@ struct SystemBannersTests {
         #expect(!microphone.muted)
     }
 
-    @Test("The waveform has the other person on the left and you on the right, each from how loud it's just been")
+    @Test("Both voices cross the whole waveform from their own side, fading as they go, and overlap rather than split it")
     func callVoices() {
-        let half = CallLook.bars / 2
-        let now = [CGFloat(1)] + Array(repeating: 0, count: half - 1)
-        let bars = CallVoices.shaped(theirs: now, yours: now)
-        // Fourteen, as the iPhone's, seven each.
-        #expect(bars.count == 14)
-        // Each newest at its own end.
-        #expect(bars[0] == 1 && bars[13] == 1 && bars[1..<13].allSatisfy { $0 == 0 })
-        #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: half), yours: Array(repeating: 3, count: half)).allSatisfy { $0 == 1 })
+        let count = CallLook.bars
+        #expect(count == 14)
+        // Both speaking steadily, as loud as can be.
+        let steady = CallVoices.shaped(theirs: Array(repeating: 1, count: count), yours: Array(repeating: 1, count: count))
+        #expect(steady.count == 14)
+        // The other person's, strongest at the left end, fading to the right, and still there at the right end.
+        #expect(steady[0].theirs == 1 && steady[13].theirs == CallLook.farthest)
+        #expect(zip(steady, steady.dropFirst()).allSatisfy { $0.theirs > $1.theirs })
+        // Yours the other way round.
+        #expect(steady[13].yours == 1 && steady[0].yours == CallLook.farthest)
+        #expect(zip(steady, steady.dropFirst()).allSatisfy { $0.yours < $1.yours })
+        // Not cut in half: each voice reaches past the middle, past the yellow middle's height.
+        let core = CallLook.core / CallLook.waveHeight
+        #expect(steady.allSatisfy { $0.theirs > core && $0.yours > core })
+        // Each newest at its own end, older moments further in: one word goes across.
+        let word = [CGFloat(1)] + Array(repeating: 0, count: count - 1)
+        let spoke = CallVoices.shaped(theirs: word, yours: [])
+        #expect(spoke[0].theirs == 1 && spoke[1...].allSatisfy { $0.theirs == 0 } && spoke.allSatisfy { $0.yours == 0 })
+        let older = CallVoices.shaped(theirs: Array(repeating: 0, count: 5) + [1] + Array(repeating: 0, count: count - 6), yours: word)
+        #expect(older[5].theirs == CallLook.fade(across: 5.0 / 13) && older[13].yours == 1)
+        // Drawn overlapping: the louder behind, the other in front.
+        let (back, front) = CallLook.layers(CallBar(theirs: 0.3, yours: 0.8))
+        #expect(back.level == 0.8 && !back.theirs && front.level == 0.3 && front.theirs)
+        // Louder than loud is as loud as can be.
+        #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: count), yours: [])[0].theirs == 1)
     }
 
     @Test("Closed, the phone stands as the iPhone's and both ends are as far in as its")

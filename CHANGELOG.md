@@ -13,18 +13,19 @@
 - Added calls: one coming in shows as tall as the Alarm, with the caller, a red
   button to decline and a green one to accept, in place of macOS's popup; on a
   call, a green phone and its time beside the camera, and a waveform of both
-  voices, the other person's green on the left and yours orange on the right,
-  each bar yellow in its middle. Opened, a FaceTime or Phone call shows the
-  caller's photo from Contacts, or their initial in a purple to teal circle,
-  their name and the call's time, and under them buttons for the sound output,
-  video, which is off, muting your microphone, going to the call and ending it.
-  A call in another app opens to one row: the caller's name, the sound output
-  and, where Glance can press the app's own, ending it. Your microphone is
-  unmuted when the call ends, if Glance muted it. During a call, music and
-  anything else going on show in a bubble beside the notch. FaceTime and Phone
-  calls are read from macOS's own popup, which needs `Screen & System Audio
-  Recording`; Zoom, Discord, WhatsApp and others show once they use the
-  microphone. Turn it off with `Calls` in **Settings > Live Activities**.
+  voices, the other person's green from the left and yours orange from the
+  right, each crossing the whole waveform and fading as it goes, each bar yellow
+  in its middle. Opened, a FaceTime or Phone call shows the caller's photo from
+  Contacts, or their initial in a purple to teal circle, their name and the
+  call's time, and under them buttons for the sound output, video, which is off,
+  muting your microphone, going to the call and ending it. A call in another app
+  opens to one row: the caller's name, the sound output and, where Glance can
+  press the app's own, ending it. Your microphone is unmuted when the call ends,
+  if Glance muted it. During a call, music and anything else going on show in a
+  bubble beside the notch. FaceTime and Phone calls are read from macOS's own
+  popup, which needs `Screen & System Audio Recording`; Zoom, Discord, WhatsApp
+  and others show once they use the microphone. Turn it off with `Calls` in
+  **Settings > Live Activities**.
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
