@@ -1354,8 +1354,12 @@ final class NotchController {
     private var activityControls: [PlayerControl]? {
         switch model.expanded {
         case .timer, .stopwatch: [.activityFirst, .activitySecond]
-        // Connected, the sound output, and ending it only where that can be done.
-        case .call where model.call?.rings == false && model.call?.canEnd != true: [.activityFirst]
+        // Connected: the sound output, the microphone where it can be muted, more, and ending it
+        // where that can be done; going out, ending it.
+        case .call where model.call?.isConnected == true:
+            [.activityFirst] + (CallMicrophone.canMute ? [.activitySecond] : []) + [.activityThird]
+                + (model.call?.canEnd == true ? [.activityFourth] : [])
+        case .call where model.call?.rings == false: model.call?.canEnd == true ? [.activityFirst] : []
         // Coming in where it can't be declined: Accept alone.
         case .call where model.call?.rings == true && model.call?.canDecline == false: [.activitySecond]
         case .call: [.activityFirst, .activitySecond]

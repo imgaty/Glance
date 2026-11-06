@@ -402,7 +402,7 @@ final class NotchModel: ObservableObject {
                     ExpandedCallView.width(
                         for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height, closedWidth: closedSize.width)
                         + pull * 0.35,
-                    TimerLayout.tallHeight(closedSize.height) + pull
+                    ExpandedCallView.height(for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height) + pull
                 )
             case .open where expanded == .airplay:
                 (

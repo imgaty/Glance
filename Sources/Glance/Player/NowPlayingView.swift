@@ -378,7 +378,7 @@ struct NowPlayingView: View {
         case .cover: nowPlaying.openSource()
         case .lyrics: lyricsControl.toggle()
         // The lines and an activity's buttons see to their own.
-        case .line, .position, .activityFirst, .activitySecond: break
+        case .line, .position, .activityFirst, .activitySecond, .activityThird, .activityFourth: break
         case .left:
             if showsDJ { nowPlaying.differentDJPicks() } else { use(leftSlot, fromKeys: fromKeys) }
         case .previous:
@@ -437,7 +437,7 @@ struct NowPlayingView: View {
         case .playPause: nowPlaying.isPlaying ? String(localized: "Pause") : String(localized: "Play")
         case .next: String(localized: "Next")
         case .right: named(rightSlot)
-        case .activityFirst, .activitySecond: ""
+        case .activityFirst, .activitySecond, .activityThird, .activityFourth: ""
         }
     }
 

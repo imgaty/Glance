@@ -14,9 +14,9 @@ import SwiftUI
 /// own view has its buttons instead.
 enum PlayerControl: Hashable {
     case cover, lyrics, line, position, left, previous, playPause, next, right
-    case activityFirst, activitySecond
+    case activityFirst, activitySecond, activityThird, activityFourth
 
-    var onActivity: Bool { self == .activityFirst || self == .activitySecond }
+    var onActivity: Bool { [.activityFirst, .activitySecond, .activityThird, .activityFourth].contains(self) }
 }
 
 /// Where the keyboard is in the open player. The notch takes every key typed while it has the

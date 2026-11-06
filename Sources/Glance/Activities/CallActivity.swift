@@ -36,15 +36,16 @@ struct CallShown: Equatable {
     /// It can be declined from the notch; Discord's own window has no button for that.
     var canDecline = true
 
-    /// As a contact without a picture shows, in a gray circle: the first letters of their first and
-    /// last names, or none for a number, which shows a person's outline.
+    /// As the iPhone pictured a caller without a picture: the name's first letter, one even for a
+    /// name of three words, or none for a number, which shows a person's outline.
     var initials: String {
-        let words = name.split(whereSeparator: \.isWhitespace)
-        guard let first = words.first?.first, first.isLetter else { return "" }
-        let last = words.count > 1 ? words.last?.first : nil
-        return [first, last].compactMap { $0.map { String($0).uppercased() } }.joined()
+        guard let first = name.first(where: { !$0.isWhitespace }), first.isLetter else { return "" }
+        return String(first).uppercased()
     }
     var rings: Bool { phase == .ringing }
+    /// Over FaceTime or Phone, whose callers show as the iPhone shows them, in a colored circle; other
+    /// apps' show no picture.
+    var throughApple: Bool { app == CallAudio.faceTime || app == CallAudio.phone }
     var isConnected: Bool {
         if case .connected = phase { return true }
         return false
@@ -54,10 +55,9 @@ struct CallShown: Equatable {
 /// How a call looks, measured from screenshots of the user's own iPhone on a call: a bright green
 /// phone and its time on one side, on the other a waveform, the other person on the left, green, and
 /// you on the right, orange, every bar yellow in its middle, so it's yellow dots while nobody speaks.
-/// Opened, the caller's name,
-/// the speaker and a red button with a cross. Ringing, the caller's initials in a gray circle, and a
-/// gray handset. The green and yellow are the iPhone's own, in Display P3, which they're just outside
-/// sRGB in.
+/// Opened, a FaceTime or Phone caller's initial in a colored circle, their name and the time, and the
+/// iPhone's five buttons. The colors are the iPhone's own, in Display P3, which the green and yellow
+/// are just outside sRGB in.
 enum CallLook {
     static let green = Color(.displayP3, red: 0x7F / 255, green: 0xFB / 255, blue: 0x7F / 255)
     static let handset = Color(red: 0x8F / 255, green: 0x8F / 255, blue: 0x91 / 255)
@@ -65,8 +65,12 @@ enum CallLook {
     static let decline = Color(red: 0xE9 / 255, green: 0x56 / 255, blue: 0x45 / 255)
     static let end = Color(red: 0xFE / 255, green: 0x44 / 255, blue: 0x44 / 255)
     static let speaker = Color(red: 0x2C / 255, green: 0x2C / 255, blue: 0x2E / 255)
-    static let avatarTop = Color(red: 0xA4 / 255, green: 0xA8 / 255, blue: 0xB4 / 255)
-    static let avatarBottom = Color(red: 0x89 / 255, green: 0x8D / 255, blue: 0x96 / 255)
+    /// A FaceTime or Phone caller's circle, as the iPhone pictures one, top to bottom, and its serif
+    /// initials, half the circle's size, which gives the iPhone's cap height of 0.353 of it.
+    static let pictureTop = Color(.displayP3, red: 0x94 / 255, green: 0x60 / 255, blue: 0xF0 / 255)
+    static let pictureMiddle = Color(.displayP3, red: 0x7C / 255, green: 0x9D / 255, blue: 0xE2 / 255)
+    static let pictureBottom = Color(.displayP3, red: 0x78 / 255, green: 0xDD / 255, blue: 0xD5 / 255)
+    static let pictureInitials: CGFloat = 0.5
 
     /// The waveform's bars, half the other person's and half yours, and their measures, the iPhone's
     /// for the notch's height.
@@ -93,13 +97,24 @@ enum CallLook {
 
     /// Inside the round buttons, the symbol's size for the button's, as on the iPhone: its cross a
     /// third across, the speaker three fifths, the phone two fifths.
-    static let initials: CGFloat = 0.32
-    static let smallInitials: CGFloat = 0.48
     static let endGlyph: CGFloat = 0.4
     /// The cross heavier than the rest, measured on the iPhone: 0.35 across, its strokes 0.08.
     static let crossGlyph: CGFloat = 0.45
     static let acceptGlyph: CGFloat = 0.42
     static let speakerGlyph: CGFloat = 0.42
+    /// Opened on a call, its buttons as the iPhone's, each symbol's size by the button for its ink to
+    /// match: the speaker, video off, the microphone, more, and ending it. Video is darker and its
+    /// symbol dim, as it is on a voice call.
+    static let speakerSymbol: CGFloat = 0.465
+    static let videoSymbol: CGFloat = 0.44
+    static let micSymbol: CGFloat = 0.463
+    static let moreSymbol: CGFloat = 0.44
+    static let endSymbol: CGFloat = 0.458
+    static let videoFill = Color(.displayP3, red: 0x1D / 255, green: 0x1D / 255, blue: 0x1F / 255)
+    static let videoGlyph = Color(.displayP3, red: 0x61 / 255, green: 0x60 / 255, blue: 0x65 / 255)
+    /// The name's and the time's baselines in the caller's row, by its height, as the iPhone has them.
+    static let nameBaseline: CGFloat = 0.567
+    static let timeBaseline: CGFloat = 0.933
     /// Opened on a call, the name by the notch's height, and how far in it starts.
     static let name: CGFloat = 0.215
     static let nameEdge: CGFloat = 0.246
@@ -131,8 +146,8 @@ enum CallLayout {
     /// Opened, each wing only as wide as the first line of words or the buttons need, whichever's
     /// wider: the second line runs on under the camera, as far as the buttons.
     @MainActor
-    static func openWing(firstLine: CGFloat, buttons: CGFloat, restingHeight h: CGFloat) -> CGFloat {
-        let left = roundEdge(h) + round(h) + wordsGap(h) + firstLine + LiveActivityView.cameraGap
+    static func openWing(firstLine: CGFloat, buttons: CGFloat, picture: Bool = true, restingHeight h: CGFloat) -> CGFloat {
+        let left = roundEdge(h) + (picture ? round(h) + wordsGap(h) : 0) + firstLine + LiveActivityView.cameraGap
         let right = LiveActivityView.cameraGap + round(h) * buttons + roundGap(h) * (buttons - 1) + roundEdge(h)
         return max(left, right)
     }
@@ -162,17 +177,17 @@ enum CallLayout {
     }
 }
 
-/// The caller, as a contact without a picture shows: their initials in a gray circle, or for a
-/// number, a person's outline.
+/// A FaceTime or Phone caller, as the iPhone pictures one: their initials in serif, white, on purple
+/// going to blue and teal, or for a number, a person's outline. Other apps' callers have no picture.
 struct CallAvatar: View {
     let call: CallShown
     let side: CGFloat
-    /// Beside the camera, its letters are larger and bolder for the size.
-    var small = false
 
     var body: some View {
         Circle()
-            .fill(LinearGradient(colors: [CallLook.avatarTop, CallLook.avatarBottom], startPoint: .top, endPoint: .bottom))
+            .fill(
+                LinearGradient(colors: [CallLook.pictureTop, CallLook.pictureMiddle, CallLook.pictureBottom], startPoint: .top, endPoint: .bottom)
+            )
             .overlay {
                 if call.initials.isEmpty {
                     Image(systemName: "person.fill")
@@ -180,7 +195,7 @@ struct CallAvatar: View {
                         .foregroundStyle(.white)
                 } else {
                     Text(call.initials)
-                        .font(.system(size: side * (small ? CallLook.smallInitials : CallLook.initials), weight: small ? .semibold : .medium))
+                        .font(.system(size: side * CallLook.pictureInitials, weight: .regular, design: .serif))
                         .foregroundStyle(.white)
                 }
             }
@@ -308,7 +323,7 @@ struct CallMark: View {
         HStack(spacing: 0) {
             switch call.phase {
             case .ringing:
-                CallAvatar(call: call, side: h * CallLook.avatar, small: true)
+                if call.throughApple { CallAvatar(call: call, side: h * CallLook.avatar) }
                 Spacer(minLength: 0)
                 Image(systemName: "phone.down.fill")
                     .font(.system(size: h * CallLook.handsetSize, weight: .medium))
@@ -353,7 +368,7 @@ struct IncomingCallView: View {
         let h = restingHeight
         let side = CallLayout.round(h)
         HStack(spacing: CallLayout.wordsGap(h)) {
-            CallAvatar(call: call, side: side)
+            if call.throughApple { CallAvatar(call: call, side: side) }
             VStack(alignment: .leading, spacing: 0) {
                 Text(call.line ?? call.over)
                     .font(NotchType.detail)
@@ -396,15 +411,15 @@ struct IncomingCallView: View {
     @MainActor
     static func wing(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
         let first = ceil(((call.line ?? call.over) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size)]).width)
-        return CallLayout.openWing(firstLine: first, buttons: call.canDecline ? 2 : 1, restingHeight: h)
+        return CallLayout.openWing(firstLine: first, buttons: call.canDecline ? 2 : 1, picture: call.throughApple, restingHeight: h)
     }
 }
 
-/// Opened, a call shows as its popup does, as tall as one coming in: the caller, and while it rings,
-/// what it's over and buttons to decline or accept it; once connected, as the iPhone shows it, the
-/// caller's name alone, a button for the sound output and, where its popup's own can be pressed, one
-/// to end it. What's below the camera runs on underneath it. Clicked anywhere else, it goes to the
-/// app it's in.
+/// Opened, a call shows as the iPhone shows it. Connected: under the camera, the caller (a FaceTime or
+/// Phone caller in their colored circle), their name and the call's time; under them, the speaker,
+/// video, off, the microphone, more, which goes to the call's app, and, where its popup's own can be
+/// pressed, a red button to end it. Coming in or going out, as tall as the Alarm: the caller, what
+/// it's over, and buttons to decline or accept it. Clicked, the caller goes to the app it's in.
 struct ExpandedCallView: View {
     let call: CallShown
     let restingHeight: CGFloat
@@ -413,73 +428,120 @@ struct ExpandedCallView: View {
     /// How wide the notch is closed, if it shows beside the camera there, for what's there to grow out of.
     var closedWidth: CGFloat? = nil
     @Environment(\.playerKeys) private var keys
+    @ObservedObject private var microphone = CallMicrophone.shared
     @State private var arrived = false
 
     var body: some View {
+        Group {
+            if case .connected(let since) = call.phase {
+                connected(since: since)
+            } else {
+                coming
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .onAppear {
+            microphone.refresh()
+            withAnimation(NotchMotion.expand) { arrived = true }
+        }
+    }
+
+    /// The caller's row under the camera, the buttons under it.
+    private func connected(since: Date) -> some View {
         let h = restingHeight
         let side = CallLayout.round(h)
-        // What shows beside the camera grows out of there, as the Timer's does: the caller while it
-        // rings, the time once it's going. The rest fades in.
+        let out = revealed && arrived
+        let picture = call.throughApple
+        let words = CallLayout.roundEdge(h) + (picture ? side + CallLayout.wordsGap(h) : 0)
+        let rowTop = h + LiveActivityView.cameraGap
+        let font = NSFont.systemFont(ofSize: NotchType.size)
+        // The time grows out of where it shows beside the camera, going from green to gray as it comes.
+        let spread = ((closedWidth ?? width) - width) / 2
+        let timeFrom = CGSize(
+            width: h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread,
+            height: h / 2 - (rowTop + side * CallLook.timeBaseline - font.capHeight / 2))
+        return VStack(alignment: .leading, spacing: CallLayout.roundGap(h)) {
+            Button {
+                CallWatch.shared.goToApp()
+            } label: {
+                HStack(spacing: CallLayout.wordsGap(h)) {
+                    if picture {
+                        CallAvatar(call: call, side: side)
+                            .modifier(PageFade(hidden: !revealed))
+                    }
+                    ZStack(alignment: .topLeading) {
+                        Text(call.name)
+                            .font(NotchType.title)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .padding(.top, side * CallLook.nameBaseline - NSFont.systemFont(ofSize: NotchType.size, weight: .semibold).ascender)
+                            .modifier(PageFade(hidden: !revealed))
+                        CallTime(since: since)
+                            .font(NotchType.detail)
+                            .foregroundStyle(out || closedWidth == nil ? NotchType.detailColor : CallLook.green)
+                            .padding(.top, side * CallLook.timeBaseline - font.ascender)
+                            .modifier(
+                                GrowsOut(
+                                    out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
+                                    from: timeFrom)
+                            )
+                            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+                .frame(height: side)
+                .contentShape(Rectangle())
+            }
+            // Clicked, it goes to the app, and doesn't sink in as a button does.
+            .buttonStyle(StillPress())
+            .notchControl()
+            .help(String(localized: "Show in \(call.over)"))
+            .accessibilityLabel(String(localized: "\(call.name), on a call"))
+            .accessibilityHint(String(localized: "Show in \(call.over)"))
+            HStack(spacing: CallLayout.roundGap(h)) { buttons(h) }
+                .modifier(PageFade(hidden: !revealed))
+        }
+        .padding(.top, rowTop)
+        .padding(.horizontal, CallLayout.roundEdge(h))
+        .frame(width: width, height: Self.height(for: call, restingHeight: h), alignment: .top)
+    }
+
+    /// Coming in or going out: the caller, what it's over and the name, and the buttons, in one row.
+    private var coming: some View {
+        let h = restingHeight
+        let side = CallLayout.round(h)
         let out = revealed && arrived
         let spread = ((closedWidth ?? width) - width) / 2
         let rise = (h - TimerLayout.tallHeight(h)) / 2
         let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)
-        let line = NSLayoutManager().defaultLineHeight(for: NSFont.systemFont(ofSize: NotchType.size))
-        let words = CallLayout.roundEdge(h) + side + CallLayout.wordsGap(h)
-        let timeFrom = CGSize(
-            width: h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread, height: rise + line / 2)
-        HStack(spacing: CallLayout.wordsGap(h)) {
+        return HStack(spacing: CallLayout.wordsGap(h)) {
             Button {
                 CallWatch.shared.goToApp()
             } label: {
-                if case .connected = call.phase {
-                    // As the iPhone shows it: the name alone, large.
-                    Text(call.name)
-                        .font(.system(size: TimerLayout.tallHeight(h) * CallLook.name, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.leading, TimerLayout.tallHeight(h) * CallLook.nameEdge - CallLayout.roundEdge(h))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .modifier(PageFade(hidden: !revealed))
-                } else {
-                    HStack(spacing: CallLayout.wordsGap(h)) {
+                HStack(spacing: CallLayout.wordsGap(h)) {
+                    if call.throughApple {
                         CallAvatar(call: call, side: side)
                             .modifier(
                                 GrowsOut(out: out || closedWidth == nil || !call.rings, scale: h * CallLook.avatar / side, anchor: .leading, from: avatarFrom)
                             )
                             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && call.rings))
-                        VStack(alignment: .leading, spacing: 0) {
-                            if case .connected(let since) = call.phase {
-                                CallTime(since: since)
-                                    .font(NotchType.detail)
-                                    .foregroundStyle(CallLook.green)
-                                    .modifier(
-                                        GrowsOut(
-                                            out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
-                                            from: timeFrom)
-                                    )
-                                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
-                            } else {
-                                Text(call.line ?? call.over)
-                                    .font(NotchType.detail)
-                                    .foregroundStyle(NotchType.detailColor)
-                                    .modifier(PageFade(hidden: !revealed))
-                            }
-                            Text(call.name)
-                                .font(NotchType.title)
-                                .foregroundStyle(.white)
-                                .modifier(PageFade(hidden: !revealed))
-                        }
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .contentShape(Rectangle())
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(call.line ?? call.over)
+                            .font(NotchType.detail)
+                            .foregroundStyle(NotchType.detailColor)
+                        Text(call.name)
+                            .font(NotchType.title)
+                            .foregroundStyle(.white)
+                    }
+                    .modifier(PageFade(hidden: !revealed))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .contentShape(Rectangle())
             }
-            // Clicked, it goes to the app, and doesn't sink in as a button does.
             .buttonStyle(StillPress())
             .notchControl()
             .help(String(localized: "Show in \(call.over)"))
@@ -490,28 +552,53 @@ struct ExpandedCallView: View {
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
         .frame(width: width, height: TimerLayout.tallHeight(h))
-        .accessibilityElement(children: .contain)
-        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
     }
 
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
         let side = CallLayout.round(h)
-        if !call.rings {
+        if call.isConnected {
             IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
                 // From the keyboard the pointer can be anywhere: the menu opens under the button.
                 let fromKeys = NSApp.currentEvent?.type == .keyDown
                 AudioOutput.shared.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil, withVolume: false, outputsOnly: true)
             } glyph: {
-                glyph("speaker.wave.3.fill", CallLook.speakerGlyph, side)
+                glyph("speaker.wave.3.fill", CallLook.speakerSymbol, side, weight: .regular)
             }
-            if call.canEnd {
-                IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
-                    CallWatch.shared.end()
+            // Video, off, as the iPhone shows it on a voice call: the Mac can't add it to one.
+            IslandCircle(height: h, tint: .white, highlighted: false, fill: CallLook.videoFill, side: side) {
+                Image(systemName: "video.slash.fill")
+                    .font(.system(size: side * CallLook.videoSymbol, weight: .semibold))
+                    .foregroundStyle(CallLook.videoGlyph)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(String(localized: "Video"))
+            .accessibilityValue(String(localized: "Off"))
+            if microphone.available {
+                // Live, white with a dark microphone, as on the iPhone; muted, dark, struck through.
+                IslandCircleButton(
+                    control: .activitySecond, height: h, tint: .white, label: microphone.muted ? String(localized: "Unmute") : String(localized: "Mute"),
+                    fill: microphone.muted ? CallLook.speaker : .white, side: side
+                ) {
+                    microphone.toggle()
                 } glyph: {
-                    glyph("xmark", CallLook.crossGlyph, side, weight: .heavy)
+                    Image(systemName: microphone.muted ? "mic.slash.fill" : "mic.fill")
+                        .font(.system(size: side * CallLook.micSymbol, weight: .medium))
+                        .foregroundStyle(microphone.muted ? .white : .black)
                 }
             }
-        } else {
+            IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Show in \(call.over)"), fill: CallLook.speaker, side: side) {
+                CallWatch.shared.goToApp()
+            } glyph: {
+                glyph("ellipsis", CallLook.moreSymbol, side)
+            }
+            if call.canEnd {
+                IslandCircleButton(control: .activityFourth, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
+                    CallWatch.shared.end()
+                } glyph: {
+                    glyph("phone.down.fill", CallLook.endSymbol, side, weight: .bold)
+                }
+            }
+        } else if call.rings {
             if call.canDecline {
                 IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Decline"), fill: CallLook.decline, side: side) {
                     CallWatch.shared.decline()
@@ -524,6 +611,12 @@ struct ExpandedCallView: View {
             } glyph: {
                 glyph("phone.fill", CallLook.acceptGlyph, side)
             }
+        } else if call.canEnd {
+            IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
+                CallWatch.shared.end()
+            } glyph: {
+                glyph("phone.down.fill", CallLook.endSymbol, side, weight: .bold)
+            }
         }
     }
 
@@ -533,18 +626,108 @@ struct ExpandedCallView: View {
             .foregroundStyle(.white)
     }
 
-    /// Each side of the camera: as wide as the wider of the first line and the buttons, each from its end.
+    /// How many round buttons a connected call has: the speaker, video, the microphone where it can
+    /// be muted, more, and ending it where that can be done.
     @MainActor
-    static func wing(for call: CallShown, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
-        guard case .connected = call.phase else { return IncomingCallView.wing(for: call, restingHeight: h) }
-        // The name sits below the camera, so it runs on under it as far as the buttons, and never
-        // widens the notch.
-        return CallLayout.openWing(firstLine: 0, buttons: call.canEnd ? 2 : 1, restingHeight: h)
+    static func connectedButtons(for call: CallShown) -> Int {
+        3 + (CallMicrophone.canMute ? 1 : 0) + (call.canEnd ? 1 : 0)
+    }
+
+    /// Each side of the camera. Connected, as wide as the row of buttons under it, at the least as
+    /// wide as the camera with its gaps; otherwise as wide as the wider of the first line and the
+    /// buttons, each from its end.
+    @MainActor
+    static func wing(for call: CallShown, restingHeight h: CGFloat, closedWidth: CGFloat = 185) -> CGFloat {
+        guard call.isConnected else {
+            if call.rings { return IncomingCallView.wing(for: call, restingHeight: h) }
+            // Going out: the caller and what it's over, and ending it where that can be done.
+            let first = ceil(((call.line ?? call.over) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size)]).width)
+            return CallLayout.openWing(firstLine: first, buttons: call.canEnd ? 1 : 0, picture: call.throughApple, restingHeight: h)
+        }
+        let buttons = CGFloat(connectedButtons(for: call))
+        let row = CallLayout.roundEdge(h) * 2 + CallLayout.round(h) * buttons + CallLayout.roundGap(h) * (buttons - 1)
+        return max((row - closedWidth) / 2, LiveActivityView.cameraGap)
     }
 
     @MainActor
     static func width(for call: CallShown, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
-        closedWidth + wing(for: call, restingHeight: h) * 2
+        closedWidth + wing(for: call, restingHeight: h, closedWidth: closedWidth) * 2
+    }
+
+    /// Connected, the camera, the caller's row and the buttons' with a gap between, and the padding;
+    /// otherwise as tall as the Alarm.
+    static func height(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
+        guard call.isConnected else { return TimerLayout.tallHeight(h) }
+        return (h + LiveActivityView.cameraGap + CallLayout.round(h) * 2 + CallLayout.roundGap(h) + CallLayout.roundEdge(h)).rounded()
+    }
+}
+
+/// The Mac's microphone, which a call's Mute button mutes: the default input device's own mute, so
+/// the call hears nothing, nor does anything else listening. What Glance mutes it unmutes as the
+/// call ends. At the bench it's only said.
+@MainActor
+final class CallMicrophone: ObservableObject {
+    static let shared = CallMicrophone(fakes: ActivityBench.scene != nil)
+    @Published private(set) var muted = false
+    @Published private(set) var available = CallMicrophone.canMute
+    /// Muted from the notch, to be unmuted as the call ends.
+    private(set) var mutedHere = false
+    /// At the bench and in tests, the real microphone is never touched.
+    private let fakes: Bool
+
+    init(fakes: Bool) {
+        self.fakes = fakes
+        if fakes { available = true }
+    }
+
+    private static var muteAddress: AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyMute, mScope: kAudioDevicePropertyScopeInput, mElement: kAudioObjectPropertyElementMain)
+    }
+
+    /// The default input device, if its mute can be set.
+    private static var device: AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var device = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &device) == noErr, device != 0 else { return nil }
+        var mute = muteAddress
+        var settable: DarwinBoolean = false
+        guard AudioObjectHasProperty(device, &mute), AudioObjectIsPropertySettable(device, &mute, &settable) == noErr, settable.boolValue else { return nil }
+        return device
+    }
+
+    static var canMute: Bool { ActivityBench.scene != nil || device != nil }
+
+    /// Reads it again, as the call opens.
+    func refresh() {
+        guard !fakes else { return }
+        available = Self.canMute
+        guard let device = Self.device else { return }
+        var mute = Self.muteAddress
+        var value: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        if AudioObjectGetPropertyData(device, &mute, 0, nil, &size, &value) == noErr { muted = value != 0 }
+    }
+
+    func toggle() {
+        set(!muted)
+        mutedHere = muted
+    }
+
+    /// The call's over: the microphone back on, if it was muted here.
+    func callEnded() {
+        guard mutedHere else { return }
+        mutedHere = false
+        set(false)
+    }
+
+    private func set(_ on: Bool) {
+        guard !fakes else { return muted = on }
+        guard let device = Self.device else { return }
+        var mute = Self.muteAddress
+        var value: UInt32 = on ? 1 : 0
+        if AudioObjectSetPropertyData(device, &mute, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value) == noErr { muted = on }
     }
 }
 
@@ -830,6 +1013,7 @@ final class CallWatch: ObservableObject {
             minuteTimer?.invalidate()
             minuteTimer = nil
         }
+        if next == nil { CallMicrophone.shared.callEnded() }
     }
 
     func accept() {

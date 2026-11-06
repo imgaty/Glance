@@ -728,7 +728,7 @@ struct SystemBannersTests {
     func calls() {
         let ringing = CallShown(name: "Alex Morgan", over: "FaceTime", app: nil, phase: .ringing)
         let connected = CallShown(name: "Alex Morgan", over: "FaceTime", app: nil, phase: .connected(since: .now))
-        #expect(ringing.initials == "AM" && !ringing.isConnected && connected.isConnected)
+        #expect(ringing.initials == "A" && !ringing.isConnected && connected.isConnected)
         #expect(CallShown(name: "", over: "", phase: .ringing).initials == "")
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.activity = true
@@ -751,23 +751,70 @@ struct SystemBannersTests {
         #expect(alert.tall && alert.stays)
     }
 
-    @Test("Opened, a call is as tall and as wide as one coming in, with room for ending it only where that can be done")
+    @Test("Opened, a call has the caller's row under the camera and the iPhone's buttons under it, as wide as they are")
     @MainActor
     func openedCall() {
         let h: CGFloat = 32
         let ringing = CallShown(name: "Alex Morgan", over: "Phone", phase: .ringing)
         #expect(ExpandedCallView.wing(for: ringing, restingHeight: h) == IncomingCallView.wing(for: ringing, restingHeight: h))
+        #expect(ExpandedCallView.height(for: ringing, restingHeight: h) == TimerLayout.tallHeight(h))
         let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
         model.call = CallShown(name: "Alex Morgan", over: "Phone", phase: .connected(since: .now))
         model.expanded = .call
         model.state = .open
-        #expect(model.metrics.height == TimerLayout.tallHeight(h))
+        // The camera, two rows of 49 with the buttons' gap between, and the padding under them.
+        let side = TimerLayout.content(h)
+        let tall = (h + LiveActivityView.cameraGap + side * 2 + h * TimerLayout.buttonGap + TimerLayout.buttonEdge(h)).rounded()
+        #expect(model.metrics.height == tall)
+        #expect(ExpandedCallView.height(for: model.call!, restingHeight: h) == tall)
         #expect(model.metrics.bodyWidth == 185 + 2 * ExpandedCallView.wing(for: model.call!, restingHeight: h))
-        // With a short name the buttons decide its width, and a second one takes more.
-        let short = CallShown(name: "Al", over: "Phone", phase: .connected(since: .now))
-        var ending = short
+        // As wide as its buttons, 14 in from each end: one more for ending it where that can be done.
+        var ending = model.call!
         ending.canEnd = true
-        #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: short, restingHeight: h))
+        let buttons = CGFloat(ExpandedCallView.connectedButtons(for: ending))
+        #expect(Int(buttons) == ExpandedCallView.connectedButtons(for: model.call!) + 1)
+        #expect(
+            abs(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185) - (28 + buttons * side + (buttons - 1) * h * TimerLayout.buttonGap)) < 0.01)
+        #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: model.call!, restingHeight: h))
+    }
+
+    @Test("Only a FaceTime or Phone caller has a picture, as the iPhone pictures one; other apps' have none")
+    @MainActor
+    func callPicture() {
+        let h: CGFloat = 32
+        #expect(CallShown(name: "A", over: "Phone", app: CallAudio.phone, phase: .ringing).throughApple)
+        #expect(CallShown(name: "A", over: "FaceTime", app: CallAudio.faceTime, phase: .ringing).throughApple)
+        let other = CallShown(name: "A", over: "Discord", app: "com.hnc.Discord", phase: .ringing)
+        #expect(!other.throughApple)
+        // Where the first line decides the width, without the picture the words start at the padding.
+        var long = other
+        long.line = "Incoming video call from a long way away"
+        var apple = long
+        apple.app = CallAudio.faceTime
+        #expect(
+            abs(
+                IncomingCallView.wing(for: apple, restingHeight: h) - IncomingCallView.wing(for: long, restingHeight: h)
+                    - (CallLayout.round(h) + CallLayout.wordsGap(h))) < 0.01)
+        // The serif initial is half the circle, for the iPhone's cap height of about 0.35 of it.
+        #expect(CallLook.pictureInitials == 0.5)
+    }
+
+    @Test("Mute mutes the microphone, and what the notch muted is unmuted as the call ends")
+    @MainActor
+    func callMute() {
+        // Faked: a test never touches the real microphone.
+        let microphone = CallMicrophone(fakes: true)
+        #expect(microphone.available && !microphone.muted)
+        microphone.toggle()
+        #expect(microphone.muted && microphone.mutedHere)
+        microphone.callEnded()
+        #expect(!microphone.muted && !microphone.mutedHere)
+        // Unmuted again before the end, nothing's left to undo.
+        microphone.toggle()
+        microphone.toggle()
+        #expect(!microphone.muted && !microphone.mutedHere)
+        microphone.callEnded()
+        #expect(!microphone.muted)
     }
 
     @Test("The waveform has the other person on the left and you on the right, each from how loud it's just been")
@@ -889,12 +936,12 @@ struct SystemBannersTests {
         #expect(NotificationWindow.away(from: CGPoint(x: 1512, y: -300), height: 1080) == CGPoint(x: 1512, y: -1379))
     }
 
-    @Test("A caller's circle has the first letters of their first and last names, and none for a number")
+    @Test("A caller's circle has their name's first letter, as the iPhone's had for three words, and none for a number")
     func callInitials() {
         func initials(_ name: String) -> String { CallShown(name: name, over: "Phone", phase: .ringing).initials }
         #expect(initials("Silva") == "S")
-        #expect(initials("Alex Morgan") == "AM")
-        #expect(initials("Maria da Silva") == "MS")
+        #expect(initials("Alex Morgan") == "A")
+        #expect(initials("  maria da Silva") == "M")
         #expect(initials("+351 912 345 678") == "")
         #expect(initials("") == "")
     }
