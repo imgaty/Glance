@@ -522,7 +522,8 @@ extension NotchModel {
     func close() {
         // What's open is the bubble's, and it goes back out into the bubble as the notch closes.
         let intoBubble = openedFromBubble && second != nil && alert == nil && !folded
-        withAnimation(NotchMotion.spring(response: 0.36, dampingFraction: 0.88)) {
+        // Folding as the Dynamic Island's activities fold, from whatever's open: no bounce.
+        withAnimation(IslandMotion.fold) {
             state = .closed
             stretch = 0
             if intoBubble { bubbleReach = bubbleSpan }
@@ -706,7 +707,10 @@ struct NotchView: View {
                 .padding(.top, lyricsTop)
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .mask { awayFromCamera }
-                .animation(Self.fade(in: lyricsShown)) { $0.opacity(lyricsShown ? 1 : 0).blur(radius: lyricsShown ? 0 : 4) }
+                // Shown or hidden with the lyrics button, they fade; with the notch, they come and go
+                // as every opened view does.
+                .animation(Self.fade(in: model.showsLyrics)) { $0.opacity(model.showsLyrics ? 1 : 0).blur(radius: model.showsLyrics ? 0 : 4) }
+                .modifier(IslandReveal(hidden: !heroOpen))
                 .allowsHitTesting(places == nil)
             // The player and the tray side by side, as pages are: going to the tray, the player
             // slides off to the left as the tray comes in from the right, and back. The tray stays
@@ -717,7 +721,10 @@ struct NotchView: View {
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
                 .offset(x: onTray ? -pageShift : 0)
-                .modifier(PageFade(hidden: !playerShown))
+                // Sliding to the tray, it fades; opening and closing, it comes and goes as every
+                // opened view does, the Dynamic Island's expanded activities' way.
+                .modifier(PageFade(hidden: onTray))
+                .modifier(IslandReveal(hidden: !heroOpen))
             TrayView(
                 tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
                 airDropTargeted: model.airDropTargeted
@@ -725,7 +732,8 @@ struct NotchView: View {
             .frame(width: model.trayWidth, height: model.trayHeight)
             .environment(\.notchControls, trayShown)
             .offset(x: onTray ? 0 : pageShift)
-            .modifier(PageFade(hidden: !trayShown))
+            .modifier(PageFade(hidden: !onTray))
+            .modifier(IslandReveal(hidden: !heroOpen))
             .allowsHitTesting(places == nil && trayShown)
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.

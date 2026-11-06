@@ -618,7 +618,8 @@ final class NotchController {
         let wing = SystemActivityView.wing(
             for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
         func announce() {
-            withAnimation(open) {
+            // One as tall as the Alarm is an expanded activity, and grows as the notch opens.
+            withAnimation(alert.tall ? NotchMotion.expand : open) {
                 model.switching = false
                 model.alertWing = wing
                 model.alert = alert

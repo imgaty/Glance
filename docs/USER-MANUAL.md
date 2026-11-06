@@ -77,9 +77,12 @@ song. Times and percentages use the digits of your language and region.
 
 Hover over the notch or click it, depending on
 **Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
-notch closes when the pointer leaves it. The player, the tray and the lyrics
-come and go as the Dynamic Island's activities do, fading in out of a blur and
-away into one, as the notch opens, closes, or switches between them. With
+notch closes when the pointer leaves it. It opens and closes the same way to
+whatever it shows: the player, the tray, the lyrics, a live activity, or an
+announcement as tall as the Alarm. As the Dynamic Island's expanded activities
+do, the notch grows with a touch of bounce while what it shows grows out of a
+blur, and folds without one as it blurs away. Between the player and the tray,
+they slide and fade. With
 Reduce Motion on, they only fade, and nothing bounces: the notch, the bubbles and
 the cover settle straight where they're going, the star glows without swelling,
 the skip arrows stay where they are, and the welcome tour's pages fade rather

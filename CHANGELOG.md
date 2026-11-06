@@ -73,7 +73,10 @@
   blur and away into one, under the notch at rest, which stays sharp over it. An
   announcement shows as long as the iPhone shows AirPods arriving. Between two,
   it folds to rest before opening for the next, and the pointer on it folds it
-  away at once, the notch opening once it has. With Reduce Motion on, the notch
+  away at once, the notch opening once it has. Opening and closing are the same
+  for the player, the tray, the lyrics, every live activity and an announcement
+  as tall as the Alarm: the notch grows with a touch of bounce as what it shows
+  grows out of a blur, and folds without one. With Reduce Motion on, the notch
   widens without bouncing and nothing blurs.
 - Added every language macOS comes in, 36 in all: Glance follows the language
   macOS shows it in, and its words for macOS's own settings are macOS's.

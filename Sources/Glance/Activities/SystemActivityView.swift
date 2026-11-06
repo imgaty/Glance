@@ -68,7 +68,7 @@ struct SystemActivityView: View {
         ZStack {
             if let alert = shownAlert, case .incomingCall(let call) = alert.content {
                 IncomingCallView(call: call, restingHeight: restingHeight, hovered: hoveredButton)
-                    .islandFade(self.alert != nil)
+                    .modifier(IslandReveal(hidden: self.alert == nil))
                     .id(alert.id)
                     .transition(IslandMotion.fade)
                     .accessibilityElement(children: .contain)
@@ -81,7 +81,7 @@ struct SystemActivityView: View {
                     .accessibilityAction(.default, open)
             } else if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
                 TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
-                    .islandFade(self.alert != nil)
+                    .modifier(IslandReveal(hidden: self.alert == nil))
                     .id(alert.id)
                     .transition(IslandMotion.fade)
                     // Its buttons inside, which VoiceOver can press.
@@ -89,7 +89,7 @@ struct SystemActivityView: View {
                     .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .lowBattery(let percent) = alert.content {
                 LowBatteryView(percent: percent, restingHeight: restingHeight, hovered: hoveredButton == .lowPower)
-                    .islandFade(self.alert != nil)
+                    .modifier(IslandReveal(hidden: self.alert == nil))
                     .id(alert.id)
                     .transition(IslandMotion.fade)
                     .accessibilityElement(children: .contain)
