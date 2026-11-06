@@ -258,10 +258,11 @@ struct ActivitiesTests {
     @Test("A device arrives as AirPods do on the iPhone: the device and its ring by the notch's height, against the camera")
     func deviceLayout() {
         // The iPhone's Dynamic Island, 110 pixels tall for AirPods, as for anything else: the AirPods
-        // 51 tall; the ring 59 across, as far in from the end as from the top and bottom.
+        // 51 tall; the ring, 59 across there, as large as every other activity's mark beside the
+        // camera, as far in from the end as from the top and bottom.
         let island = DeviceLayout(height: 110)
         #expect(abs(island.picture - 51) < 0.5)
-        #expect(abs(island.ring - 59) < 0.5)
+        #expect(abs(island.ring - 110 * TimerLayout.ring) < 0.001)
         #expect(abs(island.trailing - (110 - island.ring) / 2) < 0.001)
         // Its wings as wide as the ring and its level need, against the camera, and no wider.
         let pill = NotchAlert(kind: .device, content: .device(model: .beatsPill, battery: 15), spoken: "")

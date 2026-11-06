@@ -200,9 +200,10 @@ enum AirDropLayout {
     // Beside the camera.
     static let symbol: CGFloat = 0.575
     static let symbolEdge: CGFloat = 0.148
-    static let ring: CGFloat = 0.62
+    /// As large as every other activity's mark beside the camera, as far in from its end as from the top.
+    static let ring: CGFloat = TimerLayout.ring
     static let ringLine: CGFloat = 0.075
-    static let ringEdge: CGFloat = 0.19
+    static let ringEdge: CGFloat = (1 - ring) / 2
     // Opened.
     static let badge: CGFloat = 0.55
     static let badgeOut: CGFloat = 0.065

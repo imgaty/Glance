@@ -67,23 +67,20 @@ enum CallLook {
     /// As shares of the notch's height: the waveform, the phone, the circle, the handset.
     static let waveHeight: CGFloat = 0.45
     static let phone: CGFloat = 0.42
-    static let avatar: CGFloat = 0.68
-    static let handsetSize: CGFloat = 0.52
+    /// The caller's circle and the handset as large as every other activity's mark beside the camera.
+    static let avatar: CGFloat = TimerLayout.ring
+    static let handsetSize: CGFloat = 0.49
     /// Between the phone and its time.
     static let timeGap: CGFloat = 5
 
-    // Opened, by the share of its height, or of what's round for what's inside.
-    static let round: CGFloat = 0.6
-    static let roundGap: CGFloat = 0.11
-    static let wordsGap: CGFloat = 0.15
+    /// Inside the round buttons, the symbol's size for the button's, so each is as large in it as
+    /// Apple's is, measured from screenshots of real iPhone calls: the handset half as wide as its
+    /// button, the phone two fifths, the speaker a little over half.
     static let initials: CGFloat = 0.32
     static let smallInitials: CGFloat = 0.48
-    static let endGlyph: CGFloat = 0.3
-    static let acceptGlyph: CGFloat = 0.38
-    static let speakerGlyph: CGFloat = 0.41
-    /// The caller's name, and the line or time with it.
-    static let nameSize: CGFloat = 16
-    static var name: Font { .system(size: nameSize) }
+    static let endGlyph: CGFloat = 0.4
+    static let acceptGlyph: CGFloat = 0.42
+    static let speakerGlyph: CGFloat = 0.39
 
     /// A waveform drawn as macOS's popup draws its own, for a call that has no popup to show it, and
     /// for trying it: the same bars twice over, the other person's darker and stronger to the left,
@@ -127,12 +124,12 @@ enum CallLayout {
         return max(left, right)
     }
 
-    /// Opened, how big what's round is, in a row with the same space all around it: concentric with
-    /// the notch's round end. Then between the round buttons, and before the words.
-    static func round(_ h: CGFloat) -> CGFloat { (TimerLayout.tallHeight(h) * CallLook.round).rounded() }
-    static func roundEdge(_ h: CGFloat) -> CGFloat { (TimerLayout.tallHeight(h) - round(h)) / 2 }
-    static func roundGap(_ h: CGFloat) -> CGFloat { (TimerLayout.tallHeight(h) * CallLook.roundGap).rounded() }
-    static func wordsGap(_ h: CGFloat) -> CGFloat { (TimerLayout.tallHeight(h) * CallLook.wordsGap).rounded() }
+    /// Opened, round things are as large as every other activity's, at the same distance from the
+    /// ends and from each other, and the words as far from the caller as AirDrop's from its file.
+    static func round(_ h: CGFloat) -> CGFloat { TimerLayout.content(h) }
+    static func roundEdge(_ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
+    static func roundGap(_ h: CGFloat) -> CGFloat { h * TimerLayout.buttonGap }
+    static func wordsGap(_ h: CGFloat) -> CGFloat { h * AirDropLayout.gap }
 
     /// How far in from a wing's end: as far as from the top and bottom, concentric with it.
     static func edge(_ h: CGFloat) -> CGFloat { LiveActivityView.textEdge(restingHeight: h) }
@@ -306,10 +303,10 @@ struct IncomingCallView: View {
             CallAvatar(call: call, side: side)
             VStack(alignment: .leading, spacing: 0) {
                 Text(call.line ?? call.over)
-                    .font(CallLook.name)
+                    .font(NotchType.detail)
                     .foregroundStyle(NotchType.detailColor)
                 Text(call.name)
-                    .font(CallLook.name)
+                    .font(NotchType.title)
                     .foregroundStyle(.white)
             }
             .lineLimit(1)
@@ -343,7 +340,7 @@ struct IncomingCallView: View {
     /// Each wing: as wide as the wider side, what it's over or the buttons, each from its end.
     @MainActor
     static func wing(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
-        let first = ceil(((call.line ?? call.over) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: CallLook.nameSize)]).width)
+        let first = ceil(((call.line ?? call.over) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size)]).width)
         return CallLayout.openWing(firstLine: first, buttons: 2, restingHeight: h)
     }
 }
@@ -375,11 +372,11 @@ struct ExpandedCallView: View {
                                 .foregroundStyle(CallLook.green)
                         } else {
                             Text(call.line ?? call.over)
-                                .font(CallLook.name)
+                                .font(NotchType.detail)
                                 .foregroundStyle(NotchType.detailColor)
                         }
                         Text(call.name)
-                            .font(CallLook.name)
+                            .font(NotchType.title)
                             .foregroundStyle(.white)
                     }
                     .lineLimit(1)

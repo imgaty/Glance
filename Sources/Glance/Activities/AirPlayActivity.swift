@@ -119,7 +119,8 @@ enum AirPlayLayout {
     static let buttonFill = Color.p3(0x12, 0x20, 0x3B)
     static let buttonWords = Color.p3(0x4B, 0x80, 0xF1)
     // Beside the camera: the symbol and the device, each as far in from its end.
-    static let symbol: CGFloat = 0.6
+    /// As tall in ink as every other activity's mark beside the camera.
+    static let symbol: CGFloat = 0.585
     static let symbolEdge: CGFloat = 0.144
     static let device: CGFloat = 0.4
     static let deviceEdge: CGFloat = 0.23

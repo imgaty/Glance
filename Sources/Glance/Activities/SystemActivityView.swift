@@ -462,7 +462,8 @@ struct DeviceLayout {
     /// What a device's usual height is multiplied by, for it to look as large as any other.
     var fit: CGFloat = 1
     var picture: CGFloat { height * (extended ? ExpandedDeviceLayout.picture : 0.464) * fit }
-    var ring: CGFloat { extended ? TimerLayout.content(height) : height * (low ? 0.68 : 0.54) }
+    /// As large as every other activity's mark beside the camera; larger only when it has a number in it, to read.
+    var ring: CGFloat { extended ? TimerLayout.content(height) : height * (low ? 0.68 : TimerLayout.ring) }
     /// As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
     var ringLine: CGFloat { extended ? height * ExpandedDeviceLayout.ringLine : max(ring * (low ? 0.1 : 0.12), 2) }
     /// The level in numbers, inside the ring.
