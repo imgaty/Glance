@@ -969,8 +969,8 @@ final class NotchController {
         case .decline: CallWatch.shared.decline()
         case .lowPower:
             LowPowerMode.shared.toggle()
-            // Long enough to see it change.
-            Activities.shared.keep(.lowBattery, for: 2.5)
+            // Long enough to see it change, and then it's done with: it goes, reached or not.
+            Activities.shared.keep(.lowBattery, for: 2.5, holds: false)
         }
         model.hoveredButton = nil
     }
@@ -1805,6 +1805,11 @@ final class NotchController {
 
     /// From the menu, the same as swiping up on the notch, for anyone who can't swipe.
     func putAway() { pushedUp() }
+
+    /// The pointer's on an announcement, which waits for it while it has a button.
+    var holdsAlert: Bool {
+        model.alert != nil && (model.hoveredButton != nil || interactiveZone.contains(NSEvent.mouseLocation))
+    }
 
     /// A live activity swiped away, for a moment: still going, it comes back by itself after
     /// `swipedAway`, and sooner if it changes: music with the next song, or when it plays again; a

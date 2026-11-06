@@ -409,6 +409,7 @@ final class NotchManager {
     func start() {
         Preferences.registerDefaults()
         reload()
+        Activities.shared.holding = { [weak self] in self?.controllers.contains(where: \.holdsAlert) == true }
 
         // Only a change the notches would show: the Dock coming and going with Glance's windows
         // changes the screens' parameters too, and rebuilding for it would make them blink.

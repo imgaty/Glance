@@ -17,6 +17,8 @@ struct NotchAlert: Identifiable, Equatable {
 
         /// A device or its case running low: its ring red.
         var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
+        /// With a button of its own to reach, which a timed one can't take away.
+        var hasButton: Bool { self == .lowBattery }
     }
 
     /// What shows on either side of the camera.
@@ -56,6 +58,8 @@ struct NotchAlert: Identifiable, Equatable {
     /// to open until it starts to fold; one that stays shows until it's dismissed.
     var seconds: Double = 2.82
     var stays = false
+    /// Waits while its button is being reached.
+    var waitsToBeReached: Bool { kind.hasButton }
     /// A device's name, as it extends under the pointer.
     var name: String?
 
@@ -127,13 +131,29 @@ final class Activities: ObservableObject {
     }
 
     /// What shows, of this kind, stays a while longer: what was done on it is seen.
-    func keep(_ kind: NotchAlert.Kind, for seconds: Double) {
+    func keep(_ kind: NotchAlert.Kind, for seconds: Double, holds: Bool = true) {
         guard let alert, alert.kind == kind, !alert.stays else { return }
         shownTask?.cancel()
         shownTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds), tolerance: .zero)
+            if holds { await self?.waitWhileReached(alert) }
             guard !Task.isCancelled else { return }
             self?.next()
+        }
+    }
+
+    /// Whether the pointer's on the notch showing one, from the notches.
+    var holding: (() -> Bool)?
+
+    /// VoiceOver or Switch Control, which take longer to reach a button than an announcement shows.
+    static var assisted: Bool { NSWorkspace.shared.isVoiceOverEnabled || NSWorkspace.shared.isSwitchControlEnabled }
+
+    /// One with a button, as Low Battery's, stays while it's being reached: with VoiceOver or Switch
+    /// Control on, until it's put away, and while the pointer's on it.
+    private func waitWhileReached(_ alert: NotchAlert) async {
+        while alert.waitsToBeReached, Self.assisted || holding?() == true {
+            try? await Task.sleep(for: .seconds(0.5))
+            if Task.isCancelled { return }
         }
     }
 
@@ -155,6 +175,7 @@ final class Activities: ObservableObject {
         shownTask = Task { [weak self] in
             // To the frame, as the Dynamic Island's: the system would otherwise wake it when it suits.
             try? await Task.sleep(for: .seconds(alert.seconds), tolerance: .zero)
+            await self?.waitWhileReached(alert)
             guard !Task.isCancelled else { return }
             self?.next()
         }

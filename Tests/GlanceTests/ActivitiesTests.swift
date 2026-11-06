@@ -1202,6 +1202,12 @@ struct SystemBannersTests {
         #expect(NotchController.putAwayTitle(alert: nil, first: nil) == nil)
     }
 
+    @Test("Low Battery waits while its button's being reached; announcements without one don't")
+    func lowBatteryWaits() {
+        #expect(NotchAlert.Kind.lowBattery.hasButton)
+        #expect(!NotchAlert.Kind.charging.hasButton && !NotchAlert.Kind.device.hasButton)
+    }
+
     @Test("A call's own time always wins: a reading missed keeps it, and a relaunch takes it, never zero")
     func callClock() throws {
         let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
