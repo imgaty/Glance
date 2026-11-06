@@ -1047,7 +1047,10 @@ final class CallWatch: ObservableObject {
     private var popup: CallPopup?
     /// Who the call is with, kept from its popup in case that's closed during it.
     private var who: String?
+    /// When the popup's call started.
     private var since: Date?
+    /// When a call in another app started: by its own time, where it shows one, as Discord does.
+    private var clock = CallClock()
     private var watch: Timer?
     private var minuteTimer: Timer?
     private var showing: CallShown?
@@ -1104,15 +1107,12 @@ final class CallWatch: ObservableObject {
         } else if let microphone {
             let apple = microphone.bundle == CallAudio.appleService
             let app = apple ? Self.appleApp(detail: nil, phoneRunning: Self.phoneRunning) : (name: microphone.name, bundle: microphone.bundle)
-            // Discord says who it's with and for how long.
-            let discord = microphone.bundle.hasPrefix(DiscordCall.bundle) ? DiscordCall.shared.read() : nil
-            if let elapsed = discord?.elapsed {
-                let shown = Date.now - TimeInterval(elapsed)
-                if since.map({ abs($0.timeIntervalSince(shown)) > 1.5 }) ?? true { since = shown }
-            }
-            let started = since ?? .now
-            since = started
+            // Discord says who it's with and for how long. Its time is waited for a moment, as
+            // its window fills in, as after Glance opens, rather than counted from nothing.
+            let isDiscord = microphone.bundle.hasPrefix(DiscordCall.bundle)
+            let discord = isDiscord ? DiscordCall.shared.read() : nil
             if let name = discord?.name { who = name }
+            guard let started = clock.going(shown: discord?.elapsed, at: .now, waitsForTime: isDiscord) else { return }
             show(
                 CallShown(
                     name: discord?.name ?? who ?? app.name, over: app.name, app: app.bundle, phase: .connected(since: started),
@@ -1120,6 +1120,7 @@ final class CallWatch: ObservableObject {
         } else {
             who = nil
             since = nil
+            clock.ended(at: .now)
             DiscordCall.shared.forget()
             show(nil)
         }
@@ -1217,6 +1218,63 @@ final class CallWatch: ObservableObject {
     func bench(_ made: CallShown?) {
         CallVoices.shared.madeUp = true
         show(made)
+    }
+}
+
+/// When a call in an app other than FaceTime or Phone started, as near as can be known: by the app's
+/// own time wherever it shows one, which always wins; without one, what was known is kept, so a
+/// reading missed, Glance opened again, or the call gone a moment never starts it from nothing.
+struct CallClock: Equatable {
+    /// A time read as so many seconds started in the second before that many seconds ago, a little
+    /// either side for the app drawing it late. Each reading narrows it down.
+    private(set) var earliest: Date?
+    private(set) var latest: Date?
+    /// Without a time of its own, when the call was first heard.
+    private(set) var heard: Date?
+    /// When it was last gone, for a call that comes straight back.
+    private(set) var gone: Date?
+
+    /// How long its own time is waited for, and how long a call that's gone is remembered.
+    static let wait: TimeInterval = 3
+    static let keep: TimeInterval = 10
+
+    /// When it started, by its own time: the middle of what the readings leave.
+    var shown: Date? {
+        guard let earliest, let latest else { return nil }
+        return earliest.addingTimeInterval(latest.timeIntervalSince(earliest) / 2)
+    }
+
+    /// When the call started, given the time its app shows now, if it shows one; nil while that
+    /// time is still worth waiting for.
+    mutating func going(shown seconds: Int?, at now: Date, waitsForTime: Bool) -> Date? {
+        gone = nil
+        if let seconds {
+            let latest = now.addingTimeInterval(-TimeInterval(seconds) + 0.1)
+            let earliest = now.addingTimeInterval(-TimeInterval(seconds) - 1.2)
+            if let known = self.earliest, let last = self.latest, max(known, earliest) <= min(last, latest) {
+                self.earliest = max(known, earliest)
+                self.latest = min(last, latest)
+            } else {
+                // Not the same time as before: another call, or the app's own moved.
+                self.earliest = earliest
+                self.latest = latest
+            }
+        }
+        if let shown { return shown }
+        let heard = self.heard ?? now
+        self.heard = heard
+        if waitsForTime, now.timeIntervalSince(heard) < Self.wait { return nil }
+        return heard
+    }
+
+    /// The call's gone: remembered a while, in case it's back.
+    mutating func ended(at now: Date) {
+        let gone = self.gone ?? now
+        if now.timeIntervalSince(gone) > Self.keep {
+            self = CallClock()
+        } else {
+            self.gone = gone
+        }
     }
 }
 

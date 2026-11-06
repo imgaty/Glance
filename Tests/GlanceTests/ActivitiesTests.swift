@@ -1190,6 +1190,62 @@ struct SystemBannersTests {
         #expect(CGMutablePath().isEmpty)
     }
 
+    @Test("A call's own time always wins: a reading missed keeps it, and a relaunch takes it, never zero")
+    func callClock() throws {
+        let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func shown(_ start: Date?, at date: Date) -> Int? { start.map { Int(date.timeIntervalSince($0)) } }
+        // Glance opened mid-call: Discord's time, not zero.
+        var clock = CallClock()
+        let first = clock.going(shown: 1725, at: t0, waitsForTime: true)
+        let start = try #require(first)
+        #expect(shown(start, at: t0) == 1725)
+        // A reading missed keeps it.
+        let missed = clock.going(shown: nil, at: t0 + 5, waitsForTime: true)
+        #expect(missed == start)
+        #expect(shown(missed, at: t0 + 5) == 1730)
+        // Each reading narrows it to Discord's tick, partway through a second, and it then says
+        // what Discord does.
+        let ticks = t0 - 1725.4
+        for step in 1...12 {
+            let at = t0 + Double(step) * 1.37
+            let discord = Int(at.timeIntervalSince(ticks))
+            let read = clock.going(shown: discord, at: at, waitsForTime: true)
+            #expect(shown(read, at: at) == discord)
+        }
+        // Discord's time wins over Glance's own count.
+        var own = CallClock()
+        let counted = own.going(shown: nil, at: t0, waitsForTime: false)
+        #expect(counted == t0)
+        let corrected = own.going(shown: 300, at: t0 + 2, waitsForTime: false)
+        #expect(shown(corrected, at: t0 + 2) == 300)
+        // Discord's time is waited for a moment, then counted from when the call was heard.
+        var waiting = CallClock()
+        let soon = waiting.going(shown: nil, at: t0, waitsForTime: true)
+        let still = waiting.going(shown: nil, at: t0 + 2, waitsForTime: true)
+        let after = waiting.going(shown: nil, at: t0 + 3.5, waitsForTime: true)
+        #expect(soon == nil && still == nil && after == t0)
+        // Gone a moment, the same call keeps its time; gone longer, it's forgotten.
+        var back = CallClock()
+        let kept = back.going(shown: 90, at: t0, waitsForTime: true)
+        back.ended(at: t0 + 1)
+        back.ended(at: t0 + 6)
+        let returned = back.going(shown: nil, at: t0 + 7, waitsForTime: true)
+        #expect(returned == kept)
+        back.ended(at: t0 + 8)
+        back.ended(at: t0 + 19)
+        #expect(back == CallClock())
+        // Another time altogether: another call.
+        var other = CallClock()
+        _ = other.going(shown: 500, at: t0, waitsForTime: true)
+        let next = other.going(shown: 3, at: t0 + 10, waitsForTime: true)
+        #expect(shown(next, at: t0 + 10) == 3)
+        // Past an hour, in either way of writing it.
+        #expect(CallPopup.elapsed(in: "Voice Connected 59:59") == 3599)
+        #expect(CallPopup.elapsed(in: "Voice Connected 1:00:00") == 3600)
+        #expect(CallPopup.elapsed(in: "01:02:03") == 3723)
+        #expect(CallPopup.elapsed(in: "60:00") == 3600)
+    }
+
     @Test("Discord's call link gives the name and the time, in whatever words it's in")
     @MainActor
     func discordReading() {
