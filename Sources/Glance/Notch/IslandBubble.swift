@@ -30,11 +30,6 @@ struct IslandBubble: View {
     var artwork: NSImage? = nil
     /// The music's paused: its cover dims, as beside the camera.
     var paused = false
-    /// Opened by a click on it: under the notch, its circle grows into the open notch's outline as the
-    /// notch opens, so it opens out of the bubble, and shrinks back into it as it closes.
-    var grows = false
-    var growLayer = false
-    var openSize: CGSize = .zero
     let name: String
     /// Opens it, as a click on it does.
     let open: () -> Void
@@ -153,21 +148,6 @@ struct IslandBubble: View {
         .animation(hidden ? .linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)) { $0.opacity(hidden ? 0 : 1) }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
         .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptMusic ? 1 : 0) }
-        // Centered on the notch, its top at the notch's: from the bubble's circle where it rests, to
-        // the open notch's outline.
-        .background(alignment: .top) {
-            if growLayer {
-                // Flush with the top of the screen once open, as the notch is; round as the bubble.
-                UnevenRoundedRectangle(
-                    topLeadingRadius: grows ? 0 : h / 2, bottomLeadingRadius: grows ? PlayerLayout.cornerRadius : h / 2,
-                    bottomTrailingRadius: grows ? PlayerLayout.cornerRadius : h / 2, topTrailingRadius: grows ? 0 : h / 2, style: .continuous
-                )
-                .fill(.black)
-                .frame(width: grows ? openSize.width : h, height: grows ? openSize.height : h)
-                .offset(x: grows ? 0 : notchEnd + h * Self.gap + h / 2)
-                .animation(grows ? IslandMotion.open : IslandMotion.fold, value: grows)
-            }
-        }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1

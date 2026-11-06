@@ -526,6 +526,32 @@ struct ActivitiesTests {
         #expect(SystemActivityView.widthChange(after: now, of: .stopwatch(.stopped(elapsed: 595))) == nil)
     }
 
+    @Test("Opened from the bubble, the notch is one shape reaching over the bubble, and closes back into it")
+    @MainActor
+    func openFromBubble() async throws {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.activity = true
+        model.timer = .running(until: .now + 300, total: 300)
+        model.timerWing = 60
+        #expect(model.detached == .timer)
+        // From the notch's end to the bubble's far side.
+        #expect(abs(model.bubbleSpan - 32 * (1 + IslandBubble.gap)) < 0.001)
+        // Clicked, it reaches over the bubble at once, and opens from there to its own size.
+        model.openedFromBubble = true
+        model.bubbleReach = model.bubbleSpan
+        model.open()
+        #expect(model.bubbleReach == 0 && model.state == .open)
+        // Closed, it goes back over the bubble, then draws back from it.
+        model.close()
+        #expect(model.bubbleReach == model.bubbleSpan && !model.openedFromBubble)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(model.bubbleReach == 0)
+        // Opened from the notch, it never reaches out.
+        model.open()
+        model.close()
+        #expect(model.bubbleReach == 0)
+    }
+
     @Test("With more than one, the first keeps the leading side and the second is detached, two at most")
     func detached() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)

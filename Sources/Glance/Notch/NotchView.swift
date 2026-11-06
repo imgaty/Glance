@@ -121,6 +121,13 @@ final class NotchModel: ObservableObject {
     }
     /// Opened by a click on the detached bubble, so it opens out of the bubble, and closes back into it.
     @Published var openedFromBubble = false
+    /// How far past its trailing end the notch reaches toward the bubble: as far as the bubble's far
+    /// side as it opens out of it, or closes back into it, and nothing otherwise. One outline grows
+    /// from there, so the notch and the bubble are one shape, not two.
+    @Published var bubbleReach: CGFloat = 0
+    /// From the notch's trailing end to the bubble's far side.
+    var bubbleSpan: CGFloat { closedSize.height * (1 + IslandBubble.gap) }
+    private var reachTask: Task<Void, Never>?
     /// How much larger the closed notch was than at rest as it opened, at each end and at the bottom:
     /// the pointer swells it, and what shows beside the camera rides with its ends.
     private(set) var grownSwell: CGFloat = 0
@@ -491,17 +498,32 @@ extension NotchModel {
 
     /// With the Dynamic Island's spring, as its activities expand (see `NotchMotion`).
     func open() {
+        reachTask?.cancel()
         withAnimation(NotchMotion.expand) {
             state = .open
             proximity = 0
             pop = false
+            bubbleReach = 0
         }
     }
 
     func close() {
+        // What's open is the bubble's, and it goes back out into the bubble as the notch closes.
+        let intoBubble = openedFromBubble && second != nil && alert == nil && !folded
         withAnimation(NotchMotion.spring(response: 0.36, dampingFraction: 0.88)) {
             state = .closed
             stretch = 0
+            if intoBubble { bubbleReach = bubbleSpan }
+        }
+        openedFromBubble = false
+        guard intoBubble else { return }
+        // Closed back into the bubble, the notch's end draws back from it, as it does when an
+        // activity first goes out into the bubble.
+        reachTask?.cancel()
+        reachTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(380))
+            guard let self, !Task.isCancelled, state == .closed else { return }
+            withAnimation(IslandMotion.fold) { bubbleReach = 0 }
         }
     }
 
@@ -732,7 +754,9 @@ struct NotchView: View {
         // the picture, so the glass and the notch's black and outline would part as it changes size
         // (opening, a new layout, the lyrics coming or going). Laid out afresh at every step, the
         // whole notch, glass and all, keeps together.
-        .modifier(SteppedFrame(width: m.bodyWidth, height: m.height, corners: model.corners))
+        // What's in it stays where it is while the notch reaches out to the bubble.
+        .offset(x: -model.bubbleReach / 2)
+        .modifier(SteppedFrame(width: m.bodyWidth + model.bubbleReach, height: m.height, corners: model.corners))
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         // Stretched sideways, what's in it stretches with it, staying where it is.
@@ -744,7 +768,7 @@ struct NotchView: View {
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
         // end, all of it is hidden there, under what the notch shows.
-        .background(alignment: .top) { bubble(m) }
+        .background(alignment: .top) { bubble(m).offset(x: -model.bubbleReach / 2) }
         .background {
             ZStack {
                 if thumbnail {
@@ -778,6 +802,8 @@ struct NotchView: View {
         .scaleEffect(1 + min(model.stretch, 0) * 0.005, anchor: .top)
         // Turned off: a notch on a display without one folds up into the top edge.
         .scaleEffect(x: 1, y: max(1 - model.vanish, 0.001), anchor: .top)
+        // Reaching out to the bubble, it's that much wider on its trailing side alone.
+        .offset(x: model.bubbleReach / 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .coordinateSpace(.named(ControlFrames.space))
         .onPreferenceChange(ControlFrames.self) { model.controlFrames = $0 }
@@ -810,9 +836,6 @@ struct NotchView: View {
             airdrop: activity == .airdrop ? model.airdrop : nil,
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
-            grows: model.openedFromBubble && model.state == .open,
-            growLayer: model.openedFromBubble && (model.state == .open || activity != nil),
-            openSize: CGSize(width: model.metrics(for: .open).bodyWidth, height: model.metrics(for: .open).height),
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
             hidden: model.state == .open,
