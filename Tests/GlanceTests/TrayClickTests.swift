@@ -144,18 +144,16 @@ struct TrayClickTests {
         #expect(Shelf.inset + (Shelf.tile.width - Shelf.icon) / 2 == PlayerLayout.padding)
     }
 
-    @Test("With something dragged in, the tray is as wide as its two places to drop need, however many items it has")
+    @Test("With something dragged in, the tray is as wide as the compact player, whatever the layout and however many items")
     func dropWidth() {
-        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .side, hasCamera: true)
         model.dropping = true
-        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
-        let words = ceil(("Keep in Tray" as NSString).size(withAttributes: [.font: font]).width)
-        // Each place: the longer name and the padding either side; the gap; the padding around them.
-        #expect(Shelf.dropWidth >= (words + 28) * 2 + Shelf.dropGap + 28)
-        #expect(model.trayWidth == max(Shelf.dropWidth, 185 + 28))
-        #expect(model.trayWidth < model.openSize.width)
+        let compact = PlayerLayout.top.size(closed: CGSize(width: 185, height: 32)).width
+        #expect(model.trayWidth == compact)
+        // Narrower than the player with its cover on the side.
+        #expect(compact < PlayerLayout.side.size(closed: CGSize(width: 185, height: 32)).width)
         model.trayItems = 30
-        #expect(model.trayWidth == max(Shelf.dropWidth, 185 + 28))
+        #expect(model.trayWidth == compact)
         // Let go, as wide as its items again.
         model.dropping = false
         #expect(model.trayWidth == Shelf.peekWidth)

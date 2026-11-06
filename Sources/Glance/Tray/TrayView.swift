@@ -37,14 +37,6 @@ enum Shelf {
         return box.height > font.boundingRectForFont.height * 1.5
     }
 
-    /// Something dragged in: its two places to drop it side by side, each as wide as the longer of
-    /// their names with the padding either side, and the padding around them. No wider: the tray
-    /// is as wide as what it shows needs.
-    static var dropWidth: CGFloat {
-        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
-        let widest = [String(localized: "Keep in Tray"), "AirDrop"].map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
-        return (widest + PlayerLayout.padding * 2) * 2 + dropGap + PlayerLayout.padding * 2
-    }
     /// Between the two places to drop.
     static let dropGap: CGFloat = 8
 
