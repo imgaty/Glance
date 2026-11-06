@@ -467,9 +467,9 @@ extension NowPlaying {
 }
 
 private enum LyricsStyle {
-    /// How far ahead of the song the lyrics run, in seconds: a line is lit just as it starts to be
-    /// sung, rather than a beat after.
-    static let lead = 0.25
+    /// How far ahead of the song the lyrics run, in seconds: none, so a line lights as it starts to
+    /// be sung, as its time says. Spotify's and Music's positions are exact to a hundredth or so.
+    static let lead = 0.0
     static let size = NotchType.lyricSize
     static let font = NotchType.lyric
     /// Apple Music leaves a lot of air between lines.
