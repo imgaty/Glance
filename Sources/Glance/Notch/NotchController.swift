@@ -1356,9 +1356,11 @@ final class NotchController {
         case .timer, .stopwatch: [.activityFirst, .activitySecond]
         // Connected: the sound output, the microphone where it can be muted, more, and ending it
         // where that can be done; going out, ending it.
-        case .call where model.call?.isConnected == true:
+        case .call where model.call?.isConnected == true && model.call?.throughApple == true:
             [.activityFirst] + (CallMicrophone.canMute ? [.activitySecond] : []) + [.activityThird]
                 + (model.call?.canEnd == true ? [.activityFourth] : [])
+        // Another app's: the sound output, and ending it where that can be done.
+        case .call where model.call?.isConnected == true: [.activityFirst] + (model.call?.canEnd == true ? [.activityFourth] : [])
         case .call where model.call?.rings == false: model.call?.canEnd == true ? [.activityFirst] : []
         // Coming in where it can't be declined: Accept alone.
         case .call where model.call?.rings == true && model.call?.canDecline == false: [.activitySecond]

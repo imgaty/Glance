@@ -23,6 +23,8 @@ struct CallPopup: Equatable {
     var green: CGPoint?
     /// When its time started, worked out from the moment that time changed, so the notch's ticks with it.
     var started: Date?
+    /// Its picture of the caller, small, to tell contacts with the same name apart (see `CallFace`).
+    var face: [UInt8]?
 
     /// How long it's been going, by the time it shows.
     var elapsed: Int? { Self.elapsed(in: detail) }
@@ -128,16 +130,21 @@ struct CallPopup: Equatable {
         let width = image.width
         let height = image.height
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        let found: (red: CGPoint?, green: CGPoint?) = pixels.withUnsafeMutableBytes { raw in
+        let found: (red: CGPoint?, green: CGPoint?, face: [UInt8]?) = pixels.withUnsafeMutableBytes { raw in
             guard
                 let context = CGContext(
                     data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
                     space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-            else { return (nil, nil) }
+            else { return (nil, nil, nil) }
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-            return buttons(pixels: UnsafeBufferPointer(raw.bindMemory(to: UInt8.self)), width: width, height: height)
+            let bytes = UnsafeBufferPointer(raw.bindMemory(to: UInt8.self))
+            let both = buttons(pixels: bytes, width: width, height: height)
+            let circle = CGRect(
+                x: CallFace.inPopup.minX * CGFloat(width), y: CallFace.inPopup.minY * CGFloat(height),
+                width: CallFace.inPopup.width * CGFloat(width), height: CallFace.inPopup.height * CGFloat(height))
+            return (both.red, both.green, CallFace.cells(pixels: bytes, width: width, height: height, rowBytes: width * 4, circle: circle))
         }
-        return CallPopup(name: words.name, detail: words.detail, red: found.red, green: found.green)
+        return CallPopup(name: words.name, detail: words.detail, red: found.red, green: found.green, face: found.face)
     }
 }
 

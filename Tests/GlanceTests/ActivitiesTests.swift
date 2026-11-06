@@ -8,6 +8,7 @@
 import AppKit
 import CoreAudio
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import Glance
@@ -751,40 +752,102 @@ struct SystemBannersTests {
         #expect(alert.tall && alert.stays)
     }
 
-    @Test("Opened, a call is laid out as the player: padded all around, the circle clear of the camera, the buttons under")
+    @Test("Opened, a FaceTime or Phone call is laid out as the player: padded all around, its time on the circle's bottom edge")
     @MainActor
     func openedCall() {
         let h: CGFloat = 32
-        let ringing = CallShown(name: "Alex Morgan", over: "Phone", phase: .ringing)
+        let ringing = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .ringing)
         #expect(ExpandedCallView.wing(for: ringing, restingHeight: h) == IncomingCallView.wing(for: ringing, restingHeight: h))
         #expect(ExpandedCallView.height(for: ringing, restingHeight: h) == TimerLayout.tallHeight(h))
         let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
-        model.call = CallShown(name: "Alex Morgan", over: "Phone", phase: .connected(since: .now))
+        model.call = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now))
         model.expanded = .call
         model.state = .open
-        // The padding all around; the name and time start below the camera, as the player's title, so
-        // they reach lower than the circle; then the buttons' gap and the buttons.
+        // The padding all around, 14 at the top and the bottom alike; the caller's row as tall as the
+        // circle; the buttons' gap, to a whole point, and the buttons.
         let side = TimerLayout.content(h)
-        let headerTop = h + PlayerLayout.cameraGap - PlayerLayout.padding
-        #expect(ExpandedCallView.headerTop(restingHeight: h) == headerTop)
-        let tall = (PlayerLayout.padding * 2 + max(side, headerTop + PlayerLayout.headerHeight) + h * TimerLayout.buttonGap + side).rounded()
+        let tall = PlayerLayout.padding * 2 + side + (h * TimerLayout.buttonGap).rounded() + side
+        #expect(tall == 133)
         #expect(model.metrics.height == tall)
         #expect(ExpandedCallView.height(for: model.call!, restingHeight: h) == tall)
         #expect(model.metrics.bodyWidth == 185 + 2 * ExpandedCallView.wing(for: model.call!, restingHeight: h))
-        // As wide as its buttons, 14 in from each end: one more for ending it where that can be done.
+        // As wide as the caller's circle needs to stay as far from the camera as the player's cover,
+        // or the buttons, 14 in from each end, if they need more: one more for ending it.
         var ending = model.call!
         ending.canEnd = true
         let buttons = CGFloat(ExpandedCallView.connectedButtons(for: ending))
         #expect(Int(buttons) == ExpandedCallView.connectedButtons(for: model.call!) + 1)
+        let circle = PlayerLayout.padding + side + PlayerLayout.besideCamera
+        let row = 28 + buttons * side + (buttons - 1) * h * TimerLayout.buttonGap
+        #expect(isClose(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185), 185 + 2 * max(circle, (row - 185) / 2), tolerance: 0.01))
+        #expect(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185) == 327)
+        #expect(ExpandedCallView.wing(for: ending, restingHeight: h) >= circle)
+    }
+
+    @Test("Opened, a FaceTime or Phone call's time stands on the caller's circle's bottom edge, the name above it clear of the camera")
+    @MainActor
+    func openedCallTimeOnCircle() throws {
+        let h: CGFloat = 32
+        // Seventeen seconds: a 1 and a 7, whose bottoms are flat, on the baseline.
+        let call = CallShown(name: "ALEX", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now - 17.5))
+        let width = ExpandedCallView.width(for: call, restingHeight: h, closedWidth: 185)
+        let view = ExpandedCallView(call: call, restingHeight: h, width: width)
+            .environment(\.colorScheme, .dark)
+            .background(Color.black)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        let image = try #require(renderer.cgImage)
+        let w = image.width, rows = image.height
+        var pixels = [UInt8](repeating: 0, count: w * rows * 4)
+        pixels.withUnsafeMutableBytes { raw in
+            let context = CGContext(
+                data: raw.baseAddress, width: w, height: rows, bitsPerComponent: 8, bytesPerRow: w * 4,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: rows))
+        }
+        func pixel(_ x: Int, _ y: Int) -> (Int, Int, Int) {
+            let at = (y * w + x) * 4
+            return (Int(pixels[at]), Int(pixels[at + 1]), Int(pixels[at + 2]))
+        }
+        // The circle: its colors, in the corner. The words: everything lit to its right, down to the circle's bottom and a little past.
+        let edge = Int(PlayerLayout.padding * 2), side = Int(TimerLayout.content(h) * 2)
+        let circleRows = (0..<rows).filter { y in
+            (edge..<(edge + side)).contains { x in
+                let c = pixel(x, y)
+                return max(c.0, c.1, c.2) > 60
+            }
+        }
+        let circleBottom = try #require(circleRows.max())
+        let wordsFrom = edge + side + Int(CallLayout.wordsGap(h) * 2)
+        let lit = (0..<min(circleBottom + 12, rows)).filter { y in (wordsFrom..<(wordsFrom + 120)).contains { x in max(pixel(x, y).0, pixel(x, y).1) > 90 } }
+        let wordsTop = try #require(lit.min()), wordsBottom = try #require(lit.max())
+        // The time's flat digits end on the circle's last row; the name's capitals start 4 below the camera.
+        #expect(abs(wordsBottom - circleBottom) <= 1)
+        #expect(CGFloat(wordsTop) / 2 >= h + PlayerLayout.cameraGap - 0.5)
+        #expect(CGFloat(circleRows.min() ?? 0) / 2 == PlayerLayout.padding)
+    }
+
+    @Test("Opened, another app's call is one row as tall as the Alarm: the name, the speaker and, where it can be done, End")
+    @MainActor
+    func openedOtherAppCall() {
+        let h: CGFloat = 32
+        let side = TimerLayout.content(h)
+        var call = CallShown(name: "Alex Morgan", over: "Discord", app: "com.hnc.Discord", phase: .connected(since: .now))
+        #expect(!call.throughApple)
+        #expect(ExpandedCallView.height(for: call, restingHeight: h) == TimerLayout.tallHeight(h))
+        // The speaker alone, then End too: each wing as wide as the buttons need, from the camera to the end.
+        #expect(ExpandedCallView.connectedButtons(for: call) == 1)
+        #expect(isClose(ExpandedCallView.wing(for: call, restingHeight: h), LiveActivityView.cameraGap + side + PlayerLayout.padding))
+        call.canEnd = true
+        #expect(ExpandedCallView.connectedButtons(for: call) == 2)
         #expect(
-            abs(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185) - (28 + buttons * side + (buttons - 1) * h * TimerLayout.buttonGap)) < 0.01)
-        #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: model.call!, restingHeight: h))
-        // A FaceTime or Phone caller's circle, up in the corner, stays as far from the camera as the
-        // player's cover.
-        var apple = ending
-        apple.app = CallAudio.phone
-        #expect(ExpandedCallView.wing(for: apple, restingHeight: h) >= PlayerLayout.padding + side + PlayerLayout.besideCamera)
-        #expect(ExpandedCallView.height(for: apple, restingHeight: h) == tall)
+            isClose(
+                ExpandedCallView.wing(for: call, restingHeight: h),
+                LiveActivityView.cameraGap + side * 2 + h * TimerLayout.buttonGap + PlayerLayout.padding))
+        // No wider for a long name, which runs on under the camera.
+        var long = call
+        long.name = "Alexandra Montgomery-Fitzgerald"
+        #expect(ExpandedCallView.wing(for: long, restingHeight: h) == ExpandedCallView.wing(for: call, restingHeight: h))
     }
 
     @Test("Only a FaceTime or Phone caller has a picture, as the iPhone pictures one; other apps' have none")
@@ -806,6 +869,100 @@ struct SystemBannersTests {
                     - (CallLayout.round(h) + CallLayout.wordsGap(h))) < 0.01)
         // The serif initial is half the circle, for the iPhone's cap height of about 0.35 of it.
         #expect(CallLook.pictureInitials == 0.5)
+    }
+
+    /// A made-up contact's photo, one color, or, with `half`, two: never a real contact's.
+    private func photo(_ color: NSColor, half: NSColor? = nil) -> Data {
+        let image = NSImage(size: NSSize(width: 60, height: 60), flipped: false) { rect in
+            color.setFill()
+            rect.fill()
+            if let half {
+                half.setFill()
+                NSRect(x: 0, y: 0, width: 60, height: 30).fill()
+                NSColor.white.setFill()
+                NSRect(x: 10, y: 35, width: 15, height: 15).fill()
+            }
+            return true
+        }
+        return NSBitmapImageRep(data: image.tiffRepresentation!)!.representation(using: .png, properties: [:])!
+    }
+
+    @MainActor
+    private func settle(_ photos: CallPhotos, until done: @escaping @MainActor () -> Bool) async {
+        for _ in 0..<100 where !done() { try? await Task.sleep(for: .milliseconds(10)) }
+    }
+
+    @Test("A FaceTime or Phone caller's photo comes from Contacts: one contact's, none without one or without permission")
+    @MainActor
+    func callPhotos() async {
+        let call = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now))
+        let card = CallPhotos.Card(photo: photo(.systemBlue))
+        // One contact with a photo: it shows.
+        let one = CallPhotos(book: .init(allowed: { true }, ask: { true }, cards: { name, _ in name == "Alex Morgan" ? [card] : [] }))
+        one.look(for: call, face: nil)
+        await settle(one) { one.photo(for: call) != nil }
+        #expect(one.photo(for: call) != nil)
+        // Only for that caller.
+        var other = call
+        other.name = "Sam Rivers"
+        #expect(one.photo(for: other) == nil)
+        // A contact without a photo: the initial.
+        let plain = CallPhotos(book: .init(allowed: { true }, ask: { true }, cards: { _, _ in [CallPhotos.Card(photo: nil)] }))
+        plain.look(for: call, face: nil)
+        await settle(plain) { false }
+        #expect(plain.photo(for: call) == nil)
+        // Contacts not allowed: never read, the initial.
+        let denied = CallPhotos(
+            book: .init(
+                allowed: { false }, ask: { true },
+                cards: { _, _ in
+                    Issue.record("read without permission")
+                    return [card]
+                }))
+        denied.look(for: call, face: nil)
+        await settle(denied) { false }
+        #expect(denied.photo(for: call) == nil)
+        // Not asked yet: asked once, and refused, the initial.
+        let refused = CallPhotos(book: .init(allowed: { nil }, ask: { false }, cards: { _, _ in [card] }))
+        refused.look(for: call, face: nil)
+        await settle(refused) { false }
+        #expect(refused.photo(for: call) == nil)
+        // Another app's caller is never looked up.
+        let discord = CallShown(name: "Alex Morgan", over: "Discord", app: "com.hnc.Discord", phase: .connected(since: .now))
+        one.forget()
+        one.look(for: discord, face: nil)
+        await settle(one) { false }
+        #expect(one.photo(for: discord) == nil)
+    }
+
+    @Test("Two contacts with the caller's name are told apart by the popup's own picture of the caller")
+    @MainActor
+    func callPhotoSameName() async throws {
+        let call = CallShown(name: "Alex Morgan", over: "FaceTime", app: CallAudio.faceTime, phase: .connected(since: .now))
+        let blue = photo(.systemBlue, half: .systemOrange)
+        let green = photo(.systemGreen, half: .systemPurple)
+        let photos = CallPhotos(book: .init(allowed: { true }, ask: { true }, cards: { _, _ in [.init(photo: blue), .init(photo: green)] }))
+        // Until the popup's picture is read, no one's photo.
+        photos.look(for: call, face: nil)
+        await settle(photos) { false }
+        #expect(photos.photo(for: call) == nil)
+        // The popup shows the second contact's photo, a little darker and smaller.
+        let shown = try #require(NSImage(data: green)?.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let face = try #require(CallFace.cells(of: shown)).map { UInt8(Double($0) * 0.85) }
+        photos.look(for: call, face: face)
+        let chosen = try #require(photos.photo(for: call))
+        #expect(chosen.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0) }?.colorAt(x: 50, y: 5) != nil)
+        let greenCells = CallFace.cells(of: shown)!
+        let blueCells = CallFace.cells(of: NSImage(data: blue)!.cgImage(forProposedRect: nil, context: nil, hints: nil)!)!
+        #expect(CallFace.pick(face, among: [blueCells, greenCells]) == 1)
+        // An initial in the popup is like neither: no one's photo.
+        let initial = [UInt8](repeating: 90, count: face.count)
+        #expect(CallFace.pick(initial, among: [blueCells, greenCells]) == nil)
+        // Two photos as like it: no one's.
+        #expect(CallFace.pick(greenCells, among: [greenCells, greenCells]) == nil)
+        // A number is looked up as a number.
+        #expect(CallPhotos.isNumber("+351 912 345 678") && !CallPhotos.isNumber("Alex Morgan") && !CallPhotos.isNumber("R2"))
+        #expect(CallPhotos.same("Álex  Morgan".replacingOccurrences(of: "  ", with: " "), "alex morgan") && !CallPhotos.same("Alex", "Alex Morgan"))
     }
 
     @Test("Mute mutes the microphone, and what the notch muted is unmuted as the call ends")
@@ -948,7 +1105,7 @@ struct SystemBannersTests {
     @Test("A caller's circle has their name's first letter, as the iPhone's had for three words, and none for a number")
     func callInitials() {
         func initials(_ name: String) -> String { CallShown(name: name, over: "Phone", phase: .ringing).initials }
-        #expect(initials("Silva") == "S")
+        #expect(initials("Morgan") == "M")
         #expect(initials("Alex Morgan") == "A")
         #expect(initials("  maria da Silva") == "M")
         #expect(initials("+351 912 345 678") == "")

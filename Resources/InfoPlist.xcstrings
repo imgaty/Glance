@@ -417,6 +417,214 @@
         }
       }
     },
+    "NSContactsUsageDescription": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يبحث Glance عن المتصل في جهات الاتصال أثناء مكالمات FaceTime والمكالمات الهاتفية فقط، لعرض صورته. لا يغادر شيء جهاز Mac."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance cerca qui truca als teus contactes només durant les trucades de FaceTime i telefòniques, per mostrar-ne la foto. Res no surt del Mac."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance vyhledává volajícího v kontaktech jen během hovorů FaceTime a telefonních hovorů, aby ukázal jeho fotku. Nic neopouští váš Mac."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance slår kun den, der ringer, op i dine kontakter under FaceTime- og telefonopkald for at vise vedkommendes billede. Intet forlader din Mac."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance sucht den Anrufer nur während FaceTime- und Telefonanrufen in deinen Kontakten, um sein Foto zu zeigen. Nichts verlässt deinen Mac."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Glance αναζητά ποιος καλεί στις επαφές σας μόνο στις κλήσεις FaceTime και τις τηλεφωνικές κλήσεις, για να δείχνει τη φωτογραφία του. Τίποτα δεν φεύγει από το Mac σας."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance busca quién llama en tus contactos solo durante las llamadas de FaceTime y telefónicas, para mostrar su foto. Nada sale de tu Mac."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance etsii soittajan yhteystiedoistasi vain FaceTime- ja puhelinpuheluiden aikana näyttääkseen hänen kuvansa. Mikään ei poistu Macista."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance recherche l’appelant dans vos contacts uniquement pendant les appels FaceTime et téléphoniques, pour afficher sa photo. Rien ne quitte votre Mac."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance מחפש את המתקשר באנשי הקשר רק במהלך שיחות FaceTime ושיחות טלפון, כדי להציג את התמונה שלו. שום דבר לא יוצא מה-Mac."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance केवल FaceTime और फ़ोन कॉल के दौरान आपके संपर्कों में कॉल करने वाले को खोजता है, ताकि उसकी फ़ोटो दिखा सके। कुछ भी आपके Mac से बाहर नहीं जाता।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance traži pozivatelja u vašim kontaktima samo tijekom FaceTime i telefonskih poziva, kako bi prikazao njegovu fotografiju. Ništa ne napušta vaš Mac."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Glance csak FaceTime- és telefonhívások közben keresi meg a hívót a kontaktjai között, hogy megjelenítse a fotóját. Semmi sem hagyja el a Macet."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mencari penelepon di kontak Anda hanya selama panggilan FaceTime dan telepon, untuk menampilkan fotonya. Tidak ada yang keluar dari Mac Anda."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance cerca chi chiama nei tuoi contatti solo durante le chiamate FaceTime e telefoniche, per mostrarne la foto. Nulla lascia il Mac."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glanceは、FaceTime通話と電話の間だけ連絡先で相手を探し、その写真を表示します。何もMacの外に送られません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance는 FaceTime 통화와 전화 통화 중에만 연락처에서 발신자를 찾아 사진을 표시합니다. 아무것도 Mac 밖으로 나가지 않습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance mencari pemanggil dalam kenalan anda semasa panggilan FaceTime dan telefon sahaja, untuk menunjukkan fotonya. Tiada apa meninggalkan Mac anda."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance slår opp den som ringer i kontaktene dine bare under FaceTime- og telefonsamtaler, for å vise bildet av vedkommende. Ingenting forlater Macen."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance zoekt de beller alleen tijdens FaceTime- en telefoongesprekken op in je contacten, om diens foto te tonen. Niets verlaat je Mac."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance wyszukuje dzwoniącego w kontaktach tylko podczas połączeń FaceTime i telefonicznych, aby pokazać jego zdjęcie. Nic nie opuszcza Maca."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance procura quem está ligando nos seus contatos só durante chamadas do FaceTime e telefônicas, para mostrar a foto da pessoa. Nada sai do seu Mac."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Glance procura quem está a ligar nos seus contactos só durante chamadas FaceTime e telefónicas, para mostrar a fotografia da pessoa. Nada sai do seu Mac."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance caută apelantul în contactele tale doar în timpul apelurilor FaceTime și telefonice, pentru a-i afișa fotografia. Nimic nu părăsește Mac-ul."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ищет звонящего в контактах только во время звонков FaceTime и телефонных звонков, чтобы показать его фото. Ничего не покидает ваш Mac."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance vyhľadáva volajúceho v kontaktoch len počas hovorov FaceTime a telefonických hovorov, aby ukázal jeho fotku. Nič neopúšťa váš Mac."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance poišče klicatelja v vaših stikih samo med klici FaceTime in telefonskimi klici, da prikaže njegovo fotografijo. Nič ne zapusti vašega Maca."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance letar upp den som ringer i dina kontakter bara under FaceTime- och telefonsamtal, för att visa personens bild. Inget lämnar din Mac."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance ค้นหาผู้โทรในรายชื่อของคุณเฉพาะระหว่างการโทร FaceTime และการโทรศัพท์ เพื่อแสดงรูปภาพของผู้โทร ไม่มีข้อมูลออกจาก Mac ของคุณ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance, yalnızca FaceTime ve telefon aramaları sırasında arayan kişiyi kişilerinizde arar ve fotoğrafını gösterir. Hiçbir şey Mac’inizden çıkmaz."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance шукає того, хто телефонує, у контактах лише під час дзвінків FaceTime і телефонних дзвінків, щоб показати його фото. Ніщо не залишає ваш Mac."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance chỉ tìm người gọi trong danh bạ của bạn trong các cuộc gọi FaceTime và cuộc gọi điện thoại, để hiển thị ảnh của họ. Không có gì rời khỏi máy Mac của bạn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 仅在 FaceTime 通话和电话期间在通讯录中查找来电者，以显示其照片。任何内容都不会离开你的 Mac。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glance 僅在 FaceTime 通話和電話期間在聯絡人中查找來電者，以顯示其照片。任何內容都不會離開你的 Mac。"
+          }
+        }
+      }
+    },
     "NSMicrophoneUsageDescription": {
       "localizations": {
         "ar": {
