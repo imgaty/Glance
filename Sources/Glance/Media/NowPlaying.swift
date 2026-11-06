@@ -88,8 +88,8 @@ final class NowPlaying: ObservableObject {
 
     /// Spotify's DJ is choosing the music, or talking about it.
     var djPlaying: Bool { options.dj || djTalking }
-    /// The DJ was heard talking, and nothing since has said it stopped choosing the music.
-    private var djHeard = false
+    /// Whether the DJ chooses the music, from what Spotify has shown of it.
+    private var djReading = DJReading()
 
     /// The song, as the lookups made for it are kept.
     private var track: String { title + "\u{1F}" + artist }
@@ -138,6 +138,8 @@ final class NowPlaying: ObservableObject {
             return
         }
         pickingDJ = true
+        // Spotify takes its button away while the DJ finds new picks: it's still the DJ.
+        djReading.heldUntil = .now + DJReading.afterPress
         Task {
             defer { pickingDJ = false }
             if await SpotifyDJ.press() { return }
@@ -172,9 +174,8 @@ final class NowPlaying: ObservableObject {
             // doesn't, having heard the DJ talk is all there is to go by.
             var dj: Bool?
             if app == PlayerScripting.spotify {
-                if djTalking { djHeard = true }
-                if let shown = await SpotifyDJ.djInBar() { djHeard = shown }
-                dj = djHeard
+                let inBar = await SpotifyDJ.djInBar()
+                dj = djReading.update(talking: djTalking, inBar: inBar, now: .now)
             }
             guard app == appBundleID else { return }
             var read = reply.map { PlayerScripting.options(from: $0, app: app, dj: dj) } ?? PlaybackOptions()
@@ -507,7 +508,7 @@ final class NowPlaying: ObservableObject {
             appIcon = app.flatMap(NSWorkspace.shared.icon(forApp:))
             // What the last app offered isn't this one's, until it's read.
             options = PlaybackOptions()
-            djHeard = false
+            djReading = DJReading()
             heldFavorite = nil
         }
         if djTalking {
@@ -660,7 +661,7 @@ final class NowPlaying: ObservableObject {
         appBundleID = nil
         appIcon = nil
         options = PlaybackOptions()
-        djHeard = false
+        djReading = DJReading()
         AudioLevels.shared.follow(pid: 0, playing: false)
         AppVolume.shared.follow(app: nil, pid: 0)
     }

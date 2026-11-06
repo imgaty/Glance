@@ -297,3 +297,33 @@ enum SpotifyDJ {
         return String(data: data, encoding: .utf8) ?? ""
     }
 }
+
+/// Whether Spotify's DJ chooses the music, from what Spotify shows of it. Spotify takes its DJ
+/// button out of its bar for a second or two as the DJ finds new picks, once for nearly six,
+/// always while the DJ talks over them, measured on Spotify 1.3.8. So while the DJ talks it's the
+/// DJ, a click on the notch's button holds it a while, and otherwise the button has to be gone
+/// for a few seconds before the DJ is taken to have stopped.
+struct DJReading {
+    private(set) var on = false
+    private var missingSince: Date?
+    var heldUntil = Date.distantPast
+
+    /// How long the button may be gone while a song plays.
+    static let patience: TimeInterval = 3
+    /// How long a click on the notch's button holds the DJ, through its talk starting.
+    static let afterPress: TimeInterval = 8
+
+    /// `inBar` is nil where Spotify's bar can't be read: then what was thought stays.
+    mutating func update(talking: Bool, inBar: Bool?, now: Date) -> Bool {
+        if talking || inBar == true {
+            on = true
+            missingSince = nil
+            return on
+        }
+        guard inBar == false, now >= heldUntil else { return on }
+        let since = missingSince ?? now
+        missingSince = since
+        if now.timeIntervalSince(since) >= Self.patience { on = false }
+        return on
+    }
+}

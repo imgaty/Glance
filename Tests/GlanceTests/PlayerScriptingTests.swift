@@ -283,6 +283,44 @@ struct PlayerScriptingTests {
         #expect(SpotifyDJ.accessibilitySwitch == "--force-renderer-accessibility")
     }
 
+    @Test("The DJ stays the DJ through Spotify taking its button away as it finds new picks, as recorded on 2026-11-06")
+    func djThroughGaps() {
+        var reading = DJReading()
+        let start = Date(timeIntervalSince1970: 0)
+        func at(_ seconds: Double) -> Date { start + seconds }
+        // As recorded from Spotify's bar, 20:03:07 on: a song with the button; the DJ talks, the
+        // button gone for a second and a half; back; a song; the DJ talks, the button gone nearly six.
+        let recorded: [(Double, Bool, Bool)] = [
+            (0, false, true), (1, true, true), (2, true, false), (3.5, true, true), (7, false, true),
+            (8, true, false), (10, true, true), (23, true, true), (23.5, true, false), (29.3, true, true), (34, false, true),
+        ]
+        for (seconds, talking, inBar) in recorded {
+            let on = reading.update(talking: talking, inBar: inBar, now: at(seconds))
+            #expect(on, "at \(seconds) s")
+        }
+        // A click on the notch's button: Spotify takes its button away before the DJ talks.
+        reading.heldUntil = at(40) + DJReading.afterPress
+        let on1 = reading.update(talking: false, inBar: false, now: at(40.5))
+        #expect(on1)
+        let on2 = reading.update(talking: false, inBar: false, now: at(46))
+        #expect(on2)
+        // Gone a moment while a song plays: still the DJ.
+        let on3 = reading.update(talking: false, inBar: true, now: at(50))
+        #expect(on3)
+        let on4 = reading.update(talking: false, inBar: false, now: at(52))
+        #expect(on4)
+        // Gone for longer, something else plays: not the DJ any more.
+        let on5 = reading.update(talking: false, inBar: false, now: at(55))
+        #expect(!on5)
+        // Where the bar can't be read, what was thought stays, and the DJ talking says it's the DJ.
+        let on6 = reading.update(talking: false, inBar: nil, now: at(60))
+        #expect(!on6)
+        let on7 = reading.update(talking: true, inBar: nil, now: at(61))
+        #expect(on7)
+        let on8 = reading.update(talking: false, inBar: nil, now: at(70))
+        #expect(on8)
+    }
+
     @Test("Spotify 1.3.8 gives the DJ's button no name, so it's found by the class its stylesheet gives its round DJ-blue look")
     func djButtonStyle() {
         // As in Spotify 1.3.8.620's own stylesheet, between its neighbours.
