@@ -764,10 +764,10 @@ struct SystemBannersTests {
         model.expanded = .call
         model.state = .open
         // The padding all around, 14 at the top and the bottom alike; the caller's row as tall as the
-        // circle; the buttons' gap, to a whole point, and the buttons.
+        // circle; a phone's gap between the rows, to a whole point, and the buttons.
         let side = TimerLayout.content(h)
-        let tall = PlayerLayout.padding * 2 + side + (h * TimerLayout.buttonGap).rounded() + side
-        #expect(tall == 133)
+        let tall = PlayerLayout.padding * 2 + side + (side * 50 / 150).rounded() + side
+        #expect(tall == 142)
         #expect(model.metrics.height == tall)
         #expect(ExpandedCallView.height(for: model.call!, restingHeight: h) == tall)
         #expect(model.metrics.bodyWidth == 185 + 2 * ExpandedCallView.wing(for: model.call!, restingHeight: h))
@@ -778,9 +778,10 @@ struct SystemBannersTests {
         let buttons = CGFloat(ExpandedCallView.connectedButtons(for: ending))
         #expect(Int(buttons) == ExpandedCallView.connectedButtons(for: model.call!) + 1)
         let circle = PlayerLayout.padding + side + PlayerLayout.besideCamera
-        let row = 28 + buttons * side + (buttons - 1) * h * TimerLayout.buttonGap
+        // The buttons as far apart as on a phone: 63 pixels for its 150 pixel buttons.
+        let row = 28 + buttons * side + (buttons - 1) * side * 63 / 150
         #expect(isClose(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185), 185 + 2 * max(circle, (row - 185) / 2), tolerance: 0.01))
-        #expect(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185) == 327)
+        #expect(ExpandedCallView.width(for: ending, restingHeight: h, closedWidth: 185) > 350)
         #expect(ExpandedCallView.wing(for: ending, restingHeight: h) >= circle)
     }
 

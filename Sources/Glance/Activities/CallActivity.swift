@@ -115,6 +115,10 @@ enum CallLook {
     /// Opened on a call, the name by the notch's height, and how far in it starts.
     static let name: CGFloat = 0.215
     static let nameEdge: CGFloat = 0.246
+    /// Opened, as far apart as on the user's phone, by the buttons' size, measured at 3x on their
+    /// screenshot: 150 pixel buttons, 63 between them, and 50 between the caller's circle and them.
+    static let buttonSpacing: CGFloat = 63.0 / 150
+    static let rowSpacing: CGFloat = 50.0 / 150
 
     /// A bar's color past its yellow middle: the other person's green, yours orange; the yellow. All
     /// three measured on the iPhone, in Display P3.
@@ -514,8 +518,8 @@ struct ExpandedCallView: View {
             .help(String(localized: "Show in \(call.over)"))
             .accessibilityLabel(String(localized: "\(call.name), on a call"))
             .accessibilityHint(String(localized: "Show in \(call.over)"))
-            // Spread from end to end, as the player's controls.
-            HStack(spacing: max(CallLayout.roundGap(h), (width - edge * 2 - side * count) / max(count - 1, 1))) { buttons(h) }
+            // Spread from end to end, as the player's controls, at least as far apart as on a phone.
+            HStack(spacing: max(side * CallLook.buttonSpacing, (width - edge * 2 - side * count) / max(count - 1, 1))) { buttons(h) }
                 .modifier(PageFade(hidden: !revealed))
         }
         .padding([.top, .horizontal], edge)
@@ -699,9 +703,9 @@ struct ExpandedCallView: View {
     }
 
     /// Each side of the camera. Connected over FaceTime or Phone, as the player's: wide enough for the
-    /// caller's circle, up in the corner, to stay clear of the camera, and for the row of buttons, at
-    /// least as wide as the camera with its gaps. Another app's, and otherwise, as wide as the wider
-    /// of the first line and the buttons, each from its end.
+    /// caller's circle, up in the corner, to stay clear of the camera, and for the row of buttons as
+    /// far apart as on a phone, at least as wide as the camera with its gaps. Another app's, and
+    /// otherwise, as wide as the wider of the first line and the buttons, each from its end.
     @MainActor
     static func wing(for call: CallShown, restingHeight h: CGFloat, closedWidth: CGFloat = 185) -> CGFloat {
         if call.isConnected, !call.throughApple {
@@ -715,7 +719,7 @@ struct ExpandedCallView: View {
             return CallLayout.openWing(firstLine: first, buttons: call.canEnd ? 1 : 0, picture: call.throughApple, restingHeight: h)
         }
         let buttons = CGFloat(connectedButtons(for: call))
-        let row = CallLayout.roundEdge(h) * 2 + CallLayout.round(h) * buttons + CallLayout.roundGap(h) * (buttons - 1)
+        let row = CallLayout.roundEdge(h) * 2 + CallLayout.round(h) * buttons + CallLayout.round(h) * CallLook.buttonSpacing * (buttons - 1)
         let circle = call.throughApple ? CallLayout.roundEdge(h) + CallLayout.round(h) + PlayerLayout.besideCamera : 0
         return max((row - closedWidth) / 2, circle, LiveActivityView.cameraGap)
     }
@@ -725,9 +729,9 @@ struct ExpandedCallView: View {
         closedWidth + wing(for: call, restingHeight: h, closedWidth: closedWidth) * 2
     }
 
-    /// Between the caller's row and the buttons: the buttons' own gap, to a whole point, so the
-    /// padding under them is the same as above.
-    static func rowGap(restingHeight h: CGFloat) -> CGFloat { CallLayout.roundGap(h).rounded() }
+    /// Between the caller's row and the buttons, as on a phone, to a whole point, so the padding
+    /// under them is the same as above.
+    static func rowGap(restingHeight h: CGFloat) -> CGFloat { (CallLayout.round(h) * CallLook.rowSpacing).rounded() }
 
     /// Connected over FaceTime or Phone, the padding all around, the caller's row, as tall as the
     /// circle, and the buttons' with a gap between; otherwise as tall as the Alarm.
