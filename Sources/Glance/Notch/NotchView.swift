@@ -816,7 +816,8 @@ struct NotchView: View {
         if model.expanded == .call, let call = model.call {
             let h = model.closedSize.height
             ExpandedCallView(
-                call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width), revealed: shown
+                call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width), revealed: shown,
+                closedWidth: grownFrom
             )
             .allowsHitTesting(places == nil && shown)
         }
@@ -837,8 +838,7 @@ struct NotchView: View {
         if model.expanded == .airdrop, let transfer = model.airdrop {
             let h = model.closedSize.height
             let width = AirDropLayout.width(restingHeight: h, camera: model.camera)
-            ExpandedAirDropView(shown: transfer, restingHeight: h, width: width)
-                .modifier(PageFade(hidden: !shown))
+            ExpandedAirDropView(shown: transfer, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom)
                 .allowsHitTesting(places == nil && shown)
         }
     }

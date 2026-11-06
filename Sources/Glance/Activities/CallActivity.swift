@@ -358,30 +358,55 @@ struct ExpandedCallView: View {
     let restingHeight: CGFloat
     let width: CGFloat
     var revealed = true
+    /// How wide the notch is closed, if it shows beside the camera there, for what's there to grow out of.
+    var closedWidth: CGFloat? = nil
     @Environment(\.playerKeys) private var keys
+    @State private var arrived = false
 
     var body: some View {
         let h = restingHeight
         let side = CallLayout.round(h)
+        // What shows beside the camera grows out of there, as the Timer's does: the caller while it
+        // rings, the time once it's going. The rest fades in.
+        let out = revealed && arrived
+        let spread = ((closedWidth ?? width) - width) / 2
+        let rise = (h - TimerLayout.tallHeight(h)) / 2
+        let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)
+        let line = NSLayoutManager().defaultLineHeight(for: NSFont.systemFont(ofSize: NotchType.size))
+        let words = CallLayout.roundEdge(h) + side + CallLayout.wordsGap(h)
+        let timeFrom = CGSize(
+            width: CallLayout.edge(h) + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread, height: rise + line / 2)
         HStack(spacing: CallLayout.wordsGap(h)) {
             Button {
                 CallWatch.shared.goToApp()
             } label: {
                 HStack(spacing: CallLayout.wordsGap(h)) {
                     CallAvatar(call: call, side: side)
+                        .modifier(
+                            GrowsOut(out: out || closedWidth == nil || !call.rings, scale: h * CallLook.avatar / side, anchor: .leading, from: avatarFrom)
+                        )
+                        .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && call.rings))
                     VStack(alignment: .leading, spacing: 0) {
                         if case .connected(let since) = call.phase {
                             CallTime(since: since)
                                 .font(NotchType.detail)
                                 .foregroundStyle(CallLook.green)
+                                .modifier(
+                                    GrowsOut(
+                                        out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
+                                        from: timeFrom)
+                                )
+                                .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
                         } else {
                             Text(call.line ?? call.over)
                                 .font(NotchType.detail)
                                 .foregroundStyle(NotchType.detailColor)
+                                .modifier(PageFade(hidden: !revealed))
                         }
                         Text(call.name)
                             .font(NotchType.title)
                             .foregroundStyle(.white)
+                            .modifier(PageFade(hidden: !revealed))
                     }
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -395,11 +420,12 @@ struct ExpandedCallView: View {
             .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
             .accessibilityHint(String(localized: "Show in \(call.over)"))
             HStack(spacing: CallLayout.roundGap(h)) { buttons(h) }
+                .modifier(PageFade(hidden: !revealed))
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
-        .modifier(PageFade(hidden: !revealed))
         .frame(width: width, height: TimerLayout.tallHeight(h))
         .accessibilityElement(children: .contain)
+        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
     }
 
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {

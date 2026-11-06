@@ -175,6 +175,7 @@ struct SystemActivityView: View {
                 .accessibilityElement(children: .combine)
             } else if let shownAirDrop {
                 AirDropMark(shown: shownAirDrop, restingHeight: restingHeight, leadingOnly: leadingOnly)
+                    .modifier(GrownAway(grown: grown))
                     .islandFade(airdrop != nil)
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)

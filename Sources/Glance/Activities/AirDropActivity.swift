@@ -293,6 +293,11 @@ struct ExpandedAirDropView: View {
     let shown: AirDropShown
     let restingHeight: CGFloat
     let width: CGFloat
+    /// The notch is open to it.
+    var revealed = true
+    /// How wide the notch is closed, if it shows beside the camera there, for its ring to grow out of.
+    var closedWidth: CGFloat? = nil
+    @State private var arrived = false
     @State private var hovering = false
 
     /// Who it's with; going out, the file, until macOS's window says who it's going to.
@@ -323,13 +328,22 @@ struct ExpandedAirDropView: View {
             .frame(maxWidth: AirDropLayout.wordsRoom(h, width: width), alignment: .leading)
         }
         .padding(.leading, AirDropLayout.thumbEdge(h))
-        let right = stopButton(h).padding(.trailing, AirDropLayout.ringEdge(h))
+        // The ring grows out of where it shows beside the camera, as the Timer's does.
+        let out = revealed && arrived
+        let spread = ((closedWidth ?? width) - width) / 2
+        let rise = (h - TimerLayout.tallHeight(h)) / 2
+        let ringFrom = CGSize(width: spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h), height: rise)
+        let right = stopButton(h)
+            .modifier(GrowsOut(out: out || closedWidth == nil, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom))
+            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+            .padding(.trailing, AirDropLayout.ringEdge(h))
         // AirDrop's name stops at the camera; who it's from, below it, runs on underneath.
         ZStack {
-            left.frame(maxWidth: .infinity, alignment: .leading)
+            left.modifier(PageFade(hidden: !revealed)).frame(maxWidth: .infinity, alignment: .leading)
             right.frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(width: width, height: TimerLayout.tallHeight(h))
+        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Self.spoken(shown))
     }
