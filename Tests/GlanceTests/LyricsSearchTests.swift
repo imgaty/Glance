@@ -67,12 +67,21 @@ struct LyricsSearchTests {
         #expect(NowPlaying.pausedPosition(reported: 0, shown: 42) == 0)
     }
 
+    @Test("A report that leaves the position out keeps the song where it is, unless it's a new song")
+    func missingPosition() {
+        #expect(NowPlaying.reportedPosition(nil, shown: 95, sameSong: true) == 95)
+        #expect(NowPlaying.reportedPosition(nil, shown: 95, sameSong: false) == 0)
+        #expect(NowPlaying.reportedPosition(12, shown: 95, sameSong: true) == 12)
+    }
+
     @Test("Nothing found is told from LRCLIB not answering")
     func nothing() async {
-        if case .nothing = await LyricsStore.firstAnswer([Self.after(0, .unreachable), Self.after(0, .nothing)], patience: 5) {} else {
+        if case .nothing = await LyricsStore.firstAnswer([Self.after(0, .unreachable), Self.after(0, .nothing)], patience: 5) {
+        } else {
             Issue.record("expected nothing")
         }
-        if case .unreachable = await LyricsStore.firstAnswer([Self.after(0, .unreachable)], patience: 5) {} else {
+        if case .unreachable = await LyricsStore.firstAnswer([Self.after(0, .unreachable)], patience: 5) {
+        } else {
             Issue.record("expected unreachable")
         }
     }

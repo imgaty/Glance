@@ -97,6 +97,12 @@ final class NowPlaying: ObservableObject {
     private nonisolated static let pausedSlip = 5.0
 
     /// Where a paused song stays: where it's shown, unless the report says it was moved.
+    /// Where a report puts the song: where it says, or where it was if it doesn't say and it's the
+    /// same song; a new song without one starts at the beginning.
+    nonisolated static func reportedPosition(_ reported: Double?, shown: Double, sameSong: Bool) -> Double {
+        reported ?? (sameSong ? shown : 0)
+    }
+
     nonisolated static func pausedPosition(reported: Double, shown: Double) -> Double {
         abs(reported - shown) < pausedSlip ? shown : reported
     }
@@ -468,6 +474,7 @@ final class NowPlaying: ObservableObject {
         if report["direct"] == nil { stopFollowingDirectly() }
         lastShownApp = report["app"] as? String
         let shown = position(at: .now)
+        let sameSong = title == report["title"] as? String ?? "" && artist == report["artist"] as? String ?? ""
         title = report["title"] as? String ?? ""
         artist = report["artist"] as? String ?? ""
         album = report["album"] as? String ?? ""
@@ -483,11 +490,12 @@ final class NowPlaying: ObservableObject {
             isPlaying = playing
             heldPlaying = nil
         }
-        let reported = report["elapsed"] as? Double ?? 0
+        // Around play and pause some reports leave the position out: the song stays where it is.
+        let reported = Self.reportedPosition(report["elapsed"] as? Double, shown: shown, sameSong: sameSong)
         rate = (report["rate"] as? Double).flatMap { $0 > 0 ? $0 : nil } ?? 1
         if isPlaying {
             elapsed = reported
-            reportedAt = (report["timestamp"] as? Double).map(Date.init(timeIntervalSince1970:)) ?? .now
+            reportedAt = report["elapsed"] == nil ? .now : (report["timestamp"] as? Double).map(Date.init(timeIntervalSince1970:)) ?? .now
         } else {
             // The clock and the lyrics stay where the song stopped, rather than stepping back.
             elapsed = Self.pausedPosition(reported: reported, shown: shown)
