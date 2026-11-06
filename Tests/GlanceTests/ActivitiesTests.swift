@@ -396,9 +396,9 @@ struct ActivitiesTests {
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: resting)
         #expect(model.wing == model.timerWing)
-        // With music, the timer is detached, and music has the leading side alone.
+        // With music, the timer is detached, and music keeps its own side as it is.
         model.activity = true
-        #expect(model.wing == resting)
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: resting))
         model.pop = true
         model.popWing = 120
         #expect(model.wing == 120)
@@ -535,11 +535,11 @@ struct ActivitiesTests {
         #expect(model.expansion(fromBubble: false) == nil)
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = 60
-        // Music keeps the leading side, as wide as the notch is tall; its trailing side folds away,
+        // Music keeps its leading side as it is; its trailing side folds away,
         // and the timer is detached off that end.
         #expect(model.detached == .timer)
-        #expect(model.wing == 32)
-        #expect(model.metrics.fold == 32)
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
+        #expect(model.metrics.fold == model.wing)
         #expect(model.notchClock == nil)
         // A third waits its turn: nothing's ever detached at the leading side.
         model.stopwatch = .stopped(elapsed: 12)
@@ -563,7 +563,7 @@ struct ActivitiesTests {
         model.state = .closed
         model.activity = false
         #expect(model.notchClock == .timer(model.timer!))
-        #expect(model.wing == 32)
+        #expect(model.wing == max(model.timerWing, LiveActivityView.restingWing(restingHeight: 32)))
         #expect(model.detached == .stopwatch)
         #expect(model.expansion(fromBubble: false) == .timer)
         #expect(model.expansion(fromBubble: true) == .stopwatch)
@@ -623,7 +623,7 @@ struct ActivitiesTests {
         model.airdrop = transfer
         #expect(model.activities == [.airdrop, .timer, .airplay])
         #expect(model.notchClock == nil)
-        #expect(model.wing == 32)
+        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
         #expect(model.expansion(fromBubble: false) == .airdrop)
         model.activity = true
         #expect(model.detached == .airdrop)
@@ -736,10 +736,10 @@ struct SystemBannersTests {
         model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
         #expect(model.activities.first == .music)
         model.call = connected
-        // Both show: the call first, with the notch, music detached beside it, the call by its phone alone.
+        // Both show: the call first, with the notch, music detached in its trailing side's place.
         #expect(model.activities == [.call, .music, .airplay] && !model.musicShown)
         #expect(model.detached == .music)
-        #expect(model.wing == 32)
+        #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32) && model.metrics.fold == model.wing)
         // Without music, AirPlay is detached instead; alone, the call has both wings, as wide as it needs.
         model.activity = false
         #expect(model.detached == .airplay)

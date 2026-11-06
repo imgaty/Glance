@@ -28,6 +28,8 @@ struct IslandBubble: View {
     /// Or music, by its cover in a circle, or a note without one.
     var music = false
     var artwork: NSImage? = nil
+    /// The music's paused: its cover dims, as beside the camera.
+    var paused = false
     let name: String
     /// Opens it, as a click on it does.
     let open: () -> Void
@@ -72,20 +74,23 @@ struct IslandBubble: View {
                     case .stopwatch(let watch): StopwatchMark(watch: watch, height: h)
                     case nil:
                         if keptMusic {
+                            // As the cover beside the camera: its size, its corners, dimmed while paused.
+                            let side = h - LiveActivityView.inset * 2
                             Group {
                                 if let keptArtwork {
                                     Image(nsImage: keptArtwork).resizable().aspectRatio(contentMode: .fill)
                                 } else {
                                     Image(systemName: "music.note")
-                                        .font(.system(size: h * 0.4, weight: .semibold))
+                                        .font(.system(size: side * 0.5, weight: .semibold))
                                         .foregroundStyle(.white.opacity(0.7))
                                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                                         .background(.white.opacity(0.12))
                                 }
                             }
-                            // As large as every other mark beside the camera.
-                            .frame(width: h * TimerLayout.ring, height: h * TimerLayout.ring)
-                            .clipShape(Circle())
+                            .frame(width: side, height: side)
+                            .overlay(Color.black.opacity(paused ? 1 - PausedLook.kept : 0))
+                            .animation(.easeInOut(duration: 0.3), value: paused)
+                            .clipShape(RoundedRectangle(cornerRadius: side * ArtworkShape.restingRadius, style: .continuous))
                         } else if let keptAirDrop {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if keptRoute != nil {

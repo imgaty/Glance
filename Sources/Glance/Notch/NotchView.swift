@@ -367,11 +367,10 @@ final class NotchModel: ObservableObject {
         let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
         if folded { return 0 }
         if alert != nil { return max(alertExtended ? alertExtendedWing : alertWing, resting) }
-        if activities.first == .call, let call { return detached != nil ? closedSize.height : CallLayout.wing(for: call, restingHeight: closedSize.height) }
+        // With another detached, the first keeps its own side as it is; its trailing side folds away
+        // (see `NotchMetrics.fold`), the other taking its place in a bubble.
+        if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
         if activity, pop { return max(popWing, resting) }
-        // With another detached, the first has the leading side alone, as wide as the notch is tall,
-        // the Dynamic Island's minimal presentation.
-        if detached != nil { return closedSize.height }
         // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares.
         if notchClock != nil { return max(timerWing, resting) }
         return activities.isEmpty ? 0 : resting
@@ -808,6 +807,7 @@ struct NotchView: View {
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
+            paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
             hidden: model.state == .open,
