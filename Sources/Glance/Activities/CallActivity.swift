@@ -1227,6 +1227,14 @@ final class DiscordCall {
 
     private var askedPID: pid_t = 0
     private var link: AXUIElement?
+    /// The way down to the link from Discord's windows, as indexes: Discord redraws the link every
+    /// second as its time ticks, so the element found goes stale, but the way to it stays, and
+    /// following it costs a few reads where looking through the whole window cost about a quarter
+    /// of a second, every second, on the thread that draws the notch.
+    private var linkPath: [Int]?
+    /// When the whole window was last looked through for a call coming in, which needn't be
+    /// every second: only when Discord's window says one rings, or every few seconds otherwise.
+    private var lookedForRinging = Date.distantPast
     private var leave: AXUIElement?
     private var join: AXUIElement?
 
@@ -1247,15 +1255,49 @@ final class DiscordCall {
             askedPID = app.processIdentifier
             link = nil
         }
-        // What was found last, if it still says something; Discord redraws it, renamed say, and
-        // then it's looked for afresh.
+        // What was found last, if it still says something; Discord redraws it as its time ticks, and
+        // then it's found again the same way down; failing that, looked for afresh.
         if let link, let found = Self.reading(link) { return found }
-        link = Self.findLink(in: element)
+        if let linkPath, let followed = Self.follow(linkPath, in: element), Self.isCallLink(followed), let found = Self.reading(followed) {
+            if link == nil || !CFEqual(link, followed) {
+                link = followed
+                leave = Self.leaveButton(beside: followed)
+            }
+            return found
+        }
+        let found = Self.findLink(in: element)
+        link = found?.element
+        linkPath = found?.path
         leave = link.flatMap(Self.leaveButton(beside:))
         if let link { return Self.reading(link) }
-        // Not joined yet: a call coming in shows in the list of messages, by who it's from.
+        // Not joined yet: a call coming in shows in the list of messages, by who it's from. Its
+        // window says so in its title first, so looking through it all waits for that, or a while.
+        guard ringingAsked || Date.now.timeIntervalSince(lookedForRinging) > 5 else { return nil }
+        lookedForRinging = .now
         join = Self.findJoin(in: element)
         return Self.ringingName(in: element).map { Reading(name: $0, ringing: true) }
+    }
+
+    /// Set while `ringing()` asks, as Discord's window says a call is coming in.
+    private var ringingAsked = false
+
+    /// The element at the end of a way down from the app's windows.
+    private static func follow(_ path: [Int], in app: AXUIElement) -> AXUIElement? {
+        guard let first = path.first, let windows = SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement], first < windows.count else {
+            return nil
+        }
+        var element = windows[first]
+        for index in path.dropFirst() {
+            guard let children = SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement], index < children.count else { return nil }
+            element = children[index]
+        }
+        return element
+    }
+
+    /// A link whose words end in a running time: the call's.
+    private static func isCallLink(_ element: AXUIElement) -> Bool {
+        SystemNotices.value(element, kAXRoleAttribute) as? String == "AXLink"
+            && CallPopup.elapsed(in: SystemNotices.value(element, kAXDescriptionAttribute) as? String) != nil
     }
 
     private static func reading(_ link: AXUIElement) -> Reading? {
@@ -1309,6 +1351,8 @@ final class DiscordCall {
         }
         if titled { ringingSeen = .now }
         guard let seen = ringingSeen, Date.now.timeIntervalSince(seen) < 3 else { return nil }
+        shared.ringingAsked = true
+        defer { shared.ringingAsked = false }
         guard let reading = shared.read(), reading.ringing else { return nil }
         return reading
     }
@@ -1328,6 +1372,7 @@ final class DiscordCall {
         }
         askedPID = 0
         link = nil
+        linkPath = nil
         leave = nil
         join = nil
     }
@@ -1338,14 +1383,21 @@ final class DiscordCall {
         return Reading(name: name, elapsed: CallPopup.elapsed(in: time))
     }
 
-    /// A link whose words end in a running time.
-    private static func findLink(in app: AXUIElement) -> AXUIElement? {
-        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-            let links = SystemNotices.findAll(in: window) { element in
-                SystemNotices.value(element, kAXRoleAttribute) as? String == "AXLink"
-                    && CallPopup.elapsed(in: SystemNotices.value(element, kAXDescriptionAttribute) as? String) != nil
+    /// The call's link, and the way down to it: the first link whose words end in a running time,
+    /// looking no further once it's found.
+    private static func findLink(in app: AXUIElement) -> (element: AXUIElement, path: [Int])? {
+        var seen = 0
+        func walk(_ element: AXUIElement, _ path: [Int]) -> (element: AXUIElement, path: [Int])? {
+            seen += 1
+            guard path.count < 80, seen < 20_000 else { return nil }
+            if isCallLink(element) { return (element, path) }
+            for (index, child) in (SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).enumerated() {
+                if let found = walk(child, path + [index]) { return found }
             }
-            if let first = links.first { return first }
+            return nil
+        }
+        for (index, window) in (SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).enumerated() {
+            if let found = walk(window, [index]) { return found }
         }
         return nil
     }
