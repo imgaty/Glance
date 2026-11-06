@@ -953,7 +953,10 @@ final class CallVoices: ObservableObject {
         shownYours = Self.eased(shownYours, towards: yours)
         theirHistory = [shownTheirs] + theirHistory.dropLast()
         yourHistory = [shownYours] + yourHistory.dropLast()
-        let ripples = (0..<CallLook.bars).map { (theirs: Self.ripple($0, theirs: true, at: t), yours: Self.ripple($0, theirs: false, at: t)) }
+        // Each bar's flicker is the waveform's own motion, not the voices', so Reduce Motion stops it.
+        let ripples =
+            NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? [] : (0..<CallLook.bars).map { (theirs: Self.ripple($0, theirs: true, at: t), yours: Self.ripple($0, theirs: false, at: t)) }
         let next = Self.shaped(theirs: theirHistory, yours: yourHistory, ripples: ripples)
         if next != bars { bars = next }
     }
