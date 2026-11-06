@@ -201,12 +201,21 @@ enum CallLayout {
         case .ringing, .calling:
             return max(edge(h) + h * CallLook.avatar + gap, gap + h * CallLook.handsetSize * 1.5 + edge(h))
         case .connected(let since):
-            let time = ClockText.of(max(Int(date.timeIntervalSince(since)), 0))
+            // The time changes once a second, but this is asked on every move of the pointer, more
+            // than once: what the second's time measures is kept for the rest of it.
+            let seconds = max(Int(date.timeIntervalSince(since)), 0)
+            if let kept = measured, kept.seconds == seconds, kept.height == h { return kept.wing }
+            let time = ClockText.of(seconds)
             let words = SystemActivityView.digitsWidth(time, LiveActivityView.textSize(for: h), .semibold)
-            return max(
+            let wing = max(
                 h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap + words + gap, gap + CallLook.waveWidth + h * CallLook.waveEdge)
+            measured = (seconds, h, wing)
+            return wing
         }
     }
+
+    /// The connected call's wing, as last measured, for its second and the notch's height.
+    nonisolated(unsafe) private static var measured: (seconds: Int, height: CGFloat, wing: CGFloat)?
 }
 
 /// A FaceTime or Phone caller: their photo from Contacts, or for a contact without one, their
