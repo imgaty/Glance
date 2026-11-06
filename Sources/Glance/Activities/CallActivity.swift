@@ -137,8 +137,24 @@ enum CallLook {
     }
 
     /// How strong a voice still is at the far side, having crossed the waveform from its own: it
-    /// fades evenly on the way, as the user's iPhone shows it, rather than stopping at the middle.
-    static let farthest: CGFloat = 0.35
+    /// fades evenly on the way, rather than stopping at the middle. Measured from the user's iPhone,
+    /// whose middle bars are little more than dots while those at the ends are up to three times as
+    /// tall: about 0.4 of a voice by the middle, so 0.15 at the far side.
+    static let farthest: CGFloat = 0.15
+
+    /// How tall a bar's yellow is, in points: a quiet bar all yellow, a dot; the taller a bar, the
+    /// thinner its yellow, down to 0.6 of a dot at the tallest, as the iPhone's, whose tall bars
+    /// are yellow for 7 to 9 of their 45 pixels; and wider where the quieter voice overlaps more.
+    static func yellowHeight(louder: CGFloat, overlap: CGFloat, core: CGFloat, height: CGFloat) -> CGFloat {
+        let grown = min(max((louder - core) / max(height - core, 1), 0), 1)
+        return min(max(core * (1 - 0.4 * grown), overlap), louder)
+    }
+
+    /// A bar's yellow, on its middle.
+    static func yellowFrame(of bar: CGRect, overlap: CGFloat, core: CGFloat, height: CGFloat) -> CGRect {
+        let tall = yellowHeight(louder: bar.height, overlap: overlap * height, core: core, height: height)
+        return CGRect(x: bar.minX, y: bar.midY - tall / 2, width: bar.width, height: tall)
+    }
 
     /// A voice's strength `across` the waveform from its own side, 0 there to 1 at the far side.
     static func fade(across: CGFloat) -> CGFloat { pow(farthest, min(max(across, 0), 1)) }
@@ -263,7 +279,7 @@ struct CallWaveform: View {
                         for (index, voices) in bars.enumerated() {
                             let parts = CallLook.layers(voices)
                             let louder = CallLook.barFrame(index, level: parts.louder, height: size.height, core: core)
-                            let overlap = CallLook.barFrame(index, level: parts.overlap, height: size.height, core: core)
+                            let overlap = CallLook.yellowFrame(of: louder, overlap: parts.overlap, core: core, height: size.height)
                             context.fill(
                                 Path(roundedRect: louder, cornerRadius: louder.width / 2), with: .color(Color(nsColor: CallLook.voice(theirs: parts.theirs))))
                             context.fill(Path(roundedRect: overlap, cornerRadius: overlap.width / 2), with: .color(Color(nsColor: CallLook.yellow)))
@@ -332,7 +348,7 @@ final class CallBarsView: NSView {
         for (index, voices) in bars.enumerated() where index < backs.count {
             let parts = CallLook.layers(voices)
             let louder = CallLook.barFrame(index, level: parts.louder, height: bounds.height, core: core)
-            let overlap = CallLook.barFrame(index, level: parts.overlap, height: bounds.height, core: core)
+            let overlap = CallLook.yellowFrame(of: louder, overlap: parts.overlap, core: core, height: bounds.height)
             backs[index].frame = louder
             backs[index].cornerRadius = louder.width / 2
             backs[index].backgroundColor = CallLook.voice(theirs: parts.theirs).cgColor
@@ -928,7 +944,8 @@ final class CallVoices: ObservableObject {
         shownYours = Self.eased(shownYours, towards: yours)
         theirHistory = [shownTheirs] + theirHistory.dropLast()
         yourHistory = [shownYours] + yourHistory.dropLast()
-        let next = Self.shaped(theirs: theirHistory, yours: yourHistory)
+        let ripples = (0..<CallLook.bars).map { (theirs: Self.ripple($0, theirs: true, at: t), yours: Self.ripple($0, theirs: false, at: t)) }
+        let next = Self.shaped(theirs: theirHistory, yours: yourHistory, ripples: ripples)
         if next != bars { bars = next }
     }
 
@@ -941,16 +958,31 @@ final class CallVoices: ObservableObject {
     /// the left end and older to the right, yours newest at the right end and older to the left,
     /// each fading as it crosses, so they overlap rather than meet in the middle. Nothing's made up:
     /// each part of a bar is a moment of that voice.
-    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat]) -> [CallBar] {
+    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat], ripples: [(theirs: CGFloat, yours: CGFloat)] = []) -> [CallBar] {
         let count = CallLook.bars
         return (0..<count).map { index in
             let across = CGFloat(index) / CGFloat(max(count - 1, 1))
             let their = index < theirs.count ? theirs[index] : 0
             let your = count - 1 - index < yours.count ? yours[count - 1 - index] : 0
+            let ripple = index < ripples.count ? ripples[index] : (theirs: 1, yours: 1)
             return CallBar(
-                theirs: min(max(their, 0), 1) * CallLook.fade(across: across),
-                yours: min(max(your, 0), 1) * CallLook.fade(across: 1 - across))
+                theirs: min(max(their, 0), 1) * CallLook.fade(across: across) * ripple.theirs,
+                yours: min(max(your, 0), 1) * CallLook.fade(across: 1 - across) * ripple.yours)
         }
+    }
+
+    /// The least of a voice a bar shows while it speaks.
+    static let rippleFloor: CGFloat = 0.55
+
+    /// How much of a voice a bar shows just now. The island's bars aren't an even ramp: in the
+    /// user's screenshots each stands taller or shorter than its neighbours, within the voice's
+    /// shape. So each flickers on its own, a couple of times a second, from `rippleFloor` to all of
+    /// the voice; with nobody speaking it's still a dot.
+    nonisolated static func ripple(_ index: Int, theirs: Bool, at time: Double) -> CGFloat {
+        let seed = Double(index * 7 + (theirs ? 3 : 11))
+        let slow = sin(time * (9 + seed.truncatingRemainder(dividingBy: 5) * 1.7) + seed * 1.3)
+        let fast = sin(time * (14 + seed.truncatingRemainder(dividingBy: 3) * 2.3) + seed * 0.7)
+        return rippleFloor + (1 - rippleFloor) * CGFloat((slow + fast) / 4 + 0.5)
     }
 
     private func startMicrophone() {

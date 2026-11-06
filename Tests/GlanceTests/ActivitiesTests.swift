@@ -1051,9 +1051,11 @@ struct SystemBannersTests {
         // Yours the other way round.
         #expect(steady[13].yours == 1 && steady[0].yours == CallLook.farthest)
         #expect(zip(steady, steady.dropFirst()).allSatisfy { $0.yours < $1.yours })
-        // Not cut in half: each voice reaches past the middle, past the yellow middle's height.
+        // Not cut in half: each voice is still taller than a dot past the middle, and reaches the far
+        // side, faint there, as the iPhone's middle bars are little more than dots.
         let core = CallLook.core / CallLook.waveHeight
-        #expect(steady.allSatisfy { $0.theirs > core && $0.yours > core })
+        #expect(steady[7].theirs > core && steady[6].yours > core)
+        #expect(steady.allSatisfy { $0.theirs > 0 && $0.yours > 0 })
         // Each newest at its own end, older moments further in: one word goes across.
         let word = [CGFloat(1)] + Array(repeating: 0, count: count - 1)
         let spoke = CallVoices.shaped(theirs: word, yours: [])
@@ -1067,6 +1069,16 @@ struct SystemBannersTests {
         #expect(CallLook.layers(CallBar()).overlap == 0)
         // Louder than loud is as loud as can be.
         #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: count), yours: [])[0].theirs == 1)
+        // Not an even ramp: each bar flickers on its own, between most and all of the voice.
+        for time in stride(from: 0.0, through: 3, by: 0.1) {
+            let ripples = (0..<count).map { CallVoices.ripple($0, theirs: true, at: time) }
+            #expect(ripples.allSatisfy { $0 >= CallVoices.rippleFloor - 0.0001 && $0 <= 1.0001 })
+            #expect(Set(ripples.map { Int($0 * 100) }).count > 4)
+        }
+        #expect(CallVoices.ripple(3, theirs: true, at: 1) != CallVoices.ripple(3, theirs: false, at: 1))
+        // Nobody speaking: still dots, however it flickers.
+        let quiet = CallVoices.shaped(theirs: [], yours: [], ripples: Array(repeating: (theirs: 0.7, yours: 0.9), count: count))
+        #expect(quiet.allSatisfy { $0.theirs == 0 && $0.yours == 0 })
     }
 
     @Test("Closed, the phone stands as the iPhone's and both ends are as far in as its")
@@ -1093,10 +1105,16 @@ struct SystemBannersTests {
         #expect(abs(yellow.redComponent - max(them.redComponent, you.redComponent)) < 12.0 / 255)
         #expect(abs(yellow.greenComponent - max(them.greenComponent, you.greenComponent)) < 12.0 / 255)
         #expect(abs(yellow.blueComponent - max(them.blueComponent, you.blueComponent)) < 12.0 / 255)
-        // Quiet: a dot, the smallest a bar is; loud: as tall as the waveform, on its middle.
+        // Quiet: a dot, the smallest a bar is, all yellow; loud: as tall as the waveform, on its middle,
+        // its yellow thinner than a dot, as the iPhone's tall bars are.
         let quiet = CallLook.barFrame(0, level: 0, height: 14, core: 3.7)
         let loud = CallLook.barFrame(0, level: 1, height: 14, core: 3.7)
         #expect(quiet.height == 3.7 && loud.height == 14 && quiet.midY == loud.midY)
+        #expect(CallLook.yellowFrame(of: quiet, overlap: 0, core: 3.7, height: 14) == quiet)
+        let thin = CallLook.yellowFrame(of: loud, overlap: 0, core: 3.7, height: 14)
+        #expect(abs(thin.height - 3.7 * 0.6) < 0.001 && thin.midY == loud.midY)
+        // Where the quieter voice overlaps more, as much yellow.
+        #expect(CallLook.yellowFrame(of: loud, overlap: 0.5, core: 3.7, height: 14).height == 7)
     }
 
     @Test("macOS's popup's waveform is read for each voice: the other person on its left, you on its right")
