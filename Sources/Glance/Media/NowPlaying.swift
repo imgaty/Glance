@@ -129,14 +129,7 @@ final class NowPlaying: ObservableObject {
         let spotify = NSRunningApplication.runningApplications(withBundleIdentifier: PlayerScripting.spotify).first
         let wasHidden = spotify?.isHidden == true
         Task {
-            let script = PlayerScripting.tell(PlayerScripting.spotify, "return spotify url of current track")
-            guard let reply = await PlayerScripting.run(script) else { return }
-            let steps = PlayerScripting.djPicksScripts(playing: reply.trimmingCharacters(in: .whitespacesAndNewlines))
-            for (index, step) in steps.enumerated() {
-                // The briefest moment on the song alone, for Spotify to take it that the DJ's been left.
-                if index > 0 { try? await Task.sleep(for: .seconds(PlayerScripting.djPicksGap)) }
-                guard await PlayerScripting.run(step) != nil else { return }
-            }
+            guard await PlayerScripting.run(PlayerScripting.djPicksScript) != nil else { return }
             // It comes forward a moment after it's told to, if it does.
             for _ in 0..<10 {
                 if Self.broughtForward(front: front?.bundleIdentifier, now: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) {

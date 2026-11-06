@@ -270,12 +270,11 @@ struct PlayerScriptingTests {
         #expect(!NowPlaying.broughtForward(front: nil, now: PlayerScripting.spotify))
     }
 
-    @Test("The DJ's button leaves the DJ for the song on its own, then starts it anew, in Spotify")
+    @Test("The DJ's button plays the DJ within the DJ, in Spotify, and never a song on its own")
     func djPicks() {
-        let dj = #"tell application "Spotify" to play track "spotify:playlist:37i9dQZF1EYkqdzj48dyYq""#
-        #expect(PlayerScripting.djPicksScripts(playing: "spotify:track:AAA") == [#"tell application "Spotify" to play track "spotify:track:AAA""#, dj])
-        // What the DJ says goes by the song it comes before.
-        #expect(PlayerScripting.djPicksScripts(playing: "spotify:media:AAA") == [#"tell application "Spotify" to play track "spotify:track:AAA""#, dj])
+        #expect(
+            PlayerScripting.djPicksScript
+                == #"tell application "Spotify" to play track "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" in context "spotify:playlist:37i9dQZF1EYkqdzj48dyYq""#)
     }
 
     @Test("The DJ's ring follows the waveform's bars: all of them, the low ones and the high ones")

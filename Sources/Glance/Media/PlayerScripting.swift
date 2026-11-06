@@ -168,17 +168,11 @@ enum PlayerScripting {
     /// Spotify's DJ, at the same address for everyone.
     static let djAddress = "spotify:playlist:37i9dQZF1EYkqdzj48dyYq"
 
-    /// How long the song plays alone, in seconds, between those two.
-    static let djPicksGap = 0.25
-
-    /// What gets different picks from the DJ, in turn. Spotify's own button for that sends the DJ a
-    /// signal no other app can send, and asked to play while it's playing, the DJ only carries on
-    /// with the same song. So it's left, for the song on its own, and then started anew. What the DJ
-    /// says has the address of the song it comes before.
-    static func djPicksScripts(playing address: String) -> [String] {
-        let song = address.replacingOccurrences(of: "spotify:media:", with: "spotify:track:")
-        return [tell(spotify, "play track \"\(song)\""), tell(spotify, "play track \"\(djAddress)\"")]
-    }
+    /// What gets different picks from the DJ. Spotify's own button for that sends the DJ a signal no
+    /// other app can send. Asked to play the DJ within the DJ, it starts again with something else,
+    /// measured as 3 new songs in 4, where playing the song on its own and then the DJ gave 1 in 3
+    /// and left Spotify on the song's album.
+    static let djPicksScript = tell(spotify, "play track \"\(djAddress)\" in context \"\(djAddress)\"")
     private static let queue = DispatchQueue(label: "Glance.PlayerScripting")
 
     /// Finds the song whose favorite counts, as `t`. A song streamed from Apple Music and its copy
