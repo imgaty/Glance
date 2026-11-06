@@ -20,10 +20,11 @@
   video, which is off, muting your microphone, going to the call and ending it.
   A call in another app opens to one row: the caller's name, the sound output
   and, where Glance can press the app's own, ending it. Your microphone is
-  unmuted when the call ends, if Glance muted it. FaceTime and Phone calls are
-  read from macOS's own popup, which needs `Screen & System Audio Recording`;
-  Zoom, Discord, WhatsApp and others show once they use the microphone. Turn it
-  off with `Calls` in **Settings > Live Activities**.
+  unmuted when the call ends, if Glance muted it. During a call, music and
+  anything else going on show in a bubble beside the notch. FaceTime and Phone
+  calls are read from macOS's own popup, which needs `Screen & System Audio
+  Recording`; Zoom, Discord, WhatsApp and others show once they use the
+  microphone. Turn it off with `Calls` in **Settings > Live Activities**.
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in

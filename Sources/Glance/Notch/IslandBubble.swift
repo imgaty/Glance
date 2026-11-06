@@ -25,6 +25,9 @@ struct IslandBubble: View {
     /// Or AirPlay, by its symbol alone, in its blue; or AirDrop, by its ring.
     var route: AirPlayRoute? = nil
     var airdrop: AirDropShown? = nil
+    /// Or music, by its cover in a circle, or a note without one.
+    var music = false
+    var artwork: NSImage? = nil
     let name: String
     /// Opens it, as a click on it does.
     let open: () -> Void
@@ -41,8 +44,10 @@ struct IslandBubble: View {
     @State private var kept: ClockShown?
     @State private var keptRoute: AirPlayRoute?
     @State private var keptAirDrop: AirDropShown?
+    @State private var keptMusic = false
+    @State private var keptArtwork: NSImage?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (clock: 0, route: 0, airdrop: 0)
+    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -66,7 +71,22 @@ struct IslandBubble: View {
                     case .timer(let timer): TimerRing(state: timer, height: h)
                     case .stopwatch(let watch): StopwatchMark(watch: watch, height: h)
                     case nil:
-                        if let keptAirDrop {
+                        if keptMusic {
+                            Group {
+                                if let keptArtwork {
+                                    Image(nsImage: keptArtwork).resizable().aspectRatio(contentMode: .fill)
+                                } else {
+                                    Image(systemName: "music.note")
+                                        .font(.system(size: h * 0.4, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(0.7))
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .background(.white.opacity(0.12))
+                                }
+                            }
+                            // As large as every other mark beside the camera.
+                            .frame(width: h * TimerLayout.ring, height: h * TimerLayout.ring)
+                            .clipShape(Circle())
+                        } else if let keptAirDrop {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if keptRoute != nil {
                             Image(systemName: "airplay.audio")
@@ -96,6 +116,12 @@ struct IslandBubble: View {
                         .accessibilityLabel(ExpandedAirDropView.spoken(airdrop))
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
+                } else if shown, !hidden, music {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel(name)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
                 } else if shown, !hidden, let route {
                     Color.clear
                         .accessibilityElement()
@@ -116,7 +142,7 @@ struct IslandBubble: View {
         // as anything fading here would show as a pale circle beside the notch.
         .animation(hidden ? .linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)) { $0.opacity(hidden ? 0 : 1) }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
-        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil ? 1 : 0) }
+        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptMusic ? 1 : 0) }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1
@@ -126,6 +152,18 @@ struct IslandBubble: View {
                 try? await Task.sleep(for: SystemActivityView.folding)
                 if changes.clock == change { kept = nil }
             }
+        }
+        .onChange(of: music, initial: true) { _, new in
+            changes.music += 1
+            if new { return keptMusic = true }
+            let change = changes.music
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.music == change { keptMusic = false }
+            }
+        }
+        .onChange(of: artwork.map(ObjectIdentifier.init), initial: true) { _, _ in
+            if let artwork { keptArtwork = artwork }
         }
         .onChange(of: airdrop, initial: true) { _, new in
             changes.airdrop += 1

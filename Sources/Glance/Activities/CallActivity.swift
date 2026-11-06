@@ -331,6 +331,9 @@ final class CallBarsView: NSView {
 struct CallMark: View {
     let call: CallShown
     let restingHeight: CGFloat
+    /// Only the phone, or the caller's circle while it rings, with another activity detached (see
+    /// `SystemActivityView.leadingOnly`).
+    var leadingOnly = false
 
     var body: some View {
         let h = restingHeight
@@ -342,6 +345,7 @@ struct CallMark: View {
                 Image(systemName: "phone.down.fill")
                     .font(.system(size: h * CallLook.handsetSize, weight: .medium))
                     .foregroundStyle(CallLook.handset)
+                    .islandFade(!leadingOnly)
             case .calling:
                 Image(systemName: "phone.fill")
                     .font(.system(size: h * CallLook.phone, weight: .medium))
@@ -357,8 +361,10 @@ struct CallMark: View {
                 CallTime(since: since)
                     .font(.system(size: LiveActivityView.textSize(for: h), weight: .semibold))
                     .foregroundStyle(CallLook.green)
+                    .islandFade(!leadingOnly)
                 Spacer(minLength: 0)
                 CallWaveform(height: h * CallLook.waveHeight, core: h * CallLook.core)
+                    .islandFade(!leadingOnly)
             }
         }
         .padding(.leading, call.rings ? CallLayout.edge(h) : h * CallLook.phoneEdge)

@@ -256,12 +256,12 @@ final class NotchModel: ObservableObject {
     /// goes with `activity`.
     @Published var dismissed: Set<Activity> = []
 
-    /// Those showing now, in that order.
+    /// Those showing now, in that order: every one going on, whatever else is. The first has the
+    /// notch, the second is detached beside it, and the rest wait their turn.
     var activities: [Activity] {
         var shown: [Activity] = []
-        // A call has the notch to itself, music giving way to it.
-        if call != nil, !dismissed.contains(.call) { shown.append(.call) }
-        if musicShown { shown.append(.music) }
+        if call != nil { shown.append(.call) }
+        if activity { shown.append(.music) }
         if airdrop != nil { shown.append(.airdrop) }
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
@@ -269,8 +269,8 @@ final class NotchModel: ObservableObject {
         return shown.filter { !dismissed.contains($0) }
     }
 
-    /// Music has its place beside the camera, with no call showing.
-    var musicShown: Bool { activity && (call == nil || dismissed.contains(.call)) }
+    /// Music has the notch's wings: it comes first. Second, it's detached beside the notch.
+    var musicShown: Bool { activities.first == .music }
 
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
@@ -292,7 +292,7 @@ final class NotchModel: ObservableObject {
     /// the notch is open, something else is announced, or a new song's name shows: it runs back into
     /// the notch while it does.
     var detached: Activity? {
-        guard state != .open, alert == nil, !folded, !(activity && pop), activities.first != .call else { return nil }
+        guard state != .open, alert == nil, !folded, !(musicShown && pop) else { return nil }
         return second
     }
 
@@ -367,7 +367,7 @@ final class NotchModel: ObservableObject {
         let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
         if folded { return 0 }
         if alert != nil { return max(alertExtended ? alertExtendedWing : alertWing, resting) }
-        if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
+        if activities.first == .call, let call { return detached != nil ? closedSize.height : CallLayout.wing(for: call, restingHeight: closedSize.height) }
         if activity, pop { return max(popWing, resting) }
         // With another detached, the first has the leading side alone, as wide as the notch is tall,
         // the Dynamic Island's minimal presentation.
@@ -807,6 +807,7 @@ struct NotchView: View {
             shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
+            music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
             hidden: model.state == .open,

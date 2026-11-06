@@ -736,10 +736,18 @@ struct SystemBannersTests {
         model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
         #expect(model.activities.first == .music)
         model.call = connected
-        #expect(model.activities.first == .call && !model.activities.contains(.music) && !model.musicShown)
-        // Nothing detached beside it, and its wings as wide as it needs.
+        // Both show: the call first, with the notch, music detached beside it, the call by its phone alone.
+        #expect(model.activities == [.call, .music, .airplay] && !model.musicShown)
+        #expect(model.detached == .music)
+        #expect(model.wing == 32)
+        // Without music, AirPlay is detached instead; alone, the call has both wings, as wide as it needs.
+        model.activity = false
+        #expect(model.detached == .airplay)
+        model.airplay = nil
         #expect(model.detached == nil)
         #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32))
+        model.activity = true
+        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
         #expect(CallLayout.wing(for: connected, restingHeight: 32) > CallLook.waveWidth)
         // An hour's time takes more room.
         let longer = CallShown(name: "A", over: "F", phase: .connected(since: .now - 3_700))

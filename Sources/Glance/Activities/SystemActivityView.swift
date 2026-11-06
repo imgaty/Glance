@@ -74,7 +74,7 @@ struct SystemActivityView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(alert.spoken)
             } else if shownAlert == nil, let call {
-                CallMark(call: call, restingHeight: restingHeight)
+                CallMark(call: call, restingHeight: restingHeight, leadingOnly: leadingOnly)
                     .modifier(GrownAway(grown: grown))
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
