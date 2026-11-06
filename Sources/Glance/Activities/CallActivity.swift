@@ -444,6 +444,8 @@ struct ExpandedCallView: View {
     var revealed = true
     /// How wide the notch is closed, if it shows beside the camera there, for what's there to grow out of.
     var closedWidth: CGFloat? = nil
+    /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
+    var closedDrop: CGFloat = 0
     @Environment(\.playerKeys) private var keys
     @ObservedObject private var microphone = CallMicrophone.shared
     @State private var arrived = false
@@ -478,7 +480,7 @@ struct ExpandedCallView: View {
         let timeBaseline = edge + side
         let timeFrom = CGSize(
             width: h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread,
-            height: h / 2 - (timeBaseline - detail.capHeight / 2))
+            height: h / 2 + closedDrop - (timeBaseline - detail.capHeight / 2))
         let count = CGFloat(3 + (microphone.available ? 1 : 0) + (call.canEnd ? 1 : 0))
         return VStack(alignment: .leading, spacing: Self.rowGap(restingHeight: h)) {
             Button {
@@ -580,7 +582,7 @@ struct ExpandedCallView: View {
         let side = CallLayout.round(h)
         let out = revealed && arrived
         let spread = ((closedWidth ?? width) - width) / 2
-        let rise = (h - TimerLayout.tallHeight(h)) / 2
+        let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)
         return HStack(spacing: CallLayout.wordsGap(h)) {
             Button {

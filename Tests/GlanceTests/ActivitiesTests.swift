@@ -828,6 +828,26 @@ struct SystemBannersTests {
         #expect(CGFloat(circleRows.min() ?? 0) / 2 == PlayerLayout.padding)
     }
 
+    @Test("What grows out of the closed notch starts from it as swollen as the pointer had made it, and AirPlay's symbols from their frames")
+    @MainActor
+    func grownFromSwell() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
+        model.state = .peek
+        model.state = .open
+        #expect(model.grownSwell == NotchModel.peekSwell)
+        // Opened straight from rest, with the pointer near, by as much as it had swollen.
+        model.state = .closed
+        model.proximity = 0.5
+        model.state = .open
+        #expect(model.grownSwell == NotchModel.nearSwell * 0.5)
+        // The peek's swell is its metrics' own: wider at each end and taller by it.
+        model.state = .closed
+        model.proximity = 0
+        let rest = model.metrics(for: .closed), peek = model.metrics(for: .peek)
+        #expect(isClose(peek.bodyWidth - rest.bodyWidth, 2 * model.swell(in: .peek)) && isClose(peek.height - rest.height, model.swell(in: .peek)))
+    }
+
     @Test("Opened, another app's call is one row as tall as the Alarm: the name, the speaker and, where it can be done, End")
     @MainActor
     func openedOtherAppCall() {

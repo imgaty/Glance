@@ -192,6 +192,8 @@ struct ExpandedAirPlayView: View {
     var revealed = true
     /// How wide the notch is closed, if it shows beside the camera there, and grows out of that.
     var closedWidth: CGFloat? = nil
+    /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
+    var closedDrop: CGFloat = 0
     @State private var hovering = false
     @State private var arrived = false
 
@@ -199,10 +201,12 @@ struct ExpandedAirPlayView: View {
         let h = restingHeight
         let layout = AirPlayLayout.self
         let out = revealed && arrived || closedWidth == nil
-        let rise = h / 2 - (h + LiveActivityView.cameraGap + h * layout.header / 2)
+        let rise = h / 2 + closedDrop - (h + LiveActivityView.cameraGap + h * layout.header / 2)
         let spread = ((closedWidth ?? width) - width) / 2
-        let symbolFrom = CGSize(width: h * layout.symbolEdge - PlayerLayout.padding - spread, height: rise)
-        let deviceFrom = CGSize(width: spread - h * layout.deviceEdge + PlayerLayout.padding, height: rise)
+        // From each frame's edge here to its edge beside the camera, the room the large symbols have
+        // beside their ink included, so they start exactly where they were.
+        let symbolFrom = CGSize(width: h * layout.symbolEdge - (PlayerLayout.padding - h * layout.bigSymbolMargin) - spread, height: rise)
+        let deviceFrom = CGSize(width: spread - h * layout.deviceEdge + (PlayerLayout.padding - h * layout.bigDeviceMargin), height: rise)
         VStack(spacing: h * AirPlayLayout.buttonGap) {
             HStack(spacing: 0) {
                 Image(systemName: "airplay.audio")

@@ -112,7 +112,26 @@ final class NotchModel: ObservableObject {
     /// The widest a wing gets while a new song is announced; longer titles scroll.
     static let maxPopWing: CGFloat = 150
 
-    @Published var state: NotchState = .closed
+    @Published var state: NotchState = .closed {
+        didSet {
+            // How far the closed notch had swollen under the pointer as it opened, for what grows out
+            // of it to start where it was (see `grownSwell`).
+            if state == .open, oldValue != .open { grownSwell = swell(in: oldValue) }
+        }
+    }
+    /// How much larger the closed notch was than at rest as it opened, at each end and at the bottom:
+    /// the pointer swells it, and what shows beside the camera rides with its ends.
+    private(set) var grownSwell: CGFloat = 0
+
+    /// How much the closed notch swells in a state, at each end and at the bottom.
+    func swell(in state: NotchState) -> CGFloat {
+        switch state {
+        case .closed: Self.nearSwell * proximity
+        case .peek where restingTall: 0
+        case .peek: Self.peekSwell
+        default: 0
+        }
+    }
     /// 0...1, how close the pointer is while the notch is closed.
     @Published var proximity: CGFloat = 0
     /// Rubber-band offset from scroll gestures, in points. Negative squashes the open notch.
@@ -797,8 +816,11 @@ struct NotchView: View {
     /// How wide the notch is closed, when what it's open to shows beside the camera there, alone, and
     /// grows out of that; with another detached, or from a bubble, it doesn't.
     private var grownFrom: CGFloat? {
-        model.second == nil && model.expanded != nil && model.activities.first == model.expanded ? model.restingWidth : nil
+        model.second == nil && model.expanded != nil && model.activities.first == model.expanded ? model.restingWidth + 2 * model.grownSwell : nil
     }
+
+    /// How far below the closed notch's middle at rest its middle was, swollen as it opened.
+    private var grownDrop: CGFloat { model.grownSwell / 2 }
 
     /// Opened to the timer or the stopwatch: its own view, laid out at its open size, as the player
     /// is, so the growing shape reveals it.
@@ -808,7 +830,8 @@ struct NotchView: View {
             let name = model.expanded.map(model.name(of:)) ?? String(localized: "Timer")
             let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
             ExpandedTimerView(
-                shown: clock, name: name, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom
+                shown: clock, name: name, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom,
+                closedDrop: grownDrop
             )
             .frame(width: width, height: TimerLayout.tallHeight(h))
             .allowsHitTesting(places == nil && shown)
@@ -821,7 +844,7 @@ struct NotchView: View {
             let h = model.closedSize.height
             ExpandedCallView(
                 call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width), revealed: shown,
-                closedWidth: grownFrom
+                closedWidth: grownFrom, closedDrop: grownDrop
             )
             .allowsHitTesting(places == nil && shown)
         }
@@ -832,7 +855,7 @@ struct NotchView: View {
         if model.expanded == .airplay, let route = model.airplay {
             let h = model.closedSize.height
             let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
-            ExpandedAirPlayView(route: route, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom)
+            ExpandedAirPlayView(route: route, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom, closedDrop: grownDrop)
                 .allowsHitTesting(places == nil && shown)
         }
     }
@@ -842,7 +865,7 @@ struct NotchView: View {
         if model.expanded == .airdrop, let transfer = model.airdrop {
             let h = model.closedSize.height
             let width = AirDropLayout.width(restingHeight: h, camera: model.camera)
-            ExpandedAirDropView(shown: transfer, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom)
+            ExpandedAirDropView(shown: transfer, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom, closedDrop: grownDrop)
                 .allowsHitTesting(places == nil && shown)
         }
     }

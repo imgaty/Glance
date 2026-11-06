@@ -211,6 +211,8 @@ struct ExpandedTimerView: View {
     var revealed = true
     /// How wide the notch is closed, if it shows beside the camera there, and grows out of that.
     var closedWidth: CGFloat? = nil
+    /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
+    var closedDrop: CGFloat = 0
     @ObservedObject private var clock = ClockActivity.shared
     @State private var arrived = false
 
@@ -220,7 +222,7 @@ struct ExpandedTimerView: View {
         // spare, beside the camera.
         let side = max((width - camera) / 2, 0)
         let out = revealed && arrived
-        let rise = (h - TimerLayout.tallHeight(h)) / 2
+        let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let spread = ((closedWidth ?? width) - width) / 2
         let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.timeEdge(h), height: rise)
         let ringFrom = CGSize(width: SystemActivityView.ringEdge(h) - TimerLayout.buttonEdge(h) - spread, height: rise)

@@ -297,6 +297,8 @@ struct ExpandedAirDropView: View {
     var revealed = true
     /// How wide the notch is closed, if it shows beside the camera there, for its ring to grow out of.
     var closedWidth: CGFloat? = nil
+    /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
+    var closedDrop: CGFloat = 0
     @State private var arrived = false
     @State private var hovering = false
 
@@ -331,7 +333,7 @@ struct ExpandedAirDropView: View {
         // The ring grows out of where it shows beside the camera, as the Timer's does.
         let out = revealed && arrived
         let spread = ((closedWidth ?? width) - width) / 2
-        let rise = (h - TimerLayout.tallHeight(h)) / 2
+        let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let ringFrom = CGSize(width: spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h), height: rise)
         let right = stopButton(h)
             .modifier(GrowsOut(out: out || closedWidth == nil, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom))
