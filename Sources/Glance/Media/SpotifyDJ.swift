@@ -18,17 +18,29 @@ enum SpotifyDJ {
     /// The switch that shows Spotify's controls to Accessibility.
     static let accessibilitySwitch = "--force-renderer-accessibility"
     /// The button's name in Spotify's own words, under this key, in each of its languages.
-    static let nameKey = "web-player.your-dj.jumpbutton.tooltip.hover"
+    nonisolated static let nameKey = "web-player.your-dj.jumpbutton.tooltip.hover"
     /// Its Previous button's, which finds the player bar in any language.
-    static let previousKey = "playback-control.skip-back"
-    private static let bundle = "/Applications/Spotify.app/Contents/Resources/Apps/xpui.spa"
+    nonisolated static let previousKey = "playback-control.skip-back"
+    nonisolated private static let bundle = "/Applications/Spotify.app/Contents/Resources/Apps/xpui.spa"
 
-    /// Its name in the Mac's languages and in English, as Spotify words it.
-    private static var names: Set<String>?
+    /// How the button is told from the rest: Spotify 1.3.8 gives it no name, only its round DJ-blue
+    /// look, so it's known by the class its stylesheet gives that look, read from Spotify itself, so
+    /// it follows Spotify's updates; or by its name, where a Spotify gives it one.
+    struct Mark: Sendable {
+        let names: Set<String>
+        let style: String?
+    }
+    private static var mark: Mark?
     private static var previousNames: Set<String>?
-    private static var button: AXUIElement?
-    /// Spotify's player bar: Previous, Play, Next, and Shuffle, or the DJ's button in its place.
-    private static var bar: AXUIElement?
+    /// The way to Spotify's now playing bar (the song, its controls, and while the DJ chooses the
+    /// music, the DJ's button, before Lyrics), as indexes from its windows down, and what the bar
+    /// is called. Spotify's elements themselves aren't kept: once Spotify draws them again, one kept
+    /// from before can keep a reader waiting for minutes. Followed afresh, the way costs a few reads.
+    struct Way: Sendable {
+        let path: [Int]
+        let label: String
+    }
+    private static var way: Way?
     private static var lastSearch = Date.distantPast
     /// Whether the running Spotify, by its process, was started with the switch.
     private static var switchChecked: (pid: pid_t, has: Bool)?
@@ -36,73 +48,142 @@ enum SpotifyDJ {
     /// Whether Spotify's own bar shows its DJ button, as it does only while the DJ chooses the music;
     /// nil where Spotify doesn't show its controls to Accessibility. Spotify's scripting can't say.
     static func djInBar() async -> Bool? {
-        guard AXIsProcessTrusted(), let spotify = running, !lacksSwitch else { return nil }
-        if names == nil { names = await Task.detached { Self.readNames(key: nameKey) }.value }
+        guard AXIsProcessTrusted(), let spotify = running, !lacksSwitch, let mark = await loadMark() else { return nil }
         if previousNames == nil { previousNames = await Task.detached { Self.readNames(key: previousKey) }.value }
-        guard let names, let previousNames, !names.isEmpty, !previousNames.isEmpty else { return nil }
-        if let bar {
-            if let shown = await Task.detached(operation: { Self.shows(names, in: bar) }).value { return shown }
-            // Spotify redrew its bar, as it does when the music changes: it's found again.
-            self.bar = nil
+        guard let previousNames, !previousNames.isEmpty else { return nil }
+        let pid = spotify.processIdentifier
+        if let way, let shown = await Task.detached(operation: { Self.follow(way, in: Self.app(pid)).flatMap { Self.shows(mark, in: $0) } }).value {
+            return shown
         }
-        // Found again, but not on every check.
+        // Looked for again, but not on every check.
         guard Date.now.timeIntervalSince(lastSearch) > 5 else { return nil }
         lastSearch = .now
-        let app = AXUIElementCreateApplication(spotify.processIdentifier)
+        guard let found = await Task.detached(operation: { Self.findBar(in: Self.app(pid), previous: previousNames) }).value else { return nil }
+        way = found.way
+        return await Task.detached { Self.shows(mark, in: found.bar) }.value
+    }
+
+    nonisolated private static func app(_ pid: pid_t) -> AXUIElement {
+        let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 1)
-        let found = await Task.detached { Self.findBar(in: app, previous: previousNames) }.value
-        bar = found
-        guard let found else { return nil }
-        return await Task.detached { Self.shows(names, in: found) }.value
+        return app
+    }
+
+    /// The bar, by the way to it, if it's still there.
+    nonisolated private static func follow(_ way: Way, in app: AXUIElement) -> AXUIElement? {
+        guard let first = way.path.first, let windows = SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement], first < windows.count else {
+            return nil
+        }
+        var element = windows[first]
+        for index in way.path.dropFirst() {
+            AXUIElementSetMessagingTimeout(element, 0.5)
+            guard let children = SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement], index < children.count else { return nil }
+            element = children[index]
+        }
+        AXUIElementSetMessagingTimeout(element, 0.5)
+        return SystemNotices.value(element, kAXDescriptionAttribute) as? String == way.label ? element : nil
+    }
+
+    /// The button's marks, read once.
+    private static func loadMark() async -> Mark? {
+        if mark == nil { mark = await Task.detached { Mark(names: Self.readNames(key: nameKey), style: Self.readStyle()) }.value }
+        guard let mark, mark.style != nil || !mark.names.isEmpty else { return nil }
+        return mark
+    }
+
+    /// Whether an element is the DJ's button.
+    nonisolated static func isJump(_ element: AXUIElement, _ mark: Mark) -> Bool {
+        guard SystemNotices.value(element, kAXRoleAttribute) as? String == kAXButtonRole as String else { return false }
+        if let style = mark.style, (SystemNotices.value(element, "AXDOMClassList") as? [String])?.contains(style) == true { return true }
+        return [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains { mark.names.contains(SystemNotices.value(element, $0) as? String ?? "") }
+    }
+
+    /// The class Spotify's stylesheet gives the DJ's button: round, in the DJ's blue.
+    nonisolated static func style(in stylesheet: String) -> String? {
+        let pattern = #"\.([A-Za-z0-9_-]+)\{cursor:pointer;background:#0a59b8;border:none;border-radius:50%"#
+        guard let expression = try? NSRegularExpression(pattern: pattern),
+            let match = expression.firstMatch(in: stylesheet, range: NSRange(stylesheet.startIndex..., in: stylesheet)),
+            let range = Range(match.range(at: 1), in: stylesheet)
+        else { return nil }
+        return String(stylesheet[range])
+    }
+
+    nonisolated private static func readStyle() -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-p", bundle, "xpui-snapshot.css"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return style(in: String(decoding: data, as: UTF8.self))
     }
 
     /// Whether the bar holds the DJ's button; nil if it can't be read. A bar Spotify has since drawn
     /// again can keep a reader waiting, so it's given only a moment.
-    nonisolated private static func shows(_ names: Set<String>, in bar: AXUIElement) -> Bool? {
-        AXUIElementSetMessagingTimeout(bar, 0.25)
-        guard let children = SystemNotices.value(bar, kAXChildrenAttribute) as? [AXUIElement], !children.isEmpty else { return nil }
-        return children.contains { child in
-            AXUIElementSetMessagingTimeout(child, 0.25)
-            return [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains { names.contains(SystemNotices.value(child, $0) as? String ?? "") }
-        }
+    nonisolated private static func shows(_ mark: Mark, in bar: AXUIElement) -> Bool? {
+        jump(in: bar, mark).map { $0 != nil }
     }
 
-    /// The bar: what holds Spotify's Previous button among its other controls. A page's carousels
-    /// have Previous buttons too, each beside only its Next.
-    nonisolated private static func findBar(in app: AXUIElement, previous: Set<String>) -> AXUIElement? {
+    /// The DJ's button among the bar's controls: nil if the bar can't be read, nil inside if it isn't there.
+    nonisolated private static func jump(in bar: AXUIElement, _ mark: Mark) -> AXUIElement?? {
+        AXUIElementSetMessagingTimeout(bar, 0.25)
+        guard let children = SystemNotices.value(bar, kAXChildrenAttribute) as? [AXUIElement], !children.isEmpty else { return nil }
+        return .some(
+            children.first { child in
+                AXUIElementSetMessagingTimeout(child, 0.25)
+                return isJump(child, mark)
+            })
+    }
+
+    /// The now playing bar: what holds the controls Spotify's Previous button is among. A page's
+    /// carousels have Previous buttons too, each beside only its Next.
+    nonisolated private static func findBar(in app: AXUIElement, previous: Set<String>) -> (bar: AXUIElement, way: Way)? {
         var seen = 0
-        func walk(_ element: AXUIElement, _ depth: Int) -> AXUIElement? {
+        // Down to Previous, then up two: its controls, then the bar that holds them.
+        func walk(_ element: AXUIElement, _ path: [Int]) -> (bar: AXUIElement, way: Way)? {
             seen += 1
-            guard depth < 60, seen < 30_000 else { return nil }
-            if SystemNotices.value(element, kAXRoleAttribute) as? String == kAXButtonRole as String,
-                [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains(where: { previous.contains(SystemNotices.value(element, $0) as? String ?? "") }),
-                let parent = SystemNotices.value(element, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID(),
-                (SystemNotices.value(parent as! AXUIElement, kAXChildrenAttribute) as? [AXUIElement])?.count ?? 0 >= 4
+            guard path.count < 60, seen < 30_000 else { return nil }
+            let children = SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []
+            // Holding Previous among four or more controls, this is the controls; the bar holds them.
+            if children.count >= 4, path.count >= 2,
+                children.contains(where: { child in
+                    SystemNotices.value(child, kAXRoleAttribute) as? String == kAXButtonRole as String
+                        && [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains { previous.contains(SystemNotices.value(child, $0) as? String ?? "") }
+                })
             {
-                return (parent as! AXUIElement)
+                return barAbove(element, path)
             }
-            for child in SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
-                if let found = walk(child, depth + 1) { return found }
+            for (index, child) in children.enumerated() {
+                if let found = walk(child, path + [index]) { return found }
             }
             return nil
         }
-        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
-            if let found = walk(window, 0) { return found }
+        func barAbove(_ controls: AXUIElement, _ path: [Int]) -> (bar: AXUIElement, way: Way)? {
+            guard let parent = SystemNotices.value(controls, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID() else { return nil }
+            let bar = parent as! AXUIElement
+            return (bar, Way(path: Array(path.dropLast()), label: SystemNotices.value(bar, kAXDescriptionAttribute) as? String ?? ""))
+        }
+        for (index, window) in (SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).enumerated() {
+            if let found = walk(window, [index]) { return found }
         }
         return nil
     }
 
     /// Presses Spotify's own button, if Spotify shows it. Whether it did.
     static func press() async -> Bool {
-        guard AXIsProcessTrusted(), let spotify = running else { return false }
-        if names == nil { names = await Task.detached { Self.readNames(key: nameKey) }.value }
-        guard let names, !names.isEmpty else { return false }
-        if let button, matches(button, names), AXUIElementPerformAction(button, kAXPressAction as CFString) == .success { return true }
-        let app = AXUIElementCreateApplication(spotify.processIdentifier)
-        AXUIElementSetMessagingTimeout(app, 1)
-        button = await Task.detached { Self.find(in: app, names: names) }.value
-        guard let button else { return false }
-        return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+        guard AXIsProcessTrusted(), let spotify = running, let mark = await loadMark() else { return false }
+        let pid = spotify.processIdentifier
+        let way = way
+        // In the bar, where it is, found afresh; or wherever Spotify shows it.
+        return await Task.detached {
+            let app = Self.app(pid)
+            let inBar = way.flatMap { Self.follow($0, in: app) }.flatMap { Self.jump(in: $0, mark) } ?? nil
+            guard let button = inBar ?? Self.find(in: app, mark: mark) else { return false }
+            return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+        }.value
     }
 
     /// Spotify was started without the switch, so it shows no controls to Accessibility.
@@ -126,7 +207,7 @@ enum SpotifyDJ {
         configuration.arguments = [accessibilitySwitch]
         configuration.activates = false
         guard (try? await NSWorkspace.shared.openApplication(at: url, configuration: configuration)) != nil else { return false }
-        button = nil
+        way = nil
         // Once it answers, on with the DJ, which goes on with its session.
         for _ in 0..<40 {
             try? await Task.sleep(for: .milliseconds(250))
@@ -156,21 +237,13 @@ enum SpotifyDJ {
         NSRunningApplication.runningApplications(withBundleIdentifier: PlayerScripting.spotify).first
     }
 
-    private static func matches(_ element: AXUIElement, _ names: Set<String>) -> Bool {
-        [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains { names.contains(SystemNotices.value(element, $0) as? String ?? "") }
-    }
-
     /// The button, among everything Spotify shows.
-    nonisolated private static func find(in app: AXUIElement, names: Set<String>) -> AXUIElement? {
+    nonisolated private static func find(in app: AXUIElement, mark: Mark) -> AXUIElement? {
         var seen = 0
         func walk(_ element: AXUIElement, _ depth: Int) -> AXUIElement? {
             seen += 1
             guard depth < 60, seen < 30_000 else { return nil }
-            if SystemNotices.value(element, kAXRoleAttribute) as? String == kAXButtonRole as String,
-                [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains(where: { names.contains(SystemNotices.value(element, $0) as? String ?? "") })
-            {
-                return element
-            }
+            if isJump(element, mark) { return element }
             for child in SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
                 if let found = walk(child, depth + 1) { return found }
             }

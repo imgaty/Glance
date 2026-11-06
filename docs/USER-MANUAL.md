@@ -203,8 +203,8 @@ with a switch for it, so the first click in a Spotify opened without it starts
 Spotify again with it, which stops the music for a few seconds, and then presses
 the button. Spotify shows that button only while the DJ plays, so with the DJ
 paused, it's played first. Glance tells the DJ from other music by that same
-button in Spotify's player bar; before Spotify has been started with the switch,
-by hearing the DJ talk. Shuffle and repeat show dimmed with the DJ or a podcast,
+button, round and blue beside `Lyrics` in Spotify's bar; before Spotify has been
+started with the switch, by hearing the DJ talk. Shuffle and repeat show dimmed with the DJ or a podcast,
 because Spotify doesn't offer them then.
 
 While the DJ talks, the cover becomes its green ring on blue, following the same sound

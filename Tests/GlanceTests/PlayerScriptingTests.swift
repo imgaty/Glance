@@ -283,6 +283,17 @@ struct PlayerScriptingTests {
         #expect(SpotifyDJ.accessibilitySwitch == "--force-renderer-accessibility")
     }
 
+    @Test("Spotify 1.3.8 gives the DJ's button no name, so it's found by the class its stylesheet gives its round DJ-blue look")
+    func djButtonStyle() {
+        // As in Spotify 1.3.8.620's own stylesheet, between its neighbours.
+        let sheet =
+            ".Emt7NrkZ4o2yFtQPWOL_{margin:0 auto}.MKFJGfPCySuartS1MoA4{cursor:pointer;background:#0a59b8;border:none;border-radius:50%;min-width:32px}.MKFJGfPCySuartS1MoA4 .o0vUBVdxi5tQBM6yNsFT{background:#1ed76000}"
+        #expect(SpotifyDJ.style(in: sheet) == "MKFJGfPCySuartS1MoA4")
+        // Another blue, or no such rule: nothing.
+        #expect(SpotifyDJ.style(in: ".a{cursor:pointer;background:#1ed760;border:none;border-radius:50%}") == nil)
+        #expect(SpotifyDJ.style(in: "") == nil)
+    }
+
     @Test("The DJ's ring follows the waveform's bars: all of them, the low ones and the high ones")
     func djHeard() {
         #expect(DJHeard(levels: [0, 0, 0, 0, 0, 0]) == .silent)
