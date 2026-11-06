@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 5 November 2026`
+`Created: 11 October 2026` | `Last updated: 6 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -346,7 +346,7 @@ sliding under the notch as it folds:
 | A device's battery at 20%, and again at 10% | The device as it shows connecting, its ring red, with its level in numbers inside |
 | The charging case's battery at 20%, and again at 10% | The case on its own, closed and turning in 3D from the front, from Apple's and Beats' own models, its ring red, with its level in numbers inside. It's the only time the case shows, and it doesn't count towards the earbuds' ring |
 | A call coming in | The notch grows as tall as the Alarm: the caller and what the call is over, with a red button to decline and a green one to accept, in place of macOS's popup. Swiped up, the caller's initial and a gray handset stay beside the camera while it rings |
-| On a call | A green phone and the call's time beside the camera, and on the other side macOS's own waveform for the call, with both voices at once. Click it and the notch grows as tall as the Alarm: the caller and the call's time, a gray button for the sound output and, for FaceTime and phone calls, a red one to end it. Click the caller to go to the call. It takes the notch from music for as long as the call lasts |
+| On a call | A green phone and the call's time beside the camera, and on the other side a waveform of both voices, the other person's green on the left and yours orange on the right, each bar yellow in its middle. Click it and the notch grows as tall as the Alarm: the caller and the call's time, a gray button for the sound output and, for FaceTime and phone calls, a red one to end it. Click the caller to go to the call. It takes the notch from music for as long as the call lasts |
 
 Nothing else is announced: not other makers' headphones and speakers, nor
 keyboards, mice, trackpads or game controllers.

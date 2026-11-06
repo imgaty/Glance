@@ -52,8 +52,9 @@ struct CallShown: Equatable {
 }
 
 /// How a call looks, measured from screenshots of the user's own iPhone on a call: a bright green
-/// phone and its time on one side, on the other a waveform, the other person on the left in full
-/// color and you on the right, faded, in yellow dots while nobody speaks. Opened, the caller's name,
+/// phone and its time on one side, on the other a waveform, the other person on the left, green, and
+/// you on the right, orange, every bar yellow in its middle, so it's yellow dots while nobody speaks.
+/// Opened, the caller's name,
 /// the speaker and a red button with a cross. Ringing, the caller's initials in a gray circle, and a
 /// gray handset. The green and yellow are the iPhone's own, in Display P3, which they're just outside
 /// sRGB in.
@@ -69,18 +70,26 @@ enum CallLook {
 
     /// The waveform's bars, half the other person's and half yours, and their measures, the iPhone's
     /// for the notch's height.
-    static let bars = 16
+    static let bars = 14
     static let barWidth: CGFloat = 1.5
     static let barGap: CGFloat = 1.05
     static var waveWidth: CGFloat { CGFloat(bars) * (barWidth + barGap) - barGap }
-    /// As shares of the notch's height: the waveform at its tallest, the phone, the circle, the handset.
+    /// As shares of the notch's height: the waveform at its tallest, every bar's yellow middle, which
+    /// is all a quiet one is, the phone, the circle, the handset.
     static let waveHeight: CGFloat = 0.45
-    static let phone: CGFloat = 0.42
+    static let core: CGFloat = 0.115
+    static let phone: CGFloat = 0.384
     /// The caller's circle and the handset as large as every other activity's mark beside the camera.
     static let avatar: CGFloat = TimerLayout.ring
     static let handsetSize: CGFloat = 0.49
     /// Between the phone and its time.
-    static let timeGap: CGFloat = 5
+    static let timeGap: CGFloat = 1.5
+    /// The iPhone's handset stands more upright than the symbol, by this much.
+    static let phoneTilt: Double = 15
+    /// From the ends, by the notch's height, for the phone's ink and the waveform's to be as far in
+    /// as the iPhone's, 0.264 and 0.291: the tilted symbol inks 0.078 inside its bounds.
+    static let phoneEdge: CGFloat = 0.186
+    static let waveEdge: CGFloat = 0.291
 
     /// Inside the round buttons, the symbol's size for the button's, as on the iPhone: its cross a
     /// third across, the speaker three fifths, the phone two fifths.
@@ -95,22 +104,26 @@ enum CallLook {
     static let name: CGFloat = 0.215
     static let nameEdge: CGFloat = 0.246
 
-    /// A bar's color: quiet, the iPhone's yellow dot; louder, the other person's goes green and yours
-    /// fades.
-    static func voice(theirs: Bool, level: CGFloat) -> NSColor {
-        let yellow = NSColor(displayP3Red: 0xF4 / 255, green: 0xFF / 255, blue: 0x6E / 255, alpha: 1)
-        let part = min(max((level - 0.12) / 0.3, 0), 1)
-        if theirs {
-            let green = NSColor(displayP3Red: 0x7F / 255, green: 0xFB / 255, blue: 0x7F / 255, alpha: 1)
-            return yellow.blended(withFraction: part, of: green) ?? green
-        }
-        return yellow.withAlphaComponent(1 - 0.45 * part)
+    /// A bar's color past its yellow middle: the other person's green, yours orange; the yellow. All
+    /// three measured on the iPhone, in Display P3.
+    static func voice(theirs: Bool) -> NSColor {
+        theirs
+            ? NSColor(displayP3Red: 0x77 / 255, green: 0xF8 / 255, blue: 0x4C / 255, alpha: 1)
+            : NSColor(displayP3Red: 0xF8 / 255, green: 0xC6 / 255, blue: 0x47 / 255, alpha: 1)
+    }
+    static let yellow = NSColor(displayP3Red: 0xFE / 255, green: 0xFF / 255, blue: 0x56 / 255, alpha: 1)
+
+    /// Where a bar goes, for a level from 0 to 1, in a space this tall, and its yellow middle `core`
+    /// tall: quiet, the bar is its middle alone.
+    static func barFrame(_ index: Int, level: CGFloat, height: CGFloat, core: CGFloat) -> CGRect {
+        let tall = max(level * height, core)
+        return CGRect(x: CGFloat(index) * (barWidth + barGap), y: (height - tall) / 2, width: barWidth, height: tall)
     }
 
-    /// Where a bar goes, for a level from 0 to 1, in a space this tall: a dot when quiet.
-    static func barFrame(_ index: Int, level: CGFloat, height: CGFloat) -> CGRect {
-        let tall = max(level * height, barWidth)
-        return CGRect(x: CGFloat(index) * (barWidth + barGap), y: (height - tall) / 2, width: barWidth, height: tall)
+    /// A bar's yellow middle.
+    static func coreFrame(of bar: CGRect, core: CGFloat) -> CGRect {
+        let tall = min(core, bar.height)
+        return CGRect(x: bar.minX, y: bar.midY - tall / 2, width: bar.width, height: tall)
     }
 }
 
@@ -143,7 +156,8 @@ enum CallLayout {
         case .connected(let since):
             let time = ClockText.of(max(Int(date.timeIntervalSince(since)), 0))
             let words = SystemActivityView.digitsWidth(time, LiveActivityView.textSize(for: h), .semibold)
-            return max(edge(h) + h * CallLook.phone * 1.15 + CallLook.timeGap + words + gap, gap + CallLook.waveWidth + edge(h))
+            return max(
+                h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap + words + gap, gap + CallLook.waveWidth + h * CallLook.waveEdge)
         }
     }
 }
@@ -190,20 +204,24 @@ struct CallTime: View {
 /// right, each bar a moment of that voice.
 struct CallWaveform: View {
     let height: CGFloat
+    /// Each bar's yellow middle.
+    let core: CGFloat
     @Environment(\.notchOnScreen) private var onScreen
 
     var body: some View {
         Group {
             if onScreen {
-                LiveCallBars()
+                LiveCallBars(core: core)
             } else {
                 TimelineView(.animation(minimumInterval: 1.0 / 30)) { _ in
                     let bars = CallVoices.shared.bars
                     Canvas { context, size in
                         for (index, level) in bars.enumerated() {
-                            let bar = CallLook.barFrame(index, level: level, height: size.height)
-                            let color = CallLook.voice(theirs: index < bars.count / 2, level: level)
+                            let bar = CallLook.barFrame(index, level: level, height: size.height, core: core)
+                            let middle = CallLook.coreFrame(of: bar, core: core)
+                            let color = CallLook.voice(theirs: index < bars.count / 2)
                             context.fill(Path(roundedRect: bar, cornerRadius: bar.width / 2), with: .color(Color(nsColor: color)))
+                            context.fill(Path(roundedRect: middle, cornerRadius: middle.width / 2), with: .color(Color(nsColor: CallLook.yellow)))
                         }
                     }
                 }
@@ -217,21 +235,30 @@ struct CallWaveform: View {
 /// The bars on the notch on the screen, drawn by Core Animation: through SwiftUI each change would
 /// redraw the whole notch.
 private struct LiveCallBars: NSViewRepresentable {
-    func makeNSView(context: Context) -> CallBarsView { CallBarsView() }
+    let core: CGFloat
+    func makeNSView(context: Context) -> CallBarsView { CallBarsView(core: core) }
     func updateNSView(_ view: CallBarsView, context: Context) {}
 }
 
 final class CallBarsView: NSView {
     private var parts: [CALayer] = []
+    private var cores: [CALayer] = []
+    private let core: CGFloat
     private var hearing: AnyCancellable?
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
+    init(core: CGFloat) {
+        self.core = core
+        super.init(frame: .zero)
         wantsLayer = true
-        for _ in 0..<CallLook.bars {
+        for index in 0..<CallLook.bars {
             let bar = CALayer()
+            bar.backgroundColor = CallLook.voice(theirs: index < CallLook.bars / 2).cgColor
+            let middle = CALayer()
+            middle.backgroundColor = CallLook.yellow.cgColor
             layer?.addSublayer(bar)
+            layer?.addSublayer(middle)
             parts.append(bar)
+            cores.append(middle)
         }
     }
 
@@ -259,10 +286,12 @@ final class CallBarsView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for (index, level) in bars.enumerated() where index < parts.count {
-            let bar = CallLook.barFrame(index, level: level, height: bounds.height)
+            let bar = CallLook.barFrame(index, level: level, height: bounds.height, core: core)
+            let middle = CallLook.coreFrame(of: bar, core: core)
             parts[index].frame = bar
             parts[index].cornerRadius = bar.width / 2
-            parts[index].backgroundColor = CallLook.voice(theirs: index < bars.count / 2, level: level).cgColor
+            cores[index].frame = middle
+            cores[index].cornerRadius = middle.width / 2
         }
         CATransaction.commit()
     }
@@ -288,20 +317,23 @@ struct CallMark: View {
                 Image(systemName: "phone.fill")
                     .font(.system(size: h * CallLook.phone, weight: .medium))
                     .foregroundStyle(CallLook.green)
+                    .rotationEffect(.degrees(CallLook.phoneTilt))
                 Spacer(minLength: 0)
             case .connected(let since):
                 Image(systemName: "phone.fill")
                     .font(.system(size: h * CallLook.phone, weight: .medium))
                     .foregroundStyle(CallLook.green)
+                    .rotationEffect(.degrees(CallLook.phoneTilt))
                     .padding(.trailing, CallLook.timeGap)
                 CallTime(since: since)
                     .font(.system(size: LiveActivityView.textSize(for: h), weight: .semibold))
                     .foregroundStyle(CallLook.green)
                 Spacer(minLength: 0)
-                CallWaveform(height: h * CallLook.waveHeight)
+                CallWaveform(height: h * CallLook.waveHeight, core: h * CallLook.core)
             }
         }
-        .padding(.horizontal, CallLayout.edge(h))
+        .padding(.leading, call.rings ? CallLayout.edge(h) : h * CallLook.phoneEdge)
+        .padding(.trailing, call.isConnected ? h * CallLook.waveEdge : CallLayout.edge(h))
         .frame(maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
@@ -395,7 +427,7 @@ struct ExpandedCallView: View {
         let line = NSLayoutManager().defaultLineHeight(for: NSFont.systemFont(ofSize: NotchType.size))
         let words = CallLayout.roundEdge(h) + side + CallLayout.wordsGap(h)
         let timeFrom = CGSize(
-            width: CallLayout.edge(h) + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread, height: rise + line / 2)
+            width: h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread, height: rise + line / 2)
         HStack(spacing: CallLayout.wordsGap(h)) {
             Button {
                 CallWatch.shared.goToApp()

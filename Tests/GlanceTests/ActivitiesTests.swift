@@ -772,24 +772,42 @@ struct SystemBannersTests {
 
     @Test("The waveform has the other person on the left and you on the right, each from how loud it's just been")
     func callVoices() {
-        let now = [CGFloat(1)] + Array(repeating: 0, count: 7)
+        let half = CallLook.bars / 2
+        let now = [CGFloat(1)] + Array(repeating: 0, count: half - 1)
         let bars = CallVoices.shaped(theirs: now, yours: now)
-        #expect(bars.count == CallLook.bars)
+        // Fourteen, as the iPhone's, seven each.
+        #expect(bars.count == 14)
         // Each newest at its own end.
-        #expect(bars[0] == 1 && bars[15] == 1 && bars[1..<15].allSatisfy { $0 == 0 })
-        #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: 8), yours: Array(repeating: 3, count: 8)).allSatisfy { $0 == 1 })
+        #expect(bars[0] == 1 && bars[13] == 1 && bars[1..<13].allSatisfy { $0 == 0 })
+        #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: half), yours: Array(repeating: 3, count: half)).allSatisfy { $0 == 1 })
     }
 
-    @Test("Quiet, every bar's the iPhone's yellow dot; louder, the other person's goes green and yours fades")
+    @Test("Closed, the phone stands as the iPhone's and both ends are as far in as its")
+    @MainActor
+    func callClosedEnds() {
+        let call = CallShown(name: "Caller", over: "Phone", phase: .connected(since: .now - 30))
+        let wing = CallLayout.wing(for: call, restingHeight: 32)
+        #expect(CallLook.phoneTilt == 15)
+        // The waveform's side: its bars, the iPhone's distance from the end, and the camera's gap.
+        #expect(wing >= CallLook.waveWidth + 32 * CallLook.waveEdge + LiveActivityView.cameraGap)
+        #expect(abs(32 * (CallLook.phoneEdge + 0.078) - 8.44) < 0.05)
+        #expect(abs(32 * CallLook.waveEdge - 9.31) < 0.05)
+    }
+
+    @Test("Every bar is yellow in its middle and all yellow when quiet; past it, the other person's green and yours orange")
     @MainActor
     func callBarColors() throws {
-        let quietThem = try #require(CallLook.voice(theirs: true, level: 0).usingColorSpace(.sRGB))
-        let quietYou = try #require(CallLook.voice(theirs: false, level: 0).usingColorSpace(.sRGB))
-        #expect(abs(quietThem.redComponent - quietYou.redComponent) < 0.01 && quietYou.alphaComponent == 1)
-        let them = try #require(CallLook.voice(theirs: true, level: 1).usingColorSpace(.sRGB))
-        #expect(them.greenComponent > them.redComponent)
-        #expect(CallLook.voice(theirs: false, level: 1).alphaComponent < 0.6)
-        #expect(CallLook.barFrame(0, level: 0, height: 14).height == CallLook.barWidth)
+        let them = try #require(CallLook.voice(theirs: true).usingColorSpace(.displayP3))
+        let you = try #require(CallLook.voice(theirs: false).usingColorSpace(.displayP3))
+        #expect(them.greenComponent > them.redComponent && you.redComponent > you.greenComponent)
+        #expect(them.alphaComponent == 1 && you.alphaComponent == 1)
+        // Quiet: the yellow middle alone.
+        let quiet = CallLook.barFrame(0, level: 0, height: 14, core: 3.7)
+        #expect(quiet.height == 3.7 && CallLook.coreFrame(of: quiet, core: 3.7) == quiet)
+        // Loud: the middle stays as tall, in the middle.
+        let loud = CallLook.barFrame(0, level: 1, height: 14, core: 3.7)
+        #expect(loud.height == 14 && CallLook.coreFrame(of: loud, core: 3.7).height == 3.7)
+        #expect(CallLook.coreFrame(of: loud, core: 3.7).midY == loud.midY)
     }
 
     @Test("macOS's popup's waveform is read for each voice: the other person on its left, you on its right")
