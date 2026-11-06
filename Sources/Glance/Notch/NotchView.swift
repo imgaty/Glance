@@ -119,6 +119,8 @@ final class NotchModel: ObservableObject {
             if state == .open, oldValue != .open { grownSwell = swell(in: oldValue) }
         }
     }
+    /// Opened by a click on the detached bubble, so it opens out of the bubble, and closes back into it.
+    @Published var openedFromBubble = false
     /// How much larger the closed notch was than at rest as it opened, at each end and at the bottom:
     /// the pointer swells it, and what shows beside the camera rides with its ends.
     private(set) var grownSwell: CGFloat = 0
@@ -808,6 +810,9 @@ struct NotchView: View {
             airdrop: activity == .airdrop ? model.airdrop : nil,
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
+            grows: model.openedFromBubble && model.state == .open,
+            growLayer: model.openedFromBubble && (model.state == .open || activity != nil),
+            openSize: CGSize(width: model.metrics(for: .open).bodyWidth, height: model.metrics(for: .open).height),
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
             hidden: model.state == .open,

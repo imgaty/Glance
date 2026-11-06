@@ -1161,6 +1161,7 @@ final class NotchController {
                 model.use(PlayerLayout.current)
             }
             model.alertExtended = false
+            model.openedFromBubble = model.bubbleHovered && model.detached != nil
             model.bubbleHovered = false
             model.bubblePressed = false
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
