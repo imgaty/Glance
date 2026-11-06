@@ -206,11 +206,11 @@ final class NotchModel: ObservableObject {
     /// The tray on the player's grid: the padding either side of its first and last icons, as of the
     /// cover and the buttons, and under its row. As wide as its items, from three items' width,
     /// fewer sitting in the middle of it, up to `trayMaxWidth`, past which its row scrolls; and
-    /// always wider than the camera with the padding either side. Empty, or with something dragged
-    /// in, as wide as the player, for its words and its two places to drop.
+    /// always wider than the camera with the padding either side. Empty, as wide as the player, for
+    /// its words; with something dragged in, as wide as its two places to drop need.
     var trayWidth: CGFloat {
-        let least =
-            trayItems == 0 || dropping ? openSize.width : max(Shelf.narrowest, closedSize.width + PlayerLayout.padding * 2)
+        if dropping { return max(Shelf.dropWidth, closedSize.width + PlayerLayout.padding * 2) }
+        let least = trayItems == 0 ? openSize.width : max(Shelf.narrowest, closedSize.width + PlayerLayout.padding * 2)
         return min(max(Shelf.width(count: trayItems), least), max(trayMaxWidth, least))
     }
 

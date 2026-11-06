@@ -143,4 +143,21 @@ struct TrayClickTests {
         #expect(model.metrics.height == 32 + PlayerLayout.cameraGap + Shelf.tile.height + PlayerLayout.padding)
         #expect(Shelf.inset + (Shelf.tile.width - Shelf.icon) / 2 == PlayerLayout.padding)
     }
+
+    @Test("With something dragged in, the tray is as wide as its two places to drop need, however many items it has")
+    func dropWidth() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.dropping = true
+        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        let words = ceil(("Keep in Tray" as NSString).size(withAttributes: [.font: font]).width)
+        // Each place: the longer name and the padding either side; the gap; the padding around them.
+        #expect(Shelf.dropWidth >= (words + 28) * 2 + Shelf.dropGap + 28)
+        #expect(model.trayWidth == max(Shelf.dropWidth, 185 + 28))
+        #expect(model.trayWidth < model.openSize.width)
+        model.trayItems = 30
+        #expect(model.trayWidth == max(Shelf.dropWidth, 185 + 28))
+        // Let go, as wide as its items again.
+        model.dropping = false
+        #expect(model.trayWidth == Shelf.peekWidth)
+    }
 }

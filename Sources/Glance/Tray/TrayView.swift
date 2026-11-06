@@ -37,6 +37,17 @@ enum Shelf {
         return box.height > font.boundingRectForFont.height * 1.5
     }
 
+    /// Something dragged in: its two places to drop it side by side, each as wide as the longer of
+    /// their names with the padding either side, and the padding around them. No wider: the tray
+    /// is as wide as what it shows needs.
+    static var dropWidth: CGFloat {
+        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        let widest = [String(localized: "Keep in Tray"), "AirDrop"].map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
+        return (widest + PlayerLayout.padding * 2) * 2 + dropGap + PlayerLayout.padding * 2
+    }
+    /// Between the two places to drop.
+    static let dropGap: CGFloat = 8
+
     /// The row of items, from the first to the last, with its insets at both ends.
     static func width(count: Int) -> CGFloat {
         count == 0 ? 0 : CGFloat(count) * tile.width + CGFloat(count - 1) * spacing + inset * 2
@@ -200,7 +211,7 @@ struct TrayView: View {
     /// Something dragged in from another app: kept in the tray, or sent with AirDrop, whichever it's
     /// let go over.
     private var dropZones: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Shelf.dropGap) {
             DropZone(title: String(localized: "Keep in Tray"), lit: !airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
                 Image(systemName: "tray.and.arrow.down.fill").font(.system(size: Self.zoneGlyph))
             }
