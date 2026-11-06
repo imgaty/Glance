@@ -33,6 +33,8 @@ struct CallShown: Equatable {
     var canEnd = false
     /// The line over the name while it rings, as its popup words it.
     var line: String?
+    /// It can be declined from the notch; Discord's own window has no button for that.
+    var canDecline = true
 
     /// As a contact without a picture shows, in a gray circle: the first letters of their first and
     /// last names, or none for a number, which shows a person's outline.
@@ -313,9 +315,11 @@ struct IncomingCallView: View {
             .truncationMode(.tail)
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: CallLayout.roundGap(h)) {
-                button("phone.down.fill", CallLook.decline, side, CallLook.endGlyph, hovered == .decline)
-                    .reportsFrame(.decline)
-                    .spokenButton(String(localized: "Decline")) { CallWatch.shared.decline() }
+                if call.canDecline {
+                    button("phone.down.fill", CallLook.decline, side, CallLook.endGlyph, hovered == .decline)
+                        .reportsFrame(.decline)
+                        .spokenButton(String(localized: "Decline")) { CallWatch.shared.decline() }
+                }
                 button("phone.fill", CallLook.accept, side, CallLook.acceptGlyph, hovered == .accept)
                     .reportsFrame(.accept)
                     .spokenButton(String(localized: "Accept")) { CallWatch.shared.accept() }
@@ -341,7 +345,7 @@ struct IncomingCallView: View {
     @MainActor
     static func wing(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
         let first = ceil(((call.line ?? call.over) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size)]).width)
-        return CallLayout.openWing(firstLine: first, buttons: 2, restingHeight: h)
+        return CallLayout.openWing(firstLine: first, buttons: call.canDecline ? 2 : 1, restingHeight: h)
     }
 }
 
@@ -416,10 +420,12 @@ struct ExpandedCallView: View {
                 }
             }
         } else {
-            IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Decline"), fill: CallLook.decline, side: side) {
-                CallWatch.shared.decline()
-            } glyph: {
-                glyph("phone.down.fill", CallLook.endGlyph, side)
+            if call.canDecline {
+                IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Decline"), fill: CallLook.decline, side: side) {
+                    CallWatch.shared.decline()
+                } glyph: {
+                    glyph("phone.down.fill", CallLook.endGlyph, side)
+                }
             }
             IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Accept"), fill: CallLook.accept, side: side) {
                 CallWatch.shared.accept()
@@ -620,14 +626,14 @@ final class CallWatch: ObservableObject {
             self?.refresh()
         }
         // Reading whether the microphone's in use costs next to nothing; it's read rarely.
-        let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 CallBanners.shared.follow()
                 self?.microphone = CallAudio.appOnMicrophone()
                 self?.refresh()
             }
         }
-        timer.tolerance = 1.5
+        timer.tolerance = 0.2
         RunLoop.main.add(timer, forMode: .common)
         watch = timer
         CallBanners.shared.follow()
@@ -655,6 +661,9 @@ final class CallWatch: ObservableObject {
             } else {
                 show(CallShown(name: name, over: app.name, app: app.bundle, phase: .calling, canEnd: popup.red != nil))
             }
+        } else if let ringing = DiscordCall.ringing(), microphone == nil {
+            // Discord tells of a call coming in only in its own window.
+            show(CallShown(name: ringing.name, over: "Discord", app: DiscordCall.bundle, phase: .ringing, canDecline: false))
         } else if let microphone {
             let apple = microphone.bundle == CallAudio.appleService
             let app = apple ? Self.appleApp(detail: nil, phoneRunning: Self.phoneRunning) : (name: microphone.name, bundle: microphone.bundle)
@@ -666,10 +675,11 @@ final class CallWatch: ObservableObject {
             }
             let started = since ?? .now
             since = started
+            if let name = discord?.name { who = name }
             show(
                 CallShown(
                     name: discord?.name ?? who ?? app.name, over: app.name, app: app.bundle, phase: .connected(since: started),
-                    canEnd: discord != nil && DiscordCall.shared.canEnd))
+                    canEnd: DiscordCall.shared.canEnd))
         } else {
             who = nil
             since = nil
@@ -728,6 +738,7 @@ final class CallWatch: ObservableObject {
     func accept() {
         Activities.shared.dismiss(.incomingCall)
         guard ActivityBench.scene == nil else { return ActivityBench.shared.answered() }
+        if popup == nil, call?.app == DiscordCall.bundle { return DiscordCall.shared.accept() }
         CallBanners.shared.press(.green)
     }
 
@@ -770,11 +781,16 @@ final class DiscordCall {
     struct Reading: Equatable {
         var name: String
         var elapsed: Int?
+        /// Coming in, not yet joined.
+        var ringing = false
     }
 
     private var askedPID: pid_t = 0
     private var link: AXUIElement?
     private var leave: AXUIElement?
+    private var join: AXUIElement?
+
+    var canAnswer: Bool { join != nil }
 
     var canEnd: Bool { leave != nil }
 
@@ -791,14 +807,73 @@ final class DiscordCall {
             askedPID = app.processIdentifier
             link = nil
         }
-        if link.map({ SystemNotices.value($0, kAXRoleAttribute) == nil }) ?? true {
-            link = Self.findLink(in: element)
-            leave = link.flatMap(Self.leaveButton(beside:))
-        }
-        guard let link else { return nil }
-        let parts = Self.parts(of: link)
-        return Self.reading(name: parts.name, time: parts.time)
+        // What was found last, if it still says something; Discord redraws it, renamed say, and
+        // then it's looked for afresh.
+        if let link, let found = Self.reading(link) { return found }
+        link = Self.findLink(in: element)
+        leave = link.flatMap(Self.leaveButton(beside:))
+        if let link { return Self.reading(link) }
+        // Not joined yet: a call coming in shows in the list of messages, by who it's from.
+        join = Self.findJoin(in: element)
+        return Self.ringingName(in: element).map { Reading(name: $0, ringing: true) }
     }
+
+    private static func reading(_ link: AXUIElement) -> Reading? {
+        let parts = parts(of: link)
+        return reading(name: parts.name, time: parts.time)
+    }
+
+    /// Answers it, as Discord's own Join Voice Call does.
+    func accept() {
+        guard let join else { return }
+        AXUIElementPerformAction(join, kAXPressAction as CFString)
+    }
+
+    /// Who a call coming in is from: the message list says "Name (direct message), Incoming Call".
+    nonisolated static func ringingName(from words: String) -> String? {
+        guard words.contains("Incoming Call"), let end = words.range(of: " (direct message)") else { return nil }
+        let name = words[..<end.lowerBound].replacingOccurrences(of: "unread, ", with: "")
+        return name.isEmpty ? nil : name
+    }
+
+    private static func ringingName(in app: AXUIElement) -> String? {
+        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            let links = SystemNotices.findAll(in: window) { SystemNotices.value($0, kAXRoleAttribute) as? String == "AXLink" }
+            for link in links {
+                if let name = ringingName(from: SystemNotices.value(link, kAXDescriptionAttribute) as? String ?? "") { return name }
+            }
+        }
+        return nil
+    }
+
+    private static func findJoin(in app: AXUIElement) -> AXUIElement? {
+        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            let buttons = SystemNotices.findAll(in: window) {
+                SystemNotices.value($0, kAXRoleAttribute) as? String == kAXButtonRole
+                    && ["Join Voice Call", "Join Call"].contains(SystemNotices.value($0, kAXDescriptionAttribute) as? String ?? "")
+            }
+            if let first = buttons.first { return first }
+        }
+        return nil
+    }
+
+    /// A call coming in: Discord's window takes the title "Incoming Call" every other second while
+    /// it rings, which shows without asking Discord for anything; only then is its window read, for
+    /// who it's from.
+    static func ringing() -> Reading? {
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first else { return nil }
+        let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        let titled = windows.contains {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == app.processIdentifier
+                && ($0[kCGWindowName as String] as? String)?.hasPrefix("Incoming Call") == true
+        }
+        if titled { ringingSeen = .now }
+        guard let seen = ringingSeen, Date.now.timeIntervalSince(seen) < 3 else { return nil }
+        guard let reading = shared.read(), reading.ringing else { return nil }
+        return reading
+    }
+
+    private static var ringingSeen: Date?
 
     /// Leaves the call, as Discord's own button does.
     func end() {
@@ -814,6 +889,7 @@ final class DiscordCall {
         askedPID = 0
         link = nil
         leave = nil
+        join = nil
     }
 
     /// The name, and the time when there's one, which comes as minutes and seconds.

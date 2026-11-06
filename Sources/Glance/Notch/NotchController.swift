@@ -1356,6 +1356,8 @@ final class NotchController {
         case .timer, .stopwatch: [.activityFirst, .activitySecond]
         // Connected, the sound output, and ending it only where that can be done.
         case .call where model.call?.rings == false && model.call?.canEnd != true: [.activityFirst]
+        // Coming in where it can't be declined: Accept alone.
+        case .call where model.call?.rings == true && model.call?.canDecline == false: [.activitySecond]
         case .call: [.activityFirst, .activitySecond]
         case .airdrop, .airplay: [.activityFirst]
         case .music, nil: nil

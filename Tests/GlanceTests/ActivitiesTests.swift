@@ -839,6 +839,9 @@ struct SystemBannersTests {
         #expect(DiscordCall.reading(name: "Gilberto Fuseta", time: "05:42") == .init(name: "Gilberto Fuseta", elapsed: 342))
         #expect(DiscordCall.reading(name: "  ", time: "05:42") == nil)
         #expect(DiscordCall.reading(name: "Gilberto", time: nil) == .init(name: "Gilberto", elapsed: nil))
+        // Discord's call coming in, by who it's from.
+        #expect(DiscordCall.ringingName(from: "unread, Gilberto Fuseta (direct message), Incoming Call, Online") == "Gilberto Fuseta")
+        #expect(DiscordCall.ringingName(from: "Gilberto Fuseta (direct message), Ongoing Call, Online") == nil)
         #expect(CallVoices.eased(0, towards: 1) > CallVoices.eased(1, towards: 0) - 0.5)
     }
 
