@@ -268,7 +268,7 @@ opens it too, ready for the drop, without reaching the top edge.
 | Swipe left or right with two fingers, or scroll a mouse's wheel | Scrolls the tray |
 | Right-click an item | Open, Open With, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), Keep, and Remove from Tray |
 | Hold Option in an item's menu | Turns Paste into Paste and Match Style, for text without its style |
-| Choose **Services > Glance Tray** in Finder or any app | Keeps what's selected there in the tray, as a drop does |
+| Choose **Services > Send to Glance Tray** in Finder or any app | Keeps what's selected there in the tray, as a drop does |
 | Choose **Share > Glance Tray** in Safari, Photos, Finder or any app | Keeps what's shared in the tray, as a drop does; a picture on a web page too |
 
 Something dragged onto the notch from another app gets two places to go:
@@ -676,7 +676,7 @@ their signature matches the one built into Glance.
 9. **Double-clicking an item copies it but doesn't paste it.** Turn on Glance
    under **System Settings > Privacy & Security > Accessibility**.
 
-10. **Glance Tray isn't in the Services menu.** Turn it on under
+10. **Send to Glance Tray isn't in the Services menu.** Turn it on under
     **System Settings > Keyboard > Keyboard Shortcuts > Services**. The
     Services menu offers it for selected text and files; for a picture on a web
     page, use the Share menu.

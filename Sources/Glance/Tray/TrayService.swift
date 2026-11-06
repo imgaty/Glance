@@ -7,7 +7,7 @@
 
 import AppKit
 
-/// Glance Tray, in every app's Services menu and in Finder's (see NSServices in Info.plist),
+/// Send to Glance Tray, in every app's Services menu and in Finder's (see NSServices in Info.plist),
 /// and in the Share menu, through the GlanceShare extension: what's chosen there is kept in the
 /// tray, as if it were dropped on the notch.
 @MainActor

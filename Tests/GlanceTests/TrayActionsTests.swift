@@ -277,6 +277,7 @@ struct TrayActionsTests {
         #expect(entry["NSPortName"] as? String == plist["CFBundleName"] as? String)
         // Without a context, macOS lists a new service turned off.
         #expect(entry["NSRequiredContext"] != nil)
-        #expect((entry["NSMenuItem"] as? [String: String])?["default"] == "Glance Tray")
+        // Named for what it does, as a menu item is.
+        #expect((entry["NSMenuItem"] as? [String: String])?["default"] == "Send to Glance Tray")
     }
 }
