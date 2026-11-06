@@ -139,7 +139,7 @@ final class NowPlaying: ObservableObject {
         Task {
             defer { pickingDJ = false }
             if await SpotifyDJ.press() { return }
-            if SpotifyDJ.lacksSwitch { _ = await SpotifyDJ.restartAndPress() }
+            if SpotifyDJ.lacksSwitch { _ = await SpotifyDJ.restartAndPress() } else { _ = await SpotifyDJ.playAndPress() }
         }
     }
 

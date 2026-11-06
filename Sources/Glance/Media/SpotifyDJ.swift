@@ -69,6 +69,18 @@ enum SpotifyDJ {
         return false
     }
 
+    /// Spotify shows its button only while the DJ plays: paused, it's played, and the button pressed
+    /// once it shows. Whether it was.
+    static func playAndPress() async -> Bool {
+        guard await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "return player state as text")) != "playing" else { return false }
+        guard await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "play")) != nil else { return false }
+        for _ in 0..<12 {
+            try? await Task.sleep(for: .milliseconds(250))
+            if await press() { return true }
+        }
+        return false
+    }
+
     private static var running: NSRunningApplication? {
         NSRunningApplication.runningApplications(withBundleIdentifier: PlayerScripting.spotify).first
     }
