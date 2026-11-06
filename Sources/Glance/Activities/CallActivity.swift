@@ -435,7 +435,7 @@ struct ExpandedCallView: View {
             IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
                 // From the keyboard the pointer can be anywhere: the menu opens under the button.
                 let fromKeys = NSApp.currentEvent?.type == .keyDown
-                AudioOutput.shared.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil, withVolume: false)
+                AudioOutput.shared.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil, withVolume: false, outputsOnly: true)
             } glyph: {
                 glyph("speaker.wave.3.fill", CallLook.speakerGlyph, side)
             }

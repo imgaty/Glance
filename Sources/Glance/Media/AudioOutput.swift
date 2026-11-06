@@ -31,27 +31,30 @@ final class AudioOutput: NSObject, ObservableObject {
     /// battery, then Sound Settings. At the pointer, or from the keyboard, under the button.
     /// `withVolume` false leaves the playing app's volume out, where it isn't what's heard, as on a
     /// call.
-    func showMenu(at point: CGPoint? = nil, withVolume: Bool = true) {
-        menu(withVolume: withVolume).popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
+    /// `outputsOnly`, as a call's own: the outputs alone, with no words or settings around them.
+    func showMenu(at point: CGPoint? = nil, withVolume: Bool = true, outputsOnly: Bool = false) {
+        menu(withVolume: withVolume, outputsOnly: outputsOnly).popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
     }
 
-    func menu(withVolume: Bool = true) -> NSMenu {
+    func menu(withVolume: Bool = true, outputsOnly: Bool = false) -> NSMenu {
         let menu = NSMenu()
         // No check marks: the output playing is filled in.
         menu.showsStateColumn = false
         let volume = AppVolume.shared
-        var views: [NSView] = [SoundMenuHeading(title: String(localized: "Sound"), main: true)]
+        var views: [NSView] = outputsOnly ? [] : [SoundMenuHeading(title: String(localized: "Sound"), main: true)]
         if withVolume, volume.app != nil { views.append(VolumeMenuSlider(volume: volume)) }
         for view in views {
             let item = NSMenuItem()
             item.view = view
             menu.addItem(item)
         }
-        views.append(Self.addDivider(to: menu, height: 7))
-        let heading = NSMenuItem.sectionHeader(title: String(localized: "Output"))
-        heading.view = SoundMenuHeading(title: String(localized: "Output"), main: false)
-        views.append(heading.view!)
-        menu.addItem(heading)
+        if !outputsOnly {
+            views.append(Self.addDivider(to: menu, height: 7))
+            let heading = NSMenuItem.sectionHeader(title: String(localized: "Output"))
+            heading.view = SoundMenuHeading(title: String(localized: "Output"), main: false)
+            views.append(heading.view!)
+            menu.addItem(heading)
+        }
         let current = Self.defaultOutput
         var rows: [OutputRow] = []
         // The Mac's own first, as the Mac's Sound menu lists them.
@@ -66,12 +69,14 @@ final class AudioOutput: NSObject, ObservableObject {
             menu.addItem(item)
             rows.append(row)
         }
-        views.append(Self.addDivider(to: menu, height: 11))
-        let settings = NSMenuItem(title: String(localized: "Sound Settings…"), action: #selector(openSoundSettings), keyEquivalent: "")
-        settings.target = self
-        settings.view = SoundMenuRow(title: settings.title)
-        views.append(settings.view!)
-        menu.addItem(settings)
+        if !outputsOnly {
+            views.append(Self.addDivider(to: menu, height: 11))
+            let settings = NSMenuItem(title: String(localized: "Sound Settings…"), action: #selector(openSoundSettings), keyEquivalent: "")
+            settings.target = self
+            settings.view = SoundMenuRow(title: settings.title)
+            views.append(settings.view!)
+            menu.addItem(settings)
+        }
         // As wide as the longest name needs, and every row as wide, so the slider is centered.
         let width = max(Self.menuWidth, rows.map(\.fittingWidth).max() ?? 0)
         for view in views + rows { view.setFrameSize(NSSize(width: width, height: view.frame.height)) }
@@ -166,6 +171,8 @@ final class AudioOutput: NSObject, ObservableObject {
         AudioProperty.readArray(AudioProperty.system, kAudioHardwarePropertyDevices)
             .filter { AudioProperty.size(of: $0, kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeOutput) > 0 }
             .filter { !(AudioProperty.uid(of: $0)?.hasPrefix(AudioProperty.ownDevicePrefix) ?? false) }
+            // macOS's own hidden aggregate, made while an app records and plays at once, isn't a place to play.
+            .filter { !Self.isSystemAggregate(uid: AudioProperty.uid(of: $0)) }
             .map { id in
                 var name: Unmanaged<CFString>?
                 var transport: UInt32 = 0
@@ -174,6 +181,10 @@ final class AudioOutput: NSObject, ObservableObject {
                 let title = name?.takeRetainedValue() as String? ?? String(localized: "Output")
                 return Device(id: id, name: title, symbol: symbol(name: title, transport: transport), transport: transport)
             }
+    }
+
+    nonisolated static func isSystemAggregate(uid: String?) -> Bool {
+        uid?.hasPrefix("CADefaultDeviceAggregate") == true
     }
 
     /// What it is, until macOS says which model (see `Device.model`).

@@ -814,6 +814,12 @@ struct SystemBannersTests {
         #expect(CallAudio.appBundle(of: "us.zoom.xos") == "us.zoom.xos")
     }
 
+    @Test("macOS's hidden aggregate, made while an app records and plays at once, isn't an output")
+    func hiddenAggregateIsNoOutput() {
+        #expect(AudioOutput.isSystemAggregate(uid: "CADefaultDeviceAggregate-4348-0"))
+        #expect(!AudioOutput.isSystemAggregate(uid: "BuiltInSpeakerDevice"))
+    }
+
     @Test("Opened, a call is no wider for a long name, which runs on under the camera")
     @MainActor
     func openedCallName() {
