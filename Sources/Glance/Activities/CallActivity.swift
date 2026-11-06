@@ -631,6 +631,7 @@ final class CallWatch: ObservableObject {
                 CallBanners.shared.follow()
                 self?.microphone = CallAudio.appOnMicrophone()
                 self?.refresh()
+                self?.refitAsTimeGrows()
             }
         }
         timer.tolerance = 0.2
@@ -740,6 +741,17 @@ final class CallWatch: ObservableObject {
         guard ActivityBench.scene == nil else { return ActivityBench.shared.answered() }
         if popup == nil, call?.app == DiscordCall.bundle { return DiscordCall.shared.accept() }
         CallBanners.shared.press(.green)
+    }
+
+    /// The notch refits as soon as the time gains a digit, at 10:00 or 1:00:00, not a minute after.
+    private var timeLength = 0
+    private func refitAsTimeGrows() {
+        guard case .connected(let since) = call?.phase else { return timeLength = 0 }
+        let length = ClockText.of(max(Int(Date.now.timeIntervalSince(since)), 0)).count
+        if length != timeLength {
+            timeLength = length
+            minutes += 1
+        }
     }
 
     func decline() {
