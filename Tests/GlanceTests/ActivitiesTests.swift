@@ -1208,6 +1208,12 @@ struct SystemBannersTests {
         #expect(!NotchAlert.Kind.charging.hasButton && !NotchAlert.Kind.device.hasButton)
     }
 
+    @Test("With Increase Contrast, Accept's phone reads on a darker green")
+    func acceptWithContrast() {
+        #expect(CallLook.accept(.increased) == CallLook.acceptContrast)
+        #expect(CallLook.accept(.standard) == CallLook.accept)
+    }
+
     @Test("A call's own time always wins: a reading missed keeps it, and a relaunch takes it, never zero")
     func callClock() throws {
         let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)

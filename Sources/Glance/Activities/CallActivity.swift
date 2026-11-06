@@ -62,6 +62,10 @@ enum CallLook {
     static let green = Color(.displayP3, red: 0x7F / 255, green: 0xFB / 255, blue: 0x7F / 255)
     static let handset = Color(red: 0x8F / 255, green: 0x8F / 255, blue: 0x91 / 255)
     static let accept = Color(red: 0x67 / 255, green: 0xCD / 255, blue: 0x67 / 255)
+    /// With Increase Contrast, a green the white phone reads on at 4.4 to 1, rather than 2.0: Apple's
+    /// own green for it.
+    static let acceptContrast = Color(red: 0x24 / 255, green: 0x8A / 255, blue: 0x3D / 255)
+    static func accept(_ contrast: ColorSchemeContrast) -> Color { contrast == .increased ? acceptContrast : accept }
     static let decline = Color(red: 0xE9 / 255, green: 0x56 / 255, blue: 0x45 / 255)
     static let end = Color(red: 0xFE / 255, green: 0x44 / 255, blue: 0x44 / 255)
     static let speaker = Color(red: 0x2C / 255, green: 0x2C / 255, blue: 0x2E / 255)
@@ -424,6 +428,7 @@ struct IncomingCallView: View {
     let restingHeight: CGFloat
     /// Which button the pointer is on.
     let hovered: AlertButton?
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         let h = restingHeight
@@ -447,7 +452,7 @@ struct IncomingCallView: View {
                         .reportsFrame(.decline)
                         .spokenButton(String(localized: "Decline")) { CallWatch.shared.decline() }
                 }
-                button("phone.fill", CallLook.accept, side, CallLook.acceptGlyph, hovered == .accept)
+                button("phone.fill", CallLook.accept(contrast), side, CallLook.acceptGlyph, hovered == .accept)
                     .reportsFrame(.accept)
                     .spokenButton(String(localized: "Accept")) { CallWatch.shared.accept() }
             }
@@ -494,6 +499,7 @@ struct ExpandedCallView: View {
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
     @Environment(\.playerKeys) private var keys
+    @Environment(\.colorSchemeContrast) private var contrast
     @ObservedObject private var microphone = CallMicrophone.shared
     @State private var arrived = false
 
@@ -722,7 +728,7 @@ struct ExpandedCallView: View {
                     glyph("phone.down.fill", CallLook.endGlyph, side)
                 }
             }
-            IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Accept"), fill: CallLook.accept, side: side) {
+            IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Accept"), fill: CallLook.accept(contrast), side: side) {
                 CallWatch.shared.accept()
             } glyph: {
                 glyph("phone.fill", CallLook.acceptGlyph, side)
