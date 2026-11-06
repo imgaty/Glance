@@ -808,6 +808,12 @@ struct SystemBannersTests {
         #expect(pixels.withUnsafeBufferPointer { CallPopup.lifted(pixels: $0, width: 0, height: 0, rowBytes: 0) }.isEmpty)
     }
 
+    @Test("Clicked, a call goes to the app it's in, not to the helper its sound comes from")
+    func callGoesToItsApp() {
+        #expect(CallAudio.appBundle(of: "com.hnc.Discord.helper.Renderer") == "com.hnc.Discord")
+        #expect(CallAudio.appBundle(of: "us.zoom.xos") == "us.zoom.xos")
+    }
+
     @Test("Opened, a call is no wider for a long name, which runs on under the camera")
     @MainActor
     func openedCallName() {

@@ -414,7 +414,8 @@ struct ExpandedCallView: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+            // Clicked, it goes to the app, and doesn't sink in as a button does.
+            .buttonStyle(StillPress())
             .notchControl()
             .help(String(localized: "Show in \(call.over)"))
             .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
@@ -798,7 +799,7 @@ final class CallWatch: ObservableObject {
     /// To the call, in its app.
     func goToApp() {
         guard ActivityBench.scene == nil else { return }
-        let bundle = call?.app ?? CallAudio.faceTime
+        let bundle = CallAudio.appBundle(of: call?.app ?? CallAudio.faceTime)
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
@@ -999,6 +1000,13 @@ enum CallAudio {
         ("org.whispersystems.signal-desktop", "Signal"), ("com.skype", "Skype"), ("Cisco-Systems.Spark", "Webex"),
         ("com.webex", "Webex"), ("com.ringcentral", "RingCentral"), ("com.loom", "Loom"),
     ]
+
+    /// The app itself, for one of its helpers, which can't be opened: Discord's sound comes from
+    /// "com.hnc.Discord.helper.Renderer", whose app is "com.hnc.Discord".
+    nonisolated static func appBundle(of bundle: String) -> String {
+        callApps.first { bundle.hasPrefix($0.prefix) && $0.prefix.contains(".") && !$0.prefix.hasSuffix(".") }
+            .map { bundle.hasPrefix($0.prefix + ".helper") || bundle.hasPrefix($0.prefix + ".Helper") ? $0.prefix : bundle } ?? bundle
+    }
 
     /// The calling app a bundle ID belongs to.
     static func callApp(of bundle: String) -> App? {
@@ -1313,4 +1321,9 @@ final class CallBanners {
         try? await Task.sleep(for: .milliseconds(30))
         if let back { CGWarpMouseCursorPosition(back) }
     }
+}
+
+/// A button that doesn't change as it's pressed.
+private struct StillPress: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { configuration.label }
 }
