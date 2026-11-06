@@ -105,6 +105,19 @@ struct PlayerScriptingTests {
                 == PlaybackOptions(shuffle: true, repeatMode: .off))
     }
 
+    @Test("Where Spotify's own bar says, an album that reads as not offering shuffle isn't taken for the DJ")
+    func spotifyDJFromItsBar() {
+        // Spotify 1.3.8 on an album: its scripting says shuffle isn't offered, as for the DJ.
+        let album = "false|false|false|spotify:track:7oVEtyuv9NBmnytsCIsY5I"
+        #expect(PlayerScripting.options(from: album, app: spotify, dj: false) == PlaybackOptions(shuffle: false, repeatMode: .off))
+        #expect(PlayerScripting.options(from: album, app: spotify, dj: true) == PlaybackOptions(dj: true))
+        // The DJ's own words, and a podcast, as before.
+        #expect(PlayerScripting.options(from: "false|false|false|spotify:media:0000000000000000000000", app: spotify, dj: true) == PlaybackOptions(dj: true))
+        #expect(PlayerScripting.options(from: "false|false|false|spotify:episode:4rOoJ6Egrf8K2IrywzwOMk", app: spotify, dj: false) == PlaybackOptions())
+        // Shuffle on is never the DJ's, which has none.
+        #expect(PlayerScripting.options(from: "true|true|true|spotify:track:7oVEtyuv9NBmnytsCIsY5I", app: spotify, dj: false) == PlaybackOptions(shuffle: true, repeatMode: .all))
+    }
+
     @Test("A reply that isn't options gives none", arguments: ["", "true", "garbage", "missing value"])
     func malformedReply(reply: String) {
         #expect(PlayerScripting.options(from: reply, app: music) == PlaybackOptions())

@@ -19,16 +19,83 @@ enum SpotifyDJ {
     static let accessibilitySwitch = "--force-renderer-accessibility"
     /// The button's name in Spotify's own words, under this key, in each of its languages.
     static let nameKey = "web-player.your-dj.jumpbutton.tooltip.hover"
+    /// Its Previous button's, which finds the player bar in any language.
+    static let previousKey = "playback-control.skip-back"
     private static let bundle = "/Applications/Spotify.app/Contents/Resources/Apps/xpui.spa"
 
     /// Its name in the Mac's languages and in English, as Spotify words it.
     private static var names: Set<String>?
+    private static var previousNames: Set<String>?
     private static var button: AXUIElement?
+    /// Spotify's player bar: Previous, Play, Next, and Shuffle, or the DJ's button in its place.
+    private static var bar: AXUIElement?
+    private static var lastSearch = Date.distantPast
+    /// Whether the running Spotify, by its process, was started with the switch.
+    private static var switchChecked: (pid: pid_t, has: Bool)?
+
+    /// Whether Spotify's own bar shows its DJ button, as it does only while the DJ chooses the music;
+    /// nil where Spotify doesn't show its controls to Accessibility. Spotify's scripting can't say.
+    static func djInBar() async -> Bool? {
+        guard AXIsProcessTrusted(), let spotify = running, !lacksSwitch else { return nil }
+        if names == nil { names = await Task.detached { Self.readNames(key: nameKey) }.value }
+        if previousNames == nil { previousNames = await Task.detached { Self.readNames(key: previousKey) }.value }
+        guard let names, let previousNames, !names.isEmpty, !previousNames.isEmpty else { return nil }
+        if let bar {
+            if let shown = await Task.detached(operation: { Self.shows(names, in: bar) }).value { return shown }
+            // Spotify redrew its bar, as it does when the music changes: it's found again.
+            self.bar = nil
+        }
+        // Found again, but not on every check.
+        guard Date.now.timeIntervalSince(lastSearch) > 5 else { return nil }
+        lastSearch = .now
+        let app = AXUIElementCreateApplication(spotify.processIdentifier)
+        AXUIElementSetMessagingTimeout(app, 1)
+        let found = await Task.detached { Self.findBar(in: app, previous: previousNames) }.value
+        bar = found
+        guard let found else { return nil }
+        return await Task.detached { Self.shows(names, in: found) }.value
+    }
+
+    /// Whether the bar holds the DJ's button; nil if it can't be read. A bar Spotify has since drawn
+    /// again can keep a reader waiting, so it's given only a moment.
+    nonisolated private static func shows(_ names: Set<String>, in bar: AXUIElement) -> Bool? {
+        AXUIElementSetMessagingTimeout(bar, 0.25)
+        guard let children = SystemNotices.value(bar, kAXChildrenAttribute) as? [AXUIElement], !children.isEmpty else { return nil }
+        return children.contains { child in
+            AXUIElementSetMessagingTimeout(child, 0.25)
+            return [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains { names.contains(SystemNotices.value(child, $0) as? String ?? "") }
+        }
+    }
+
+    /// The bar: what holds Spotify's Previous button among its other controls. A page's carousels
+    /// have Previous buttons too, each beside only its Next.
+    nonisolated private static func findBar(in app: AXUIElement, previous: Set<String>) -> AXUIElement? {
+        var seen = 0
+        func walk(_ element: AXUIElement, _ depth: Int) -> AXUIElement? {
+            seen += 1
+            guard depth < 60, seen < 30_000 else { return nil }
+            if SystemNotices.value(element, kAXRoleAttribute) as? String == kAXButtonRole as String,
+                [kAXDescriptionAttribute, kAXTitleAttribute, kAXHelpAttribute].contains(where: { previous.contains(SystemNotices.value(element, $0) as? String ?? "") }),
+                let parent = SystemNotices.value(element, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID(),
+                (SystemNotices.value(parent as! AXUIElement, kAXChildrenAttribute) as? [AXUIElement])?.count ?? 0 >= 4
+            {
+                return (parent as! AXUIElement)
+            }
+            for child in SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
+                if let found = walk(child, depth + 1) { return found }
+            }
+            return nil
+        }
+        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] {
+            if let found = walk(window, 0) { return found }
+        }
+        return nil
+    }
 
     /// Presses Spotify's own button, if Spotify shows it. Whether it did.
     static func press() async -> Bool {
         guard AXIsProcessTrusted(), let spotify = running else { return false }
-        if names == nil { names = await Task.detached { Self.readNames() }.value }
+        if names == nil { names = await Task.detached { Self.readNames(key: nameKey) }.value }
         guard let names, !names.isEmpty else { return false }
         if let button, matches(button, names), AXUIElementPerformAction(button, kAXPressAction as CFString) == .success { return true }
         let app = AXUIElementCreateApplication(spotify.processIdentifier)
@@ -41,7 +108,11 @@ enum SpotifyDJ {
     /// Spotify was started without the switch, so it shows no controls to Accessibility.
     static var lacksSwitch: Bool {
         guard let spotify = running else { return false }
-        return !arguments(of: spotify.processIdentifier).contains(accessibilitySwitch)
+        let pid = spotify.processIdentifier
+        if let switchChecked, switchChecked.pid == pid { return !switchChecked.has }
+        let has = arguments(of: pid).contains(accessibilitySwitch)
+        switchChecked = (pid, has)
+        return !has
     }
 
     /// Starts Spotify again with the switch, goes on with the DJ, and presses its button once it
@@ -111,8 +182,8 @@ enum SpotifyDJ {
         return nil
     }
 
-    /// The button's name, from Spotify's own word lists for the Mac's languages and English.
-    nonisolated private static func readNames() -> Set<String> {
+    /// A control's name under a key, from Spotify's own word lists for the Mac's languages and English.
+    nonisolated private static func readNames(key: String) -> Set<String> {
         var languages = Locale.preferredLanguages.flatMap { language -> [String] in
             let base = language.split(separator: "-").first.map(String.init) ?? language
             return [language, base]
@@ -129,15 +200,15 @@ enum SpotifyDJ {
             guard (try? process.run()) != nil else { continue }
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-            if let words = name(in: data) { found.insert(words) }
+            if let words = name(in: data, key: key) { found.insert(words) }
         }
         return found
     }
 
     /// The button's name in one of Spotify's word lists.
-    nonisolated static func name(in data: Data) -> String? {
+    nonisolated static func name(in data: Data, key: String = nameKey) -> String? {
         guard let list = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-        return list[nameKey] as? String
+        return list[key] as? String
     }
 
     /// A process's arguments, as `ps` shows them.

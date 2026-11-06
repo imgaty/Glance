@@ -207,15 +207,19 @@ enum PlayerScripting {
         }
     }
 
-    static func options(from reply: String, app: String) -> PlaybackOptions {
+    /// `dj` is whether the DJ chooses the music, where that's known some other way: Spotify 1.3.8
+    /// says shuffle isn't offered on an album too, since its scripting gives `shuffling enabled`
+    /// the same code as `repeating enabled`, so that alone can't tell the DJ from an album.
+    static func options(from reply: String, app: String, dj: Bool? = nil) -> PlaybackOptions {
         let parts = reply.components(separatedBy: "|")
         guard parts.count >= 2 else { return PlaybackOptions() }
         if app == spotify {
-            // Not offered, as with the DJ or a podcast: shown faint, as Spotify shows them.
-            guard parts.count < 4 || parts[2] != "false" else {
-                let address = parts[3]
-                return PlaybackOptions(dj: address.hasPrefix("spotify:track:") || address.hasPrefix("spotify:media:"))
-            }
+            let offered = parts.count < 4 || parts[2] != "false"
+            let address = parts.count >= 4 ? parts[3] : ""
+            let song = address.hasPrefix("spotify:track:") || address.hasPrefix("spotify:media:")
+            if dj ?? (!offered && song) { return PlaybackOptions(dj: true) }
+            // Not offered, as with a podcast: shown faint, as Spotify shows them.
+            guard offered || song else { return PlaybackOptions() }
             return PlaybackOptions(shuffle: parts[0] == "true", repeatMode: parts[1] == "true" ? .all : .off)
         }
         return PlaybackOptions(

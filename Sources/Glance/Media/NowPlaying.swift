@@ -88,6 +88,8 @@ final class NowPlaying: ObservableObject {
 
     /// Spotify's DJ is choosing the music, or talking about it.
     var djPlaying: Bool { options.dj || djTalking }
+    /// The DJ was heard talking, and nothing since has said it stopped choosing the music.
+    private var djHeard = false
 
     /// The song, as the lookups made for it are kept.
     private var track: String { title + "\u{1F}" + artist }
@@ -166,7 +168,16 @@ final class NowPlaying: ObservableObject {
         Task {
             let reply = await PlayerScripting.run(script)
             guard app == appBundleID else { return }
-            var read = reply.map { PlayerScripting.options(from: $0, app: app) } ?? PlaybackOptions()
+            // Spotify's own bar says whether the DJ chooses the music, where Spotify shows it; where it
+            // doesn't, having heard the DJ talk is all there is to go by.
+            var dj: Bool?
+            if app == PlayerScripting.spotify {
+                if djTalking { djHeard = true }
+                if let shown = await SpotifyDJ.djInBar() { djHeard = shown }
+                dj = djHeard
+            }
+            guard app == appBundleID else { return }
+            var read = reply.map { PlayerScripting.options(from: $0, app: app, dj: dj) } ?? PlaybackOptions()
             // Spotify's scripting only says whether repeat is on. If it's on and the last click
             // asked for one song, that's what it is.
             if app == PlayerScripting.spotify, read.repeatMode == .all, requestedRepeat == .one { read.repeatMode = .one }
@@ -496,6 +507,7 @@ final class NowPlaying: ObservableObject {
             appIcon = app.flatMap(NSWorkspace.shared.icon(forApp:))
             // What the last app offered isn't this one's, until it's read.
             options = PlaybackOptions()
+            djHeard = false
             heldFavorite = nil
         }
         if djTalking {
@@ -648,6 +660,7 @@ final class NowPlaying: ObservableObject {
         appBundleID = nil
         appIcon = nil
         options = PlaybackOptions()
+        djHeard = false
         AudioLevels.shared.follow(pid: 0, playing: false)
         AppVolume.shared.follow(app: nil, pid: 0)
     }
