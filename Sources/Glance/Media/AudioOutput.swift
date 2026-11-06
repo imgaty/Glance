@@ -108,8 +108,23 @@ final class AudioOutput: NSObject, ObservableObject {
     fileprivate static var bluetooth: [String: DeviceWatch.BluetoothInfo] = [:]
 
     private static func readBluetooth() async {
-        bluetooth.merge(await DeviceWatch.bluetoothReport()) { _, new in new }
+        bluetooth.merge(await DeviceWatch.bluetoothReport(), uniquingKeysWith: kept)
     }
+
+    /// A device's latest report, keeping its model from an earlier one: macOS can list a pair
+    /// that's just connected before it tells what model they are.
+    nonisolated static func kept(_ old: DeviceWatch.BluetoothInfo, _ new: DeviceWatch.BluetoothInfo) -> DeviceWatch.BluetoothInfo {
+        var info = new
+        info.product = new.product ?? old.product
+        info.vendor = new.vendor ?? old.vendor
+        info.kind = new.kind ?? old.kind
+        return info
+    }
+
+    /// While a Bluetooth output's model isn't known yet, the report is read again, as macOS lists a
+    /// pair a moment after its sound goes to them, and their model sometimes later still.
+    private var modelTask: Task<Void, Never>?
+    static let modelRetries: [Double] = [0, 1, 2, 3, 5, 8]
 
     @objc private func choose(_ item: NSMenuItem) {
         var id = AudioDeviceID(item.tag)
@@ -121,11 +136,21 @@ final class AudioOutput: NSObject, ObservableObject {
         let current = Self.defaultOutput
         let device = Self.outputs().first { $0.id == current }
         symbol = device?.model?.symbol ?? device?.symbol ?? "speaker.wave.2.fill"
-        // Bluetooth headphones are pictured as their model once System Information has told it.
-        guard let device, DeviceWatch.isBluetooth(device.transport), Self.bluetooth[device.name.lowercased()] == nil else { return }
-        Task { [weak self] in
-            await Self.readBluetooth()
-            if Self.bluetooth[device.name.lowercased()] != nil { self?.refresh() }
+        // Bluetooth headphones are pictured as their model once System Information has told it,
+        // which can take a few seconds after they've connected.
+        modelTask?.cancel()
+        guard let device, DeviceWatch.isBluetooth(device.transport), device.model == nil else { return }
+        modelTask = Task { [weak self] in
+            for wait in Self.modelRetries {
+                try? await Task.sleep(for: .seconds(wait))
+                guard !Task.isCancelled, Self.defaultOutput == device.id else { return }
+                await Self.readBluetooth()
+                guard !Task.isCancelled else { return }
+                if let model = Self.outputs().first(where: { $0.id == device.id })?.model {
+                    self?.symbol = model.symbol
+                    return
+                }
+            }
         }
     }
 

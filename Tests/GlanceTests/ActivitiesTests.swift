@@ -1101,6 +1101,24 @@ struct SystemBannersTests {
         #expect(!AudioOutput.isSystemAggregate(uid: "BuiltInSpeakerDevice"))
     }
 
+    @Test("AirPods playing are pictured as their model, kept when a later report leaves it out, and asked for again for a while")
+    func outputModelKept() {
+        var first = DeviceWatch.BluetoothInfo()
+        first.product = 0x2024
+        first.vendor = 0x4C
+        first.kind = "Headphones"
+        // Listed again with their battery but not yet their model: the model stays.
+        var later = DeviceWatch.BluetoothInfo()
+        later.battery = 80
+        let kept = AudioOutput.kept(first, later)
+        #expect(kept.product == 0x2024 && kept.vendor == 0x4C && kept.kind == "Headphones" && kept.battery == 80)
+        #expect(kept.modelSymbols?.symbol == first.modelSymbols?.symbol)
+        // Their model is macOS's own symbol for them, not headphones.
+        #expect(first.modelSymbols?.symbol.hasPrefix("airpods") == true)
+        // Not told the model yet, macOS is asked again over about twenty seconds.
+        #expect(AudioOutput.modelRetries.reduce(0, +) >= 15)
+    }
+
     @Test("Opened, a call is no wider for a long name, which runs on under the camera")
     @MainActor
     func openedCallName() {
