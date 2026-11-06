@@ -134,17 +134,11 @@ struct NowPlayingView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
-                // The explicit badge follows the title, as on the iPhone.
-                HStack(spacing: 5) {
-                    MarqueeText(
-                        text: nowPlaying.hasMedia ? nowPlaying.title : String(localized: "Not Playing"),
-                        font: NotchType.title, active: isVisible, fills: false)
-                    if nowPlaying.explicit {
-                        Image(systemName: "e.square.fill")
-                            .font(.system(size: NotchType.size * 0.8))
-                            .transition(.opacity)
-                    }
-                }
+                // The explicit badge follows the title and scrolls with it, as on the iPhone.
+                MarqueeText(
+                    text: nowPlaying.hasMedia ? nowPlaying.title : String(localized: "Not Playing"),
+                    font: NotchType.title, active: isVisible, fills: false, explicit: nowPlaying.hasMedia && nowPlaying.explicit
+                )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 MarqueeText(text: nowPlaying.artist, font: NotchType.detail, active: isVisible)
                     .foregroundStyle(NotchType.detailColor)

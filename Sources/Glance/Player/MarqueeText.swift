@@ -18,6 +18,8 @@ struct MarqueeText: View {
     var alignment: Alignment = .leading
     /// Takes all the width it's offered; otherwise only as much as its text needs.
     var fills = true
+    /// The explicit badge, right after the words and scrolling with them, as Apple Music shows it.
+    var explicit = false
 
     @State private var textWidth: CGFloat = 0
     @State private var boxWidth: CGFloat = 0
@@ -28,11 +30,12 @@ struct MarqueeText: View {
     private static let speed: CGFloat = 32  // points a second
     private static let rest: Double = 2.5
     private static let fade: CGFloat = 10
+    private static let badgeGap: CGFloat = 5
 
     var body: some View {
         let overflows = textWidth > boxWidth + 1
         // One line tall and only as wide as it's given: the text itself rides on top and is clipped.
-        Text(text).font(font).lineLimit(1).hidden()
+        content(fixed: false).hidden()
             .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
             .onGeometryChange(for: CGFloat.self) {
                 $0.size.width
@@ -75,7 +78,22 @@ struct MarqueeText: View {
     }
 
     private var label: some View {
-        Text(text).font(font).lineLimit(1).fixedSize()
+        content(fixed: true)
+    }
+
+    private func content(fixed: Bool) -> some View {
+        HStack(spacing: Self.badgeGap) {
+            if fixed {
+                Text(text).font(font).lineLimit(1).fixedSize()
+            } else {
+                Text(text).font(font).lineLimit(1)
+            }
+            if explicit {
+                Image(systemName: "e.square.fill")
+                    .font(.system(size: NotchType.size * 0.8))
+                    .transition(.opacity)
+            }
+        }
     }
 
     private func offset(at date: Date) -> CGFloat {
