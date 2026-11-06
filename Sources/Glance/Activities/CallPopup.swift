@@ -88,32 +88,27 @@ struct CallPopup: Equatable {
         return (middle(red), middle(green))
     }
 
-    /// Its waveform's pixels with the popup's background taken away, so they sit on the notch's black
-    /// and stay as lit as they are: four 8-bit channels each, in the order they came, alpha last, and
-    /// each channel made to reach as high as before. The background's the darkest corner, where
-    /// nothing's ever drawn.
-    nonisolated static func lifted(pixels: UnsafeBufferPointer<UInt8>, width: Int, height: Int, rowBytes: Int) -> [UInt8] {
-        guard width > 0, height > 0, pixels.count >= rowBytes * height else { return [] }
-        let corners = [0, width - 1, (height - 1) * rowBytes / 4, (height - 1) * rowBytes / 4 + width - 1]
-        func background(_ channel: Int) -> Int { corners.map { Int(pixels[$0 * 4 + channel]) }.min() ?? 0 }
-        let under = (background(0), background(1), background(2))
-        func lift(_ value: UInt8, _ under: Int) -> UInt8 {
-            guard under < 255 else { return 0 }
-            return UInt8(max(Int(value) - under, 0) * 255 / (255 - under))
+    /// How loud each voice is in a picture of the popup's waveform, from 0 to 1: the other person's
+    /// bars are its left, yours its right, each by its tallest bar above a quiet dot. Anything lit is
+    /// a bar, whatever its color, so it reads the same in either order of color channels.
+    nonisolated static func levels(pixels: UnsafeBufferPointer<UInt8>, width: Int, height: Int, rowBytes: Int) -> (theirs: CGFloat, yours: CGFloat) {
+        guard width > 0, height > 0, pixels.count >= rowBytes * height else { return (0, 0) }
+        let count = 30
+        let heights: [Int] = (0..<count).map { bar in
+            let middle = Int((Double(bar) + 0.5) / Double(count) * Double(width))
+            return (max(middle - 1, 0)...min(middle + 1, width - 1)).map { x in
+                (0..<height).filter { y in
+                    let at = y * rowBytes + x * 4
+                    return max(pixels[at], pixels[at + 1], pixels[at + 2]) > 110
+                }.count
+            }.max() ?? 0
         }
-        var out = [UInt8](repeating: 0, count: width * height * 4)
-        for y in 0..<height {
-            for x in 0..<width {
-                let from = y * rowBytes + x * 4
-                let to = (y * width + x) * 4
-                let (a, b, c) = (lift(pixels[from], under.0), lift(pixels[from + 1], under.1), lift(pixels[from + 2], under.2))
-                out[to] = a
-                out[to + 1] = b
-                out[to + 2] = c
-                out[to + 3] = max(a, b, c)
-            }
+        // A quiet dot is about a seventh of the strip; the tallest bar about three quarters.
+        func level(_ bars: ArraySlice<Int>) -> CGFloat {
+            let dot = CGFloat(height) * 0.14, tallest = CGFloat(height) * 0.75
+            return min(max((CGFloat(bars.max() ?? 0) - dot) / (tallest - dot), 0), 1)
         }
-        return out
+        return (level(heights.prefix(12)), level(heights.suffix(12)))
     }
 
     /// Reads its words and buttons from its picture.
@@ -168,14 +163,14 @@ enum CallPopupCamera {
     }
 }
 
-/// The popup's own waveform as it moves, which shows both voices with nothing else listened to: the
-/// same pixels macOS draws, only ever a small strip of that one window, a few times a second.
+/// The popup's own waveform as it moves, which shows both voices with nothing else listened to: only
+/// ever a small strip of that one window, a few times a second, read for how tall its bars are.
 final class CallPopupWave: NSObject, SCStreamOutput, @unchecked Sendable {
     private let queue = DispatchQueue(label: "Glance.CallPopupWave")
     private var stream: SCStream?
-    private let heard: @Sendable (CGImage) -> Void
+    private let heard: @Sendable (CGFloat, CGFloat) -> Void
 
-    init(heard: @escaping @Sendable (CGImage) -> Void) {
+    init(heard: @escaping @Sendable (CGFloat, CGFloat) -> Void) {
         self.heard = heard
     }
 
@@ -226,14 +221,7 @@ final class CallPopupWave: NSObject, SCStreamOutput, @unchecked Sendable {
         let height = CVPixelBufferGetHeight(buffer)
         let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
         let pixels = UnsafeBufferPointer(start: base.assumingMemoryBound(to: UInt8.self), count: rowBytes * height)
-        let lifted = CallPopup.lifted(pixels: pixels, width: width, height: height, rowBytes: rowBytes)
-        guard !lifted.isEmpty, let space = CGColorSpace(name: CGColorSpace.displayP3),
-            let provider = CGDataProvider(data: Data(lifted) as CFData),
-            let image = CGImage(
-                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: space,
-                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
-                provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
-        else { return }
-        heard(image)
+        let levels = CallPopup.levels(pixels: pixels, width: width, height: height, rowBytes: rowBytes)
+        heard(levels.theirs, levels.yours)
     }
 }

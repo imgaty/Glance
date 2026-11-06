@@ -51,23 +51,30 @@ struct CallShown: Equatable {
     }
 }
 
-/// How a call looks, measured from published screenshots of real iPhone calls and from macOS's own
-/// popup: a green phone and its time on one side, on the other a waveform in both voices at once.
-/// Ringing, the caller's initials in a gray circle, and a gray handset.
+/// How a call looks, measured from screenshots of the user's own iPhone on a call: a bright green
+/// phone and its time on one side, on the other a waveform, the other person on the left in full
+/// color and you on the right, faded, in yellow dots while nobody speaks. Opened, the caller's name,
+/// the speaker and a red button with a cross. Ringing, the caller's initials in a gray circle, and a
+/// gray handset. The green and yellow are the iPhone's own, in Display P3, which they're just outside
+/// sRGB in.
 enum CallLook {
-    static let green = Color(red: 0x9A / 255, green: 0xEE / 255, blue: 0x9C / 255)
+    static let green = Color(.displayP3, red: 0x7F / 255, green: 0xFB / 255, blue: 0x7F / 255)
     static let handset = Color(red: 0x8F / 255, green: 0x8F / 255, blue: 0x91 / 255)
     static let accept = Color(red: 0x67 / 255, green: 0xCD / 255, blue: 0x67 / 255)
     static let decline = Color(red: 0xE9 / 255, green: 0x56 / 255, blue: 0x45 / 255)
+    static let end = Color(red: 0xFE / 255, green: 0x44 / 255, blue: 0x44 / 255)
     static let speaker = Color(red: 0x2C / 255, green: 0x2C / 255, blue: 0x2E / 255)
     static let avatarTop = Color(red: 0xA4 / 255, green: 0xA8 / 255, blue: 0xB4 / 255)
     static let avatarBottom = Color(red: 0x89 / 255, green: 0x8D / 255, blue: 0x96 / 255)
 
-    /// How much room the waveform takes beside the camera: half the width of macOS's popup's, so its
-    /// bars stay sharp, and shorter by less, so they're as tall as they can be.
-    static let waveWidth: CGFloat = 45
-    /// As shares of the notch's height: the waveform, the phone, the circle, the handset.
-    static let waveHeight: CGFloat = 0.6
+    /// The waveform's bars, half the other person's and half yours, and their measures, the iPhone's
+    /// for the notch's height.
+    static let bars = 16
+    static let barWidth: CGFloat = 1.5
+    static let barGap: CGFloat = 1.05
+    static var waveWidth: CGFloat { CGFloat(bars) * (barWidth + barGap) - barGap }
+    /// As shares of the notch's height: the waveform at its tallest, the phone, the circle, the handset.
+    static let waveHeight: CGFloat = 0.45
     static let phone: CGFloat = 0.42
     /// The caller's circle and the handset as large as every other activity's mark beside the camera.
     static let avatar: CGFloat = TimerLayout.ring
@@ -75,44 +82,35 @@ enum CallLook {
     /// Between the phone and its time.
     static let timeGap: CGFloat = 5
 
-    /// Inside the round buttons, the symbol's size for the button's, so each is as large in it as
-    /// Apple's is, measured from screenshots of real iPhone calls: the handset half as wide as its
-    /// button, the phone two fifths, the speaker a little over half.
+    /// Inside the round buttons, the symbol's size for the button's, as on the iPhone: its cross a
+    /// third across, the speaker three fifths, the phone two fifths.
     static let initials: CGFloat = 0.32
     static let smallInitials: CGFloat = 0.48
     static let endGlyph: CGFloat = 0.4
+    /// The cross heavier than the rest, measured on the iPhone: 0.35 across, its strokes 0.08.
+    static let crossGlyph: CGFloat = 0.45
     static let acceptGlyph: CGFloat = 0.42
-    static let speakerGlyph: CGFloat = 0.39
+    static let speakerGlyph: CGFloat = 0.42
+    /// Opened on a call, the name by the notch's height, and how far in it starts.
+    static let name: CGFloat = 0.215
+    static let nameEdge: CGFloat = 0.246
 
-    /// A waveform drawn as macOS's popup draws its own, for a call that has no popup to show it, and
-    /// for trying it: the same bars twice over, the other person's darker and stronger to the left,
-    /// yours lighter and on top, stronger to the right. In the same size as the popup's picture.
-    nonisolated static func drawnWave(theirs: [CGFloat], yours: [CGFloat]) -> CGImage? {
-        let width = 180
-        let height = 36
-        guard let space = CGColorSpace(name: CGColorSpace.displayP3),
-            let context = CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space,
-                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
-        else { return nil }
-        func color(_ rgb: (CGFloat, CGFloat, CGFloat)) -> CGColor { CGColor(colorSpace: space, components: [rgb.0 / 255, rgb.1 / 255, rgb.2 / 255, 1])! }
-        func bar(_ index: Int, _ tall: CGFloat, _ fill: CGColor, _ glow: CGColor) {
-            let rect = CGRect(x: CGFloat(index) * 6 + 1, y: (CGFloat(height) - tall) / 2, width: 4, height: tall)
-            context.setShadow(offset: .zero, blur: 3, color: glow)
-            context.setFillColor(fill)
-            context.addPath(CGPath(roundedRect: rect, cornerWidth: 2, cornerHeight: min(2, tall / 2), transform: nil))
-            context.fillPath()
+    /// A bar's color: quiet, the iPhone's yellow dot; louder, the other person's goes green and yours
+    /// fades.
+    static func voice(theirs: Bool, level: CGFloat) -> NSColor {
+        let yellow = NSColor(displayP3Red: 0xF4 / 255, green: 0xFF / 255, blue: 0x6E / 255, alpha: 1)
+        let part = min(max((level - 0.12) / 0.3, 0), 1)
+        if theirs {
+            let green = NSColor(displayP3Red: 0x7F / 255, green: 0xFB / 255, blue: 0x7F / 255, alpha: 1)
+            return yellow.blended(withFraction: part, of: green) ?? green
         }
-        for (index, level) in theirs.enumerated() where level > 0.02 {
-            bar(index, max(level * 27, 5), color((0xFF, 0xAF, 0x28)), color((0xE8, 0x93, 0x3E)))
-        }
-        for (index, level) in yours.enumerated() {
-            // Dots of pale yellow with nothing to hear, going green as they get taller.
-            let part = min(max((level - 0.15) / 0.35, 0), 1)
-            let fill = (0xFF + (0x9C - 0xFF) * part, 0xFF as CGFloat, 0xB5 + (0x91 - 0xB5) * part)
-            bar(index, max(level * 27, 5), color(fill), color((0xCC + (0x78 - 0xCC) * part, 0xCB + (0xDB - 0xCB) * part, 0x75)))
-        }
-        return context.makeImage()
+        return yellow.withAlphaComponent(1 - 0.45 * part)
+    }
+
+    /// Where a bar goes, for a level from 0 to 1, in a space this tall: a dot when quiet.
+    static func barFrame(_ index: Int, level: CGFloat, height: CGFloat) -> CGRect {
+        let tall = max(level * height, barWidth)
+        return CGRect(x: CGFloat(index) * (barWidth + barGap), y: (height - tall) / 2, width: barWidth, height: tall)
     }
 }
 
@@ -188,8 +186,8 @@ struct CallTime: View {
     }
 }
 
-/// The waveform beside the camera on a call: macOS's popup's own, or for a call without one, drawn
-/// as it draws it: both voices over the same width at once.
+/// The waveform beside the camera on a call: the other person's voice on the left, yours on the
+/// right, each bar a moment of that voice.
 struct CallWaveform: View {
     let height: CGFloat
     @Environment(\.notchOnScreen) private var onScreen
@@ -197,11 +195,16 @@ struct CallWaveform: View {
     var body: some View {
         Group {
             if onScreen {
-                LiveCallWave()
+                LiveCallBars()
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 12)) { _ in
-                    if let picture = CallVoices.shared.picture {
-                        Image(decorative: picture, scale: 1).resizable()
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { _ in
+                    let bars = CallVoices.shared.bars
+                    Canvas { context, size in
+                        for (index, level) in bars.enumerated() {
+                            let bar = CallLook.barFrame(index, level: level, height: size.height)
+                            let color = CallLook.voice(theirs: index < bars.count / 2, level: level)
+                            context.fill(Path(roundedRect: bar, cornerRadius: bar.width / 2), with: .color(Color(nsColor: color)))
+                        }
                     }
                 }
             }
@@ -211,21 +214,25 @@ struct CallWaveform: View {
     }
 }
 
-/// The waveform on the notch on the screen, shown by Core Animation: through SwiftUI each new picture
-/// would redraw the whole notch.
-private struct LiveCallWave: NSViewRepresentable {
-    func makeNSView(context: Context) -> CallWaveView { CallWaveView() }
-    func updateNSView(_ view: CallWaveView, context: Context) {}
+/// The bars on the notch on the screen, drawn by Core Animation: through SwiftUI each change would
+/// redraw the whole notch.
+private struct LiveCallBars: NSViewRepresentable {
+    func makeNSView(context: Context) -> CallBarsView { CallBarsView() }
+    func updateNSView(_ view: CallBarsView, context: Context) {}
 }
 
-final class CallWaveView: NSView {
+final class CallBarsView: NSView {
+    private var parts: [CALayer] = []
     private var hearing: AnyCancellable?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.contentsGravity = .resize
-        layer?.minificationFilter = .linear
+        for _ in 0..<CallLook.bars {
+            let bar = CALayer()
+            layer?.addSublayer(bar)
+            parts.append(bar)
+        }
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -238,14 +245,26 @@ final class CallWaveView: NSView {
         hearing =
             window == nil
             ? nil
-            : CallVoices.shared.$picture.sink { [weak self] picture in
-                MainActor.assumeIsolated {
-                    CATransaction.begin()
-                    CATransaction.setDisableActions(true)
-                    self?.layer?.contents = picture
-                    CATransaction.commit()
-                }
+            : CallVoices.shared.$bars.sink { [weak self] bars in
+                MainActor.assumeIsolated { self?.draw(bars) }
             }
+    }
+
+    override func layout() {
+        super.layout()
+        draw(CallVoices.shared.bars)
+    }
+
+    private func draw(_ bars: [CGFloat]) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (index, level) in bars.enumerated() where index < parts.count {
+            let bar = CallLook.barFrame(index, level: level, height: bounds.height)
+            parts[index].frame = bar
+            parts[index].cornerRadius = bar.width / 2
+            parts[index].backgroundColor = CallLook.voice(theirs: index < bars.count / 2, level: level).cgColor
+        }
+        CATransaction.commit()
     }
 }
 
@@ -350,9 +369,10 @@ struct IncomingCallView: View {
 }
 
 /// Opened, a call shows as its popup does, as tall as one coming in: the caller, and while it rings,
-/// what it's over and buttons to decline or accept it; once connected, its time, a button for the
-/// sound output and, where its popup's own can be pressed, one to end it. The first line stops at the
-/// camera; the caller, below it, runs on underneath. Clicked anywhere else, it goes to the app it's in.
+/// what it's over and buttons to decline or accept it; once connected, as the iPhone shows it, the
+/// caller's name alone, a button for the sound output and, where its popup's own can be pressed, one
+/// to end it. What's below the camera runs on underneath it. Clicked anywhere else, it goes to the
+/// app it's in.
 struct ExpandedCallView: View {
     let call: CallShown
     let restingHeight: CGFloat
@@ -380,39 +400,52 @@ struct ExpandedCallView: View {
             Button {
                 CallWatch.shared.goToApp()
             } label: {
-                HStack(spacing: CallLayout.wordsGap(h)) {
-                    CallAvatar(call: call, side: side)
-                        .modifier(
-                            GrowsOut(out: out || closedWidth == nil || !call.rings, scale: h * CallLook.avatar / side, anchor: .leading, from: avatarFrom)
-                        )
-                        .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && call.rings))
-                    VStack(alignment: .leading, spacing: 0) {
-                        if case .connected(let since) = call.phase {
-                            CallTime(since: since)
-                                .font(NotchType.detail)
-                                .foregroundStyle(CallLook.green)
-                                .modifier(
-                                    GrowsOut(
-                                        out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
-                                        from: timeFrom)
-                                )
-                                .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
-                        } else {
-                            Text(call.line ?? call.over)
-                                .font(NotchType.detail)
-                                .foregroundStyle(NotchType.detailColor)
+                if case .connected = call.phase {
+                    // As the iPhone shows it: the name alone, large.
+                    Text(call.name)
+                        .font(.system(size: TimerLayout.tallHeight(h) * CallLook.name, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.leading, TimerLayout.tallHeight(h) * CallLook.nameEdge - CallLayout.roundEdge(h))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .modifier(PageFade(hidden: !revealed))
+                } else {
+                    HStack(spacing: CallLayout.wordsGap(h)) {
+                        CallAvatar(call: call, side: side)
+                            .modifier(
+                                GrowsOut(out: out || closedWidth == nil || !call.rings, scale: h * CallLook.avatar / side, anchor: .leading, from: avatarFrom)
+                            )
+                            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && call.rings))
+                        VStack(alignment: .leading, spacing: 0) {
+                            if case .connected(let since) = call.phase {
+                                CallTime(since: since)
+                                    .font(NotchType.detail)
+                                    .foregroundStyle(CallLook.green)
+                                    .modifier(
+                                        GrowsOut(
+                                            out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
+                                            from: timeFrom)
+                                    )
+                                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                            } else {
+                                Text(call.line ?? call.over)
+                                    .font(NotchType.detail)
+                                    .foregroundStyle(NotchType.detailColor)
+                                    .modifier(PageFade(hidden: !revealed))
+                            }
+                            Text(call.name)
+                                .font(NotchType.title)
+                                .foregroundStyle(.white)
                                 .modifier(PageFade(hidden: !revealed))
                         }
-                        Text(call.name)
-                            .font(NotchType.title)
-                            .foregroundStyle(.white)
-                            .modifier(PageFade(hidden: !revealed))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
             }
             // Clicked, it goes to the app, and doesn't sink in as a button does.
             .buttonStyle(StillPress())
@@ -440,10 +473,10 @@ struct ExpandedCallView: View {
                 glyph("speaker.wave.3.fill", CallLook.speakerGlyph, side)
             }
             if call.canEnd {
-                IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.decline, side: side) {
+                IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
                     CallWatch.shared.end()
                 } glyph: {
-                    glyph("phone.down.fill", CallLook.endGlyph, side)
+                    glyph("xmark", CallLook.crossGlyph, side, weight: .heavy)
                 }
             }
         } else {
@@ -462,18 +495,19 @@ struct ExpandedCallView: View {
         }
     }
 
-    private func glyph(_ symbol: String, _ share: CGFloat, _ side: CGFloat) -> some View {
+    private func glyph(_ symbol: String, _ share: CGFloat, _ side: CGFloat, weight: Font.Weight = .semibold) -> some View {
         Image(systemName: symbol)
-            .font(.system(size: side * share, weight: .semibold))
+            .font(.system(size: side * share, weight: weight))
             .foregroundStyle(.white)
     }
 
     /// Each side of the camera: as wide as the wider of the first line and the buttons, each from its end.
     @MainActor
     static func wing(for call: CallShown, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
-        guard case .connected(let since) = call.phase else { return IncomingCallView.wing(for: call, restingHeight: h) }
-        let time = SystemActivityView.digitsWidth(ClockText.of(max(Int(date.timeIntervalSince(since)), 0)), NotchType.size, .regular)
-        return CallLayout.openWing(firstLine: time, buttons: call.canEnd ? 2 : 1, restingHeight: h)
+        guard case .connected = call.phase else { return IncomingCallView.wing(for: call, restingHeight: h) }
+        // The name sits below the camera, so it runs on under it as far as the buttons, and never
+        // widens the notch.
+        return CallLayout.openWing(firstLine: 0, buttons: call.canEnd ? 2 : 1, restingHeight: h)
     }
 
     @MainActor
@@ -484,42 +518,44 @@ struct ExpandedCallView: View {
 
 // MARK: - Voices
 
-/// The waveform's picture during a call. On a phone or FaceTime call, it's macOS's popup's own, as it
-/// shows, with nothing listened to. Otherwise, it's drawn the same way: the other person from the
-/// sound the call's app makes, through the same process tap as the music's waveform, and you from
-/// the microphone, once it's allowed. Nothing is recorded or kept. It runs only during a call.
+/// How loud each voice on the call is, for the waveform. On a phone or FaceTime call, read off macOS's
+/// own popup's bars, with nothing listened to: the other person's on its left, yours on its right.
+/// Otherwise, the other person from the sound the call's app makes, through the same process tap as
+/// the music's waveform, and you from the microphone, once it's allowed. Nothing is recorded or
+/// kept. It runs only during a call.
 @MainActor
 final class CallVoices: ObservableObject {
     static let shared = CallVoices()
 
-    @Published private(set) var picture: CGImage?
-    private var seen = false
+    /// What the waveform draws, left to right: the other person's newest at the left end, yours at
+    /// the right.
+    @Published private(set) var bars = [CGFloat](repeating: 0, count: CallLook.bars)
+    private var seenAt: Date?
     private var theirs: CGFloat = 0
     private var yours: CGFloat = 0
-    /// What's drawn of each voice, easing towards what's heard: quickly up, more slowly down, as
-    /// the popup's bars do.
+    /// What's drawn of each voice, easing towards what's heard: quickly up, more slowly down.
     private var shownTheirs: CGFloat = 0
     private var shownYours: CGFloat = 0
     /// How loud each voice has been, a thirtieth of a second at a time, newest first.
-    private var theirHistory = [CGFloat](repeating: 0, count: 30)
-    private var yourHistory = [CGFloat](repeating: 0, count: 30)
+    private var theirHistory = [CGFloat](repeating: 0, count: CallLook.bars / 2)
+    private var yourHistory = [CGFloat](repeating: 0, count: CallLook.bars / 2)
     private var pipeline: TapPipeline?
     private var engine: AVAudioEngine?
     private var clock: Timer?
     /// At the bench: both voices made up, turn about, with nothing listened to.
     var madeUp = false
 
-    /// The popup's own, as it just showed: sent only when it changes, so a call gone quiet stays on
-    /// its last, which is flat.
-    func saw(_ popup: CGImage) {
+    /// How loud each voice is in the popup's bars just now.
+    func saw(theirs: CGFloat, yours: CGFloat) {
         guard clock != nil else { return }
-        seen = true
-        picture = popup
+        seenAt = .now
+        self.theirs = theirs
+        self.yours = yours
     }
 
     func start(listeningTo pid: pid_t?, microphone: Bool) {
         guard clock == nil else { return }
-        if !madeUp, let pid, pid > 0, Permissions.audioCapture == .granted {
+        if !madeUp, microphone, let pid, pid > 0, Permissions.audioCapture == .granted {
             pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
@@ -550,14 +586,13 @@ final class CallVoices: ObservableObject {
         yours = 0
         shownTheirs = 0
         shownYours = 0
+        seenAt = nil
         theirHistory = theirHistory.map { _ in 0 }
         yourHistory = yourHistory.map { _ in 0 }
-        seen = false
-        picture = nil
+        bars = bars.map { _ in 0 }
     }
 
     private func tick() {
-        guard !seen else { return }
         let t = Date.now.timeIntervalSinceReferenceDate
         if madeUp {
             // They speak, you speak, both, neither.
@@ -565,13 +600,17 @@ final class CallVoices: ObservableObject {
             let voice = 0.9 * CGFloat(DJGlyph.flap(at: t))
             theirs = turn == 0 || turn == 2 ? voice : 0
             yours = turn == 1 || turn == 2 ? voice : 0
+        } else if let seenAt, Date.now.timeIntervalSince(seenAt) > 1 {
+            // The popup sends its bars only as they change: unchanged a while, nobody's speaking.
+            theirs = 0
+            yours = 0
         }
         shownTheirs = Self.eased(shownTheirs, towards: theirs)
         shownYours = Self.eased(shownYours, towards: yours)
         theirHistory = [shownTheirs] + theirHistory.dropLast()
         yourHistory = [shownYours] + yourHistory.dropLast()
-        let bars = Self.shaped(theirs: theirHistory, yours: yourHistory)
-        picture = CallLook.drawnWave(theirs: bars.theirs, yours: bars.yours)
+        let next = Self.shaped(theirs: theirHistory, yours: yourHistory)
+        if next != bars { bars = next }
     }
 
     /// A step of easing, thirty times a second.
@@ -579,15 +618,10 @@ final class CallVoices: ObservableObject {
         shown + (heard - shown) * (heard > shown ? 0.55 : 0.18)
     }
 
-    /// The bars of each voice from how loud it's just been, over the same width, as the popup's: the
-    /// other person's newest at the left, running right and dying away, yours mirrored from the right.
-    /// Nothing's made up: a bar is a moment of that voice.
-    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat]) -> (theirs: [CGFloat], yours: [CGFloat]) {
-        let count = min(theirs.count, yours.count)
-        func fading(_ place: Double) -> CGFloat { CGFloat(min(max((0.62 - place) / 0.22, 0), 1)) }
-        let them = (0..<count).map { bar in min(theirs[bar] * fading((Double(bar) + 0.5) / Double(count)), 1) }
-        let you = (0..<count).map { bar in min(yours[count - 1 - bar] * fading(1 - (Double(bar) + 0.5) / Double(count)), 1) }
-        return (them, you)
+    /// The bars, left to right, from how loud each voice has just been: the other person's newest at
+    /// the left end, yours newest at the right. Nothing's made up: a bar is a moment of that voice.
+    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat]) -> [CGFloat] {
+        (theirs + yours.reversed()).map { min(max($0, 0), 1) }
     }
 
     private func startMicrophone() {
@@ -1099,9 +1133,8 @@ final class CallBanners {
     private var mustRead = false
     private var checkedAt: Date?
     private var askedForScreen = false
-    private lazy var wave = CallPopupWave { picture in
-        nonisolated(unsafe) let picture = picture
-        DispatchQueue.main.async { MainActor.assumeIsolated { CallVoices.shared.saw(picture) } }
+    private lazy var wave = CallPopupWave { theirs, yours in
+        DispatchQueue.main.async { MainActor.assumeIsolated { CallVoices.shared.saw(theirs: theirs, yours: yours) } }
     }
 
     /// Follows Notification Center, as soon as Accessibility is allowed, and again if it's restarted.

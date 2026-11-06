@@ -770,42 +770,37 @@ struct SystemBannersTests {
         #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: short, restingHeight: h))
     }
 
-    @Test("Drawn, both voices run over the same width from their own recent loudness: the other person's from the left, yours from the right")
+    @Test("The waveform has the other person on the left and you on the right, each from how loud it's just been")
     func callVoices() {
-        let quiet = CallVoices.shaped(theirs: Array(repeating: 0, count: 30), yours: Array(repeating: 0, count: 30))
-        #expect(quiet.theirs.allSatisfy { $0 == 0 } && quiet.yours.allSatisfy { $0 == 0 })
-        // Just now loud, before that quiet: the newest bar is at each voice's own end.
-        let now = [CGFloat(1)] + Array(repeating: 0, count: 29)
+        let now = [CGFloat(1)] + Array(repeating: 0, count: 7)
         let bars = CallVoices.shaped(theirs: now, yours: now)
-        #expect(bars.theirs[0] == 1 && bars.theirs.dropFirst().allSatisfy { $0 == 0 })
-        #expect(bars.yours[29] == 1 && bars.yours.dropLast().allSatisfy { $0 == 0 })
-        // Each dies away towards the other's side.
-        let loud = Array(repeating: CGFloat(1), count: 30)
-        let both = CallVoices.shaped(theirs: loud, yours: loud)
-        #expect(both.theirs.suffix(10).allSatisfy { $0 == 0 } && both.yours.prefix(10).allSatisfy { $0 == 0 })
-        #expect(CallLook.drawnWave(theirs: both.theirs, yours: both.yours)?.width == 180)
+        #expect(bars.count == CallLook.bars)
+        // Each newest at its own end.
+        #expect(bars[0] == 1 && bars[15] == 1 && bars[1..<15].allSatisfy { $0 == 0 })
+        #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: 8), yours: Array(repeating: 3, count: 8)).allSatisfy { $0 == 1 })
     }
 
-    @Test("A call's popup has its waveform's background taken away, its colors staying as lit")
-    func callPopupWave() {
-        let width = 4
-        let height = 3
-        let rowBytes = 20
-        var pixels = [UInt8](repeating: 33, count: rowBytes * height)
-        // A lit pixel, in the middle.
-        let at = 1 * rowBytes + 2 * 4
-        pixels[at] = 37
-        pixels[at + 1] = 160
-        pixels[at + 2] = 255
-        let lifted = pixels.withUnsafeBufferPointer { CallPopup.lifted(pixels: $0, width: width, height: height, rowBytes: rowBytes) }
-        #expect(lifted.count == width * height * 4)
-        // The background's nothing at all, and the brightest stays the brightest.
-        #expect(lifted[0] == 0 && lifted[1] == 0 && lifted[2] == 0 && lifted[3] == 0)
-        let to = (1 * width + 2) * 4
-        #expect(lifted[to + 2] == 255)
-        #expect(lifted[to + 3] == 255)
-        #expect(lifted[to] < 10)
-        #expect(pixels.withUnsafeBufferPointer { CallPopup.lifted(pixels: $0, width: 0, height: 0, rowBytes: 0) }.isEmpty)
+    @Test("Quiet, every bar's the iPhone's yellow dot; louder, the other person's goes green and yours fades")
+    @MainActor
+    func callBarColors() throws {
+        let quietThem = try #require(CallLook.voice(theirs: true, level: 0).usingColorSpace(.sRGB))
+        let quietYou = try #require(CallLook.voice(theirs: false, level: 0).usingColorSpace(.sRGB))
+        #expect(abs(quietThem.redComponent - quietYou.redComponent) < 0.01 && quietYou.alphaComponent == 1)
+        let them = try #require(CallLook.voice(theirs: true, level: 1).usingColorSpace(.sRGB))
+        #expect(them.greenComponent > them.redComponent)
+        #expect(CallLook.voice(theirs: false, level: 1).alphaComponent < 0.6)
+        #expect(CallLook.barFrame(0, level: 0, height: 14).height == CallLook.barWidth)
+    }
+
+    @Test("macOS's popup's waveform is read for each voice: the other person on its left, you on its right")
+    func callPopupLevels() {
+        let width = 180, height = 36, rowBytes = width * 4
+        var pixels = [UInt8](repeating: 20, count: rowBytes * height)
+        // The first bar, on the left, at its tallest; the rest dots.
+        for y in 4..<31 { for x in 1..<6 { pixels[y * rowBytes + x * 4 + 1] = 220 } }
+        let levels = pixels.withUnsafeBufferPointer { CallPopup.levels(pixels: $0, width: width, height: height, rowBytes: rowBytes) }
+        #expect(levels.theirs == 1)
+        #expect(levels.yours == 0)
     }
 
     @Test("Clicked, a call goes to the app it's in, not to the helper its sound comes from")
