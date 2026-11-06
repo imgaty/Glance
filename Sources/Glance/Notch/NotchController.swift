@@ -1779,6 +1779,33 @@ final class NotchController {
         close(holdUntilExit: true)
     }
 
+    /// What the right-click menu offers to put away, as a swipe up on the notch would: its live
+    /// activity, a call coming in, or Low Battery. None while there's nothing, or for a timer that's
+    /// rung, which the menu stops itself.
+    var putAwayTitle: String? { Self.putAwayTitle(alert: model.alert?.kind, first: model.activities.first) }
+
+    nonisolated static func putAwayTitle(alert: NotchAlert.Kind?, first: NotchModel.Activity?) -> String? {
+        if let alert {
+            switch alert {
+            case .incomingCall: return String(localized: "Hide Call")
+            case .lowBattery: return String(localized: "Hide Low Battery")
+            default: return nil
+            }
+        }
+        switch first {
+        case .call: return String(localized: "Hide Call")
+        case .music: return String(localized: "Hide Music")
+        case .airdrop: return String(localized: "Hide AirDrop")
+        case .timer: return String(localized: "Hide Timer")
+        case .stopwatch: return String(localized: "Hide Stopwatch")
+        case .airplay: return String(localized: "Hide AirPlay")
+        case nil: return nil
+        }
+    }
+
+    /// From the menu, the same as swiping up on the notch, for anyone who can't swipe.
+    func putAway() { pushedUp() }
+
     /// A live activity swiped away, for a moment: still going, it comes back by itself after
     /// `swipedAway`, and sooner if it changes: music with the next song, or when it plays again; a
     /// timer or the stopwatch when it's started, paused or ended; AirDrop with the next file;

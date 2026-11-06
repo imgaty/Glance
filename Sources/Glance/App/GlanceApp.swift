@@ -48,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.nowPlaying = nowPlaying
         settings.onShowPermissions = { [onboarding] in onboarding.show(startingAt: .permissions) }
         notches.contextMenu = statusBar.menu
+        statusBar.putAway = (title: { [notches] in notches.putAwayTitle }, action: { [notches] in notches.putAway() })
         notches.start()
         Tray.shared.start()
         NSApp.servicesProvider = trayService
@@ -578,6 +579,16 @@ final class NotchManager {
     }
 
     /// A shortcut: the notch on the display under the pointer, or the first one.
+    /// The notch the pointer's on, or the first: the one its menu was opened from.
+    private var pointed: NotchController? {
+        let location = NSEvent.mouseLocation
+        return controllers.first { $0.screenFrame.contains(location) } ?? controllers.first
+    }
+
+    /// What the menu offers to put away on that notch, and putting it away.
+    var putAwayTitle: String? { pointed?.putAwayTitle }
+    func putAway() { pointed?.putAway() }
+
     func perform(_ action: Shortcuts.Action) {
         let location = NSEvent.mouseLocation
         let controller = controllers.first { $0.screenFrame.contains(location) } ?? controllers.first

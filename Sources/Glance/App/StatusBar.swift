@@ -32,6 +32,8 @@ final class StatusBarController: NSObject {
     /// For the notch's right-click.
     let menu = NSMenu()
     var onOpenSettings: (() -> Void)?
+    /// What the notch under the pointer would put away if swiped up, and putting it away.
+    var putAway: (title: () -> String?, action: () -> Void)?
 
     /// Square, as an icon in the menu bar is: macOS's pill around it comes out the size of the
     /// system's own icons', and the icons beside it as far away. Any wider, the pill is wider still.
@@ -307,9 +309,9 @@ final class StatusBarController: NSObject {
 }
 
 extension StatusBarController: NSMenuDelegate {
-    /// The notch's right-click menu starts with Clock's timer and stopwatch, while they show: Pause
-    /// and Cancel, or, once the timer has rung, Repeat and Stop; Start or Stop, and Lap or Reset.
-    /// Made afresh each time it opens.
+    /// The notch's right-click menu starts with hiding what it shows, as a swipe up does, then
+    /// Clock's timer and stopwatch, while they show: Pause and Cancel, or, once the timer has rung,
+    /// Repeat and Stop; Start or Stop, and Lap or Reset. Made afresh each time it opens.
     func menuNeedsUpdate(_ menu: NSMenu) {
         for item in menu.items where item.tag == Self.timerItem { menu.removeItem(item) }
         let clock = ClockActivity.shared
@@ -319,6 +321,7 @@ extension StatusBarController: NSMenuDelegate {
             item.target = self
             items.append(item)
         }
+        if let title = putAway?.title() { add(title, #selector(putAwayActivity)) }
         if let timer = clock.timer {
             add(timer.isRunning ? String(localized: "Pause Timer") : String(localized: "Resume Timer"), #selector(pauseOrResumeTimer))
             add(String(localized: "Cancel Timer"), #selector(cancelTimer))
@@ -337,6 +340,8 @@ extension StatusBarController: NSMenuDelegate {
             menu.insertItem(item, at: index)
         }
     }
+
+    @objc private func putAwayActivity() { putAway?.action() }
 
     /// Marks the timer's items in the menu, to take them out before it's made again.
     private static let timerItem = 7_000

@@ -1190,6 +1190,18 @@ struct SystemBannersTests {
         #expect(CGMutablePath().isEmpty)
     }
 
+    @Test("What a swipe puts away can be put away from the menu too, by name")
+    func putAwayFromMenu() {
+        #expect(NotchController.putAwayTitle(alert: nil, first: .music) == "Hide Music")
+        #expect(NotchController.putAwayTitle(alert: nil, first: .airplay) == "Hide AirPlay")
+        #expect(NotchController.putAwayTitle(alert: .incomingCall, first: .music) == "Hide Call")
+        #expect(NotchController.putAwayTitle(alert: .lowBattery, first: nil) == "Hide Low Battery")
+        // A rung timer has the menu's own Stop; an announcement that's gone in a moment, nothing.
+        #expect(NotchController.putAwayTitle(alert: .timerDone, first: .timer) == nil)
+        #expect(NotchController.putAwayTitle(alert: .charging, first: .music) == nil)
+        #expect(NotchController.putAwayTitle(alert: nil, first: nil) == nil)
+    }
+
     @Test("A call's own time always wins: a reading missed keeps it, and a relaunch takes it, never zero")
     func callClock() throws {
         let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)

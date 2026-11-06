@@ -332,7 +332,9 @@ comes back sooner when it changes: music with the next song or when it plays
 again, a timer or the stopwatch when it's started, paused or ended, AirDrop with
 the next file, AirPlay with the next speaker, and a call when it's answered.
 Opened to a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the
-notch and swipes that away too.
+notch and swipes that away too. Without swiping, right-click the notch and
+choose **Hide** with what it shows, such as **Hide Music**, **Hide Call** or
+**Hide Low Battery**.
 
 Turn these off with `Cover and waveform` and `Announce new audio` in
 **Settings > Live Activities**.
