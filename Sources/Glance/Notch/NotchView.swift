@@ -716,7 +716,11 @@ struct NotchView: View {
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         // Stretched sideways, what's in it stretches with it, staying where it is.
-        .scaleEffect(x: m.bodyWidth / max(m.bodyWidth - model.pageStretch, 1), y: 1, anchor: .top)
+        // Pulled down, too, what's in it stretches with it.
+        .scaleEffect(
+            x: m.bodyWidth / max(m.bodyWidth - model.pageStretch - max(model.stretch, 0) * (model.state == .open ? 0.35 : 0.4), 1),
+            y: m.height / max(m.height - max(model.stretch, 0), 1), anchor: .top
+        )
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
         // end, all of it is hidden there, under what the notch shows.
