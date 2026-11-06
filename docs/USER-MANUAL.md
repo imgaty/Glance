@@ -198,10 +198,12 @@ button.
 While Spotify's DJ chooses the music, its symbol takes the left button's place,
 as it takes shuffle's in Spotify, moving for as long as the music plays. Click
 it for different picks. Spotify lets no other app press its own button for that,
-so the DJ is started again within itself: it says a word, and within seconds it
-usually moves on to something else, though now and then it comes back to the
-same song. Spotify comes forward for an instant as it does. Shuffle and repeat
-show dimmed with the DJ or a podcast, because Spotify doesn't offer them then.
+so the DJ is started again within itself: it says a word, and within seconds
+moves on to something else. If it's about to come back to the same song, Glance
+asks it again, and failing that skips to its next pick, so each click brings a
+different song. Spotify comes forward for an instant each time it's asked.
+Shuffle and repeat show dimmed with the DJ or a podcast, because Spotify doesn't
+offer them then.
 
 While the DJ talks, the cover becomes its green ring on blue, following the same sound
 as the waveform, the colors behind the player turn blue, and the times show `--:--`.

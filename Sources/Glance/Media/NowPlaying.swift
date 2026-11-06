@@ -121,23 +121,65 @@ final class NowPlaying: ObservableObject {
         heldPlaying = (isPlaying, .now + 1.5)
     }
 
-    /// Different picks from Spotify's DJ. Spotify is left where it is, behind whatever's in front:
-    /// told to play something, it may come forward, so what was in front is put back.
+    /// Asking the DJ for something else, until it's done.
+    private var pickingDJ = false
+
+    /// Different picks from Spotify's DJ, a new song every time. The DJ is asked again for something
+    /// else; as it talks, the song it talks before shows whether it's coming back to the same one,
+    /// and then it's asked again, up to four times, and after that skipped to its next pick once that
+    /// song plays. Spotify is left where it is, behind whatever's in front: told to play something,
+    /// it may come forward, so what was in front is put back.
     func differentDJPicks() {
-        guard !isDemo else { return }
+        guard !isDemo, !pickingDJ else { return }
+        pickingDJ = true
         let front = NSWorkspace.shared.frontmostApplication
         let spotify = NSRunningApplication.runningApplications(withBundleIdentifier: PlayerScripting.spotify).first
         let wasHidden = spotify?.isHidden == true
+        func putBack() {
+            guard Self.broughtForward(front: front?.bundleIdentifier, now: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) else { return }
+            front?.activate()
+            if wasHidden { spotify?.hide() }
+        }
+        func now() async -> (album: String, address: String)? {
+            guard let reply = await PlayerScripting.run(PlayerScripting.djStateScript) else { return nil }
+            let parts = reply.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "|")
+            return parts.count == 2 ? (parts[0], parts[1]) : nil
+        }
         Task {
-            guard await PlayerScripting.run(PlayerScripting.djPicksScript) != nil else { return }
-            // It comes forward a moment after it's told to, if it does.
-            for _ in 0..<10 {
-                if Self.broughtForward(front: front?.bundleIdentifier, now: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) {
-                    front?.activate()
-                    if wasHidden { spotify?.hide() }
+            defer { pickingDJ = false }
+            let first = await now()
+            let before = PlayerScripting.songID(first?.address)
+            for _ in 0..<PlayerScripting.djAttempts {
+                let asked = await now() ?? first
+                guard await PlayerScripting.run(PlayerScripting.djPicksScript) != nil else { return }
+                guard let before else { return putBack() }
+                // Judged once Spotify has moved on from what it played as it was asked, as it may
+                // still say so for a moment; not moving on at all is the same song.
+                var outcome = PlayerScripting.DJPick.same
+                var moved = false
+                let until = Date.now + 3
+                while Date.now < until {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    putBack()
+                    guard let state = await now() else { continue }
+                    if state.album != asked?.album || state.address != asked?.address { moved = true }
+                    guard moved else { continue }
+                    outcome = PlayerScripting.djOutcome(before: before, album: state.album, address: state.address)
+                    if outcome != .waiting { break }
+                }
+                putBack()
+                if outcome == .newSong { return }
+            }
+            // Still the same song: on to the DJ's next pick as soon as it plays.
+            let until = Date.now + 20
+            while Date.now < until, let before {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard let state = await now() else { return }
+                if state.album != "DJ", PlayerScripting.songID(state.address) == before {
+                    _ = await PlayerScripting.run(PlayerScripting.djSkipScript)
                     return
                 }
-                try? await Task.sleep(for: .milliseconds(100))
+                if PlayerScripting.djOutcome(before: before, album: state.album, address: state.address) == .newSong { return }
             }
         }
     }

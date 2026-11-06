@@ -270,6 +270,20 @@ struct PlayerScriptingTests {
         #expect(!NowPlaying.broughtForward(front: nil, now: PlayerScripting.spotify))
     }
 
+    @Test("The DJ's button knows from what the DJ talks before whether it's coming back to the same song")
+    func djOutcome() {
+        #expect(PlayerScripting.songID("spotify:track:AAA") == "AAA" && PlayerScripting.songID("spotify:media:AAA") == "AAA")
+        #expect(PlayerScripting.songID("spotify:playlist:AAA") == nil && PlayerScripting.songID(nil) == nil)
+        // Before the DJ talks, the same song still playing: nothing's changed yet.
+        #expect(PlayerScripting.djOutcome(before: "AAA", album: "Arsenal", address: "spotify:track:AAA") == .waiting)
+        // The DJ talks before the same song: asked again. Before another: new music.
+        #expect(PlayerScripting.djOutcome(before: "AAA", album: "DJ", address: "spotify:media:AAA") == .same)
+        #expect(PlayerScripting.djOutcome(before: "AAA", album: "DJ", address: "spotify:media:BBB") == .newSong)
+        // Another song without a word: new too.
+        #expect(PlayerScripting.djOutcome(before: "AAA", album: "Compass", address: "spotify:track:BBB") == .newSong)
+        #expect(PlayerScripting.djAttempts >= 3)
+    }
+
     @Test("The DJ's button plays the DJ within the DJ, in Spotify, and never a song on its own")
     func djPicks() {
         #expect(
