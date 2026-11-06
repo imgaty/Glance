@@ -544,8 +544,8 @@ private struct GrownAway: ViewModifier {
 /// bounce, as they fold, and nothing blurs.
 enum IslandMotion {
     static var open: Animation { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? fold : opening }
-    static let fold = Animation.spring(response: 0.315, dampingFraction: 1.18)
-    private static let opening = Animation.spring(response: 0.55, dampingFraction: 0.8)
+    static var fold: Animation { Animation.spring(response: 0.315, dampingFraction: 1.18).paced }
+    private static var opening: Animation { Animation.spring(response: 0.55, dampingFraction: 0.8).paced }
     /// What comes and goes with the wings, as `islandFade` shows and hides it.
     static let fade = AnyTransition(IslandFade())
 }
@@ -574,10 +574,10 @@ private struct IslandFadeModifier: ViewModifier {
         // Hidden, blurred by the closed notch's height, as the Dynamic Island's activities are by its
         // own; with Reduce Motion on, only faded.
         content
-            .animation(.init(IslandCurve(shown ? .blurIn : .blurOut))) {
+            .animation(Animation(IslandCurve(shown ? .blurIn : .blurOut)).paced) {
                 $0.blur(radius: shown || reduceMotion ? 0 : closed.height * IslandCurve.blur)
             }
-            .animation(.init(IslandCurve(shown ? .opacityIn : .opacityOut))) {
+            .animation(Animation(IslandCurve(shown ? .opacityIn : .opacityOut)).paced) {
                 $0.opacity(shown ? 1 : 0)
             }
     }

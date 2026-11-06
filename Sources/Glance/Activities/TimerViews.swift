@@ -230,7 +230,7 @@ struct ExpandedTimerView: View {
         HStack(spacing: 0) {
             buttons(h)
                 .modifier(GrowsOut(out: out || closedWidth == nil, scale: TimerLayout.ring / TimerLayout.content(h) * h, anchor: .leading, from: ringFrom))
-                .modifier(PageFade(hidden: !revealed))
+                .modifier(IslandReveal(hidden: !revealed))
                 .padding(.leading, TimerLayout.buttonEdge(h))
                 .frame(width: side, alignment: .leading)
             Color.clear.frame(width: camera)
@@ -316,7 +316,7 @@ struct ExpandedTimerView: View {
                     .frame(width: label, alignment: .trailing)
                     // Its end just before the time's start.
                     .offset(x: -(label + h * TimerLayout.titleGap))
-                    .modifier(PageFade(hidden: !revealed))
+                    .modifier(IslandReveal(hidden: !revealed))
             }
         }
         .foregroundStyle(TimerLayout.ink)
@@ -374,6 +374,25 @@ struct GrowsOut: ViewModifier {
     }
 }
 
+/// What shows only in the open notch, as the Dynamic Island's expanded activities show it: out of a
+/// blur and faded in on the island's own curves, measured from it, and a little smaller at first,
+/// growing on the notch's spring as the notch does, so it rides out with it rather than fading in
+/// where it ends up. Closing, it blurs away as fast as the wings' do, shrinking back. With Reduce
+/// Motion on, it only fades.
+struct IslandReveal: ViewModifier {
+    let hidden: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// How large it starts, by its size.
+    static let start: CGFloat = 0.86
+
+    func body(content: Content) -> some View {
+        content
+            .islandFade(!hidden)
+            .animation(hidden ? IslandMotion.fold : NotchMotion.expand) { $0.scaleEffect(hidden && !reduceMotion ? Self.start : 1) }
+    }
+}
+
 /// What grows out of the notch takes over from what's beside the camera at once, as they're in the
 /// same place at the same size, and hands back only once it has shrunk there. What doesn't fades as
 /// the rest of the page does.
@@ -383,9 +402,11 @@ struct GrownFade: ViewModifier {
 
     func body(content: Content) -> some View {
         if grows {
-            content.animation(shown ? .linear(duration: 0.01) : .linear(duration: 0.08).delay(0.26)) { $0.opacity(shown ? 1 : 0) }
+            content.animation((shown ? Animation.linear(duration: 0.01) : .linear(duration: 0.08).delay(0.26)).paced) {
+                $0.opacity(shown ? 1 : 0)
+            }
         } else {
-            content.modifier(PageFade(hidden: !shown))
+            content.modifier(IslandReveal(hidden: !shown))
         }
     }
 }

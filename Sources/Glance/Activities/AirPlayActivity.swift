@@ -226,7 +226,7 @@ struct ExpandedAirPlayView: View {
                 }
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .modifier(PageFade(hidden: !revealed))
+                .modifier(IslandReveal(hidden: !revealed))
                 Spacer(minLength: h * 0.3)
                 AirPlayDevice(route: route, size: h * AirPlayLayout.bigDevice)
                     .modifier(GrowsOut(out: out, scale: layout.device / layout.bigDevice, anchor: .trailing, from: deviceFrom))
@@ -250,7 +250,7 @@ struct ExpandedAirPlayView: View {
             .notchControl()
             .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirPlay")) { AirPlayWatch.shared.stop() }
             .padding(.horizontal, PlayerLayout.padding)
-            .modifier(PageFade(hidden: !revealed))
+            .modifier(IslandReveal(hidden: !revealed))
         }
         .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
         .padding(.top, h + LiveActivityView.cameraGap)

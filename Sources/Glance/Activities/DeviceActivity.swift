@@ -106,7 +106,7 @@ struct DeviceActivityView: View {
                     .scaleEffect(extended ? 1 : ringScale)
                     .offset(x: toEnd - (extended ? large.trailing + large.ring / 2 : small.trailing + small.ring / 2), y: notch.height / 2)
                 }
-                words.modifier(PageFade(hidden: !extended))
+                words.modifier(IslandReveal(hidden: !extended))
             }
             .frame(width: 0, height: 0)
         }

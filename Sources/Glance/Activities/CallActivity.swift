@@ -511,14 +511,14 @@ struct ExpandedCallView: View {
                 // The time's baseline on the circle's bottom edge, the name above it.
                 ZStack(alignment: .bottomLeading) {
                     CallAvatar(call: call, side: side)
-                        .modifier(PageFade(hidden: !revealed))
+                        .modifier(IslandReveal(hidden: !revealed))
                     VStack(alignment: .leading, spacing: 0) {
                         Text(call.name)
                             .font(NotchType.title)
                             .foregroundStyle(.white)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                            .modifier(PageFade(hidden: !revealed))
+                            .modifier(IslandReveal(hidden: !revealed))
                         CallTime(since: since)
                             .font(NotchType.detail)
                             .foregroundStyle(out || closedWidth == nil ? NotchType.detailColor : CallLook.green)
@@ -544,7 +544,7 @@ struct ExpandedCallView: View {
             .accessibilityHint(String(localized: "Show in \(call.over)"))
             // Spread from end to end, as the player's controls, at least as far apart as on a phone.
             HStack(spacing: max(side * CallLook.buttonSpacing, (width - edge * 2 - side * count) / max(count - 1, 1))) { buttons(h) }
-                .modifier(PageFade(hidden: !revealed))
+                .modifier(IslandReveal(hidden: !revealed))
         }
         .padding([.top, .horizontal], edge)
         .frame(width: width, height: Self.height(for: call, restingHeight: h), alignment: .top)
@@ -566,7 +566,7 @@ struct ExpandedCallView: View {
                     .padding(.leading, TimerLayout.tallHeight(h) * CallLook.nameEdge - CallLayout.roundEdge(h))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
-                    .modifier(PageFade(hidden: !revealed))
+                    .modifier(IslandReveal(hidden: !revealed))
             }
             .buttonStyle(StillPress())
             .notchControl()
@@ -574,7 +574,7 @@ struct ExpandedCallView: View {
             .accessibilityLabel(String(localized: "\(call.name), on a call"))
             .accessibilityHint(String(localized: "Show in \(call.over)"))
             HStack(spacing: CallLayout.roundGap(h)) { inlineButtons(h) }
-                .modifier(PageFade(hidden: !revealed))
+                .modifier(IslandReveal(hidden: !revealed))
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
         .frame(width: width, height: TimerLayout.tallHeight(h))
@@ -626,7 +626,7 @@ struct ExpandedCallView: View {
                             .font(NotchType.title)
                             .foregroundStyle(.white)
                     }
-                    .modifier(PageFade(hidden: !revealed))
+                    .modifier(IslandReveal(hidden: !revealed))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -639,7 +639,7 @@ struct ExpandedCallView: View {
             .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
             .accessibilityHint(String(localized: "Show in \(call.over)"))
             HStack(spacing: CallLayout.roundGap(h)) { buttons(h) }
-                .modifier(PageFade(hidden: !revealed))
+                .modifier(IslandReveal(hidden: !revealed))
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
         .frame(width: width, height: TimerLayout.tallHeight(h))

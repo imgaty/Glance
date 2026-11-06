@@ -460,16 +460,27 @@ final class NotchModel: ObservableObject {
 /// The Dynamic Island's bounce as its activities expand: past its size, by about a twentieth, and
 /// back, a bounce that's seen. With Reduce Motion on, straight to its size.
 enum NotchMotion {
+    /// How fast the notch's motions run: 1 always, but slower in a test that films them a frame
+    /// at a time.
+    nonisolated(unsafe) static var pace: Double = 1
+}
+
+extension Animation {
+    /// At the notch's pace: as it is, unless a test films it slower.
+    var paced: Animation { NotchMotion.pace == 1 ? self : speed(NotchMotion.pace) }
+}
+
+extension NotchMotion {
     static var expand: Animation {
-        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            ? .spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)
+        (NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? Animation.spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)).paced
     }
 
     /// A spring that bounces, or with Reduce Motion on, that settles straight where it's going.
     static func spring(
         response: Double, dampingFraction: Double, reduced: Bool = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     ) -> Animation {
-        .spring(response: response, dampingFraction: reduced ? 1 : dampingFraction)
+        .spring(response: response, dampingFraction: reduced ? 1 : dampingFraction).paced
     }
 }
 
@@ -1010,7 +1021,7 @@ struct NotchView: View {
     /// Content fades in once the notch has begun to grow, and out quickly as it shrinks, so it is
     /// never squeezed into the closing shape.
     static func fade(in showing: Bool) -> Animation {
-        showing ? .easeOut(duration: 0.3).delay(0.08) : .easeOut(duration: 0.12)
+        (showing ? Animation.easeOut(duration: 0.3).delay(0.08) : .easeOut(duration: 0.12)).paced
     }
 
     /// Everything but the camera housing, on displays that have one: nothing is drawn under it.

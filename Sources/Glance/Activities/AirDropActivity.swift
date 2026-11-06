@@ -341,7 +341,7 @@ struct ExpandedAirDropView: View {
             .padding(.trailing, AirDropLayout.ringEdge(h))
         // AirDrop's name stops at the camera; who it's from, below it, runs on underneath.
         ZStack {
-            left.modifier(PageFade(hidden: !revealed)).frame(maxWidth: .infinity, alignment: .leading)
+            left.modifier(IslandReveal(hidden: !revealed)).frame(maxWidth: .infinity, alignment: .leading)
             right.frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(width: width, height: TimerLayout.tallHeight(h))
