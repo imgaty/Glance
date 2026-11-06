@@ -120,6 +120,7 @@ struct NowPlayingView: View {
             while isVisible, !Task.isCancelled {
                 if nowPlaying.isPlaying { await nowPlaying.syncPosition() }
                 await nowPlaying.syncFavorite()
+                nowPlaying.syncDJ()
                 try? await Task.sleep(for: .seconds(2))
             }
         }

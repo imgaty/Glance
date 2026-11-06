@@ -29,7 +29,7 @@ struct DJButton: View {
 
     var body: some View {
         Button(action: action) {
-            DJGlyph(color: color, moving: moving)
+            DJGlyph(color: color, moving: moving, follows: talking)
                 .frame(width: PlayerLayout.optionGlyph * 1.2, height: PlayerLayout.optionGlyph * 1.2)
         }
         .buttonStyle(IslandPress())
@@ -48,6 +48,9 @@ struct DJButton: View {
 struct DJGlyph: View {
     let color: Color
     let moving: Bool
+    /// The DJ is talking: it follows his voice. Otherwise it keeps its own even pace, whatever the
+    /// music does.
+    var follows = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Front to back: how far each ring's corner is pressed in at rest and at its loudest, as a share
@@ -63,7 +66,7 @@ struct DJGlyph: View {
         let animates = moving && !reduceMotion
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animates)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            let strength = animates ? Self.strength() : 0
+            let strength = animates ? (follows ? Self.strength() : Self.idle) : 0
             GeometryReader { proxy in
                 let side = min(proxy.size.width, proxy.size.height)
                 let line = side * 0.1
@@ -86,6 +89,9 @@ struct DJGlyph: View {
         let wave = 0.55 * sin(t * 2 * .pi * 4.1) + 0.3 * sin(t * 2 * .pi * 6.7 + 1.3) + 0.25 * sin(t * 2 * .pi * 2.3 + 0.4)
         return min(max(0.35 + 0.6 * wave, 0), 1)
     }
+
+    /// How far in it goes while the music plays and the DJ isn't talking.
+    static let idle = 0.5
 
     /// How far in it goes: never still while it animates, and further the louder the sound.
     private static func strength() -> Double {

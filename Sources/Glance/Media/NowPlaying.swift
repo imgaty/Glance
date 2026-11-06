@@ -55,6 +55,8 @@ final class NowPlaying: ObservableObject {
     private var lastShownApp: String?
     /// The read-back that follows a change to shuffle, repeat or favorite.
     private var settle: Task<Void, Never>?
+    /// When a setting was last changed from here, which Spotify takes a moment to report.
+    private var changedAt = Date.distantPast
     private var requestedRepeat: RepeatMode?
     /// After a press of the star, what it asked for: Music takes seconds to save a song new to the
     /// library, and says it isn't a favorite until then.
@@ -178,6 +180,14 @@ final class NowPlaying: ObservableObject {
         }
     }
 
+    /// Spotify doesn't say when the DJ stops choosing the music, and just after a change of song it
+    /// can still report the last one's, so the player asks again while it shows, unless a setting
+    /// was just changed from here and is still settling.
+    func syncDJ() {
+        guard appBundleID == PlayerScripting.spotify, Date.now.timeIntervalSince(changedAt) > 2.5 else { return }
+        refreshOptions()
+    }
+
     /// Music doesn't say when a favorite changes, so the player asks while it shows.
     func syncFavorite() async {
         guard !isDemo, let app = appBundleID, app == PlayerScripting.music,
@@ -251,6 +261,7 @@ final class NowPlaying: ObservableObject {
     /// reports the old value for a moment after a change, so the read waits for it to settle, and
     /// quick clicks (off, all, one) read back once, after the last of them.
     private func readBack(after script: String? = nil) {
+        changedAt = .now
         settle?.cancel()
         settle = Task {
             if let script { _ = await PlayerScripting.run(script) }
