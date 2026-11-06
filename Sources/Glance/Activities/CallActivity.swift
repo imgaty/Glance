@@ -120,8 +120,8 @@ enum CallLook {
     static let buttonSpacing: CGFloat = 63.0 / 150
     static let rowSpacing: CGFloat = 50.0 / 150
 
-    /// A bar's color past its yellow middle: the other person's green, yours orange; the yellow. All
-    /// three measured on the iPhone, in Display P3.
+    /// A voice's color where it's the louder: the other person's green, yours orange; and the yellow
+    /// where both overlap, about the two together. All three measured on the iPhone, in Display P3.
     static func voice(theirs: Bool) -> NSColor {
         theirs
             ? NSColor(displayP3Red: 0x77 / 255, green: 0xF8 / 255, blue: 0x4C / 255, alpha: 1)
@@ -143,15 +143,12 @@ enum CallLook {
     /// A voice's strength `across` the waveform from its own side, 0 there to 1 at the far side.
     static func fade(across: CGFloat) -> CGFloat { pow(farthest, min(max(across, 0), 1)) }
 
-    /// A bar's two voices, overlapping: the taller behind, the shorter in front, each its color.
-    static func layers(_ bar: CallBar) -> (back: (level: CGFloat, theirs: Bool), front: (level: CGFloat, theirs: Bool)) {
-        bar.theirs >= bar.yours ? ((bar.theirs, true), (bar.yours, false)) : ((bar.yours, false), (bar.theirs, true))
-    }
-
-    /// A bar's yellow middle.
-    static func coreFrame(of bar: CGRect, core: CGFloat) -> CGRect {
-        let tall = min(core, bar.height)
-        return CGRect(x: bar.minX, y: bar.midY - tall / 2, width: bar.width, height: tall)
+    /// A bar's two voices, overlapping, as the user's iPhone draws them: the louder in its own color,
+    /// and where the quieter overlaps it, yellow, the two colors together. So a bar near the left is
+    /// green past a yellow middle, near the right orange, in the middle where both are as loud
+    /// nearly all yellow, and with nobody speaking, a yellow dot.
+    static func layers(_ bar: CallBar) -> (louder: CGFloat, theirs: Bool, overlap: CGFloat) {
+        (max(bar.theirs, bar.yours), bar.theirs >= bar.yours, min(bar.theirs, bar.yours))
     }
 }
 
@@ -248,7 +245,7 @@ struct CallTime: View {
 }
 
 /// The waveform beside the camera on a call: the other person's voice from the left, yours from the
-/// right, each crossing the whole of it and fading on the way, overlapping where they meet.
+/// right, each crossing the whole of it and fading on the way, yellow where they overlap.
 struct CallWaveform: View {
     let height: CGFloat
     /// Each bar's yellow middle.
@@ -264,14 +261,12 @@ struct CallWaveform: View {
                     let bars = CallVoices.shared.bars
                     Canvas { context, size in
                         for (index, voices) in bars.enumerated() {
-                            let (back, front) = CallLook.layers(voices)
-                            for part in [back, front] {
-                                let bar = CallLook.barFrame(index, level: part.level, height: size.height, core: core)
-                                context.fill(
-                                    Path(roundedRect: bar, cornerRadius: bar.width / 2), with: .color(Color(nsColor: CallLook.voice(theirs: part.theirs))))
-                            }
-                            let middle = CallLook.coreFrame(of: CallLook.barFrame(index, level: 0, height: size.height, core: core), core: core)
-                            context.fill(Path(roundedRect: middle, cornerRadius: middle.width / 2), with: .color(Color(nsColor: CallLook.yellow)))
+                            let parts = CallLook.layers(voices)
+                            let louder = CallLook.barFrame(index, level: parts.louder, height: size.height, core: core)
+                            let overlap = CallLook.barFrame(index, level: parts.overlap, height: size.height, core: core)
+                            context.fill(
+                                Path(roundedRect: louder, cornerRadius: louder.width / 2), with: .color(Color(nsColor: CallLook.voice(theirs: parts.theirs))))
+                            context.fill(Path(roundedRect: overlap, cornerRadius: overlap.width / 2), with: .color(Color(nsColor: CallLook.yellow)))
                         }
                     }
                 }
@@ -291,10 +286,9 @@ private struct LiveCallBars: NSViewRepresentable {
 }
 
 final class CallBarsView: NSView {
-    /// Each bar's two voices, the taller behind.
+    /// Each bar: the louder voice in its color, and where the quieter overlaps it, yellow.
     private var backs: [CALayer] = []
     private var fronts: [CALayer] = []
-    private var cores: [CALayer] = []
     private let core: CGFloat
     private var hearing: AnyCancellable?
 
@@ -305,12 +299,10 @@ final class CallBarsView: NSView {
         for _ in 0..<CallLook.bars {
             let back = CALayer()
             let front = CALayer()
-            let middle = CALayer()
-            middle.backgroundColor = CallLook.yellow.cgColor
-            for part in [back, front, middle] { layer?.addSublayer(part) }
+            front.backgroundColor = CallLook.yellow.cgColor
+            for part in [back, front] { layer?.addSublayer(part) }
             backs.append(back)
             fronts.append(front)
-            cores.append(middle)
         }
     }
 
@@ -338,16 +330,14 @@ final class CallBarsView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for (index, voices) in bars.enumerated() where index < backs.count {
-            let (back, front) = CallLook.layers(voices)
-            for (layer, part) in [(backs[index], back), (fronts[index], front)] {
-                let bar = CallLook.barFrame(index, level: part.level, height: bounds.height, core: core)
-                layer.frame = bar
-                layer.cornerRadius = bar.width / 2
-                layer.backgroundColor = CallLook.voice(theirs: part.theirs).cgColor
-            }
-            let middle = CallLook.coreFrame(of: CallLook.barFrame(index, level: 0, height: bounds.height, core: core), core: core)
-            cores[index].frame = middle
-            cores[index].cornerRadius = middle.width / 2
+            let parts = CallLook.layers(voices)
+            let louder = CallLook.barFrame(index, level: parts.louder, height: bounds.height, core: core)
+            let overlap = CallLook.barFrame(index, level: parts.overlap, height: bounds.height, core: core)
+            backs[index].frame = louder
+            backs[index].cornerRadius = louder.width / 2
+            backs[index].backgroundColor = CallLook.voice(theirs: parts.theirs).cgColor
+            fronts[index].frame = overlap
+            fronts[index].cornerRadius = overlap.width / 2
         }
         CATransaction.commit()
     }

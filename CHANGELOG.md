@@ -14,8 +14,8 @@
   button to decline and a green one to accept, in place of macOS's popup; on a
   call, a green phone and its time beside the camera, and a waveform of both
   voices, the other person's green from the left and yours orange from the
-  right, each crossing the whole waveform and fading as it goes, each bar yellow
-  in its middle. Opened, a FaceTime or Phone call shows the caller's photo from
+  right, each crossing the whole waveform and fading as it goes, yellow where
+  they overlap. Opened, a FaceTime or Phone call shows the caller's photo from
   Contacts, or their initial in a purple to teal circle, their name and the
   call's time, and under them buttons for the sound output, video, which is off,
   muting your microphone, going to the call and ending it. A call in another app

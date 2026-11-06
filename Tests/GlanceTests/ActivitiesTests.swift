@@ -1060,9 +1060,11 @@ struct SystemBannersTests {
         #expect(spoke[0].theirs == 1 && spoke[1...].allSatisfy { $0.theirs == 0 } && spoke.allSatisfy { $0.yours == 0 })
         let older = CallVoices.shaped(theirs: Array(repeating: 0, count: 5) + [1] + Array(repeating: 0, count: count - 6), yours: word)
         #expect(older[5].theirs == CallLook.fade(across: 5.0 / 13) && older[13].yours == 1)
-        // Drawn overlapping: the louder behind, the other in front.
-        let (back, front) = CallLook.layers(CallBar(theirs: 0.3, yours: 0.8))
-        #expect(back.level == 0.8 && !back.theirs && front.level == 0.3 && front.theirs)
+        // Drawn overlapping: the louder in its color, yellow as far as the quieter overlaps it.
+        let parts = CallLook.layers(CallBar(theirs: 0.3, yours: 0.8))
+        #expect(parts.louder == 0.8 && !parts.theirs && parts.overlap == 0.3)
+        // Nobody speaking: both dots, overlapping, a yellow dot.
+        #expect(CallLook.layers(CallBar()).overlap == 0)
         // Louder than loud is as loud as can be.
         #expect(CallVoices.shaped(theirs: Array(repeating: 3, count: count), yours: [])[0].theirs == 1)
     }
@@ -1079,20 +1081,22 @@ struct SystemBannersTests {
         #expect(abs(32 * CallLook.waveEdge - 9.31) < 0.05)
     }
 
-    @Test("Every bar is yellow in its middle and all yellow when quiet; past it, the other person's green and yours orange")
+    @Test("A bar is the louder voice's color past the yellow where both overlap, and a yellow dot when quiet")
     @MainActor
     func callBarColors() throws {
         let them = try #require(CallLook.voice(theirs: true).usingColorSpace(.displayP3))
         let you = try #require(CallLook.voice(theirs: false).usingColorSpace(.displayP3))
+        let yellow = try #require(CallLook.yellow.usingColorSpace(.displayP3))
         #expect(them.greenComponent > them.redComponent && you.redComponent > you.greenComponent)
         #expect(them.alphaComponent == 1 && you.alphaComponent == 1)
-        // Quiet: the yellow middle alone.
+        // The iPhone's yellow is about the green and the orange together, the lighter of each.
+        #expect(abs(yellow.redComponent - max(them.redComponent, you.redComponent)) < 12.0 / 255)
+        #expect(abs(yellow.greenComponent - max(them.greenComponent, you.greenComponent)) < 12.0 / 255)
+        #expect(abs(yellow.blueComponent - max(them.blueComponent, you.blueComponent)) < 12.0 / 255)
+        // Quiet: a dot, the smallest a bar is; loud: as tall as the waveform, on its middle.
         let quiet = CallLook.barFrame(0, level: 0, height: 14, core: 3.7)
-        #expect(quiet.height == 3.7 && CallLook.coreFrame(of: quiet, core: 3.7) == quiet)
-        // Loud: the middle stays as tall, in the middle.
         let loud = CallLook.barFrame(0, level: 1, height: 14, core: 3.7)
-        #expect(loud.height == 14 && CallLook.coreFrame(of: loud, core: 3.7).height == 3.7)
-        #expect(CallLook.coreFrame(of: loud, core: 3.7).midY == loud.midY)
+        #expect(quiet.height == 3.7 && loud.height == 14 && quiet.midY == loud.midY)
     }
 
     @Test("macOS's popup's waveform is read for each voice: the other person on its left, you on its right")
