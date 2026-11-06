@@ -1050,13 +1050,15 @@ final class CallWatch: ObservableObject {
             if let name = popup?.name { self?.who = name }
             self?.refresh()
         }
-        // Reading whether the microphone's in use costs next to nothing; it's read rarely.
+        // Once a second: which calling app has the microphone, asked off the notch's thread.
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 CallBanners.shared.follow()
-                self?.microphone = CallAudio.appOnMicrophone()
-                self?.refresh()
-                self?.refitAsTimeGrows()
+                CallAudio.appOnMicrophone { app in
+                    self?.microphone = app
+                    self?.refresh()
+                    self?.refitAsTimeGrows()
+                }
             }
         }
         timer.tolerance = 0.2
@@ -1481,35 +1483,63 @@ enum CallAudio {
     }
 
     private static func processes() -> [Process] {
+        processIDs().compactMap { id in
+            guard let pid = pid(of: id), let bundle = bundle(of: id) else { return nil }
+            return Process(
+                pid: pid, bundle: bundle, input: flag(id, kAudioProcessPropertyIsRunningInput), output: flag(id, kAudioProcessPropertyIsRunningOutput))
+        }
+    }
+
+    /// Every process Core Audio knows of. Each question about one waits on macOS's sound service.
+    private static func processIDs() -> [AudioObjectID] {
         var address = AudioProperty.address(kAudioHardwarePropertyProcessObjectList)
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(AudioProperty.system, &address, 0, nil, &size) == noErr, size > 0 else { return [] }
         var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
         guard AudioObjectGetPropertyData(AudioProperty.system, &address, 0, nil, &size, &ids) == noErr else { return [] }
-        return ids.compactMap { id in
-            func flag(_ selector: AudioObjectPropertySelector) -> Bool {
-                var address = AudioProperty.address(selector)
-                var value: UInt32 = 0
-                var size = UInt32(MemoryLayout<UInt32>.size)
-                return AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value) == noErr && value != 0
-            }
-            var pid: pid_t = 0
-            var pidSize = UInt32(MemoryLayout<pid_t>.size)
-            var pidAddress = AudioProperty.address(kAudioProcessPropertyPID)
-            guard AudioObjectGetPropertyData(id, &pidAddress, 0, nil, &pidSize, &pid) == noErr else { return nil }
-            var name: Unmanaged<CFString>?
-            var nameSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
-            var nameAddress = AudioProperty.address(kAudioProcessPropertyBundleID)
-            guard AudioObjectGetPropertyData(id, &nameAddress, 0, nil, &nameSize, &name) == noErr, let bundle = name?.takeRetainedValue() as String?
-            else { return nil }
-            return Process(
-                pid: pid, bundle: bundle, input: flag(kAudioProcessPropertyIsRunningInput), output: flag(kAudioProcessPropertyIsRunningOutput))
-        }
+        return ids
     }
 
-    /// A calling app using the microphone now.
+    private static func flag(_ id: AudioObjectID, _ selector: AudioObjectPropertySelector) -> Bool {
+        var address = AudioProperty.address(selector)
+        var value: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        return AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value) == noErr && value != 0
+    }
+
+    private static func pid(of id: AudioObjectID) -> pid_t? {
+        var pid: pid_t = 0
+        var size = UInt32(MemoryLayout<pid_t>.size)
+        var address = AudioProperty.address(kAudioProcessPropertyPID)
+        return AudioObjectGetPropertyData(id, &address, 0, nil, &size, &pid) == noErr ? pid : nil
+    }
+
+    private static func bundle(of id: AudioObjectID) -> String? {
+        var name: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        var address = AudioProperty.address(kAudioProcessPropertyBundleID)
+        guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &name) == noErr else { return nil }
+        return name?.takeRetainedValue() as String?
+    }
+
+    /// A calling app using the microphone now: each process asked only whether it's recording,
+    /// and only those that are, what they are.
     static func appOnMicrophone() -> App? {
-        processes().lazy.filter(\.input).compactMap { callApp(of: $0.bundle) }.first
+        for id in processIDs() where flag(id, kAudioProcessPropertyIsRunningInput) {
+            if let bundle = bundle(of: id), let app = callApp(of: bundle) { return app }
+        }
+        return nil
+    }
+
+    private static let asking = DispatchQueue(label: "Glance.CallAudio", qos: .userInitiated)
+
+    /// The same, asked away from the thread that draws the notch, which would otherwise wait on
+    /// macOS's sound service every second; the answer comes back on it.
+    static func appOnMicrophone(then answer: @escaping @MainActor (App?) -> Void) {
+        asking.async {
+            let app = appOnMicrophone()
+            DispatchQueue.main.async { MainActor.assumeIsolated { answer(app) } }
+        }
     }
 
     /// The process making the call's sound: of the app, or of any calling app.
