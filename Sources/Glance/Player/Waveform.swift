@@ -166,6 +166,22 @@ struct WaveformGlyph: View {
         return CGRect(x: CGFloat(index) * width * (1 + 1 / barToGap), y: (size.height - height) / 2, width: width, height: height)
     }
 
+    /// A bar as a capsule drawn the same way whatever its height, a dot included, so that as one
+    /// shape turns into another every point has a partner and nothing twists on the way.
+    static func addCapsule(_ bar: CGRect, to path: CGMutablePath) {
+        let r = bar.width / 2
+        let k = r * 0.5523
+        let top = bar.minY + r, bottom = max(bar.maxY - r, top)
+        path.move(to: CGPoint(x: bar.minX, y: top))
+        path.addCurve(to: CGPoint(x: bar.midX, y: top - r), control1: CGPoint(x: bar.minX, y: top - k), control2: CGPoint(x: bar.midX - k, y: top - r))
+        path.addCurve(to: CGPoint(x: bar.maxX, y: top), control1: CGPoint(x: bar.midX + k, y: top - r), control2: CGPoint(x: bar.maxX, y: top - k))
+        path.addLine(to: CGPoint(x: bar.maxX, y: bottom))
+        path.addCurve(to: CGPoint(x: bar.midX, y: bottom + r), control1: CGPoint(x: bar.maxX, y: bottom + k), control2: CGPoint(x: bar.midX + k, y: bottom + r))
+        path.addCurve(to: CGPoint(x: bar.minX, y: bottom), control1: CGPoint(x: bar.midX - k, y: bottom + r), control2: CGPoint(x: bar.minX, y: bottom + k))
+        path.addLine(to: CGPoint(x: bar.minX, y: top))
+        path.closeSubpath()
+    }
+
     /// How wide a bar is, for how wide the waveform is.
     static func barWidth(in width: CGFloat) -> CGFloat { width / (6 + 5 / barToGap) }
 
@@ -308,7 +324,7 @@ final class LiveBarsView: NSView {
         let path = CGMutablePath()
         for (index, level) in levels.enumerated() {
             let bar = WaveformGlyph.bar(index, level: level, playing: isPlaying, in: bounds.size, width: width)
-            path.addRoundedRect(in: bar, cornerWidth: bar.width / 2, cornerHeight: min(bar.width, bar.height) / 2)
+            WaveformGlyph.addCapsule(bar, to: path)
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)

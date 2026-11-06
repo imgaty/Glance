@@ -820,6 +820,19 @@ struct SystemBannersTests {
                 == IncomingCallView.wing(for: call("Al", .ringing), restingHeight: h))
     }
 
+    @Test("A waveform's bar is drawn the same way whether it's a dot or tall, so one turns into the other cleanly")
+    func waveformCapsule() {
+        func elements(_ rect: CGRect) -> [CGPathElementType] {
+            let path = CGMutablePath()
+            WaveformGlyph.addCapsule(rect, to: path)
+            var types: [CGPathElementType] = []
+            path.applyWithBlock { types.append($0.pointee.type) }
+            return types
+        }
+        #expect(elements(CGRect(x: 0, y: 0, width: 4, height: 4)) == elements(CGRect(x: 0, y: 0, width: 4, height: 20)))
+        #expect(CGMutablePath().isEmpty)
+    }
+
     @Test("Discord's call link gives the name and the time, in whatever words it's in")
     @MainActor
     func discordReading() {
