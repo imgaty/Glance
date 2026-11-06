@@ -60,8 +60,6 @@ enum CallLook {
     static let speaker = Color(red: 0x2C / 255, green: 0x2C / 255, blue: 0x2E / 255)
     static let avatarTop = Color(red: 0xA4 / 255, green: 0xA8 / 255, blue: 0xB4 / 255)
     static let avatarBottom = Color(red: 0x89 / 255, green: 0x8D / 255, blue: 0x96 / 255)
-    /// The faint green outline the whole time, visible against anything dark.
-    static let rim = Color(red: 0x1E / 255, green: 0x36 / 255, blue: 0x1C / 255)
 
     /// How much room the waveform takes beside the camera: half the width of macOS's popup's, so its
     /// bars stay sharp, and shorter by less, so they're as tall as they can be.
