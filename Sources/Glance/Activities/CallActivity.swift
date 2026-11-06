@@ -473,6 +473,9 @@ final class CallVoices: ObservableObject {
     /// the popup's bars do.
     private var shownTheirs: CGFloat = 0
     private var shownYours: CGFloat = 0
+    /// How loud each voice has been, a thirtieth of a second at a time, newest first.
+    private var theirHistory = [CGFloat](repeating: 0, count: 30)
+    private var yourHistory = [CGFloat](repeating: 0, count: 30)
     private var pipeline: TapPipeline?
     private var engine: AVAudioEngine?
     private var clock: Timer?
@@ -520,6 +523,8 @@ final class CallVoices: ObservableObject {
         yours = 0
         shownTheirs = 0
         shownYours = 0
+        theirHistory = theirHistory.map { _ in 0 }
+        yourHistory = yourHistory.map { _ in 0 }
         seen = false
         picture = nil
     }
@@ -536,7 +541,9 @@ final class CallVoices: ObservableObject {
         }
         shownTheirs = Self.eased(shownTheirs, towards: theirs)
         shownYours = Self.eased(shownYours, towards: yours)
-        let bars = Self.shaped(theirs: shownTheirs, yours: shownYours, at: t)
+        theirHistory = [shownTheirs] + theirHistory.dropLast()
+        yourHistory = [shownYours] + yourHistory.dropLast()
+        let bars = Self.shaped(theirs: theirHistory, yours: yourHistory)
         picture = CallLook.drawnWave(theirs: bars.theirs, yours: bars.yours)
     }
 
@@ -545,19 +552,15 @@ final class CallVoices: ObservableObject {
         shown + (heard - shown) * (heard > shown ? 0.55 : 0.18)
     }
 
-    /// The bars of each voice from how loud it is, over the same width: the other person's strongest
-    /// to the left, yours to the right, each dying away by the other side, as the popup's do. They
-    /// move in place, never all together.
-    nonisolated static func shaped(theirs: CGFloat, yours: CGFloat, count: Int = 30, at t: TimeInterval) -> (theirs: [CGFloat], yours: [CGFloat]) {
-        func voice(_ level: CGFloat, _ strength: (Double) -> Double) -> [CGFloat] {
-            (0..<count).map { bar in
-                let place = (Double(bar) + 0.5) / Double(count)
-                let wave = (sin(t * 4.5 + Double(bar) * 1.7) + sin(t * 2.7 + Double(bar) * 2.9)) / 2
-                return min(level * CGFloat(strength(place) * (0.65 + 0.35 * wave)), 1)
-            }
-        }
-        func fading(_ place: Double) -> Double { min(max((0.62 - place) / 0.22, 0), 1) }
-        return (voice(theirs, fading), voice(yours) { fading(1 - $0) })
+    /// The bars of each voice from how loud it's just been, over the same width, as the popup's: the
+    /// other person's newest at the left, running right and dying away, yours mirrored from the right.
+    /// Nothing's made up: a bar is a moment of that voice.
+    nonisolated static func shaped(theirs: [CGFloat], yours: [CGFloat]) -> (theirs: [CGFloat], yours: [CGFloat]) {
+        let count = min(theirs.count, yours.count)
+        func fading(_ place: Double) -> CGFloat { CGFloat(min(max((0.62 - place) / 0.22, 0), 1)) }
+        let them = (0..<count).map { bar in min(theirs[bar] * fading((Double(bar) + 0.5) / Double(count)), 1) }
+        let you = (0..<count).map { bar in min(yours[count - 1 - bar] * fading(1 - (Double(bar) + 0.5) / Double(count)), 1) }
+        return (them, you)
     }
 
     private func startMicrophone() {

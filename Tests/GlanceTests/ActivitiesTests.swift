@@ -770,17 +770,19 @@ struct SystemBannersTests {
         #expect(ExpandedCallView.wing(for: ending, restingHeight: h) > ExpandedCallView.wing(for: short, restingHeight: h))
     }
 
-    @Test("Drawn, both voices run over the same width: the other person's to the left, yours to the right")
+    @Test("Drawn, both voices run over the same width from their own recent loudness: the other person's from the left, yours from the right")
     func callVoices() {
-        let quiet = CallVoices.shaped(theirs: 0, yours: 0, at: 10)
+        let quiet = CallVoices.shaped(theirs: Array(repeating: 0, count: 30), yours: Array(repeating: 0, count: 30))
         #expect(quiet.theirs.allSatisfy { $0 == 0 } && quiet.yours.allSatisfy { $0 == 0 })
-        let both = CallVoices.shaped(theirs: 1, yours: 1, at: 10)
-        #expect(both.theirs.count == 30 && both.yours.count == 30)
-        #expect(both.theirs.prefix(10).allSatisfy { $0 > 0 } && both.theirs.suffix(10).allSatisfy { $0 == 0 })
-        #expect(both.yours.prefix(10).allSatisfy { $0 == 0 } && both.yours.suffix(10).allSatisfy { $0 > 0 })
-        // Moving in place, never all together, and never past the top.
-        #expect(Set(both.theirs.prefix(10)).count > 1)
-        #expect(CallVoices.shaped(theirs: 3, yours: 3, at: 10).theirs.allSatisfy { $0 <= 1 })
+        // Just now loud, before that quiet: the newest bar is at each voice's own end.
+        let now = [CGFloat(1)] + Array(repeating: 0, count: 29)
+        let bars = CallVoices.shaped(theirs: now, yours: now)
+        #expect(bars.theirs[0] == 1 && bars.theirs.dropFirst().allSatisfy { $0 == 0 })
+        #expect(bars.yours[29] == 1 && bars.yours.dropLast().allSatisfy { $0 == 0 })
+        // Each dies away towards the other's side.
+        let loud = Array(repeating: CGFloat(1), count: 30)
+        let both = CallVoices.shaped(theirs: loud, yours: loud)
+        #expect(both.theirs.suffix(10).allSatisfy { $0 == 0 } && both.yours.prefix(10).allSatisfy { $0 == 0 })
         #expect(CallLook.drawnWave(theirs: both.theirs, yours: both.yours)?.width == 180)
     }
 
