@@ -239,6 +239,8 @@ struct BubbleBlend: View, Animatable {
     static let blur: CGFloat = 0.11
     /// Room around them for the blur.
     private static let margin: CGFloat = 12
+    /// Far enough out that the neck has parted, and the bubble is a circle.
+    static let apart: CGFloat = 0.9
 
     var animatableData: CGFloat {
         get { out }
@@ -251,8 +253,21 @@ struct BubbleBlend: View, Animatable {
             context.addFilter(.alphaThreshold(min: 0.5, color: .black))
             context.addFilter(.blur(radius: h * Self.blur))
             context.drawLayer { layer in
-                for x in [0, h * (1 + IslandBubble.gap) * out] {
-                    layer.fill(Path(ellipseIn: CGRect(x: Self.margin + x, y: Self.margin, width: h, height: h)), with: .color(.black))
+                let bubble = h * (1 + IslandBubble.gap) * out
+                // One shape, so that where they overlap, in the notch's end, they don't add up past its edge.
+                var circles = Path()
+                for x in [0, bubble] {
+                    circles.addEllipse(in: CGRect(x: Self.margin + x, y: Self.margin, width: h, height: h))
+                }
+                layer.fill(circles, with: .color(.black))
+                // In the notch's end, the bubble's top is the notch's: square up to the screen's edge, as
+                // the notch's other end is, rounding into a circle only as it leaves.
+                let near = 1 - min(out / Self.apart, 1)
+                if near > 0 {
+                    layer.drawLayer { top in
+                        top.clip(to: circles, options: .inverse)
+                        top.fill(Path(CGRect(x: Self.margin + bubble, y: 0, width: h, height: Self.margin + h / 2)), with: .color(.black.opacity(near)))
+                    }
                 }
             }
         }

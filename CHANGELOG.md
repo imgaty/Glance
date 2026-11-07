@@ -180,6 +180,8 @@
   kept. `Voice Memos` in **Settings > Live Activities** turns it off.
 - Fixed AirPlay's symbols jittering on their way back beside the camera as the
   notch closed.
+- Fixed the notch's end rounding at the top as the bubble ran into it or budded
+  off. It meets the top of the screen there as the notch's other end does.
 
 ### Touch
 
