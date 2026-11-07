@@ -190,6 +190,8 @@
 - Fixed the opened Voice Memos waveform rising under the camera housing, where
   it couldn't be seen. The notch opens wider, so the bars recorded so far end
   beside the camera.
+- Fixed a voice memo's time starting again from zero when it was resumed after
+  a pause. It now carries on from where it stopped.
 
 ### Touch
 

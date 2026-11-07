@@ -1779,6 +1779,29 @@ struct RecordingTests {
         #expect(!ScreenRecordingWatch.isRecordingItem(nil))
     }
 
+    @Test("A voice memo pauses while Voice Memos shows Resume, goes on while it shows Done, and resumed it carries on from where it was")
+    func voiceMemoSteps() {
+        let start = Date(timeIntervalSinceReferenceDate: 1000)
+        let recording = VoiceMemo.recording(since: start)
+        func next(_ memo: VoiceMemo?, microphone: Bool, resume: Bool = false, done: Bool = false, after seconds: Double) -> VoiceMemo? {
+            VoiceMemoWatch.next(after: memo, recording: microphone, resume: resume, done: done, at: start + seconds)
+        }
+        #expect(next(nil, microphone: true, after: 0) == recording)
+        #expect(next(recording, microphone: true, after: 5) == recording)
+        // Paused at 10 seconds.
+        let paused = next(recording, microphone: false, resume: true, done: true, after: 10)
+        #expect(paused == .paused(length: 10))
+        // Resumed: the Resume button has gone before the microphone comes back.
+        #expect(next(paused, microphone: false, done: true, after: 16) == paused)
+        #expect(next(paused, microphone: true, after: 17) == .recording(since: start + 7))
+        #expect(next(paused, microphone: true, after: 17)?.length(at: start + 18) == 11)
+        // Stopping, the microphone goes before the buttons change, then Done goes too.
+        #expect(next(recording, microphone: false, done: true, after: 20) == recording)
+        #expect(next(recording, microphone: false, after: 21) == nil)
+        #expect(next(paused, microphone: false, after: 21) == nil)
+        #expect(next(nil, microphone: false, done: true, after: 30) == nil)
+    }
+
     @Test("Voice Memos' own buttons are named as Voice Memos names them")
     func voiceMemosButtons() {
         #expect(!VoiceMemoWatch.resume.isEmpty && VoiceMemoWatch.resume != "AX_RESUME")

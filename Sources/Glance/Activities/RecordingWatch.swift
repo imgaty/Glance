@@ -180,21 +180,33 @@ final class VoiceMemoWatch: ObservableObject {
     }
 
     private func heard(recording: Bool, app: NSRunningApplication) {
-        let now = Date.now
+        // Its buttons are only looked for while one is going and the microphone has stopped.
+        let looks = !recording && memo != nil
+        let resume = looks && Self.button(Self.resume, in: app) != nil
+        let done = looks && !resume && Self.button(Self.done, in: app) != nil
+        let next = Self.next(after: memo, recording: recording, resume: resume, done: done, at: .now)
+        if next != memo { memo = next }
+    }
+
+    /// The voice memo now, from whether Voice Memos is using the microphone and which of its
+    /// buttons show: paused while its Resume button does, and going on, paused or about to record
+    /// again, for as long as its Done button does. Resumed, Voice Memos swaps Resume for Pause a
+    /// moment before the microphone comes back, and that's not the end of it.
+    nonisolated static func next(after memo: VoiceMemo?, recording: Bool, resume: Bool, done: Bool, at now: Date) -> VoiceMemo? {
         switch (recording, memo) {
         case (true, .recording?):
-            break
+            return memo
         case (true, .paused(let length)?):
-            memo = .recording(since: now - length)
+            return .recording(since: now - length)
         case (true, nil):
-            memo = .recording(since: now)
+            return .recording(since: now)
         case (false, .recording(let since)?):
-            // Paused, if its Resume button shows; otherwise it's done.
-            memo = Self.button(Self.resume, in: app) != nil ? .paused(length: now.timeIntervalSince(since)) : nil
+            if resume { return .paused(length: now.timeIntervalSince(since)) }
+            return done ? memo : nil
         case (false, .paused?):
-            if Self.button(Self.resume, in: app) == nil { memo = nil }
+            return resume || done ? memo : nil
         case (false, nil):
-            break
+            return nil
         }
     }
 

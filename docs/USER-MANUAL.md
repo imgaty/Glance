@@ -532,8 +532,8 @@ off with `Screen recording` in **Settings > Live Activities**.
 While Voice Memos records, the notch shows it as the iPhone does: a red waveform
 of the sound at its left end, the newest at the right, gliding left as it comes,
 and the recording's time at its right end. Paused, both stand still until you
-resume. The waveform comes from the Mac's microphone, once you allow it; nothing
-is recorded or kept.
+resume, and the time then carries on from where it stopped. The waveform comes
+from the Mac's microphone, once you allow it; nothing is recorded or kept.
 
 Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the waveform running on in gray dots, the time, and a button:
