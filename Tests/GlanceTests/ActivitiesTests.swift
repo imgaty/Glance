@@ -906,6 +906,17 @@ struct SystemBannersTests {
         #expect(isClose(peek.bodyWidth - rest.bodyWidth, 2 * model.swell(in: .peek)) && isClose(peek.height - rest.height, model.swell(in: .peek)))
     }
 
+    @Test("The pointer doesn't swell what's as tall as the Alarm, which is as large as it gets")
+    @MainActor
+    func swellsWithSomethingToOpen() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.proximity = 1
+        #expect(model.swells)
+        model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
+        #expect(model.restingTall && !model.swells)
+        #expect(model.metrics(for: .closed).height == model.restingHeight)
+    }
+
     @Test("Opened, another app's call is one row as tall as the Alarm: the name, the speaker and, where it can be done, End")
     @MainActor
     func openedOtherAppCall() {

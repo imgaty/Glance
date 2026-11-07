@@ -343,6 +343,10 @@ final class NotchModel: ObservableObject {
         }
     }
 
+    /// The pointer swells it, as it does an activity with a view to open to; not what's as tall as
+    /// the Alarm, which is opened already.
+    var swells: Bool { !restingTall }
+
     /// An activity's recording, if it's one.
     func recording(of activity: Activity) -> Recording? {
         switch activity {
@@ -477,15 +481,16 @@ final class NotchModel: ObservableObject {
         let pull = max(stretch, 0)
         let across = abs(lean)
         let resting = short ? closedSize.height : restingHeight
+        let near = swells ? proximity : 0
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed:
                 (
-                    restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4 + across,
-                    resting + Self.nearSwell * proximity + pull
+                    restingWidth + 2 * Self.nearSwell * near + pull * 0.4 + across,
+                    resting + Self.nearSwell * near + pull
                 )
             // Tall already, it's as large as it gets under the pointer.
-            case .peek where restingTall: (restingWidth + pull * 0.4 + across, resting + pull)
+            case .peek where !swells: (restingWidth + pull * 0.4 + across, resting + pull)
             case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4 + across, resting + Self.peekSwell + pull)
             case .open where expanded == .airdrop:
                 (
