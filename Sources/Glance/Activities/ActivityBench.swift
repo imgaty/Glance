@@ -32,6 +32,44 @@ final class ActivityBench {
         /// Said for a moment, with no view of its own to open to.
         var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery].contains(self) }
 
+        /// How the menu names it, in English, as the menu is only in builds made from source.
+        var title: String {
+            switch self {
+            case .music: "Music"
+            case .call: "Whole Call"
+            case .callRinging: "Ringing"
+            case .callSwiped: "Ringing, Swiped Away"
+            case .callOutgoing: "Calling"
+            case .callOngoing: "On a Call"
+            case .callLong: "Long Name, Over an Hour"
+            case .callNumber: "A Number"
+            case .callOtherApp: "Another App"
+            case .callUnread: "Popup Not Read"
+            case .airdrop: "Coming In"
+            case .airdropSend: "Going Out"
+            case .airdropReal: "Real Files, Nothing Made Up"
+            case .timer: "Timer"
+            case .stopwatch: "Stopwatch"
+            case .airplay: "AirPlay"
+            case .charging: "Charging"
+            case .lowBattery: "Low Battery"
+            case .lowBatteryReal: "Low Battery, Real Button"
+            case .headphones: "Headphones"
+            case .deviceBattery: "Headphones Low"
+            case .caseBattery: "Case Low"
+            }
+        }
+
+        /// The menu's groups, each under its label, in the order the notch takes them.
+        static let groups: [(label: String, scenes: [Scene])] = [
+            ("Calls", [.call, .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread]),
+            ("Music", [.music]),
+            ("AirDrop", [.airdrop, .airdropSend, .airdropReal]),
+            ("Clock", [.timer, .stopwatch]),
+            ("AirPlay", [.airplay]),
+            ("Announced", [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
+        ]
+
         /// What can be tried beside another: all but those that touch something real.
         static var seconds: [Scene] { allCases.filter { $0 != .airdropReal && $0 != .lowBatteryReal } }
     }

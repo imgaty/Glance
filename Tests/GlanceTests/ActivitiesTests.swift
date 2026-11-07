@@ -1489,6 +1489,20 @@ struct ActivityBenchTests {
         #expect(ActivityBench.parse(["Glance", "--bench"]) == nil)
         #expect(ActivityBench.parse(["Glance", "--bench", "player"]) == nil)
     }
+
+    @Test("The menu lists every scene once, under a label, each by a name of its own")
+    @MainActor
+    func menuLabels() {
+        let listed = ActivityBench.Scene.groups.flatMap(\.scenes)
+        #expect(listed.count == ActivityBench.Scene.allCases.count)
+        #expect(Set(listed) == Set(ActivityBench.Scene.allCases))
+        #expect(ActivityBench.Scene.groups.allSatisfy { !$0.label.isEmpty && !$0.scenes.isEmpty })
+        for group in ActivityBench.Scene.groups {
+            let titles = group.scenes.map(\.title)
+            #expect(Set(titles).count == titles.count, "\(group.label) names two alike")
+            #expect(titles.allSatisfy { !$0.isEmpty && $0 != $0.lowercased() })
+        }
+    }
 }
 
 /// A file going out over AirDrop, as how far the service sending it has read.

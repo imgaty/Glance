@@ -181,7 +181,12 @@ final class StatusBarController: NSObject {
             return entry
         }
         let first = ActivityBench.scene
-        for scene in ActivityBench.Scene.allCases { scenes.addItem(entry(scene.rawValue, tries: [scene], on: scene == first)) }
+        // Grouped, each group under its label.
+        for (index, group) in ActivityBench.Scene.groups.enumerated() {
+            if index > 0 { scenes.addItem(.separator()) }
+            scenes.addItem(.sectionHeader(title: group.label))
+            for scene in group.scenes { scenes.addItem(entry(scene.title, tries: [scene], on: scene == first)) }
+        }
         scenes.addItem(.separator())
         // A second beside the first, the most the notch shows; chosen again, it goes.
         let second = NSMenuItem(title: String(localized: "Add a Second"), action: nil, keyEquivalent: "")
@@ -189,9 +194,15 @@ final class StatusBarController: NSObject {
         if let first {
             let others = NSMenu()
             others.autoenablesItems = false
-            for scene in ActivityBench.Scene.seconds where scene != first {
-                let on = ActivityBench.scenes.contains(scene)
-                others.addItem(entry(scene.rawValue, tries: on ? [first] : [first, scene], on: on))
+            for (index, group) in ActivityBench.Scene.groups.enumerated() {
+                let choices = group.scenes.filter { ActivityBench.Scene.seconds.contains($0) && $0 != first }
+                guard !choices.isEmpty else { continue }
+                if index > 0, !others.items.isEmpty { others.addItem(.separator()) }
+                others.addItem(.sectionHeader(title: group.label))
+                for scene in choices {
+                    let on = ActivityBench.scenes.contains(scene)
+                    others.addItem(entry(scene.title, tries: on ? [first] : [first, scene], on: on))
+                }
             }
             second.submenu = others
         }
