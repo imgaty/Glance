@@ -28,8 +28,17 @@ struct ActivitiesPage: View {
     @State private var accessibilityAllowed = AXIsProcessTrusted()
     private let hasBattery = BatteryWatch.hasBattery
 
-    /// In the order of `PreviewActivity`.
-    private var switches: [Bool] { [trackPop, charging, lowBattery, devices, calls, airDrop, timers, stopwatch] }
+    /// The page's switches, in order, and what the picture shows as each is turned on: nothing for
+    /// calls, which it doesn't make up.
+    static let previews: [(key: String, shows: PreviewActivity?)] = [
+        (Preferences.musicTrackPop, .announcement), (Preferences.activityCharging, .charging), (Preferences.activityLowBattery, .lowBattery),
+        (Preferences.activityDevices, .device), (Preferences.activityCalls, nil), (Preferences.activityAirDrop, .airDrop),
+        (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
+    ]
+
+    /// Each switch, on or off, in that order; read on every change of one of them, as each is kept
+    /// here.
+    private var switches: [Bool] { Self.previews.map { UserDefaults.standard.object(forKey: $0.key) as? Bool ?? true } }
 
     var body: some View {
         Form {
@@ -118,9 +127,10 @@ struct ActivitiesPage: View {
         }
         // Turned on, the picture shows what it does.
         .onChange(of: switches) { old, new in
-            guard shownPage?.page == .activities, let turned = zip(old, new).enumerated().first(where: { !$0.element.0 && $0.element.1 })
+            guard shownPage?.page == .activities, let turned = zip(old, new).enumerated().first(where: { !$0.element.0 && $0.element.1 }),
+                let shown = Self.previews[turned.offset].shows
             else { return }
-            preview.show(PreviewActivity.allCases[turned.offset])
+            preview.show(shown)
         }
         // Looked at again on coming back from System Settings.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

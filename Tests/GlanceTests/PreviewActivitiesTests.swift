@@ -40,6 +40,13 @@ struct PreviewActivitiesTests {
         #expect(!shown.contains(.announcement))
     }
 
+    @Test("Each switch on the page shows its own activity as it's turned on, and Calls none")
+    @MainActor
+    func switches() {
+        #expect(ActivitiesPage.previews.compactMap(\.shows) == PreviewActivity.allCases)
+        #expect(ActivitiesPage.previews.first { $0.key == Preferences.activityCalls }.map { $0.shows == nil } == true)
+    }
+
     @Test("The battery's show only on a Mac with one")
     func battery() {
         let shown = PreviewActivity.turnedOn(in: defaults(), hasBattery: false)

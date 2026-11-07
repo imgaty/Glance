@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 6 November 2026`
+`Created: 11 October 2026` | `Last updated: 7 November 2026`
 
 <br>
 
@@ -258,6 +258,9 @@
 - Added a picture of the notch to the Live Activities page, showing what's
   turned on there, made up, one after another. Turning a switch on shows it at
   once.
+- Fixed Glance quitting when `Stopwatch` was turned on in
+  **Settings > Live Activities**, and `Calls`, `AirDrop` and `Timers` showing
+  the wrong activity in the page's picture as each was turned on.
 - Changed the app lists on the Player and Tray pages to work alike: what the
   list is for and **Add App…** at the top, each app under it, and
   **Remove from List** in its menu.
