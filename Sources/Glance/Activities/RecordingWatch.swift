@@ -272,7 +272,7 @@ final class ScreenRecordingWatch: ObservableObject {
     /// At the bench: made up.
     private var benching = false
     private var clock: Timer?
-    private var observers: [NSObjectProtocol] = []
+    private var apps: NSKeyValueObservation?
     private var startedAt = Date.distantPast
     private var savingSince = Date.distantPast
     private var files: NSMetadataQuery?
@@ -281,19 +281,16 @@ final class ScreenRecordingWatch: ObservableObject {
     /// Longest it waits for the file once stopped, before it lets it go unsaid.
     static let savingLimit: TimeInterval = 20
 
-    /// Looks twice a second while Screenshot is open, as it is only while capturing.
+    /// Looks twice a second while Screenshot is open, as it is only while capturing. Screenshot
+    /// runs in the background, with no icon in the Dock, and macOS says nothing of such an app
+    /// starting or quitting; it's known by the running apps changing.
     func start() {
-        guard observers.isEmpty, ActivityBench.scene == nil else { return }
-        let center = NSWorkspace.shared.notificationCenter
-        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
-            observers.append(
-                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
-                    let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-                    guard app?.bundleIdentifier == Self.capture else { return }
-                    MainActor.assumeIsolated { self?.follow() }
-                })
+        guard apps == nil, ActivityBench.scene == nil else { return }
+        apps = NSWorkspace.shared.observe(\.runningApplications, options: [.initial]) { [weak self] _, _ in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.follow() }
+            }
         }
-        follow()
     }
 
     private static var enabled: Bool {

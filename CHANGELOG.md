@@ -192,6 +192,8 @@
   beside the camera.
 - Fixed a voice memo's time starting again from zero when it was resumed after
   a pause. It now carries on from where it stopped.
+- Fixed a screen recording made with Screenshot not showing in the notch at
+  all.
 
 ### Touch
 
