@@ -13,9 +13,10 @@ import SwiftUI
 /// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
 /// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's
 /// symbol in it as beside the camera. It leaves the notch's end as a drop of water does: the end
-/// draws back from it on a neck that thins until it parts, and it runs back into the end as it goes;
-/// as the notch opens it stays where it
-/// rests, and the notch comes out over it. With Reduce Motion on, it fades in and out where it rests.
+/// draws back from it on a neck that thins until it parts, and it runs back into the end as it goes.
+/// Opened from the notch, it runs into the notch's end and rides on it as the notch opens, until the
+/// end takes it in; opened from the bubble, it stays where it rests, and the notch comes out over it.
+/// With Reduce Motion on, it fades in and out where it rests.
 /// VoiceOver names it, and opens it as a click does.
 struct IslandBubble: View {
     /// Out of the notch; in it, it's hidden in its end.
@@ -40,6 +41,9 @@ struct IslandBubble: View {
     let notchEnd: CGFloat
     /// The notch is open: nothing of the bubble shows over its glass.
     let hidden: Bool
+    /// The notch opened from its own end, which the bubble goes on running into as it opens, riding
+    /// with it: it's hidden only once it's all the way in.
+    var runsIn = false
     let hovered: Bool
     let pressed: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -56,6 +60,11 @@ struct IslandBubble: View {
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
+    /// How long after the notch starts opening a bubble running into its end is taken in. On the
+    /// user's iPhone recording it ran in on the fold's own curve for 0.21 s, then the last fifth of it
+    /// went in at once, in one frame, rather than creeping in: 0.21 s from when it starts running in,
+    /// `NotchController.mergeTime` before the notch opens.
+    static let inBy: Double = 0.21 - NotchController.mergeTime
 
     /// On the spring the notch's end draws back on, so the two part evenly.
     private var motion: Animation { shown ? IslandMotion.open : IslandMotion.fold }
@@ -107,7 +116,7 @@ struct IslandBubble: View {
                 }
                 .modifier(BubbleGlyph(out: reduceMotion ? 1 : out))
                 .animation(motion, value: out)
-                .animation(.easeOut(duration: 0.1)) { $0.opacity(hidden ? 0 : 1) }
+                .animation(Animation.easeOut(duration: 0.1).paced) { $0.opacity(hidden ? 0 : 1) }
             }
             .frame(width: h, height: h)
             // What it shows, in words, and a click's opening.
@@ -155,10 +164,14 @@ struct IslandBubble: View {
         }
         // From inside the notch's end, where it comes out of, to where it rests.
         .frame(width: h * (2 + Self.gap), height: h, alignment: .leading)
-        .offset(x: notchEnd - h + h * (2 + Self.gap) / 2)
-        // Solid until the opening notch has covered it, and back before the closing notch uncovers it,
-        // as anything fading here would show as a pale circle beside the notch.
-        .animation(hidden ? .linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)) { $0.opacity(hidden ? 0 : 1) }
+        // Stepped as the notch's own frame is, so the two keep one clock even when a frame comes late.
+        .modifier(SteppedOffset(x: notchEnd - h + h * (2 + Self.gap) / 2))
+        // Solid until the opening notch has covered it, or it's run all the way into the notch's end,
+        // and back before the closing notch uncovers it, as anything fading here would show as a pale
+        // circle beside the notch.
+        .animation((hidden ? Animation.linear(duration: 0.01).delay(runsIn ? Self.inBy : 0.2) : .linear(duration: 0.01)).paced) {
+            $0.opacity(hidden ? 0 : 1)
+        }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
         .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptMusic ? 1 : 0) }
         .allowsHitTesting(false)
@@ -231,6 +244,22 @@ private struct BubbleGlyph: ViewModifier, Animatable {
 /// The notch's end and the bubble running together as two drops do: two circles, one in the notch's
 /// end, blurred and cut back to a hard edge, so that where they're near, their blurs add up past the
 /// cut into a neck that thins and parts, as nothing drawn by hand does.
+/// Moved by an offset laid out afresh at every step as it animates, as the notch's frame is, rather
+/// than one only its picture follows: a late frame delays both alike, and the bubble stays on the
+/// notch's end.
+private struct SteppedOffset: ViewModifier, Animatable {
+    var x: CGFloat
+
+    var animatableData: CGFloat {
+        get { x }
+        set { x = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content.offset(x: x)
+    }
+}
+
 struct BubbleBlend: View, Animatable {
     /// 0 with the bubble in the notch's end, 1 where it rests.
     var out: CGFloat

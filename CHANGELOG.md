@@ -187,6 +187,9 @@
   notch closed.
 - Fixed the timer's ring and the stopwatch's symbol staying in the opened notch,
   behind the pause button.
+- Fixed the bubble vanishing as the notch opened from its own end. It runs into
+  the notch's end and rides out on it as the notch opens, until the end takes it
+  in, as on the iPhone.
 - Fixed the notch's end rounding at the top as the bubble ran into it or budded
   off. It meets the top of the screen there as the notch's other end does.
 - Fixed the notch's end beside the bubble showing the camera housing's own

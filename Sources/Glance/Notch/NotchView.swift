@@ -969,9 +969,12 @@ struct NotchView: View {
     private func bubble(_ m: NotchMetrics) -> some View {
         // Open, it stays where it was, under the notch, which came out over it.
         let activity = model.detached ?? (model.state == .open ? model.second : nil)
-        // Riding on the notch's end under the pointer; as the notch opens, it stays where it rests,
-        // off the camera's end, the notch's trailing wing folded away there.
+        // Riding on the notch's end under the pointer. Opened from the notch, it goes on running into
+        // the end it ran towards, riding with it as the notch opens, so the two run together as drops
+        // do rather than the opening notch covering it at once. Opened from the bubble, the notch
+        // reaches over it where it rests, off the camera's end, and grows from there.
         let restingEnd = model.closedSize.width / 2
+        let runsIn = model.state == .open && model.bubbleMerged && !model.openedFromBubble
         return IslandBubble(
             shown: activity != nil && !model.bubbleMerged, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
@@ -980,8 +983,9 @@ struct NotchView: View {
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
-            restingHeight: model.closedSize.height, notchEnd: model.state == .open ? restingEnd : m.bodyWidth / 2 - m.fold,
-            hidden: model.state == .open,
+            restingHeight: model.closedSize.height,
+            notchEnd: model.state != .open ? m.bodyWidth / 2 - m.fold : runsIn ? m.bodyWidth / 2 : restingEnd,
+            hidden: model.state == .open, runsIn: runsIn,
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
