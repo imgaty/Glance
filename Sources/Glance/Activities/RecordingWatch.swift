@@ -24,7 +24,8 @@ final class RecordingLevels: ObservableObject {
     var madeUp = false
     private var madeUpAt = 0
 
-    static let kept = RecordingLook.openRecorded
+    /// As many as the open waveform shows, and one more on its way out.
+    static let kept = RecordingLook.openRecorded + 1
 
     func start() {
         guard clock == nil else { return }

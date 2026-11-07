@@ -537,10 +537,12 @@ resume, and the time then carries on from where it stopped. The waveform comes
 from the Mac's microphone, once you allow it; nothing is recorded or kept.
 
 Hover over or click the notch while the recording has it, or click its bubble,
-and it opens to the waveform running on in gray dots, the time, and a button:
-click it to stop the recording and keep it, as Voice Memos' **Done** does. It
-opens wide enough for the bars recorded so far to end beside the camera, as the
-iPhone's do, and only the dots still to come pass beneath it. Turn it off with
+and it opens to the waveform, the time, and a button: click it to stop the
+recording and keep it, as Voice Memos' **Done** does. After the bars recorded
+so far, gray dots stand for what's still to come: they move along with the
+waveform, and each turns red and rises to the sound as it reaches the recorded
+bars. It opens wide enough for the recorded bars to end beside the camera, as
+the iPhone's do, and only the dots pass beneath it. Turn it off with
 `Voice Memos` in **Settings > Live Activities**.
 
 <br>

@@ -551,12 +551,13 @@ enum MemoBars {
         var width: CGFloat { pitch * CGFloat(slots - 1) + barWidth }
 
         /// The recorded places from the newest levels, oldest first, the newest last; the rest
-        /// dots.
-        func frames(_ levels: [CGFloat]) -> [CGRect] {
-            let newest = Array(levels.suffix(recorded))
-            let quiet = recorded - newest.count
-            return (0..<slots).map { index in
-                let level: CGFloat = index < quiet || index >= recorded ? 0 : newest[index - quiet]
+        /// dots. From a place before the first, for one that's on its way out.
+        func frames(_ levels: [CGFloat], from first: Int = 0) -> [CGRect] {
+            let newest = Array(levels.suffix(recorded - first))
+            let quiet = recorded - first - newest.count
+            return (first..<slots).map { index in
+                let place = index - first
+                let level: CGFloat = place < quiet || index >= recorded ? 0 : newest[place - quiet]
                 let tall = least + (height - least) * min(max(level, 0), 1)
                 return CGRect(x: CGFloat(index) * pitch, y: (height - tall) / 2, width: barWidth, height: tall)
             }
@@ -572,10 +573,10 @@ private struct LiveMemoBars: NSViewRepresentable {
 
 final class MemoBarsView: NSView {
     private var bars: [CALayer] = []
-    /// The recorded bars, which scroll, clipped to their places; and the dots still to come, which
-    /// stay.
-    private let recorded = CALayer()
-    private let later = CALayer()
+    /// Every bar on one strip that scrolls, the recorded ones and the dots still to come alike, as
+    /// the iPhone's: the dots run on toward the recorded ones and turn red there. One more recorded
+    /// bar than shows, on its way out at the left end.
+    private let strip = CALayer()
     private let spec: MemoBars.Spec
     private var hearing: Any?
 
@@ -583,13 +584,12 @@ final class MemoBarsView: NSView {
         self.spec = spec
         super.init(frame: .zero)
         wantsLayer = true
-        recorded.masksToBounds = true
-        layer?.addSublayer(recorded)
-        layer?.addSublayer(later)
-        for index in 0..<spec.slots {
+        layer?.masksToBounds = true
+        layer?.addSublayer(strip)
+        for index in -1..<spec.slots {
             let bar = CALayer()
             bar.backgroundColor = (index < spec.recorded ? RecordingLook.memoRedNS : RecordingLook.laterNS).cgColor
-            (index < spec.recorded ? recorded : later).addSublayer(bar)
+            strip.addSublayer(bar)
             bars.append(bar)
         }
     }
@@ -612,21 +612,21 @@ final class MemoBarsView: NSView {
         super.layout()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        recorded.frame = CGRect(x: 0, y: 0, width: spec.pitch * CGFloat(spec.recorded - 1) + spec.barWidth, height: bounds.height)
-        later.frame = bounds
+        strip.frame = bounds
         CATransaction.commit()
         draw(RecordingLevels.shared.levels, scrolls: false)
     }
 
     /// Each new level takes the newest place and every bar moves on one; drawn there at once, the
-    /// bars are slid back a place and glide into it over the time the next takes to come, so the
-    /// waveform scrolls along as the iPhone's does rather than stepping. With Reduce Motion on, it
-    /// steps.
+    /// strip is slid back a place and glides into it over the time the next takes to come, so the
+    /// waveform scrolls along as the iPhone's does rather than stepping. Where the dots meet the
+    /// recorded bars, the dot arriving turns red and grows to the level heard. With Reduce Motion
+    /// on, it steps.
     private func draw(_ levels: [CGFloat], scrolls: Bool) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         // Laid out from the top, as SwiftUI's own.
-        for (bar, frame) in zip(bars, spec.frames(levels)) {
+        for (bar, frame) in zip(bars, spec.frames(levels, from: -1)) {
             bar.frame = CGRect(x: frame.minX, y: bounds.height - frame.maxY, width: frame.width, height: frame.height)
             bar.cornerRadius = frame.width / 2
         }
@@ -637,7 +637,20 @@ final class MemoBarsView: NSView {
         glide.toValue = 0
         glide.duration = RecordingLook.barTime
         glide.timingFunction = CAMediaTimingFunction(name: .linear)
-        recorded.add(glide, forKey: "glide")
+        strip.add(glide, forKey: "glide")
+        // The newest bar is where the first dot was: it turns red and grows from it.
+        guard spec.recorded < spec.slots, let newest = bars.dropFirst(spec.recorded).first, newest.bounds.height > 0 else { return }
+        let grow = CABasicAnimation(keyPath: "transform.scale.y")
+        grow.fromValue = spec.least / newest.bounds.height
+        grow.toValue = 1
+        let redden = CABasicAnimation(keyPath: "backgroundColor")
+        redden.fromValue = RecordingLook.laterNS.cgColor
+        redden.toValue = RecordingLook.memoRedNS.cgColor
+        let turn = CAAnimationGroup()
+        turn.animations = [grow, redden]
+        turn.duration = RecordingLook.barTime
+        turn.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        newest.add(turn, forKey: "turn")
     }
 }
 

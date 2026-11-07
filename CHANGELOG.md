@@ -174,10 +174,11 @@
   in **Settings > Live Activities** turns it off.
 - Added Voice Memos recording, as the iPhone shows it: a red waveform of the
   sound beside the camera, gliding along as it comes, and the recording's time,
-  both still while it's paused. Opened, the waveform runs on in gray dots, with
-  the time and a button to stop it, as Voice Memos' **Done** does. The waveform
-  comes from the Mac's microphone once it's allowed, and nothing is recorded or
-  kept. `Voice Memos` in **Settings > Live Activities** turns it off.
+  both still while it's paused. Opened, gray dots for what's still to come move
+  along with the waveform and turn red as they reach it, beside the time and a
+  button to stop it, as Voice Memos' **Done** does. The waveform comes from the
+  Mac's microphone once it's allowed, and nothing is recorded or kept.
+  `Voice Memos` in **Settings > Live Activities** turns it off.
 - Fixed AirPlay's symbols jittering on their way back beside the camera as the
   notch closed.
 - Fixed the timer's ring and the stopwatch's symbol staying in the opened notch,
