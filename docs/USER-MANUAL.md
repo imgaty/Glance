@@ -419,10 +419,13 @@ the label it was given in Clock, if any. The stopwatch counts up beside its
 symbol, whose hand goes round once a minute, its hundredths small after the
 seconds, with the pause symbol while it's stopped.
 
-While something plays, the music keeps the left of the notch, showing its cover,
-and the timer moves out into a round bubble of its own off the notch's right end,
-showing its ring, as the iPhone shows two activities at once. A third waits its
-turn. While a new song's name shows, the bubble runs back into the notch, and
+With two activities going on, the one that started first keeps the left of the
+notch, and the other moves out into a round bubble of its own off the notch's
+right end, as the iPhone shows two activities at once: with music playing first,
+the music shows its cover and the timer its ring in the bubble. A third waits its
+turn. As on the iPhone, they take their turns in the order they started,
+whatever they are; one that ends and starts again, such as music paused for a
+while, goes to the back. While a new song's name shows, the bubble runs back into the notch, and
 comes out again after it. With Reduce Motion on, it fades in and out where it
 rests.
 
@@ -472,8 +475,8 @@ read them.
 
 While a file comes in over AirDrop, the notch shows it as the iPhone does, from
 when it starts coming until it's in: AirDrop's symbol in blue at its left end,
-and a ring at its right, filling as the file comes in. Behind music, it goes in
-a bubble of its own, showing the ring. Something waiting to be accepted shows
+and a ring at its right, filling as the file comes in. After another activity, it
+goes in a bubble of its own, showing the ring. Something waiting to be accepted shows
 once you accept it.
 
 Hover over or click the notch while AirDrop has it, or click its bubble, and it
@@ -490,7 +493,7 @@ open, and otherwise the file's name. Turn both off with `AirDrop` in
 While the sound plays on an AirPlay speaker or TV, the notch shows it as the
 iPhone shows Screen Mirroring: AirPlay's symbol in blue at its left end, and
 what it plays on at its right, a TV, a HomePod or a speaker. It stays for as
-long as the sound plays there. Behind music or a timer, it goes in a bubble of
+long as the sound plays there. After another activity, it goes in a bubble of
 its own, showing AirPlay's symbol.
 
 Hover over or click the notch while AirPlay has it, or click its bubble, and it

@@ -147,7 +147,9 @@ final class NotchModel: ObservableObject {
     @Published var stretch: CGFloat = 0
     @Published var pressed = false
     /// Music is playing: the closed notch grows wings for the artwork and the waveform.
-    @Published var activity = false
+    @Published var activity = false {
+        didSet { arrived(.music, activity) }
+    }
     /// A new song started: the wings widen for a moment to show its title and artist.
     @Published var pop = false
     /// Each wing's width while a new song is announced: just enough for its title and artist.
@@ -169,21 +171,35 @@ final class NotchModel: ObservableObject {
     var folded: Bool { switching || collapsed }
     /// Clock's timer counting down beside the camera, and its stopwatch counting up (see
     /// `ClockActivity`); and each wing's width for the one in the notch.
-    @Published var timer: NotchTimer.State?
-    @Published var stopwatch: Stopwatch?
+    @Published var timer: NotchTimer.State? {
+        didSet { arrived(.timer, timer != nil) }
+    }
+    @Published var stopwatch: Stopwatch? {
+        didSet { arrived(.stopwatch, stopwatch != nil) }
+    }
     @Published var timerWing: CGFloat = 0
     /// The timer's label, as named in Clock.
     @Published var timerName: String?
     /// The speaker or TV the sound plays on over AirPlay (see `AirPlayWatch`).
-    @Published var airplay: AirPlayRoute?
+    @Published var airplay: AirPlayRoute? {
+        didSet { arrived(.airplay, airplay != nil) }
+    }
     /// A call, ringing or going on.
-    @Published var call: CallShown?
+    @Published var call: CallShown? {
+        didSet { arrived(.call, call != nil) }
+    }
     /// The screen being recorded, and a voice memo being recorded (see `ScreenRecordingWatch` and
     /// `VoiceMemoWatch`).
-    @Published var screenRecording: ScreenRecording?
-    @Published var voiceMemo: VoiceMemo?
+    @Published var screenRecording: ScreenRecording? {
+        didSet { arrived(.screenRecording, screenRecording != nil) }
+    }
+    @Published var voiceMemo: VoiceMemo? {
+        didSet { arrived(.voiceMemo, voiceMemo != nil) }
+    }
     /// A file coming in over AirDrop (see `AirDropWatch`).
-    @Published var airdrop: AirDropShown?
+    @Published var airdrop: AirDropShown? {
+        didSet { arrived(.airdrop, airdrop != nil) }
+    }
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -260,19 +276,30 @@ final class NotchModel: ObservableObject {
     /// player: AirDrop, the timer, the stopwatch, or AirPlay.
     @Published var expanded: Activity?
 
-    /// What can show at once, in the order they take the notch: a call, the screen being recorded, a
-    /// voice memo being recorded, music, a file coming in over AirDrop, Clock's timer, its stopwatch,
-    /// AirPlay.
+    /// What can show at once: a call, the screen being recorded, a voice memo being recorded, music, a
+    /// file coming in over AirDrop, Clock's timer, its stopwatch, AirPlay.
     enum Activity: Hashable {
         case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay
+    }
+
+    /// When each one going on started, in turn: as on the iPhone, they take the notch first come,
+    /// first served, whatever they are. One that ends and starts again goes to the back.
+    private var arrivals: [Activity: Int] = [:]
+    private var arrivalCount = 0
+
+    private func arrived(_ activity: Activity, _ present: Bool) {
+        guard present else { return arrivals[activity] = nil }
+        guard arrivals[activity] == nil else { return }
+        arrivalCount += 1
+        arrivals[activity] = arrivalCount
     }
 
     /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop, AirPlay. Music's
     /// goes with `activity`.
     @Published var dismissed: Set<Activity> = []
 
-    /// Those showing now, in that order: every one going on, whatever else is. The first has the
-    /// notch, the second is detached beside it, and the rest wait their turn.
+    /// Those showing now, in the order they started: every one going on, whatever else is. The first
+    /// has the notch, the second is detached beside it, and the rest wait their turn.
     var activities: [Activity] {
         var shown: [Activity] = []
         if call != nil { shown.append(.call) }
@@ -283,7 +310,8 @@ final class NotchModel: ObservableObject {
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
         if airplay != nil { shown.append(.airplay) }
-        return shown.filter { !dismissed.contains($0) }
+        return shown.filter { !dismissed.contains($0) }.enumerated()
+            .sorted { (arrivals[$0.element] ?? .max, $0.offset) < (arrivals[$1.element] ?? .max, $1.offset) }.map(\.element)
     }
 
     /// Music has the notch's wings: it comes first. Second, it's detached beside the notch.

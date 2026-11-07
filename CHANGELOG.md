@@ -21,11 +21,11 @@
   muting your microphone, going to the call and ending it. A call in another app
   opens to one row: the caller's name, the sound output and, where Glance can
   press the app's own, ending it. Your microphone is unmuted when the call ends,
-  if Glance muted it. During a call, music and anything else going on show in a
-  bubble beside the notch. FaceTime and Phone calls are read from macOS's own
-  popup, which needs `Screen & System Audio Recording`; Zoom, Discord, WhatsApp
-  and others show once they use the microphone. Turn it off with `Calls` in
-  **Settings > Live Activities**.
+  if Glance muted it. With music or anything else going on, whichever started
+  second shows in a bubble beside the notch. FaceTime and Phone calls are read
+  from macOS's own popup, which needs `Screen & System Audio Recording`; Zoom,
+  Discord, WhatsApp and others show once they use the microphone. Turn it off
+  with `Calls` in **Settings > Live Activities**.
 - Added charging and low battery announcements beside the camera, with the
   battery's level drawn as the iPhone draws it, yellow in Low Power Mode, on
   MacBooks. Low Battery shows at 20%, at 10% and when macOS warns of it, in
@@ -142,7 +142,8 @@
   same with **Hide** and what it shows, such as **Hide Music**.
 - Added two activities at once, as the Dynamic Island shows them: the first
   keeps the left of the notch alone, and the second goes in a round bubble as
-  tall as the notch off its right end. A third waits its turn. The bubble buds
+  tall as the notch off its right end. They take their turns in the order they
+  started, whatever they are, and a third waits its turn. The bubble buds
   off the notch's end and runs back into it, and into it while a new song's name
   shows. Clicking it opens its own activity. VoiceOver reads it as a button that
   opens it. With Reduce Motion on, it fades in and out where it rests.
