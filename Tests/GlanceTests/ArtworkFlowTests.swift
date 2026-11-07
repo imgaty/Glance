@@ -56,6 +56,22 @@ struct ArtworkFlowTests {
         #expect(Self.brightness(of: flow.bars).lowest >= 0.25)
     }
 
+    @Test("A dark cover's bars are brightened more, up to a limit, so they read on black; a light one's as measured")
+    func darkCoverBars() throws {
+        #expect(ArtworkFlow.barsExposure(for: 0.05) > ArtworkFlow.barsExposure(for: 0.15))
+        #expect(ArtworkFlow.barsExposure(for: 0.15) > ArtworkFlow.barsExposure(for: 0.6))
+        #expect(ArtworkFlow.barsExposure(for: 0.6) == ArtworkFlow.barsExposure(for: 0.95))
+        #expect(ArtworkFlow.barsExposure(for: 0) == ArtworkFlow.barsExposure(for: 0.001))
+        let dark = NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
+            NSColor(srgbRed: 0.1, green: 0.05, blue: 0.16, alpha: 1).setFill()
+            rect.fill()
+            return true
+        }
+        let flow = try #require(ArtworkFlow.of(dark))
+        let levels = Self.channels(of: flow.bars).map { max($0.r, $0.g, $0.b) }
+        #expect(levels.reduce(0, +) / Double(levels.count) >= 0.4)
+    }
+
     /// White with a black ball in the middle, the harshest a cover gets.
     static func ball() -> NSImage {
         NSImage(size: NSSize(width: 128, height: 128), flipped: false) { rect in

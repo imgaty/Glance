@@ -266,6 +266,8 @@
 - Fixed the star for songs streamed from `Music`: it stays lit while `Music`
   saves the song, it removes the song from favorites, and it follows changes
   made in `Music`.
+- Fixed the waveform going gray and faint on a dark cover: its bars are
+  brightened as much as they need to read on black, as the iPhone's are.
 
 ### Opening
 

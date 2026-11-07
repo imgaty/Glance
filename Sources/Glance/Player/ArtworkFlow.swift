@@ -47,8 +47,18 @@ final class ArtworkFlow {
     private nonisolated static let barsFloor: CGFloat = 0.24
     /// The bars a little brighter than the cover, as the iPhone's are once its colors blend: the blur,
     /// the share and this chosen as closest to the 18 colors measured on its bars, 13 levels off on
-    /// average out of 255.
+    /// average out of 255. A darker cover is brightened more, up to `barsMostExposure`, so its bars read
+    /// on black as the iPhone's always do, rather than going gray.
     private nonisolated static let barsExposure: CGFloat = 0.3
+    /// How bright the bars are made at the least, on average, and the most they're brightened.
+    nonisolated static let barsBrightness = 0.3
+    private nonisolated static let barsMostExposure = 2.5
+
+    /// How much brighter the bars are than the cover's middle, which is this bright on average.
+    nonisolated static func barsExposure(for brightness: Double) -> CGFloat {
+        let needed = log2(barsBrightness / max(brightness, 0.01))
+        return CGFloat(min(max(needed, Double(barsExposure)), barsMostExposure))
+    }
     /// The cover's blur in the bars, as a share of it: soft enough that colors meet in between, as
     /// the iPhone's do, red and blue making mauve, sharp enough that each part keeps its own.
     private nonisolated static let barsBlur: CGFloat = 0.16
@@ -91,14 +101,14 @@ final class ArtworkFlow {
         cover = CIImage(cgImage: small)
         self.wash = CIImage(cgImage: wash)
         let floor = Self.barsFloor
+        // On whole pixels, or the last row and column would be half drawn.
+        let middle = cover.extent.insetBy(dx: cover.extent.width * (1 - Self.barsShare) / 2, dy: cover.extent.height * (1 - Self.barsShare) / 2)
+            .integral
         let blurred = cover.clampedToExtent().applyingGaussianBlur(sigma: Self.barsBlur * side).cropped(to: cover.extent)
         let lifted = blurred.applyingFilter(
             "CIColorClamp", parameters: ["inputMinComponents": CIVector(x: floor, y: floor, z: floor, w: 0), "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1)]
         )
-        .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: Self.barsExposure])
-        // On whole pixels, or the last row and column would be half drawn.
-        let middle = cover.extent.insetBy(dx: cover.extent.width * (1 - Self.barsShare) / 2, dy: cover.extent.height * (1 - Self.barsShare) / 2)
-            .integral
+        .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: Self.barsExposure(for: Self.brightness(of: blurred.cropped(to: middle)))])
         guard let bars = Self.context.createCGImage(lifted, from: middle) else { return nil }
         self.bars = bars
         isLight = Self.brightness(of: cover) > 0.55
