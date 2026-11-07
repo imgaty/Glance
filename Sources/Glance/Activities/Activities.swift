@@ -13,7 +13,7 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall
+        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, recordingSaved
 
         /// A device or its case running low: its ring red.
         var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
@@ -39,12 +39,15 @@ struct NotchAlert: Identifiable, Equatable {
         /// A timer that's done, as the Alarm goes off: its symbol shaking, its length and its name, and
         /// buttons to start it again or stop it.
         case timerDone(length: TimeInterval, name: String)
+        /// The screen recording saved, as tall as the Alarm: its length, the folder it went to, and
+        /// its first picture, which opens it.
+        case recordingSaved(length: TimeInterval, folder: String, preview: NSImage?)
     }
 
     /// Taller than the notch, as the Dynamic Island's Alarm is, for what's to be acted on.
     var tall: Bool {
         switch content {
-        case .timerDone, .lowBattery, .incomingCall: true
+        case .timerDone, .lowBattery, .incomingCall, .recordingSaved: true
         default: false
         }
     }
@@ -114,6 +117,8 @@ final class Activities: ObservableObject {
         AirPlayWatch.shared.start()
         AirDropWatch.shared.start()
         CallWatch.shared.start()
+        ScreenRecordingWatch.shared.start()
+        VoiceMemoWatch.shared.start()
     }
 
     /// Just woken, things reconnecting are expected, not announced.

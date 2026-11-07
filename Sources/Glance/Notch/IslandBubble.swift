@@ -25,6 +25,8 @@ struct IslandBubble: View {
     /// Or AirPlay, by its symbol alone, in its blue; or AirDrop, by its ring.
     var route: AirPlayRoute? = nil
     var airdrop: AirDropShown? = nil
+    /// Or a recording: the screen's dot, or Voice Memos' waveform.
+    var recording: Recording? = nil
     /// Or music, by its cover in a circle, or a note without one.
     var music = false
     var artwork: NSImage? = nil
@@ -46,10 +48,11 @@ struct IslandBubble: View {
     @State private var kept: ClockShown?
     @State private var keptRoute: AirPlayRoute?
     @State private var keptAirDrop: AirDropShown?
+    @State private var keptRecording: Recording?
     @State private var keptMusic = false
     @State private var keptArtwork: NSImage?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0)
+    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -91,6 +94,8 @@ struct IslandBubble: View {
                             .overlay(Color.black.opacity(paused ? 1 - PausedLook.kept : 0))
                             .animation(.easeInOut(duration: 0.3), value: paused)
                             .clipShape(RoundedRectangle(cornerRadius: side * ArtworkShape.restingRadius, style: .continuous))
+                        } else if let keptRecording {
+                            RecordingBubbleGlyph(recording: keptRecording, restingHeight: h)
                         } else if let keptAirDrop {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if keptRoute != nil {
@@ -112,6 +117,14 @@ struct IslandBubble: View {
                         Color.clear
                             .accessibilityElement()
                             .accessibilityLabel(SystemActivityView.spoken(clock, name: name, at: context.date))
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityAction(.default, open)
+                    }
+                } else if shown, !hidden, let recording {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Color.clear
+                            .accessibilityElement()
+                            .accessibilityLabel(recording.spoken(at: context.date))
                             .accessibilityAddTraits(.isButton)
                             .accessibilityAction(.default, open)
                     }
@@ -147,7 +160,7 @@ struct IslandBubble: View {
         // as anything fading here would show as a pale circle beside the notch.
         .animation(hidden ? .linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)) { $0.opacity(hidden ? 0 : 1) }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
-        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptMusic ? 1 : 0) }
+        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptMusic ? 1 : 0) }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1
@@ -177,6 +190,15 @@ struct IslandBubble: View {
             Task { @MainActor in
                 try? await Task.sleep(for: SystemActivityView.folding)
                 if changes.airdrop == change { keptAirDrop = nil }
+            }
+        }
+        .onChange(of: recording, initial: true) { _, new in
+            changes.recording += 1
+            if let new { return keptRecording = new }
+            let change = changes.recording
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.recording == change { keptRecording = nil }
             }
         }
         .onChange(of: route, initial: true) { _, new in

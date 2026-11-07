@@ -23,6 +23,8 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityAirDrop) private var airDrop = true
     @AppStorage(Preferences.activityClockTimers) private var timers = true
     @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
+    @AppStorage(Preferences.activityScreenRecording) private var screenRecording = true
+    @AppStorage(Preferences.activityVoiceMemos) private var voiceMemos = true
     @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = false
     /// Taking macOS's timer out of the menu bar takes Accessibility.
     @State private var accessibilityAllowed = AXIsProcessTrusted()
@@ -34,6 +36,7 @@ struct ActivitiesPage: View {
         (Preferences.musicTrackPop, .announcement), (Preferences.activityCharging, .charging), (Preferences.activityLowBattery, .lowBattery),
         (Preferences.activityDevices, .device), (Preferences.activityCalls, nil), (Preferences.activityAirDrop, .airDrop),
         (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
+        (Preferences.activityScreenRecording, .screenRecording), (Preferences.activityVoiceMemos, .voiceMemo),
     ]
 
     /// Each switch, on or off, in that order; read on every change of one of them, as each is kept
@@ -80,6 +83,16 @@ struct ActivitiesPage: View {
                 Toggle(isOn: $airDrop) {
                     Text("AirDrop")
                     Text("Shows files coming in and going out over AirDrop, as they go.")
+                }
+            }
+            Section {
+                Toggle(isOn: $screenRecording) {
+                    Text("Screen recording")
+                    Text("Shows the screen being recorded, from its countdown until it's saved, with a button to stop it.")
+                }
+                Toggle(isOn: $voiceMemos) {
+                    Text("Voice Memos")
+                    Text("Shows a voice memo being recorded, with its sound as it comes in, and a button to stop it.")
                 }
             }
             Section {

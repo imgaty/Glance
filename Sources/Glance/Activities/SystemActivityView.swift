@@ -32,6 +32,8 @@ struct SystemActivityView: View {
     var airdrop: AirDropShown? = nil
     /// A call, when that has the notch.
     var call: CallShown? = nil
+    /// A recording, of the screen or a voice memo, when that has the notch.
+    var recording: Recording? = nil
     /// The timer's name, as VoiceOver says it.
     var timerName = String(localized: "Timer")
     /// Another activity is detached: the trailing wing is folded away, and what's on it hidden, or it
@@ -79,6 +81,19 @@ struct SystemActivityView: View {
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction(.default, open)
+            } else if shownAlert == nil, let recording {
+                RecordingMark(recording: recording, restingHeight: restingHeight, leadingOnly: leadingOnly)
+                    .modifier(GrownAway(grown: grown))
+                    .transition(IslandMotion.fade)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction(.default, open)
+            } else if let alert = shownAlert, case .recordingSaved(let length, let folder, let preview) = alert.content {
+                RecordingSavedView(length: length, folder: folder, preview: preview, restingHeight: restingHeight, hovered: hoveredButton == .openRecording)
+                    .modifier(IslandReveal(hidden: self.alert == nil))
+                    .id(alert.id)
+                    .transition(IslandMotion.fade)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
                 TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
                     .modifier(IslandReveal(hidden: self.alert == nil))
@@ -275,8 +290,9 @@ struct SystemActivityView: View {
                 .lineLimit(1)
         case .status(let symbol, let tint, _):
             ArrivingSymbol(symbol: symbol, color: tint, size: size + 2, side: side)
-        // Laid out on their own (see `TimerDoneView`, `LowBatteryView` and `IncomingCallView`).
-        case .timerDone, .lowBattery, .incomingCall:
+        // Laid out on their own (see `TimerDoneView`, `LowBatteryView`, `IncomingCallView` and
+        // `RecordingSavedView`).
+        case .timerDone, .lowBattery, .incomingCall, .recordingSaved:
             EmptyView()
         }
     }
@@ -296,7 +312,7 @@ struct SystemActivityView: View {
         case .status(_, _, let text):
             MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
                 .foregroundStyle(.white)
-        case .timerDone, .lowBattery, .incomingCall:
+        case .timerDone, .lowBattery, .incomingCall, .recordingSaved:
             EmptyView()
         }
     }
@@ -350,10 +366,11 @@ struct SystemActivityView: View {
         }
         // As tall as the Alarm, as wide as its words or its buttons.
         if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
+        if case .recordingSaved(let length, _, _) = alert.content { return RecordingSavedView.wing(length: length, restingHeight: restingHeight) }
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device, .timerDone, .lowBattery, .incomingCall:
+            case .device, .timerDone, .lowBattery, .incomingCall, .recordingSaved:
                 (0, 0)
             case .battery(let title, let level):
                 (

@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 6 November 2026`
+`Created: 11 October 2026` | `Last updated: 7 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -120,7 +120,7 @@ keyboard the same way:
 | Tab or Shift-Tab | On the player, goes from control to control, with a ring around the one it's on, and through the lyrics while they show; on a live activity's own view, from button to button |
 | Space | Presses the control with the ring; otherwise plays or pauses; on the tray, shows the selected items in Quick Look |
 | Left or right arrow | Goes to the song before or after, or with the ring on the progress bar, ten seconds back or ahead; on the tray, selects the item before or after it, or with Shift, a run of them |
-| Up or down arrow | With a timer, the stopwatch, AirDrop or AirPlay showing, goes from the player to its own view, the ring on its first button, and back; with the ring on the lyrics, goes from line to line, and Space or Return plays from there; with the ring on `Sound Output`, turns the playing app's sound up or down |
+| Up or down arrow | With a timer, the stopwatch, AirDrop, AirPlay or a recording showing, goes from the player to its own view, the ring on its first button, and back; with the ring on the lyrics, goes from line to line, and Space or Return plays from there; with the ring on `Sound Output`, turns the playing app's sound up or down |
 | Return | Presses the control with the ring; on the tray, pastes the selected items where you were typing (with `Accessibility` allowed) |
 | ⌘C | On the tray, copies the selected items |
 | ⌘A | On the tray, selects everything |
@@ -338,9 +338,10 @@ the iPhone: an announcement folds away, a timer that's ringing stops, and a live
 activity steps away for two seconds, then comes back while it's still going. It
 comes back sooner when it changes: music with the next song or when it plays
 again, a timer or the stopwatch when it's started, paused or ended, AirDrop with
-the next file, AirPlay with the next speaker, and a call when it's answered.
-Opened to a timer, the stopwatch, AirDrop or AirPlay, swiping up closes the
-notch and swipes that away too. Without swiping, right-click the notch and
+the next file, AirPlay with the next speaker, a call when it's answered, and a
+voice memo when it's paused or resumed. Opened to a timer, the stopwatch,
+AirDrop, AirPlay or a recording, swiping up closes the notch and swipes that
+away too. Without swiping, right-click the notch and
 choose **Hide** with what it shows, such as **Hide Music**, **Hide Call** or
 **Hide Low Battery**.
 
@@ -497,6 +498,32 @@ opens to AirPlay, with the speaker's name. Click **Stop AirPlay** to send the
 sound back to where it played before, or to the Mac's own speakers. Turn it off
 with `Devices` in **Settings > Live Activities**.
 
+### Screen recording
+
+While you record the screen with macOS's Screenshot (Shift-Command-5), the notch
+shows it as the iPhone does: a red dot at its left end, fading and coming back
+for as long as it records. Once you stop, the dot dims and a spinner shows at
+the right end while the recording is saved. Then the notch says where it went,
+such as `Recording Saved to Desktop`, beside its first picture: click the
+picture to open the recording.
+
+Hover over or click the notch while the recording has it, or click its bubble,
+and it opens to the recording's time over `Screen Recording`, and a button:
+click it to stop the recording, as the stop button in the menu bar does. Turn it
+off with `Screen recording` in **Settings > Live Activities**.
+
+### Voice Memos
+
+While Voice Memos records, the notch shows it as the iPhone does: a red waveform
+of the sound at its left end, the newest at the right, and the recording's time
+at its right end. Paused, both stand still until you resume. The waveform comes
+from the Mac's microphone, once you allow it; nothing is recorded or kept.
+
+Hover over or click the notch while the recording has it, or click its bubble,
+and it opens to the waveform running on in gray dots, the time, and a button:
+click it to stop the recording and keep it, as Voice Memos' **Done** does. Turn
+it off with `Voice Memos` in **Settings > Live Activities**.
+
 <br>
 
 ## Menu bar
@@ -593,6 +620,8 @@ on, it stays on what's playing.
 | `Clock` | **Open Clock…** opens the Clock app, where timers and the stopwatch start |
 | `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
 | `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |
+| `Screen recording` | Shows the screen being recorded with macOS's Screenshot, until it's saved, with a button to stop it |
+| `Voice Memos` | Shows a voice memo being recorded, with its sound, and a button to stop it |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed (off at first). macOS keeps it out even after this is off; **Menu Bar settings**, under it, opens **System Settings > Menu Bar** to bring it back |
 
 ### Opening
@@ -634,9 +663,9 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; and switching to the tab that's playing in other browsers |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
 | `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |
-| `Microphone` | Your half of the waveform on calls in other apps, during those calls |
+| `Microphone` | Your half of the waveform on calls in other apps, during those calls, and the waveform of a voice memo while Voice Memos records it |
 | `Contacts` | The caller's photo during a FaceTime or phone call, asked for during your first one. Glance looks up only the name or number macOS's popup shows; if two of your contacts have that name, it tells them apart by the picture in the popup. Without it, the caller shows their initial |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 

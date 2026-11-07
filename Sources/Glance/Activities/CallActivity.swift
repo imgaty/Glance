@@ -1607,7 +1607,13 @@ enum CallAudio {
         return nil
     }
 
-    private static let asking = DispatchQueue(label: "Glance.CallAudio", qos: .userInitiated)
+    /// Every app using the microphone now, by its bundle: each process asked only whether it's
+    /// recording, and only those that are, what they are.
+    static func bundlesOnMicrophone() -> [String] {
+        processIDs().filter { flag($0, kAudioProcessPropertyIsRunningInput) }.compactMap(bundle(of:))
+    }
+
+    static let asking = DispatchQueue(label: "Glance.CallAudio", qos: .userInitiated)
 
     /// The same, asked away from the thread that draws the notch, which would otherwise wait on
     /// macOS's sound service every second; the answer comes back on it.

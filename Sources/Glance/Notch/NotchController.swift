@@ -100,6 +100,8 @@ final class NotchController {
     private var airPlayWatch: AnyCancellable?
     private var callWatch: AnyCancellable?
     private var callMinutes: AnyCancellable?
+    private var recordingWatch: AnyCancellable?
+    private var recordingRefit: Task<Void, Never>?
     private var airDropWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
@@ -358,6 +360,12 @@ final class NotchController {
         callWatch = CallWatch.shared.$call.removeDuplicates().sink { [weak self] call in
             MainActor.assumeIsolated { self?.show(call: call) }
         }
+        // The screen or a voice memo being recorded (see `ScreenRecordingWatch` and `VoiceMemoWatch`).
+        recordingWatch = ScreenRecordingWatch.shared.$recording.combineLatest(VoiceMemoWatch.shared.$memo)
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak self] screen, memo in
+                MainActor.assumeIsolated { self?.show(screen: screen, memo: memo) }
+            }
         callMinutes = CallWatch.shared.$minutes.dropFirst().sink { [weak self] _ in
             MainActor.assumeIsolated {
                 withAnimation(IslandMotion.open) { self?.model.objectWillChange.send() }
@@ -687,6 +695,33 @@ final class NotchController {
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
+    /// A recording started counting down, started, was paused, is being saved, or ended: its wings
+    /// come, change, or go.
+    private func show(screen: ScreenRecording?, memo: VoiceMemo?) {
+        let ending = (screen == nil && model.screenRecording != nil) || (memo == nil && model.voiceMemo != nil)
+        withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
+            if (screen == nil) != (model.screenRecording == nil) { model.dismissed.remove(.screenRecording) }
+            if memo?.isRecording != model.voiceMemo?.isRecording { model.dismissed.remove(.voiceMemo) }
+            model.screenRecording = screen
+            model.voiceMemo = memo
+        }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+        refitAsRecordingCounts()
+    }
+
+    /// Refits the notch as a recording's time gains a digit: at ten minutes, and at an hour.
+    private func refitAsRecordingCounts() {
+        recordingRefit?.cancel()
+        let lengths = [model.screenRecording.map { $0.length() }, model.voiceMemo.flatMap { $0.isRecording ? $0.length() : nil }].compactMap { $0 }
+        guard let next = lengths.flatMap({ length in [600.0, 3600].map { $0 - length } }).filter({ $0 > 0 }).min() else { return }
+        recordingRefit = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(next + 0.05))
+            guard let self, !Task.isCancelled else { return }
+            withAnimation(IslandMotion.open) { self.model.objectWillChange.send() }
+            self.refitAsRecordingCounts()
+        }
+    }
+
     /// A call came in, connected or ended: its wings come, change, or go.
     private func show(call: CallShown?) {
         withAnimation(call == nil ? IslandMotion.fold : IslandMotion.open) {
@@ -968,6 +1003,9 @@ final class NotchController {
         case .stop: ClockActivity.shared.dismissRing()
         case .accept: CallWatch.shared.accept()
         case .decline: CallWatch.shared.decline()
+        case .openRecording:
+            ScreenRecordingWatch.shared.openSaved()
+            Activities.shared.dismiss(.recordingSaved)
         case .lowPower:
             LowPowerMode.shared.toggle()
             // Long enough to see it change, and then it's done with: it goes, reached or not.
@@ -1369,7 +1407,9 @@ final class NotchController {
         // Coming in where it can't be declined: Accept alone.
         case .call where model.call?.rings == true && model.call?.canDecline == false: [.activitySecond]
         case .call: [.activityFirst, .activitySecond]
-        case .airdrop, .airplay: [.activityFirst]
+        case .airdrop, .airplay, .voiceMemo: [.activityFirst]
+        // Being saved, there's nothing left to stop.
+        case .screenRecording: { if case .saving = model.screenRecording { [] } else { [.activityFirst] } }()
         case .music, nil: nil
         }
     }
@@ -1790,11 +1830,14 @@ final class NotchController {
             switch alert {
             case .incomingCall: return String(localized: "Hide Call")
             case .lowBattery: return String(localized: "Hide Low Battery")
+            case .recordingSaved: return String(localized: "Hide Screen Recording")
             default: return nil
             }
         }
         switch first {
         case .call: return String(localized: "Hide Call")
+        case .screenRecording: return String(localized: "Hide Screen Recording")
+        case .voiceMemo: return String(localized: "Hide Voice Memo")
         case .music: return String(localized: "Hide Music")
         case .airdrop: return String(localized: "Hide AirDrop")
         case .timer: return String(localized: "Hide Timer")

@@ -156,6 +156,18 @@
   back, as macOS keeps it out even once the switch is off.
 - Added a Live Activities page to Settings, to turn each one off, music's cover
   and waveform among them.
+- Added the screen being recorded with macOS's Screenshot, as the iPhone shows
+  it: a red dot beside the camera, fading and coming back while it records, and
+  once you stop, a spinner while it's saved. Then it says where it went, such as
+  `Recording Saved to Desktop`, with its first picture, which opens it. Opened,
+  it shows the recording's time over `Screen Recording`, and a button to stop
+  it. `Screen recording` in **Settings > Live Activities** turns it off.
+- Added Voice Memos recording, as the iPhone shows it: a red waveform of the
+  sound beside the camera, and the recording's time, both still while it's
+  paused. Opened, the waveform runs on in gray dots, with the time and a button
+  to stop it, as Voice Memos' **Done** does. The waveform comes from the Mac's
+  microphone once it's allowed, and nothing is recorded or kept. `Voice Memos`
+  in **Settings > Live Activities** turns it off.
 
 ### Touch
 

@@ -487,6 +487,8 @@ enum AlertButton: Hashable {
     case lowPower
     /// A call coming in.
     case accept, decline
+    /// The screen recording saved, which opens it.
+    case openRecording
 }
 
 /// Where the closed notch's buttons are, in the notch's points, while they show.

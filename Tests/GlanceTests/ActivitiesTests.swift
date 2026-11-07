@@ -1490,6 +1490,15 @@ struct ActivityBenchTests {
         #expect(ActivityBench.parse(["Glance", "--bench", "player"]) == nil)
     }
 
+    @Test("Every recording can be tried on its own, each state by its name")
+    func recordingScenes() {
+        for name in ["screenRecording", "screenCountdown", "screenSaving", "screenSaved", "voiceMemo", "voiceMemoPaused"] {
+            #expect(ActivityBench.parse(["Glance", "--bench", name])?.scenes.first?.rawValue == name)
+        }
+        #expect(ActivityBench.parse(["Glance", "--bench", "voiceMemo+music"])?.scenes == [.voiceMemo, .music])
+        #expect(ActivityBench.Scene.screenSaved.announces)
+    }
+
     @Test("The menu lists every scene once, under a label, each by a name of its own")
     @MainActor
     func menuLabels() {
@@ -1502,6 +1511,180 @@ struct ActivityBenchTests {
             #expect(Set(titles).count == titles.count, "\(group.label) names two alike")
             #expect(titles.allSatisfy { !$0.isEmpty && $0 != $0.lowercased() })
         }
+    }
+}
+
+/// The screen and a voice memo being recorded, as the iPhone shows them.
+@MainActor
+@Suite("Recordings")
+struct RecordingTests {
+    @Test("The countdown shows each whole second left, from where it starts down to none")
+    func countdownSteps() {
+        let start = Date(timeIntervalSinceReferenceDate: 1000)
+        let until = start + 3
+        #expect(ScreenRecording.step(from: 3, until: until, at: start) == 3)
+        #expect(ScreenRecording.step(from: 3, until: until, at: start + 0.99) == 3)
+        #expect(ScreenRecording.step(from: 3, until: until, at: start + 1) == 2)
+        #expect(ScreenRecording.step(from: 3, until: until, at: start + 2.5) == 1)
+        #expect(ScreenRecording.step(from: 3, until: until, at: until) == 0)
+        #expect(ScreenRecording.step(from: 3, until: until, at: until + 5) == 0)
+        // Never more than it started from, early or late.
+        #expect(ScreenRecording.step(from: 5, until: until, at: start - 9) == 5)
+    }
+
+    @Test("Voice Memos' time reads 0:14 and the screen's 00:08, as the iPhone's do")
+    func readings() {
+        let english = Locale(identifier: "en_US")
+        #expect(ClockText.of(14, locale: english) == "0:14")
+        #expect(ClockText.of(8, paddingMinutes: true, locale: english) == "00:08")
+        #expect(Recording.reading(14.9, memo: true).hasSuffix("14"))
+        #expect(Recording.reading(3725, memo: false).filter(\.isNumber).count == 5)
+    }
+
+    @Test("A recording's length runs while it records, and holds paused, stopped and counting down")
+    func lengths() {
+        let start = Date(timeIntervalSinceReferenceDate: 1000)
+        #expect(VoiceMemo.recording(since: start).length(at: start + 20) == 20)
+        #expect(VoiceMemo.paused(length: 20).length(at: start + 99) == 20)
+        #expect(ScreenRecording.recording(since: start).length(at: start + 8) == 8)
+        #expect(ScreenRecording.saving(length: 11).length(at: start + 99) == 11)
+        #expect(ScreenRecording.countdown(from: 3, until: start + 3).length(at: start) == 0)
+        #expect(VoiceMemo.recording(since: start).length(at: start - 5) == 0)
+    }
+
+    @Test("The waveform's newest bar is last, quiet places are dots, and those to come are dots after")
+    func waveform() {
+        let spec = MemoBars.Spec(slots: 26, recorded: 15, height: 27, scale: 77, open: true)
+        let frames = spec.frames([0.2, 1, 0.5])
+        #expect(frames.count == 26)
+        // Fewer heard than recorded places: the oldest ones are dots.
+        #expect(frames[0].height == spec.least)
+        #expect(frames[12].height > spec.least)
+        #expect(frames[13].height == spec.height)
+        #expect(frames[14].height < frames[13].height)
+        #expect(frames[15...].allSatisfy { $0.height == spec.least })
+        // Evenly spaced, each on the middle.
+        #expect(abs(frames[1].minX - frames[0].minX - spec.pitch) < 0.001)
+        #expect(frames.allSatisfy { abs($0.midY - spec.height / 2) < 0.001 })
+        #expect(abs(frames[25].maxX - spec.width) < 0.001)
+        // More levels than places: only the newest show.
+        let full = spec.frames((0..<40).map { $0 == 39 ? 1 : 0 })
+        #expect(full[14].height == spec.height)
+        #expect(full[0..<14].allSatisfy { $0.height == spec.least })
+    }
+
+    @Test("Beside the camera, the waveform's quiet bars are a little taller than wide, as the iPhone's")
+    func closedDots() {
+        let spec = MemoBars.Spec(slots: 15, recorded: 15, height: 32 * RecordingLook.barMost, scale: 32, open: false)
+        #expect(spec.least > spec.barWidth)
+        #expect(spec.frames([]).allSatisfy { $0.height == spec.least })
+    }
+
+    @Test("Loudness shows by decibels: silence as none, a raised voice as all")
+    func loudness() {
+        #expect(RecordingLevels.level(rms: 0) == 0)
+        #expect(RecordingLevels.level(rms: 0.001) == 0)
+        #expect(RecordingLevels.level(rms: 1) == 1)
+        let quiet = RecordingLevels.level(rms: 0.01), loud = RecordingLevels.level(rms: 0.1)
+        #expect(quiet > 0 && quiet < loud && loud < 1)
+        #expect((0..<200).map(RecordingLevels.madeUpLevel).allSatisfy { $0 >= 0 && $0 <= 1 })
+    }
+
+    @Test("The screen recording comes before a voice memo, both after a call and before music")
+    func order() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.activity = true
+        model.voiceMemo = .recording(since: .now)
+        model.screenRecording = .recording(since: .now)
+        #expect(model.activities == [.screenRecording, .voiceMemo, .music])
+        model.call = CallShown(name: "Alex Morgan", over: "Phone", phase: .connected(since: .now))
+        #expect(model.activities.first == .call)
+        #expect(model.recording(of: .voiceMemo) == model.voiceMemo.map(Recording.voiceMemo))
+        #expect(model.recording(of: .music) == nil)
+        model.dismissed.insert(.screenRecording)
+        #expect(model.activities == [.call, .voiceMemo, .music])
+    }
+
+    @Test("Each opens to its own view; gone, the notch knows to close")
+    func opens() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.voiceMemo = .recording(since: .now)
+        #expect(model.expansion(fromBubble: false) == .voiceMemo)
+        model.expanded = .voiceMemo
+        #expect(!model.expandedGone)
+        model.voiceMemo = nil
+        #expect(model.expandedGone)
+        model.screenRecording = .saving(length: 4)
+        model.expanded = .screenRecording
+        #expect(!model.expandedGone)
+        #expect(model.name(of: .screenRecording) == "Screen Recording")
+    }
+
+    @Test("Each side is as wide as what it shows: the dot alone narrower than the countdown, the waveform wider than its time")
+    func wings() {
+        let h: CGFloat = 32
+        let dot = RecordingLook.wing(for: .screen(.recording(since: .now)), restingHeight: h)
+        let countdown = RecordingLook.wing(for: .screen(.countdown(from: 3, until: .now + 3)), restingHeight: h)
+        let saving = RecordingLook.wing(for: .screen(.saving(length: 3)), restingHeight: h)
+        #expect(dot < countdown)
+        #expect(abs(dot - (LiveActivityView.concentric(h * RecordingLook.dot, in: h) + h * RecordingLook.dot + LiveActivityView.cameraGap)) < 0.01)
+        #expect(saving >= SystemActivityView.ringEdge(h) + h * TimerLayout.ring)
+        let memo = RecordingLook.wing(for: .voiceMemo(.recording(since: .now - 14)), restingHeight: h)
+        #expect(abs(memo - (h * RecordingLook.waveEdge + RecordingLook.waveWidth(h) + LiveActivityView.cameraGap)) < 0.01)
+        // An hour in, its time is wider than its waveform.
+        let long = RecordingLook.wing(for: .voiceMemo(.recording(since: .now - 3725)), restingHeight: h)
+        #expect(long > memo)
+    }
+
+    @Test("Opened, Voice Memos is as wide as the iPhone's island for its height; the screen as its first line needs")
+    func openWidths() {
+        let h: CGFloat = 32
+        #expect(RecordingLook.memoWidth(restingHeight: h) == (TimerLayout.tallHeight(h) * 374 / 84).rounded())
+        let short = RecordingLook.screenWidth(restingHeight: h, camera: 185, length: 8)
+        let long = RecordingLook.screenWidth(restingHeight: h, camera: 185, length: 3725)
+        #expect(short >= 185 + 2 * (TimerLayout.content(h) + TimerLayout.buttonEdge(h)))
+        #expect(long > short)
+        // Its waveform and time fit beside its button.
+        let room = RecordingLook.memoWidth(restingHeight: h) - PlayerLayout.padding - ExpandedRecordingView.memoTimeEdge(h)
+        #expect(RecordingLook.openWaveWidth(h) + RecordingLook.timeWidth("0:00:00", size: NotchType.size * RecordingLook.memoTime) < room)
+    }
+
+    @Test("Saved, it's said for a moment as tall as the Alarm, and the menu can hide it")
+    func saved() {
+        let alert = ScreenRecordingWatch.savedAlert(length: 11, folder: "Desktop", preview: nil)
+        #expect(alert.tall)
+        #expect(alert.kind == .recordingSaved)
+        #expect(!alert.stays)
+        #expect(RecordingSavedView.saved(to: "Desktop") == "Recording Saved to Desktop")
+        #expect(NotchController.putAwayTitle(alert: .recordingSaved, first: nil) == "Hide Screen Recording")
+        #expect(NotchController.putAwayTitle(alert: nil, first: .screenRecording) == "Hide Screen Recording")
+        #expect(NotchController.putAwayTitle(alert: nil, first: .voiceMemo) == "Hide Voice Memo")
+    }
+
+    @Test("Screenshot's countdown is read from its menu bar item, and its stop button is anything else")
+    func screenshotCountdown() {
+        #expect(ScreenRecordingWatch.countdown(in: "5s") == 5)
+        #expect(ScreenRecordingWatch.countdown(in: " 10 s ") == 10)
+        #expect(ScreenRecordingWatch.countdown(in: "3") == 3)
+        #expect(ScreenRecordingWatch.countdown(in: "Stop Screen Recording") == nil)
+        #expect(ScreenRecordingWatch.countdown(in: "") == nil)
+        #expect(ScreenRecordingWatch.isRecordingItem("com.apple.menuextra.screencapture"))
+        #expect(!ScreenRecordingWatch.isRecordingItem("com.apple.menuextra.clock"))
+        #expect(!ScreenRecordingWatch.isRecordingItem(nil))
+    }
+
+    @Test("Voice Memos' own buttons are named as Voice Memos names them")
+    func voiceMemosButtons() {
+        #expect(!VoiceMemoWatch.resume.isEmpty && VoiceMemoWatch.resume != "AX_RESUME")
+        #expect(!VoiceMemoWatch.done.isEmpty && VoiceMemoWatch.done != "AX_DONE_BUTTON")
+    }
+
+    @Test("Said to VoiceOver in words")
+    func spoken() {
+        #expect(Recording.screen(.countdown(from: 3, until: .now + 2.5)).spoken() == "Screen recording starts in 3")
+        #expect(Recording.screen(.saving(length: 3)).spoken() == "Saving the screen recording")
+        #expect(Recording.voiceMemo(.paused(length: 20)).spoken().hasPrefix("Voice memo paused"))
+        #expect(Recording.voiceMemo(.recording(since: .now - 20)).spoken().hasPrefix("Recording a voice memo"))
     }
 }
 

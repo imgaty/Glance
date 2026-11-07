@@ -237,6 +237,8 @@ enum Preferences {
             // Off: macOS keeps its timer out of the menu bar once it's taken out, after Glance is gone.
             clockTimerHidesMenuBar: false,
             activityStopwatch: true,
+            activityScreenRecording: true,
+            activityVoiceMemos: true,
             swipeToSwitch: true,
         ])
     }
@@ -341,6 +343,10 @@ enum Preferences {
     static let activityClockTimers = "activityClockTimers"
     static let clockTimerHidesMenuBar = "clockTimerHidesMenuBar"
     static let activityStopwatch = "activityStopwatch"
+    /// The screen being recorded, and a voice memo being recorded, show (see `ScreenRecordingWatch`
+    /// and `VoiceMemoWatch`).
+    static let activityScreenRecording = "activityScreenRecording"
+    static let activityVoiceMemos = "activityVoiceMemos"
     /// Three fingers sideways on the open notch, or scrolling with Shift held, switches between the
     /// player and the tray.
     static let swipeToSwitch = "swipeToSwitch"

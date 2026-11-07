@@ -178,6 +178,10 @@ final class NotchModel: ObservableObject {
     @Published var airplay: AirPlayRoute?
     /// A call, ringing or going on.
     @Published var call: CallShown?
+    /// The screen being recorded, and a voice memo being recorded (see `ScreenRecordingWatch` and
+    /// `VoiceMemoWatch`).
+    @Published var screenRecording: ScreenRecording?
+    @Published var voiceMemo: VoiceMemo?
     /// A file coming in over AirDrop (see `AirDropWatch`).
     @Published var airdrop: AirDropShown?
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
@@ -256,10 +260,11 @@ final class NotchModel: ObservableObject {
     /// player: AirDrop, the timer, the stopwatch, or AirPlay.
     @Published var expanded: Activity?
 
-    /// What can show at once, in the order they take the notch: a call, music, a file coming in over
-    /// AirDrop, Clock's timer, its stopwatch, AirPlay.
+    /// What can show at once, in the order they take the notch: a call, the screen being recorded, a
+    /// voice memo being recorded, music, a file coming in over AirDrop, Clock's timer, its stopwatch,
+    /// AirPlay.
     enum Activity: Hashable {
-        case call, music, airdrop, timer, stopwatch, airplay
+        case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay
     }
 
     /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop, AirPlay. Music's
@@ -271,6 +276,8 @@ final class NotchModel: ObservableObject {
     var activities: [Activity] {
         var shown: [Activity] = []
         if call != nil { shown.append(.call) }
+        if screenRecording != nil { shown.append(.screenRecording) }
+        if voiceMemo != nil { shown.append(.voiceMemo) }
         if activity { shown.append(.music) }
         if airdrop != nil { shown.append(.airdrop) }
         if timer != nil { shown.append(.timer) }
@@ -285,9 +292,27 @@ final class NotchModel: ObservableObject {
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
         switch activity {
-        case .call, .music, .airdrop, .airplay: nil
+        case .call, .screenRecording, .voiceMemo, .music, .airdrop, .airplay: nil
         case .timer: timer.map(ClockShown.timer)
         case .stopwatch: stopwatch.map(ClockShown.stopwatch)
+        }
+    }
+
+    /// Opened to a recording: Voice Memos as wide as the iPhone's island, the screen recording as its
+    /// time needs.
+    func openWidth(of recording: Recording) -> CGFloat {
+        switch recording {
+        case .voiceMemo: RecordingLook.memoWidth(restingHeight: closedSize.height)
+        case .screen(let screen): RecordingLook.screenWidth(restingHeight: closedSize.height, camera: camera, length: screen.length())
+        }
+    }
+
+    /// An activity's recording, if it's one.
+    func recording(of activity: Activity) -> Recording? {
+        switch activity {
+        case .screenRecording: screenRecording.map(Recording.screen)
+        case .voiceMemo: voiceMemo.map(Recording.voiceMemo)
+        default: nil
         }
     }
 
@@ -325,6 +350,8 @@ final class NotchModel: ObservableObject {
         case .timer, .stopwatch: expandedClock == nil
         case .airplay: airplay == nil
         case .call: call == nil
+        case .screenRecording: screenRecording == nil
+        case .voiceMemo: voiceMemo == nil
         case .airdrop: airdrop == nil
         case .music, nil: false
         }
@@ -334,6 +361,8 @@ final class NotchModel: ObservableObject {
     func name(of activity: Activity) -> String {
         switch activity {
         case .call: call?.name ?? String(localized: "Call")
+        case .screenRecording: String(localized: "Screen Recording")
+        case .voiceMemo: String(localized: "Voice Memo")
         case .music: String(localized: "Music")
         case .timer: timerName ?? String(localized: "Timer")
         case .stopwatch: String(localized: "Stopwatch")
@@ -380,6 +409,7 @@ final class NotchModel: ObservableObject {
         // With another detached, the first keeps its own side as it is; its trailing side folds away
         // (see `NotchMetrics.fold`), the other taking its place in a bubble.
         if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
+        if let recording = activities.first.flatMap(recording(of:)) { return RecordingLook.wing(for: recording, restingHeight: closedSize.height) }
         if activity, pop { return max(popWing, resting) }
         // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares.
         if notchClock != nil { return max(timerWing, resting) }
@@ -437,6 +467,11 @@ final class NotchModel: ObservableObject {
                     ExpandedAirPlayView.width(for: airplay ?? AirPlayRoute(name: "", symbol: ""), restingHeight: closedSize.height)
                         + pull * 0.35,
                     AirPlayLayout.height(closedSize.height) + pull
+                )
+            case .open where expanded.flatMap(recording(of:)) != nil:
+                (
+                    expanded.flatMap(recording(of:)).map(openWidth(of:)).map { $0 + pull * 0.35 } ?? 0,
+                    TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where expanded != nil:
                 (
@@ -671,6 +706,7 @@ struct NotchView: View {
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
                 call: model.activities.first == .call && !model.folded ? model.call : nil,
+                recording: model.folded ? nil : model.activities.first.flatMap(model.recording(of:)),
                 timerName: model.activities.first.map(model.name(of:)) ?? String(localized: "Timer"),
                 leadingOnly: model.detached != nil, grown: isOpen && grownFrom != nil, hoveredButton: model.hoveredButton,
                 open: { model.openNotch() },
@@ -697,6 +733,7 @@ struct NotchView: View {
             expandedAirPlay(shown: expandedShown)
             expandedCall(shown: expandedShown)
             expandedAirDrop(shown: expandedShown)
+            expandedRecording(shown: expandedShown)
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -854,6 +891,7 @@ struct NotchView: View {
             shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
+            recording: activity.flatMap(model.recording(of:)),
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
@@ -916,6 +954,19 @@ struct NotchView: View {
             let width = AirDropLayout.width(restingHeight: h, camera: model.camera)
             ExpandedAirDropView(shown: transfer, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom, closedDrop: grownDrop)
                 .allowsHitTesting(places == nil && shown)
+        }
+    }
+
+    /// Opened to a recording: its own view, laid out at its open size, so the growing shape reveals it.
+    @ViewBuilder private func expandedRecording(shown: Bool) -> some View {
+        if let recording = model.expanded.flatMap(model.recording(of:)) {
+            let h = model.closedSize.height
+            let width = model.openWidth(of: recording)
+            ExpandedRecordingView(
+                recording: recording, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom,
+                closedDrop: grownDrop
+            )
+            .allowsHitTesting(places == nil && shown)
         }
     }
 

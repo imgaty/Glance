@@ -24,13 +24,18 @@ final class ActivityBench {
         /// going on, with someone whose name is too long and for over an hour, with a number, in an app
         /// that says nothing about it, and with nothing read from macOS's popup.
         case callRinging, callSwiped, callOutgoing, callOngoing, callLong, callNumber, callOtherApp, callUnread
+        /// The screen recorded: counting down, recording until it's stopped, saved; and each state held
+        /// for the round.
+        case screenRecording, screenCountdown, screenSaving, screenSaved
+        /// A voice memo recorded until it's stopped, and one paused.
+        case voiceMemo, voiceMemoPaused
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
         /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
         case lowBatteryReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery, .screenSaved].contains(self) }
 
         /// How the menu names it, in English, as the menu is only in builds made from source.
         var title: String {
@@ -45,6 +50,12 @@ final class ActivityBench {
             case .callNumber: "A Number"
             case .callOtherApp: "Another App"
             case .callUnread: "Popup Not Read"
+            case .screenRecording: "Screen Recording"
+            case .screenCountdown: "Countdown"
+            case .screenSaving: "Saving"
+            case .screenSaved: "Saved"
+            case .voiceMemo: "Voice Memo"
+            case .voiceMemoPaused: "Voice Memo, Paused"
             case .airdrop: "Coming In"
             case .airdropSend: "Going Out"
             case .airdropReal: "Real Files, Nothing Made Up"
@@ -63,6 +74,7 @@ final class ActivityBench {
         /// The menu's groups, each under its label, in the order the notch takes them.
         static let groups: [(label: String, scenes: [Scene])] = [
             ("Calls", [.call, .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread]),
+            ("Recording", [.screenRecording, .screenCountdown, .screenSaving, .screenSaved, .voiceMemo, .voiceMemoPaused]),
             ("Music", [.music]),
             ("AirDrop", [.airdrop, .airdropSend, .airdropReal]),
             ("Clock", [.timer, .stopwatch]),
@@ -115,7 +127,7 @@ final class ActivityBench {
         for key in [
             Preferences.liveActivity, Preferences.musicTrackPop, Preferences.lyrics, Preferences.tray, Preferences.swipeToSkip,
             Preferences.activityCharging, Preferences.activityLowBattery, Preferences.activityDevices, Preferences.activityAirDrop,
-            Preferences.activityClockTimers, Preferences.activityStopwatch,
+            Preferences.activityClockTimers, Preferences.activityStopwatch, Preferences.activityScreenRecording, Preferences.activityVoiceMemos,
         ] { off[key] = false }
         if Self.scenes.contains(.airdropReal) { off[Preferences.activityAirDrop] = true }
         if Self.scenes.contains(.music) { off[Preferences.liveActivity] = true }
@@ -163,6 +175,11 @@ final class ActivityBench {
         case .airplay: await airPlay()
         case .call: await call()
         case .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread: await callState(scene)
+        case .screenRecording: await screenRecording()
+        case .screenCountdown, .screenSaving: await screenState(scene)
+        case .screenSaved: await announce([{ Self.saved() }], every: 7)
+        case .voiceMemo: await voiceMemo(paused: false)
+        case .voiceMemoPaused: await voiceMemo(paused: true)
         case .charging: await announce(Self.charging(), every: 6)
         case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
@@ -229,6 +246,59 @@ final class ActivityBench {
             clock.bench(stopwatch: .running(since: .now))
             while !ended.contains(.stopwatch), !Task.isCancelled, clock.stopwatch != nil { await wait(0.2) }
             clock.bench(stopwatch: nil)
+            await wait(Self.rest)
+        }
+    }
+
+    // MARK: Recordings
+
+    /// The screen recorded as on the iPhone: three seconds counted down, then recording for the
+    /// round or until it's stopped, a moment saving, then saved, and again.
+    private func screenRecording() async {
+        let watch = ScreenRecordingWatch.shared
+        while !Task.isCancelled {
+            watch.bench(.countdown(from: 3, until: .now + 3))
+            await wait(3)
+            let start = Date.now
+            watch.bench(.recording(since: start))
+            await round(of: .screenRecording)
+            let length = Date.now.timeIntervalSince(start)
+            watch.bench(.saving(length: length))
+            await wait(1.5)
+            watch.bench(nil)
+            Activities.shared.post(Self.saved(length: length))
+            await wait(4 + Self.rest)
+        }
+    }
+
+    /// The countdown again and again, or a recording being saved, held for the round.
+    private func screenState(_ scene: Scene) async {
+        let watch = ScreenRecordingWatch.shared
+        while !Task.isCancelled {
+            if scene == .screenCountdown {
+                watch.bench(.countdown(from: 3, until: .now + 3))
+                await wait(4)
+            } else {
+                watch.bench(.saving(length: 11))
+                await round(of: .screenRecording)
+                watch.bench(nil)
+                await wait(Self.rest)
+            }
+        }
+    }
+
+    /// Saved, with one of macOS's own pictures for its first frame.
+    private static func saved(length: TimeInterval = 11) -> NotchAlert {
+        ScreenRecordingWatch.savedAlert(length: length, folder: FileManager.default.displayName(atPath: NSHomeDirectory() + "/Desktop"), preview: photo())
+    }
+
+    /// A voice memo recording for the round, or until it's stopped; or paused at 20 seconds.
+    private func voiceMemo(paused: Bool) async {
+        let watch = VoiceMemoWatch.shared
+        while !Task.isCancelled {
+            watch.bench(paused ? .paused(length: 20) : .recording(since: .now))
+            await round(of: .voiceMemo)
+            watch.bench(nil)
             await wait(Self.rest)
         }
     }

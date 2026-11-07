@@ -23,7 +23,7 @@ struct PreviewActivitiesTests {
     func everything() {
         #expect(
             PreviewActivity.turnedOn(in: defaults(), hasBattery: true) == [
-                .announcement, .charging, .lowBattery, .device, .airDrop, .timer, .stopwatch,
+                .announcement, .charging, .lowBattery, .device, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo,
             ])
     }
 
@@ -31,7 +31,7 @@ struct PreviewActivitiesTests {
     func turnedOff() {
         let shown = PreviewActivity.turnedOn(
             in: defaults([Preferences.activityDevices: false, Preferences.activityStopwatch: false]), hasBattery: true)
-        #expect(shown == [.announcement, .charging, .lowBattery, .airDrop, .timer])
+        #expect(shown == [.announcement, .charging, .lowBattery, .airDrop, .timer, .screenRecording, .voiceMemo])
     }
 
     @Test("A new song's name shows only with the cover and waveform on")
@@ -50,6 +50,6 @@ struct PreviewActivitiesTests {
     @Test("The battery's show only on a Mac with one")
     func battery() {
         let shown = PreviewActivity.turnedOn(in: defaults(), hasBattery: false)
-        #expect(shown == [.announcement, .device, .airDrop, .timer, .stopwatch])
+        #expect(shown == [.announcement, .device, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo])
     }
 }

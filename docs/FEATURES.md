@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 5 November 2026`
+`Created: 11 October 2026` | `Last updated: 7 November 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -50,7 +50,8 @@ moves with the music. When a new song starts, its name slides out for a moment.
 As on the iPhone, it also shows the battery charging or running low, AirPods
 and Beats connecting, and files coming in or going out over AirDrop and sound
 playing over AirPlay, both with a button to stop them. It counts Clock's timer
-down and its stopwatch up, with their buttons. With several at once, the first
+down and its stopwatch up, with their buttons, and shows the screen or a voice
+memo being recorded, with a button to stop it. With several at once, the first
 keeps the left of the notch and the second goes in a bubble of its own off the
 right, as on the iPhone.
 See the [User Manual](USER-MANUAL.md#live-activities).
@@ -97,7 +98,7 @@ apps can't read them. Clock's timer and stopwatch do.
 ## Roadmap
 
 - [x] `Animated covers`: Apple Music's animated album covers.
-- [x] `More Live Activities`: battery, devices, Clock's timer and stopwatch.
+- [x] `More Live Activities`: battery, devices, Clock's timer and stopwatch, recordings.
 - [x] `Displays without a notch`: a notch on any display.
 - [x] `Now Playing`: whatever is playing, in any app, with its controls.
 - [x] `Shortcuts`: shortcuts to open the player and the tray.

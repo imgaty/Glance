@@ -11,7 +11,7 @@ import SwiftUI
 /// What the picture on the Live Activities page shows besides what's playing, in the order of the
 /// page's switches: each turned on there, made up, one after another.
 enum PreviewActivity: CaseIterable {
-    case announcement, charging, lowBattery, device, airDrop, timer, stopwatch
+    case announcement, charging, lowBattery, device, airDrop, timer, stopwatch, screenRecording, voiceMemo
 
     private var key: String {
         switch self {
@@ -22,6 +22,8 @@ enum PreviewActivity: CaseIterable {
         case .airDrop: Preferences.activityAirDrop
         case .timer: Preferences.activityClockTimers
         case .stopwatch: Preferences.activityStopwatch
+        case .screenRecording: Preferences.activityScreenRecording
+        case .voiceMemo: Preferences.activityVoiceMemos
         }
     }
 
@@ -33,7 +35,7 @@ enum PreviewActivity: CaseIterable {
             switch activity {
             case .announcement: on(activity.key) && on(Preferences.liveActivity)
             case .charging, .lowBattery: on(activity.key) && hasBattery
-            case .device, .airDrop, .timer, .stopwatch: on(activity.key)
+            case .device, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo: on(activity.key)
             }
         }
     }
@@ -79,6 +81,8 @@ extension SettingsPreview {
             model.airdrop = nil
             model.timer = nil
             model.stopwatch = nil
+            model.screenRecording = nil
+            model.voiceMemo = nil
         }
     }
 
@@ -109,6 +113,17 @@ extension SettingsPreview {
             let stopwatch = Stopwatch.running(since: .now)
             model.timerWing = SystemActivityView.wing(for: .stopwatch(stopwatch), restingHeight: model.closedSize.height)
             await hold(\.stopwatch, stopwatch)
+        case .screenRecording:
+            await hold(\.screenRecording, ScreenRecording.recording(since: .now))
+        case .voiceMemo:
+            // Its sound made up, unless a real one is being recorded.
+            let madeUp = VoiceMemoWatch.shared.memo == nil
+            if madeUp {
+                RecordingLevels.shared.madeUp = true
+                RecordingLevels.shared.start()
+            }
+            await hold(\.voiceMemo, VoiceMemo.recording(since: .now))
+            if madeUp, VoiceMemoWatch.shared.memo == nil { RecordingLevels.shared.stop() }
         }
     }
 
