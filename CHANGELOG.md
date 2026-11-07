@@ -21,7 +21,8 @@
   muting your microphone, going to the call and ending it. A call in another app
   opens to one row: the caller's name, the sound output and, where Glance can
   press the app's own, ending it. Your microphone is unmuted when the call ends,
-  if Glance muted it. With music or anything else going on, whichever started
+  if Glance muted it. Opening and closing, what it shows fades out and in, the
+  same for every app. With music or anything else going on, whichever started
   second shows in a bubble beside the notch. FaceTime and Phone calls are read
   from macOS's own popup, which needs `Screen & System Audio Recording`; Zoom,
   Discord, WhatsApp and others show once they use the microphone. Turn it off

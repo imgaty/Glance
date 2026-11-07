@@ -956,7 +956,8 @@ struct NotchView: View {
     /// How wide the notch is closed, when what it's open to shows beside the camera there, alone, and
     /// grows out of that; with another detached, or from a bubble, it doesn't.
     private var grownFrom: CGFloat? {
-        !model.openedFromBubble && model.expanded != nil && model.activities.first == model.expanded
+        // A call's parts only fade, opening and closing, whatever app it's in.
+        !model.openedFromBubble && model.expanded != nil && model.expanded != .call && model.activities.first == model.expanded
             ? model.restingWidth + 2 * model.grownSwell : nil
     }
 
