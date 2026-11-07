@@ -12,10 +12,10 @@ import CoreImage.CIFilterBuiltins
 /// The colors that flow behind the player, made as Apple Music makes them, and never just the cover
 /// blurred: four copies of the cover, turning, the smaller two circling as well, each twisted around
 /// a point off to one side, which draws its shapes out into long ribbons, laid over one another and
-/// blurred together. The cover's palette (see `ArtworkPalette`) runs through them, and is what the
-/// waveform shows, so the two agree with each other and with the progress bar. One picture of it is
-/// drawn at a time, away from the main thread and only while something asks: nothing does while the
-/// notch is closed, the waveform turning one still picture of the palette instead.
+/// blurred together. The cover's palette (see `ArtworkPalette`) runs through them. The waveform shows
+/// the cover itself, blurred (see `bars`), as the iPhone's does. One picture of the flow is drawn at
+/// a time, away from the main thread and only while something asks: nothing does while the notch is
+/// closed.
 @MainActor
 final class ArtworkFlow {
     /// One for each picture, kept only as long as the picture is.
@@ -42,13 +42,19 @@ final class ArtworkFlow {
     private nonisolated static let twistAngle: Float = 7
     /// The blur over them all, as a share of the picture.
     private nonisolated static let blur = 0.055
-    /// How far the bars' darkest color is from black, as the iPhone's is.
-    private nonisolated static let shadowLift: CGFloat = 0.3
-    /// How much of the palette's picture the waveform shows across, its middle, so soft shades of it
-    /// pass through the bars rather than patches.
-    static let barsZoom: CGFloat = 0.6
-    /// A turn of it there, in seconds.
-    static let barsTurn = 20.0
+    /// The least each of a bar's red, green and blue may be, so a dark part of a cover still shows on
+    /// black: the iPhone's bars over a red of 178, 40, 30 read 174, 57, 68.
+    private nonisolated static let barsFloor: CGFloat = 0.24
+    /// The bars a little brighter than the cover, as the iPhone's are once its colors blend: the blur,
+    /// the share and this chosen as closest to the 18 colors measured on its bars, 13 levels off on
+    /// average out of 255.
+    private nonisolated static let barsExposure: CGFloat = 0.3
+    /// The cover's blur in the bars, as a share of it: soft enough that colors meet in between, as
+    /// the iPhone's do, red and blue making mauve, sharp enough that each part keeps its own.
+    private nonisolated static let barsBlur: CGFloat = 0.16
+    /// How much of the cover the bars show across, its middle: the iPhone's last bar still falls on
+    /// what's in the middle of the cover, not on its edge.
+    private nonisolated static let barsShare: CGFloat = 0.85
     /// How strongly the palette shows through the colors, as light: all the way in the dark, none
     /// in white, so a dark cover takes on its colors and a white one stays white.
     private nonisolated static let paletteTint: CGFloat = 0.4
@@ -62,7 +68,9 @@ final class ArtworkFlow {
 
     /// The cover is light overall: what's drawn over its colors has to be lighter too.
     let isLight: Bool
-    /// The palette, its shadows lifted so it reads on black, as the iPhone's waveform does.
+    /// The cover itself, blurred, which the waveform shows through its bars laid across the whole of
+    /// it, as the iPhone's does (`MediaCoreUI`'s waveform takes its colors from the artwork): a red
+    /// cover's sides red, a blue middle blue.
     let bars: CGImage
     private let cover: CIImage
     /// The palette's picture, which turns slowly.
@@ -82,14 +90,16 @@ final class ArtworkFlow {
         else { return nil }
         cover = CIImage(cgImage: small)
         self.wash = CIImage(cgImage: wash)
-        let lift = Self.shadowLift
-        let lifted = self.wash.applyingFilter(
-            "CIColorMatrix",
-            parameters: [
-                "inputRVector": CIVector(x: 1 - lift, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - lift, z: 0, w: 0),
-                "inputBVector": CIVector(x: 0, y: 0, z: 1 - lift, w: 0), "inputBiasVector": CIVector(x: lift, y: lift, z: lift, w: 0),
-            ])
-        guard let bars = Self.context.createCGImage(lifted, from: self.wash.extent) else { return nil }
+        let floor = Self.barsFloor
+        let blurred = cover.clampedToExtent().applyingGaussianBlur(sigma: Self.barsBlur * side).cropped(to: cover.extent)
+        let lifted = blurred.applyingFilter(
+            "CIColorClamp", parameters: ["inputMinComponents": CIVector(x: floor, y: floor, z: floor, w: 0), "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1)]
+        )
+        .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: Self.barsExposure])
+        // On whole pixels, or the last row and column would be half drawn.
+        let middle = cover.extent.insetBy(dx: cover.extent.width * (1 - Self.barsShare) / 2, dy: cover.extent.height * (1 - Self.barsShare) / 2)
+            .integral
+        guard let bars = Self.context.createCGImage(lifted, from: middle) else { return nil }
         self.bars = bars
         isLight = Self.brightness(of: cover) > 0.55
     }

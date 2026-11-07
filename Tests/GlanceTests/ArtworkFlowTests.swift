@@ -78,12 +78,15 @@ struct ArtworkFlowTests {
         return stride(from: 0, to: pixels.count, by: 4).map { (Double(pixels[$0]) / 255, Double(pixels[$0 + 1]) / 255, Double(pixels[$0 + 2]) / 255) }
     }
 
-    @Test("A hard cover makes a soft waveform: no hole in it, and no hard edge across it")
+    @Test("A hard cover makes a soft waveform: its dark part still shows, and no hard edge across it")
     func softBars() throws {
         let flow = try #require(ArtworkFlow.of(Self.ball()))
         let bars = flow.bars
         let levels = Self.channels(of: bars).map(\.r)
-        #expect((levels.min() ?? 0) > 0.3)
+        #expect((levels.min() ?? 0) >= 0.23)
+        // The cover itself shows: lighter at the sides than in its dark middle.
+        let row = bars.height / 2
+        #expect(levels[row * bars.width] > levels[row * bars.width + bars.width / 2] + 0.2)
         for y in 0..<bars.height {
             for x in 1..<bars.width {
                 #expect(abs(levels[y * bars.width + x] - levels[y * bars.width + x - 1]) < 0.04)

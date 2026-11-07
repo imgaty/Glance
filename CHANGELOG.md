@@ -216,9 +216,13 @@
 - Changed the cover's colors behind the player to flow as the iPhone's do: the
   cover's own colors drawn out into long ribbons that bend slowly through one
   another.
-- Changed the progress bar, the waveform and the colors behind the player to
-  share one palette: the cover's strongest colors, each one it really has,
-  lifted in the waveform so they read on black.
+- Changed the progress bar and the colors behind the player to share one
+  palette: the cover's strongest colors, each one it really has.
+- Changed the waveform to show the cover itself through its bars, blurred, as
+  the iPhone's does: a red cover with a blue middle gives red outer bars and
+  blue middles. Each bar is a band of the sound, from bass to treble, as tall as
+  it is against the others, so the bars follow the music's pitch rather than
+  standing alike.
 - Changed `Replace glass` to show all of the cover's colors, more strongly, just
   where the glass shows, so a white cover looks white and its red shows too. The
   times and side buttons turn lighter over a light cover.
@@ -226,8 +230,7 @@
   `Replace glass`.
 - Changed the waveform's bars to keep round ends however tall they grow, a
   little wider, as the iPhone's are.
-- Added the cover's colors pulsing gently on the music's beat, as you hear it,
-  with the waveform's bass bar rising on the same beat.
+- Added the cover's colors pulsing gently on the music's beat, as you hear it.
 - Changed the waveform to move more softly, as the iPhone's does: each bar
   eases toward its level over a tenth of a second or so, rather than leaping
   to every hit.

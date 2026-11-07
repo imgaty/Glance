@@ -329,24 +329,28 @@ private final class SampleRing: @unchecked Sendable {
     }
 }
 
-/// Turns 1024 samples into six bar heights, each bar its own part of the sound, as on iOS. How
-/// loud the music really is sets how tall the bars can grow, so a quiet song stays low. Within
-/// that, six separate slices of the spectrum each move against their own slow-moving average, with
-/// what they all share taken out, so a voice and a hi-hat each move their own bar; treble flickers.
-/// The bass's bar is the beat itself, the same signal the colors behind the player pulse on: the
-/// bass rising more sharply than it has been lately, to well above its usual level, as a kick or a
-/// bass note starts; no sooner than a fifth of a second after the last.
+/// Turns 1024 samples into six bar heights, as Apple's waveform does (`MediaCoreUI`'s binned FFT):
+/// six bands of the spectrum, each as loud as it is against the loudest of them, so the bars say
+/// where the sound is, low or high. How loud the music really is sets how tall the bars can grow,
+/// so a quiet song stays low. Apart from them, the beat, which the colors behind the player pulse
+/// on: the bass rising more sharply than it has been lately, to well above its usual level, as a
+/// kick or a bass note starts; no sooner than a fifth of a second after the last.
 final class Analyzer {
     static let size = 1024
     /// Bass, low mids, mids, upper mids, presence and air, in hertz.
-    private static let bands: [(Double, Double)] = [(45, 90), (150, 260), (400, 700), (1_100, 1_800), (3_000, 5_000), (7_000, 12_000)]
+    static let bands: [(Double, Double)] = [(45, 90), (150, 260), (400, 700), (1_100, 1_800), (3_000, 5_000), (7_000, 12_000)]
     /// Bands to bars: bass sits right of center, as in the iPhone's waveform.
-    private static let order = [4, 5, 3, 1, 0, 2]
+    static let order = [4, 5, 3, 1, 0, 2]
     /// The bar that's the bass.
     static let beatBar = order.firstIndex(of: 0)!
-    /// How high the bass's bar rests between beats, for how loud the music is, so it stays a low
-    /// dash rather than going out.
-    private static let beatBarRest: Float = 0.2
+    /// Each band's middle, in hertz, which its tilt is reckoned from.
+    nonisolated static let middles: [Double] = bands.map { ($0.0 * $0.1).squareRoot() }
+    /// Music is loudest in the bass and quieter an octave up each time: each band is raised this many
+    /// decibels an octave above the bass's, so the bars show where the sound is, its pitch, rather
+    /// than always the bass. As Apple's waveform bins its FFT into bands and shows them side by side.
+    static let tilt: Float = 4.5
+    /// How many decibels below the loudest band a bar goes down to a dot.
+    static let span: Float = 30
     /// How far each bar moves toward its level at each reading, rising and falling: softly, over a
     /// tenth of a second or so, as the iPhone's bars move, rather than leaping to every hit.
     private static let attack: [Float] = [0.4, 0.42, 0.45, 0.48, 0.5, 0.52]
@@ -372,6 +376,8 @@ final class Analyzer {
     private var previous = [Float](repeating: -120, count: 6)
     private var volume: Float = 0
     private var smoothed = [Float](repeating: 0, count: 6)
+    /// The loudest band of late, which the bars are measured against.
+    private var reference: Float?
     /// The last beat, fading; and the beat as shown, following it in.
     private var kick: Float = 0
     private var beat: Float = 0
@@ -385,6 +391,29 @@ final class Analyzer {
             let first = max(1, Int(low / hertzPerBin))
             return first..<max(first + 1, min(Self.size / 2, Int(high / hertzPerBin)))
         }
+    }
+
+    /// The bars from each band's loudness: tilted so music's falling spectrum reads level, each
+    /// measured against the loudest band of late, down to a dot `span` below it, so how tall a bar is
+    /// against the others says where the sound is. The reference follows a louder band at once and a
+    /// quieter mix slowly. Then eased, each bar with its own temperament: bass swells and lets go
+    /// slowly, treble flickers.
+    static func shape(_ decibels: [Float], reference: inout Float?, volume: Float, smoothed: inout [Float]) -> [Float] {
+        let tilted = decibels.enumerated().map { band, level in
+            level + Self.tilt * Float(log2(Self.middles[band] / Self.middles[0]))
+        }
+        let loudest = tilted.max() ?? 0
+        var top = reference ?? loudest
+        top += (loudest - top) * (loudest > top ? 0.5 : 0.02)
+        reference = top
+        var bars = [Float](repeating: 0, count: tilted.count)
+        for band in tilted.indices {
+            let level = volume * min(max((tilted[band] - (top - Self.span)) / Self.span, 0), 1)
+            let rate = level > smoothed[band] ? Self.attack[band] : Self.release[band]
+            smoothed[band] += (level - smoothed[band]) * rate
+            bars[Self.order.firstIndex(of: band)!] = smoothed[band]
+        }
+        return bars
     }
 
     func reading(_ samples: [Float]) -> AudioReading {
@@ -410,6 +439,7 @@ final class Analyzer {
             volume = 0
             kick = 0
             beat = 0
+            reference = nil
             return AudioReading(levels: smoothed, beat: 0)
         }
 
@@ -439,31 +469,12 @@ final class Analyzer {
         rises += (max(rise, 0) - rises) * 0.05
 
         var averages = self.averages ?? decibels
-        var relative = [Float](repeating: 0, count: 6)
-        var kicks = [Float](repeating: 0, count: 6)
         for band in 0..<6 {
-            // Above or below its own recent level, 10 dB either way spanning the whole range.
-            relative[band] = min(max((decibels[band] - averages[band] + 10) / 20, 0), 1)
             averages[band] += (decibels[band] - averages[band]) * 0.03
-            // A sudden rise of more than 3 dB is a hit.
-            kicks[band] = min(max((decibels[band] - previous[band] - 3) / 9, 0), 1)
             previous[band] = decibels[band]
         }
         self.averages = averages
-        // What every band shares (a hit across the whole spectrum) is taken out, so each bar shows
-        // how much its own part of the sound stands out right now.
-        let shared = relative.reduce(0, +) / 6, sharedKick = kicks.reduce(0, +) / 6
-        var bars = [Float](repeating: 0, count: 6)
-        for band in 0..<6 {
-            let own = relative[band] - shared, kick = max(kicks[band] - sharedKick, 0)
-            let shape = min(max(0.35 + 0.6 * (relative[band] - 0.5) + 0.8 * own + 0.35 * kick, 0), 1)
-            let level = volume * shape
-            // Each bar keeps its own temperament: bass swells and lets go slowly, treble flickers.
-            let rate = level > smoothed[band] ? Self.attack[band] : Self.release[band]
-            smoothed[band] += (level - smoothed[band]) * rate
-            bars[Self.order.firstIndex(of: band)!] = smoothed[band]
-        }
-        bars[Self.beatBar] = max(beat, Self.beatBarRest * volume)
+        let bars = Self.shape(decibels, reference: &reference, volume: volume, smoothed: &smoothed)
         return AudioReading(levels: bars, beat: beat)
     }
 }

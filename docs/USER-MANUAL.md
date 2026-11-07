@@ -320,8 +320,9 @@ with two fingers, or scroll a mouse's wheel, to see the rest.
 ## Live Activities
 
 While something plays, the closed notch shows the cover on its left and a
-waveform on its right, filled with the same colors that flow behind the player,
-as on the iPhone. When something new starts playing, its name and artist appear
+waveform on its right, as on the iPhone: six bars, from bass to treble, each as
+tall as its part of the sound is against the others, so they follow the music's
+pitch, with the cover itself, blurred, showing through them. When something new starts playing, its name and artist appear
 beside the notch for a moment. Everything here comes and goes as on the iPhone's
 Dynamic Island: the notch widens and folds, and what it shows rides in and out
 with its ends, fading in out of a blur and away into one. A new song's cover

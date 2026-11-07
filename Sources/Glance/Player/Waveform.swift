@@ -55,10 +55,10 @@ struct HeroWaveform: View {
     }
 }
 
-/// Six bars that follow the music's loudness from bass to treble, drawn like the iPhone's: each bar
-/// 1.6 times as wide as the gaps, with round ends however tall it grows, and dots when nothing
-/// plays. As the iPhone fills its waveform, the bars show the same colors that flow behind the
-/// player (see `ArtworkFlow`), across all six at once. Folded, it becomes Apple's lyrics symbol, the
+/// Six bars that follow the music from bass to treble, drawn like the iPhone's, measured from it:
+/// each bar a third wider than the gaps, with round ends however tall it grows, from a dot up, and
+/// dots when nothing plays. As the iPhone fills its waveform, the bars show the cover itself,
+/// blurred, laid across all six at once (see `ArtworkFlow.bars`). Folded, it becomes Apple's lyrics symbol, the
 /// way Apple swaps one symbol for another: the bars draw together into a point and are gone, and
 /// the symbol springs out of it.
 struct WaveformGlyph: View {
@@ -147,10 +147,12 @@ struct WaveformGlyph: View {
                     : .spring(response: 0.24, dampingFraction: 0.95), value: folded)
     }
 
-    /// The flowing colors, or the color alone.
+    /// The cover, blurred, across the whole waveform, or the color alone.
     @ViewBuilder private func paint(moving: Bool) -> some View {
         if let flow {
-            FlowingPaint(flow: flow, moving: moving)
+            Image(decorative: flow.bars, scale: 1)
+                .resizable()
+                .interpolation(.high)
         } else {
             color
         }
@@ -160,7 +162,7 @@ struct WaveformGlyph: View {
     /// loudest beats.
     static func bar(_ index: Int, level: Float, playing: Bool, in size: CGSize, width: CGFloat) -> CGRect {
         let level = CGFloat(level)
-        let sounding = max(width, size.height * (0.3 + 0.7 * level))
+        let sounding = width + (size.height - width) * min(max(level, 0), 1)
         // Settling into a dot as the sound fades out, rather than stopping at a dash.
         let height = playing ? width + (sounding - width) * min(level / 0.05, 1) : width
         return CGRect(x: CGFloat(index) * width * (1 + 1 / barToGap), y: (size.height - height) / 2, width: width, height: height)
@@ -185,8 +187,8 @@ struct WaveformGlyph: View {
     /// How wide a bar is, for how wide the waveform is.
     static func barWidth(in width: CGFloat) -> CGFloat { width / (6 + 5 / barToGap) }
 
-    /// How much wider a bar is than the gap beside it.
-    private static let barToGap: CGFloat = 1.6
+    /// How much wider a bar is than the gap beside it: 8 pixels to 6 on the iPhone.
+    private static let barToGap: CGFloat = 8.0 / 6
 
     /// A made-up beat, for the welcome tour: every bar at its own pace, and the bass's bar the kick,
     /// a little under twice a second.
@@ -220,27 +222,9 @@ private struct HeardLevels<Content: View>: View {
     var body: some View { content(audio.levels) }
 }
 
-/// The bars' colors, the palette turning slowly, apart from the bars' own movement.
-private struct FlowingPaint: View {
-    let flow: ArtworkFlow
-    let moving: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 15, paused: !moving || reduceMotion)) { context in
-            let turn = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate / ArtworkFlow.barsTurn
-            Image(decorative: flow.bars, scale: 1)
-                .resizable()
-                .interpolation(.high)
-                .scaleEffect(sqrt(2) / ArtworkFlow.barsZoom)
-                .rotationEffect(.radians(turn.truncatingRemainder(dividingBy: 1) * 2 * .pi))
-        }
-    }
-}
-
 /// The bars in the notch on the screen, drawn by Core Animation. The levels come 45 times a second,
 /// and through SwiftUI each one would redraw the whole notch, which took about half of a core with
-/// the notch closed. Here each only reshapes one layer, and turns the colors under it.
+/// the notch closed. Here each only reshapes one layer over the cover's colors.
 private struct LiveBars: NSViewRepresentable {
     let color: NSColor
     let flow: ArtworkFlow?
@@ -310,10 +294,8 @@ final class LiveBarsView: NSView {
         CATransaction.setDisableActions(true)
         clip.frame = bounds
         shape.frame = bounds
-        // Large enough to cover the bars however it's turned.
-        let side = hypot(bounds.width, bounds.height) / ArtworkFlow.barsZoom
-        colors.bounds = CGRect(x: 0, y: 0, width: side, height: side)
-        colors.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        // The whole cover across the whole waveform.
+        colors.frame = bounds
         CATransaction.commit()
         redraw()
     }
@@ -336,10 +318,6 @@ final class LiveBarsView: NSView {
             shape.add(change, forKey: "path")
         }
         shape.path = path
-        if isPlaying, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            let turn = (Date.now.timeIntervalSinceReferenceDate / ArtworkFlow.barsTurn).truncatingRemainder(dividingBy: 1)
-            colors.setAffineTransform(CGAffineTransform(rotationAngle: turn * 2 * .pi))
-        }
         CATransaction.commit()
     }
 }

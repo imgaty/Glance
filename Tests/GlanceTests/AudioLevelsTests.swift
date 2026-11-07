@@ -63,22 +63,64 @@ struct AudioLevelsTests {
         }
     }
 
-    @Test("The bass's bar is the beat the colors pulse on, and rests low between beats")
-    func beatBar() {
-        let samples = Self.song(seconds: 6, bpm: 120, kicks: true).samples
-        let analyzer = Analyzer(sampleRate: Self.rate)
-        var rested = false
-        for end in stride(from: Analyzer.size, through: samples.count, by: Self.hop) {
-            let reading = analyzer.reading(Array(samples[(end - Analyzer.size)..<end]))
-            let bar = reading.levels[Analyzer.beatBar]
-            #expect(bar >= reading.beat)
-            if reading.beat > 0.3 { #expect(bar == reading.beat) }
-            if reading.beat < 0.05, Double(end) / Self.rate > 1 {
-                rested = true
-                #expect(bar > 0 && bar <= 0.2)
-            }
+    /// The bars after a second of a sound, made of tones at these pitches and loudnesses.
+    static func bars(of tones: [(hertz: Double, amplitude: Double)], seconds: Double = 1.5) -> [Float] {
+        let analyzer = Analyzer(sampleRate: rate)
+        let count = Int(seconds * rate)
+        let samples = (0..<count).map { i in
+            Float(tones.reduce(0) { $0 + $1.amplitude * sin(2 * .pi * $1.hertz * Double(i) / rate) })
         }
-        #expect(rested)
+        var last = [Float]()
+        for end in stride(from: Analyzer.size, through: samples.count, by: hop) {
+            last = analyzer.reading(Array(samples[(end - Analyzer.size)..<end])).levels
+        }
+        return last
+    }
+
+    /// Where a band's bar is, left to right.
+    static func bar(ofBand band: Int) -> Int { Analyzer.order.firstIndex(of: band)! }
+
+    @Test("The bars follow the pitch: a low note raises the bass's bar, a high one a treble bar")
+    func pitch() {
+        let low = Self.bars(of: [(70, 0.5)])
+        #expect(low.indices.max { low[$0] < low[$1] } == Self.bar(ofBand: 0))
+        let high = Self.bars(of: [(4_000, 0.5)])
+        #expect(high.indices.max { high[$0] < high[$1] } == Self.bar(ofBand: 4))
+        let middle = Self.bars(of: [(550, 0.5)])
+        #expect(middle.indices.max { middle[$0] < middle[$1] } == Self.bar(ofBand: 2))
+        // Far from the note, a bar is a dot.
+        #expect(low[Self.bar(ofBand: 5)] < 0.1)
+    }
+
+    @Test("Bars differ as the sound does, rather than all standing alike")
+    func uneven() {
+        // A chord, loud in the low mids, softer up high.
+        let chord = Self.bars(of: [(200, 0.4), (1_400, 0.08), (9_000, 0.02)])
+        let tallest = chord.max() ?? 0, shortest = chord.min() ?? 0
+        #expect(tallest - shortest > 0.4)
+        #expect(chord[Self.bar(ofBand: 1)] > chord[Self.bar(ofBand: 3)])
+        #expect(chord[Self.bar(ofBand: 3)] > chord[Self.bar(ofBand: 5)])
+    }
+
+    @Test("Music's falling spectrum reads about level across the bars")
+    func tilt() {
+        // A dense spread of pitches, 4.5 dB quieter an octave up, as music tends to be.
+        var random = SystemRandomNumberGenerator()
+        let pitches = stride(from: 40.0, through: 12_000, by: 25).map { hertz in
+            (hertz, pow(hertz / 40, -Double(Analyzer.tilt) / (20 * log10(2))), Double.random(in: 0..<(2 * .pi), using: &random))
+        }
+        let count = Int(1.5 * Self.rate)
+        let scale = 0.4 / pitches.reduce(0) { $0 + $1.1 }.squareRoot()
+        let samples = (0..<count).map { i in
+            let t = Double(i) / Self.rate
+            return Float(scale * pitches.reduce(0) { $0 + $1.1 * sin(2 * .pi * $1.0 * t + $1.2) })
+        }
+        let analyzer = Analyzer(sampleRate: Self.rate)
+        var level = [Float]()
+        for end in stride(from: Analyzer.size, through: samples.count, by: Self.hop) {
+            level = analyzer.reading(Array(samples[(end - Analyzer.size)..<end])).levels
+        }
+        #expect((level.max() ?? 0) - (level.min() ?? 0) < 0.3, "\(level)")
     }
 
     @Test("The colors' pulse rises and falls more gently than the beat, and follows it")
