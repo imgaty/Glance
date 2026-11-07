@@ -90,6 +90,8 @@ final class NowPlaying: ObservableObject {
     var djPlaying: Bool { options.dj || djTalking }
     /// Whether the DJ chooses the music, from what Spotify has shown of it.
     private var djReading = DJReading()
+    /// How soon to read Spotify's bar again: soon while the DJ may have just stopped.
+    var djCheck: TimeInterval { djReading.unsure(at: .now) ? DJReading.soon : DJReading.usual }
 
     /// The song, as the lookups made for it are kept.
     private var track: String { title + "\u{1F}" + artist }

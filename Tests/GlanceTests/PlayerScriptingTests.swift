@@ -283,6 +283,31 @@ struct PlayerScriptingTests {
         #expect(SpotifyDJ.accessibilitySwitch == "--force-renderer-accessibility")
     }
 
+    @Test("Leaving the DJ for a playlist is read again every half second, so Shuffle comes back within the patience")
+    func djLeftQuickly() {
+        var reading = DJReading()
+        let start = Date(timeIntervalSince1970: 0)
+        func at(_ seconds: Double) -> Date { start + seconds }
+        _ = reading.update(talking: false, inBar: true, now: at(0))
+        #expect(!reading.unsure(at: at(0)))
+        // Another playlist: Spotify draws its bar anew, unread for a moment, then without the button.
+        _ = reading.update(talking: false, inBar: nil, now: at(2))
+        #expect(reading.unsure(at: at(2)))
+        var now = 2.5
+        var on = true
+        while on, now < 20 {
+            on = reading.update(talking: false, inBar: false, now: at(now))
+            if on { #expect(reading.unsure(at: at(now))) }
+            now += DJReading.soon
+        }
+        #expect(!on)
+        #expect(now - 2.5 <= DJReading.patience + DJReading.soon * 2)
+        // Where Spotify's bar was never read, there's nothing to read sooner.
+        var unread = DJReading()
+        _ = unread.update(talking: true, inBar: nil, now: at(0))
+        #expect(!unread.unsure(at: at(1)))
+    }
+
     @Test("The DJ stays the DJ through Spotify taking its button away as it finds new picks, as recorded on 2026-11-06")
     func djThroughGaps() {
         var reading = DJReading()

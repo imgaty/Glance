@@ -42,6 +42,9 @@ enum SpotifyDJ {
     }
     private static var way: Way?
     private static var lastSearch = Date.distantPast
+    /// Between one search for the bar and the next, when the way to it is lost: Spotify draws its
+    /// bar anew as another playlist starts, and a search takes a moment of its own.
+    static let searchPause: TimeInterval = 1
     /// Whether the running Spotify, by its process, was started with the switch.
     private static var switchChecked: (pid: pid_t, has: Bool)?
 
@@ -56,7 +59,7 @@ enum SpotifyDJ {
             return shown
         }
         // Looked for again, but not on every check.
-        guard Date.now.timeIntervalSince(lastSearch) > 5 else { return nil }
+        guard Date.now.timeIntervalSince(lastSearch) > Self.searchPause else { return nil }
         lastSearch = .now
         guard let found = await Task.detached(operation: { Self.findBar(in: Self.app(pid), previous: previousNames) }).value else { return nil }
         way = found.way
@@ -310,11 +313,22 @@ struct DJReading {
 
     /// How long the button may be gone while a song plays.
     static let patience: TimeInterval = 3
+    /// Read again this soon while it might be over: the button gone, or the bar not read.
+    static let soon: TimeInterval = 0.5
+    static let usual: TimeInterval = 2
+
+    /// Thought to be the DJ, with the button seen lately and now gone or unread: whether it's over is
+    /// read again soon. Where Spotify's bar can't be read at all, there's nothing to read sooner.
+    func unsure(at now: Date) -> Bool { on && now.timeIntervalSince(seenAt) < 10 && (missingSince != nil || unread) }
+    private var unread = false
+    private var seenAt = Date.distantPast
     /// How long a click on the notch's button holds the DJ, through its talk starting.
     static let afterPress: TimeInterval = 8
 
     /// `inBar` is nil where Spotify's bar can't be read: then what was thought stays.
     mutating func update(talking: Bool, inBar: Bool?, now: Date) -> Bool {
+        unread = inBar == nil
+        if inBar == true { seenAt = now }
         if talking || inBar == true {
             on = true
             missingSince = nil

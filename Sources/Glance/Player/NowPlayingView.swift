@@ -121,7 +121,8 @@ struct NowPlayingView: View {
                 if nowPlaying.isPlaying { await nowPlaying.syncPosition() }
                 await nowPlaying.syncFavorite()
                 nowPlaying.syncDJ()
-                try? await Task.sleep(for: .seconds(2))
+                // Soon while the DJ may have just stopped, so its button gives way to Shuffle quickly.
+                try? await Task.sleep(for: .seconds(nowPlaying.djCheck))
             }
         }
     }
