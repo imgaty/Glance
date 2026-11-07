@@ -122,13 +122,11 @@ enum RecordingLook {
     static let track = Color.p3(0x4A, 0x4A, 0x4A)
     /// Counting down or being saved, the dot and the time are this faded, measured.
     static let dim: Double = 0.29
-    /// Recording, beside the camera, the dot fades to this and back, a slow, faint pulse, and
-    /// takes this long; opened, the dot and the time fade further, a little faster (the user,
-    /// 2026-11-07, from their iPhone, twice: the closed one fainter, the opened one faster).
+    /// Recording, the dot fades to this and back, a slow, faint pulse, and takes this long:
+    /// beside the camera, and opened, where the time pulses with it, the same (the user,
+    /// 2026-11-07, after a real recording).
     static let pulseDim: Double = 0.75
     static let pulse: Double = 2
-    static let openDim: Double = 0.35
-    static let openPulse: Double = 1.5
 
     // Beside the camera.
     /// The screen's dot, by the notch's height, for the Timer's ring as the iPhone draws both.
@@ -779,11 +777,11 @@ private struct RecordingBlink: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .opacity(faded ? RecordingLook.dim : pulsed ? RecordingLook.openDim : 1)
+            .opacity(faded ? RecordingLook.dim : pulsed ? RecordingLook.pulseDim : 1)
             .animation(.easeInOut(duration: 0.3), value: faded)
             .onChange(of: recording && shown && !reduceMotion, initial: true) { _, blinks in
                 if blinks {
-                    withAnimation(.easeInOut(duration: RecordingLook.openPulse / 2).repeatForever(autoreverses: true)) { pulsed = true }
+                    withAnimation(.easeInOut(duration: RecordingLook.pulse / 2).repeatForever(autoreverses: true)) { pulsed = true }
                 } else {
                     var still = Transaction()
                     still.disablesAnimations = true

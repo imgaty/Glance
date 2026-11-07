@@ -523,9 +523,10 @@ it sooner. In a bubble, or beside one, the countdown's number shows inside its
 ring.
 
 Hover over or click the notch while the recording has it, or click its bubble,
-and it opens to the recording's time over `Screen Recording`, and a button:
-click it to stop the recording, as the stop button in the menu bar does. Turn it
-off with `Screen recording` in **Settings > Live Activities**.
+and it opens to the red dot and the recording's time over `Screen Recording`,
+the dot and time pulsing as the dot does beside the camera, and a button: click
+it to stop the recording, as the stop button in the menu bar does. Turn it off
+with `Screen recording` in **Settings > Live Activities**.
 
 ### Voice Memos
 

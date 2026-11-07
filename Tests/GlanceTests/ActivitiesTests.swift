@@ -1759,10 +1759,10 @@ struct RecordingTests {
         #expect(ScreenRecordingWatch.savedFor >= 3)
     }
 
-    @Test("Beside the camera the dot pulses slightly; opened, the dot and time fade further, faster; the stop ring is fine")
+    @Test("The dot pulses slightly and slowly, beside the camera and opened alike; the stop ring is fine")
     func pulses() {
-        #expect(RecordingLook.pulseDim > RecordingLook.openDim && RecordingLook.openDim > RecordingLook.dim)
-        #expect(RecordingLook.openPulse < RecordingLook.pulse)
+        #expect(RecordingLook.pulseDim > RecordingLook.dim && RecordingLook.pulseDim >= 0.7)
+        #expect(RecordingLook.pulse >= 2)
         #expect(RecordingLook.screenRing * TimerLayout.content(32) < 2.5)
         #expect(RecordingLook.memoRing < 0.0645)
     }
