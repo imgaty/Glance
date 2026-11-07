@@ -382,12 +382,16 @@ the notch shows the call without the caller or its buttons. The buttons click
 macOS's own, so the popup shows and the pointer moves for an instant when you
 press one.
 
-Apps that tell macOS nothing, such as Zoom, Discord, WhatsApp, Microsoft Teams,
-Slack, Telegram and Signal, show once the app uses the microphone: not while it
-rings, by the app's name rather than the person's, and ended in the app. For
-those, your half of the waveform needs `Microphone`, which Glance asks for
-during that call and uses only during calls, and the other half needs `Audio
-from apps`. Turn all this off with `Calls` in **Settings > Live Activities**.
+Apps that tell macOS nothing, such as Zoom, WhatsApp, Microsoft Teams, Slack,
+Telegram and Signal, show once the app uses the microphone: not while it rings,
+by the app's name rather than the person's, and ended in the app. With
+`Accessibility` allowed, Discord's calls show while they ring, with a button to
+accept, and on the call, who it's with and Discord's own time, which keeps
+counting while Discord is out of sight behind a full-screen app; the red button
+leaves the call. For those apps, your half of the waveform needs `Microphone`,
+which Glance asks for during that call and uses only during calls, and the
+other half needs `Audio from apps`. Turn all this off with `Calls` in
+**Settings > Live Activities**.
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 If macOS doesn't change Low Power Mode from the notch,
 **System Settings > Battery** opens, where you can. macOS's own banner at the

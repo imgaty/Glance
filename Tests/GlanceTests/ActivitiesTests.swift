@@ -1358,11 +1358,53 @@ struct SystemBannersTests {
         back.ended(at: t0 + 8)
         back.ended(at: t0 + 19)
         #expect(back == CallClock())
-        // Another time altogether: another call.
+        // Another time altogether, moving on: another call, taken once it's seen to move.
         var other = CallClock()
         _ = other.going(shown: 500, at: t0, waitsForTime: true)
-        let next = other.going(shown: 3, at: t0 + 10, waitsForTime: true)
-        #expect(shown(next, at: t0 + 10) == 3)
+        let doubted = other.going(shown: 3, at: t0 + 10, waitsForTime: true)
+        #expect(shown(doubted, at: t0 + 10) == 510)
+        let next = other.going(shown: 4, at: t0 + 11, waitsForTime: true)
+        #expect(shown(next, at: t0 + 11) == 4)
+        // Behind a full-screen app, Discord stopped drawing and went on saying 41:28: read once a
+        // second, that started the time again every other second (the user's video, 2026-11-07).
+        // Now it counts on from the call's start, and takes Discord's time back once it moves.
+        var hidden = CallClock()
+        let callStart = t0 - 2484.4
+        var readAt = t0
+        while readAt < t0 + 14 {
+            let frozen = readAt >= t0 + 4.3 && readAt < t0 + 12.5
+            let discord = frozen ? 2488 : Int(readAt.timeIntervalSince(callStart))
+            let going = hidden.going(shown: discord, at: readAt, waitsForTime: true)
+            let read = try #require(going)
+            #expect(abs(read.timeIntervalSince(callStart)) < 0.7)
+            readAt += 1.03
+        }
+        // Opened while its time was frozen, it counts from what it said, then takes the real time
+        // once it moves.
+        var late = CallClock()
+        _ = late.going(shown: 100, at: t0, waitsForTime: true)
+        _ = late.going(shown: 100, at: t0 + 2, waitsForTime: true)
+        _ = late.going(shown: 160, at: t0 + 3, waitsForTime: true)
+        let caughtUp = late.going(shown: 161, at: t0 + 4, waitsForTime: true)
+        #expect(shown(caughtUp, at: t0 + 4) == 161)
+        // macOS's popup: only its time seen ticking on twice, a second apart and agreeing, says
+        // when it started; a still picture, or two of its frames read in turn, never does.
+        var stillPicture = CallPopup.Ticks(last: 2488, at: t0)
+        for step in 1...30 {
+            let seconds = step.isMultiple(of: 2) ? 2488 : 2487
+            #expect(stillPicture.saw(seconds, at: t0 + Double(step) * 0.1) == nil)
+        }
+        let popupStart = t0 - 2487.55
+        var ticking = CallPopup.Ticks(last: 2487, at: t0)
+        var found: Date?
+        var at = t0
+        while found == nil, at < t0 + 3 {
+            at += 0.1
+            found = ticking.saw(Int(at.timeIntervalSince(popupStart)), at: at)
+        }
+        let settled = try #require(found)
+        #expect(abs(settled.timeIntervalSince(popupStart)) < 0.1)
+        #expect(at.timeIntervalSince(t0) < 2.1)
         // Past an hour, in either way of writing it.
         #expect(CallPopup.elapsed(in: "Voice Connected 59:59") == 3599)
         #expect(CallPopup.elapsed(in: "Voice Connected 1:00:00") == 3600)

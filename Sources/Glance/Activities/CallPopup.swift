@@ -63,6 +63,39 @@ struct CallPopup: Equatable {
         before.addingTimeInterval(after.timeIntervalSince(before) / 2 - TimeInterval(seconds))
     }
 
+    /// Its time read over and over, for when it started: only a time seen ticking on, twice, a
+    /// second apart and agreeing, says so. A picture of a window that's stopped drawing, as behind
+    /// a full-screen app, can hold the last two of its frames, a second apart, read in turn.
+    struct Ticks {
+        private var last: Int?
+        private var before: Date
+        private var first: Date?
+
+        init(last: Int?, at now: Date) {
+            self.last = last
+            before = now
+        }
+
+        /// When it started, once that's known, from a reading taken just now.
+        mutating func saw(_ seconds: Int?, at now: Date) -> Date? {
+            guard let seconds else { return nil }
+            defer {
+                last = seconds
+                before = now
+            }
+            guard let last, seconds == last + 1 else {
+                if seconds != last { first = nil }
+                return nil
+            }
+            let started = CallPopup.started(changedBetween: before, and: now, to: seconds)
+            if let first, abs(first.timeIntervalSince(started)) < 0.3 {
+                return first.addingTimeInterval(started.timeIntervalSince(first) / 2)
+            }
+            first = started
+            return nil
+        }
+    }
+
     /// The middle of the red and of the green button, among 8-bit pixels with four channels each,
     /// red first. They're always in the popup's right half, and big, which leaves out a caller's
     /// picture and the waveform's green.

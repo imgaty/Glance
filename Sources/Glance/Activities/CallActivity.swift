@@ -1234,10 +1234,39 @@ final class CallWatch: ObservableObject {
 /// own time wherever it shows one, which always wins; without one, what was known is kept, so a
 /// reading missed, Glance opened again, or the call gone a moment never starts it from nothing.
 struct CallClock: Equatable {
-    /// A time read as so many seconds started in the second before that many seconds ago, a little
-    /// either side for the app drawing it late. Each reading narrows it down.
-    private(set) var earliest: Date?
-    private(set) var latest: Date?
+    /// When a time read started: in the second before that many seconds ago, a little either side
+    /// for the app drawing it late. Each reading that agrees narrows it down.
+    struct Span: Equatable {
+        var earliest: Date
+        var latest: Date
+
+        init(seconds: Int, at now: Date) {
+            earliest = now.addingTimeInterval(-TimeInterval(seconds) - 1.2)
+            latest = now.addingTimeInterval(-TimeInterval(seconds) + 0.1)
+        }
+
+        init(earliest: Date, latest: Date) {
+            self.earliest = earliest
+            self.latest = latest
+        }
+
+        /// What both leave, if they agree.
+        func meeting(_ other: Span) -> Span? {
+            let from = max(earliest, other.earliest)
+            let to = min(latest, other.latest)
+            return from <= to ? Span(earliest: from, latest: to) : nil
+        }
+
+        var middle: Date { earliest.addingTimeInterval(latest.timeIntervalSince(earliest) / 2) }
+    }
+
+    /// When the call started, by its own time.
+    private(set) var span: Span?
+    /// A reading that disagreed, and the time it said: it's only believed once the app's time is
+    /// seen to move on from it. An app whose window is out of sight, as behind a full-screen app,
+    /// can stop drawing and go on showing the same second, which read a second later disagrees.
+    private(set) var disagreeing: Span?
+    private(set) var disagreeingSeconds: Int?
     /// Without a time of its own, when the call was first heard.
     private(set) var heard: Date?
     /// When it was last gone, for a call that comes straight back.
@@ -1248,32 +1277,43 @@ struct CallClock: Equatable {
     static let keep: TimeInterval = 10
 
     /// When it started, by its own time: the middle of what the readings leave.
-    var shown: Date? {
-        guard let earliest, let latest else { return nil }
-        return earliest.addingTimeInterval(latest.timeIntervalSince(earliest) / 2)
-    }
+    var shown: Date? { span?.middle }
 
     /// When the call started, given the time its app shows now, if it shows one; nil while that
     /// time is still worth waiting for.
     mutating func going(shown seconds: Int?, at now: Date, waitsForTime: Bool) -> Date? {
         gone = nil
-        if let seconds {
-            let latest = now.addingTimeInterval(-TimeInterval(seconds) + 0.1)
-            let earliest = now.addingTimeInterval(-TimeInterval(seconds) - 1.2)
-            if let known = self.earliest, let last = self.latest, max(known, earliest) <= min(last, latest) {
-                self.earliest = max(known, earliest)
-                self.latest = min(last, latest)
-            } else {
-                // Not the same time as before: another call, or the app's own moved.
-                self.earliest = earliest
-                self.latest = latest
-            }
-        }
+        if let seconds { read(seconds, at: now) }
         if let shown { return shown }
         let heard = self.heard ?? now
         self.heard = heard
         if waitsForTime, now.timeIntervalSince(heard) < Self.wait { return nil }
         return heard
+    }
+
+    private mutating func read(_ seconds: Int, at now: Date) {
+        let reading = Span(seconds: seconds, at: now)
+        guard let known = span else {
+            span = reading
+            return
+        }
+        if let both = known.meeting(reading) {
+            span = both
+            disagreeing = nil
+            disagreeingSeconds = nil
+        } else if let waiting = disagreeing, let both = waiting.meeting(reading) {
+            if seconds != disagreeingSeconds {
+                // It's moving, and not with the time known: another call, or the app's own moved.
+                span = both
+                disagreeing = nil
+                disagreeingSeconds = nil
+            } else {
+                disagreeing = both
+            }
+        } else {
+            disagreeing = reading
+            disagreeingSeconds = seconds
+        }
     }
 
     /// The call's gone: remembered a while, in case it's back.
@@ -1786,22 +1826,17 @@ final class CallBanners {
         guard let shown = popup?.elapsed else { return }
         if let started = popup?.started, abs(Date.now.timeIntervalSince(started) - TimeInterval(shown)) < 1.5 { return }
         guard let window = await CallPopupCamera.window() else { return }
-        var before = Date.now
-        var last = shown
+        var ticks = CallPopup.Ticks(last: shown, at: .now)
         let giveUp = Date.now.addingTimeInterval(3)
         while Date.now < giveUp, found != nil, !pressing {
             guard let current = frame(of: found?.banner), let image = await CallPopupCamera.picture(of: current, in: window) else { return }
             let seen = await Task.detached(priority: .userInitiated) { CallPopup.read(image, accurate: false) }.value
-            let after = Date.now
-            guard let time = seen.elapsed else { continue }
-            if time != last {
+            if let started = ticks.saw(seen.elapsed, at: .now) {
                 popup?.detail = seen.detail
-                popup?.started = CallPopup.started(changedBetween: before, and: after, to: time)
+                popup?.started = started
                 changed?(popup)
                 return
             }
-            last = time
-            before = after
         }
     }
 

@@ -199,6 +199,8 @@
   a pause. It now carries on from where it stopped.
 - Fixed a screen recording made with Screenshot not showing in the notch at
   all.
+- Fixed a Discord call's time going back a second or two, every other second,
+  while a full-screen app was in front. It now counts on from the call's start.
 
 ### Touch
 
