@@ -569,7 +569,8 @@ struct ActivitiesTests {
         // and the timer is detached off that end.
         #expect(model.detached == .timer)
         #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
-        #expect(model.metrics.fold == model.wing)
+        // Folded back to just past the camera housing (see `pastHousing`).
+        #expect(model.metrics.fold == model.wing - model.pastHousing)
         #expect(model.notchClock == nil)
         // A third waits its turn: nothing's ever detached at the leading side.
         model.stopwatch = .stopped(elapsed: 12)
@@ -784,7 +785,7 @@ struct SystemBannersTests {
         // The call first, with the notch, music detached in its trailing side's place.
         #expect(model.activities == [.call, .music, .airplay] && !model.musicShown)
         #expect(model.detached == .music)
-        #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32) && model.metrics.fold == model.wing)
+        #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32) && model.metrics.fold == model.wing - model.pastHousing)
         // Without music, AirPlay is detached instead; alone, the call has both wings, as wide as it needs.
         model.activity = false
         #expect(model.detached == .airplay)
@@ -932,6 +933,22 @@ struct SystemBannersTests {
         model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
         #expect(model.restingTall && !model.swells)
         #expect(model.metrics(for: .closed).height == model.restingHeight)
+    }
+
+    @Test("Beside a bubble, the notch's folded end reaches past the camera housing, its corner as round as the other end's covering the housing's")
+    @MainActor
+    func foldedEndPastHousing() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.timer = .running(until: .now + 300, total: 300)
+        model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: 32)
+        #expect(model.metrics(for: .closed).fold == 0)
+        model.stopwatch = .running(since: .now)
+        let m = model.metrics(for: .closed)
+        let round = model.corners.radii(forHeight: 32, wingEnds: 1).bottom, housing = model.corners.radii(forHeight: 32, wingEnds: 0).bottom
+        #expect(round > housing)
+        #expect(isClose(model.pastHousing, (round - housing) * 1.25))
+        // Its end, from the middle: past the housing's by that much.
+        #expect(isClose(m.bodyWidth / 2 - m.fold, 185 / 2 + model.pastHousing))
     }
 
     @Test("Opened, another app's call is one row as tall as the Alarm: the name, the speaker and, where it can be done, End")

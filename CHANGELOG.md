@@ -184,6 +184,9 @@
   behind the pause button.
 - Fixed the notch's end rounding at the top as the bubble ran into it or budded
   off. It meets the top of the screen there as the notch's other end does.
+- Fixed the notch's end beside the bubble showing the camera housing's own
+  corner, which is cut sharper than the other end's. It now reaches just past
+  the housing, its corner as round as the other end's.
 
 ### Touch
 

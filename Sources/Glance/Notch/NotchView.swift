@@ -545,7 +545,16 @@ final class NotchModel: ObservableObject {
         // which the glass, sized afresh with the notch, doesn't follow.
         let press: CGFloat = pressed ? 0.975 : 1
         let flare = corners.radii(forHeight: height * press).flare
-        return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare, fold: state == .open || detached == nil ? 0 : wing)
+        return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare, fold: state == .open || detached == nil ? 0 : max(wing - pastHousing, 0))
+    }
+
+    /// With another detached, how far the notch's folded end reaches past the camera housing: far
+    /// enough that its own corner, as round as the other end's, covers the housing's rounder-cut one,
+    /// which would otherwise show at that end. Measured: a quarter more than the two corners differ, as
+    /// their curves ease into the sides.
+    var pastHousing: CGFloat {
+        let h = closedSize.height
+        return max(corners.radii(forHeight: h, wingEnds: 1).bottom - corners.radii(forHeight: h, wingEnds: 0).bottom, 0) * 1.25
     }
 }
 
