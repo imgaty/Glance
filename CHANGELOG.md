@@ -201,6 +201,8 @@
   all.
 - Fixed a Discord call's time going back a second or two, every other second,
   while a full-screen app was in front. It now counts on from the call's start.
+- Fixed the screen recording's stop button opening macOS 27.3's own Live
+  Activity under the menu bar rather than stopping the recording.
 
 ### Touch
 

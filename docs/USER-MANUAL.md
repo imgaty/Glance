@@ -529,8 +529,11 @@ ring.
 Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the red dot and the recording's time over `Screen Recording`,
 the dot and time pulsing as the dot does beside the camera, and a button: click
-it to stop the recording, as the stop button in the menu bar does. Turn it off
-with `Screen recording` in **Settings > Live Activities**.
+it to stop the recording, as the stop button in the menu bar does. From macOS
+27.3, where the recording shows as a Live Activity in the menu bar, its own
+**Stop Recording** is pressed, so macOS's Live Activity opens under the menu bar
+for an instant as the recording stops. Turn it off with `Screen recording` in
+**Settings > Live Activities**.
 
 ### Voice Memos
 

@@ -444,11 +444,56 @@ final class ScreenRecordingWatch: ObservableObject {
         return NSImage(cgImage: picture, size: .zero)
     }
 
-    /// Stops it, as macOS's own button in the menu bar does.
+    /// Stops it, as macOS's own button in the menu bar does. Where macOS shows the recording as a
+    /// Live Activity in the menu bar, as macOS 27.3 does, Screenshot has no button of its own there,
+    /// and pressing the Live Activity only opens it: its own Stop Recording button, in what opens,
+    /// is pressed as soon as it shows.
     func stop() {
         if benching { return ActivityBench.shared.stopped(.screenRecording) }
+        if let button = Self.openedStopButton() {
+            AXUIElementPerformAction(button, kAXPressAction as CFString)
+            return
+        }
         guard let item = Self.stopItem() else { return }
         AXUIElementPerformAction(item, kAXPressAction as CFString)
+        guard SystemNotices.value(item, kAXSubroleAttribute) as? String == Self.liveActivity else { return }
+        Task {
+            for _ in 0..<30 {
+                if let button = Self.openedStopButton() {
+                    AXUIElementPerformAction(button, kAXPressAction as CFString)
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
+    }
+
+    nonisolated static let liveActivity = "AXLiveActivity"
+
+    /// The recording's Live Activity, opened under the menu bar: its stop button, while it shows.
+    static func openedStopButton() -> AXUIElement? {
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return nil }
+        let element = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 0.1)
+        guard let bar = SystemNotices.value(element, kAXExtrasMenuBarAttribute) else { return nil }
+        let opened = SystemNotices.findAll(in: bar as! AXUIElement) {
+            SystemNotices.value($0, kAXRoleAttribute) as? String == kAXGroupRole
+                && SystemNotices.value($0, kAXSubroleAttribute) as? String == liveActivity
+        }
+        for activity in opened {
+            let buttons = SystemNotices.findAll(in: activity) {
+                SystemNotices.value($0, kAXRoleAttribute) as? String == kAXButtonRole
+                    && isOpenedStopButton(SystemNotices.value($0, kAXIdentifierAttribute) as? String)
+            }
+            if let button = buttons.first { return button }
+        }
+        return nil
+    }
+
+    /// The stop button in a screen recording's opened Live Activity, by its identifier, which is
+    /// the same in every language: "ScreenRecording.BannerView" on macOS 27.3.
+    nonisolated static func isOpenedStopButton(_ identifier: String?) -> Bool {
+        identifier?.hasPrefix("ScreenRecording.") == true
     }
 
     /// Opens the one just saved, in the app that opens it.

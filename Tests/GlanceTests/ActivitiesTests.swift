@@ -1827,6 +1827,13 @@ struct RecordingTests {
         #expect(ScreenRecordingWatch.isRecordingItem("com.apple.menuextra.screencapture"))
         #expect(!ScreenRecordingWatch.isRecordingItem("com.apple.menuextra.clock"))
         #expect(!ScreenRecordingWatch.isRecordingItem(nil))
+        // macOS 27.3: the recording as a Live Activity in the menu bar, whose own stop button is in
+        // what opens from it (read live, 2026-11-07).
+        #expect(ScreenRecordingWatch.isRecordingItem("live-activity-pill-com.apple.screencaptureui"))
+        #expect(!ScreenRecordingWatch.isRecordingItem("live-activity-pill-com.apple.MediaRemoteUIService"))
+        #expect(ScreenRecordingWatch.isOpenedStopButton("ScreenRecording.BannerView"))
+        #expect(!ScreenRecordingWatch.isOpenedStopButton("NowPlaying.BannerView"))
+        #expect(!ScreenRecordingWatch.isOpenedStopButton(nil))
     }
 
     @Test("A voice memo pauses while Voice Memos shows Resume, goes on while it shows Done, and resumed it carries on from where it was")
