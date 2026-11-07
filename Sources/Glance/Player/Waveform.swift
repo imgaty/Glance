@@ -74,21 +74,22 @@ struct WaveformGlyph: View {
     @Environment(\.notchOnScreen) private var onScreen
 
     var body: some View {
-        if demo {
-            // As often as music's levels come, so it moves as smoothly.
-            TimelineView(.animation(minimumInterval: 1.0 / Double(Self.demoRate), paused: !isPlaying)) { context in
-                glyph(levels: Self.demoLevels(at: context.date.timeIntervalSinceReferenceDate))
-            }
-        } else if onScreen {
-            // The bars go as the rest of the glyph does, without drawing together one by one.
+        if onScreen {
+            // The bars go as the rest of the glyph does, without drawing together one by one. The
+            // made-up song's too, so it moves exactly as music does.
             ZStack {
-                LiveBars(color: NSColor(color), flow: flow, isPlaying: isPlaying)
+                LiveBars(color: NSColor(color), flow: flow, isPlaying: isPlaying, demo: demo)
                     .scaleEffect(folded ? 0.2 : 1)
                     .opacity(folded ? 0 : 1)
                     .animation(.spring(response: 0.26, dampingFraction: 0.9), value: folded)
                 GeometryReader { lyricsSymbol(in: $0.size) }
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
+        } else if demo {
+            // As often as music's levels come.
+            TimelineView(.animation(minimumInterval: 1.0 / Double(Self.demoRate), paused: !isPlaying)) { context in
+                glyph(levels: Self.demoLevels(at: context.date.timeIntervalSinceReferenceDate))
+            }
         } else {
             HeardLevels { glyph(levels: $0) }
         }
@@ -191,27 +192,67 @@ struct WaveformGlyph: View {
     /// How much wider a bar is than the gap beside it: 8 pixels to 6 on the iPhone.
     private static let barToGap: CGFloat = 8.0 / 6
 
-    /// A made-up beat, for the welcome tour and the test scenes: every bar at its own pace, and the
-    /// bass's bar the kick, a little under twice a second, rising and falling as music's bars do once
-    /// they're eased, never leaping in one frame.
+    /// The made-up song's bars, for the welcome tour and the test scenes: a made-up beat as the
+    /// analysis would hear it, eased exactly as music's levels are (see `Analyzer.shape`), each bar
+    /// rising quickly and falling away slowly, at the same 45 readings a second. The easing only
+    /// remembers the last second or so, so the readings of the second before are eased through
+    /// again each time, and the bars stay a picture of the moment.
     static func demoLevels(at t: Double) -> [Float] {
-        let kick = demoKick(at: t)
-        let paces: [Double] = [5.3, 6.1, 3.7, 2.9, 2.3, 4.4]
-        return paces.enumerated().map { bar, pace in
-            if bar == Analyzer.beatBar { return Float(0.22 + 0.72 * kick) }
-            let level = 0.42 + 0.22 * sin(t * pace + Double(bar) * 1.7) + 0.14 * sin(t * pace * 2.3 + Double(bar))
-            return Float(min(max(level, 0.1), 1))
+        let rate = Double(demoRate)
+        let now = (t * rate).rounded(.down)
+        var reference: Float? = 0
+        var smoothed = [Float](repeating: 0, count: AudioLevels.bands)
+        var bars = smoothed
+        for reading in stride(from: now - rate, through: now, by: 1) {
+            bars = Analyzer.shape(demoHeard(at: reading / rate), reference: &reference, volume: 1, smoothed: &smoothed)
+        }
+        return bars
+    }
+
+    /// How many times a second the made-up song is read: as often as music is.
+    static let demoRate = 45
+
+    /// The made-up song's beats a second: a little under two, as the colors behind the player pulse.
+    private static let demoTempo = 1.8
+
+    /// How loud the made-up song is in each band, in decibels against its loudest, as the analysis
+    /// would hear it: a kick on every beat, a snare on every other, a bass line and hi-hats on every
+    /// half beat, each a little harder or softer as played, and a voice wandering through the mids.
+    static func demoHeard(at t: Double) -> [Float] {
+        let beats = t * demoTempo
+        let beat = beats.rounded(.down)
+        let sinceBeat = (beats - beat) / demoTempo
+        let halves = beats * 2
+        let half = halves.rounded(.down)
+        let sinceHalf = (halves - half) / (demoTempo * 2)
+        let played = 0.75 + 0.25 * demoVariation(half)
+        let kick = sinceBeat < 0.07 ? 1 : exp(-(sinceBeat - 0.07) / 0.14)
+        let snare = beat.truncatingRemainder(dividingBy: 2) == 1 ? exp(-sinceBeat / 0.12) : 0
+        let hat = exp(-sinceHalf / 0.06) * played
+        let note = exp(-sinceHalf / 0.25) * played
+        let voice = 0.55 + 0.2 * sin(t * 2 * .pi / 4.4) + 0.15 * sin(t * 2 * .pi * 2.9 + 2 * sin(t * 1.3))
+        // Bass, low mids, mids, upper mids, presence and air, as `Analyzer.bands`.
+        let loudness = [
+            0.2 + 0.8 * kick, 0.25 + 0.55 * note, voice, 0.2 + 0.3 * voice + 0.45 * snare, 0.2 + 0.5 * snare + 0.3 * hat,
+            0.15 + 0.7 * hat,
+        ]
+        // Untilted, as the analysis tilts what it hears.
+        return loudness.enumerated().map { band, level in
+            Analyzer.span * Float(min(max(level, 0), 1) - 1) - Analyzer.tilt * Float(log2(Analyzer.middles[band] / Analyzer.middles[0]))
         }
     }
 
-    /// How many times a second the made-up levels are drawn: as often as music's come.
-    static let demoRate = 45
+    /// 0 to 1, the same for the same half beat, different from one to the next.
+    private static func demoVariation(_ half: Double) -> Double {
+        let x = sin(half * 12.9898) * 43758.5453
+        return x - x.rounded(.down)
+    }
 
     /// The made-up song's kick, 0 to 1, a little under twice a second, which the colors behind the
-    /// player pulse on too: up over its first 70 milliseconds and dying away, as a real kick does
-    /// once it's eased (see `Analyzer`).
+    /// player pulse on: up over its first 70 milliseconds and dying away, as a real kick does once
+    /// it's eased (see `Analyzer`).
     static func demoKick(at t: Double) -> Double {
-        let period = 1 / 1.8, rise = 0.07, fall = 0.15
+        let period = 1 / demoTempo, rise = 0.07, fall = 0.15
         let since = t.truncatingRemainder(dividingBy: period)
         return since < rise ? (1 - cos(.pi * since / rise)) / 2 : exp(-(since - rise) / fall)
     }
@@ -237,12 +278,15 @@ private struct LiveBars: NSViewRepresentable {
     let color: NSColor
     let flow: ArtworkFlow?
     let isPlaying: Bool
+    /// The made-up song's levels rather than the music's.
+    var demo = false
 
     func makeNSView(context: Context) -> LiveBarsView { LiveBarsView() }
 
     func updateNSView(_ view: LiveBarsView, context: Context) {
         view.show(color: color, colors: flow?.bars)
         view.isPlaying = isPlaying
+        view.demo = demo
     }
 }
 
@@ -251,11 +295,22 @@ final class LiveBarsView: NSView {
     private let shape = CAShapeLayer()
     private let colors = CALayer()
     private var hearing: AnyCancellable?
+    /// For the made-up song: the screen's frames, and the reading last drawn.
+    private var frames: CADisplayLink?
+    private var reading = -1.0
     private var levels = [Float](repeating: 0, count: AudioLevels.bands)
 
     var isPlaying = false {
         didSet {
+            frames?.isPaused = !isPlaying
             if isPlaying != oldValue { redraw(animated: true) }
+        }
+    }
+
+    /// The made-up song's levels, made up here, rather than the music's.
+    var demo = false {
+        didSet {
+            if demo != oldValue { listen() }
         }
     }
 
@@ -285,15 +340,39 @@ final class LiveBarsView: NSView {
         super.viewDidMoveToWindow()
         let scale = window?.backingScaleFactor ?? 2
         shape.contentsScale = scale
-        hearing =
-            window == nil
-            ? nil
-            : AudioLevels.shared.$levels.sink { [weak self] levels in
+        listen()
+    }
+
+    private func listen() {
+        hearing = nil
+        frames?.invalidate()
+        frames = nil
+        guard window != nil else { return }
+        if demo {
+            // Read by the screen's frames, so each reading shows on the first frame due after it.
+            let link = displayLink(target: self, selector: #selector(nextFrame(_:)))
+            link.isPaused = !isPlaying
+            link.add(to: .main, forMode: .common)
+            frames = link
+        } else {
+            hearing = AudioLevels.shared.$levels.sink { [weak self] levels in
                 MainActor.assumeIsolated {
                     self?.levels = levels
                     self?.redraw()
                 }
             }
+        }
+    }
+
+    /// The made-up song as it is when this frame shows, by the same clock as the colors behind
+    /// the player, drawn only when a new reading is due, as music's are.
+    @objc private func nextFrame(_ link: CADisplayLink) {
+        let t = Date.now.timeIntervalSinceReferenceDate + link.targetTimestamp - CACurrentMediaTime()
+        let now = (t * Double(WaveformGlyph.demoRate)).rounded(.down)
+        guard now != reading else { return }
+        reading = now
+        levels = WaveformGlyph.demoLevels(at: t)
+        redraw()
     }
 
     override func layout() {

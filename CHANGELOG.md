@@ -280,9 +280,10 @@
   made in `Music`.
 - Fixed the waveform going gray and faint on a dark cover: its bars are
   brightened as much as they need to read on black, as the iPhone's are.
-- Fixed the waveform in the welcome tour and the test scenes jumping, its bass
-  bar leaping to full height for a single frame. The made-up song's bars now
-  rise and fall as music's do, as smoothly.
+- Fixed the waveform in the welcome tour and the test scenes jumping and
+  jittering, most of all in the open player. The made-up song's bars now move
+  exactly as music's do: rising quickly on each beat and falling away slowly, as
+  smoothly.
 
 ### Opening
 

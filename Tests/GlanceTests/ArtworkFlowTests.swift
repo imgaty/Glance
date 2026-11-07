@@ -72,19 +72,28 @@ struct ArtworkFlowTests {
         #expect(levels.reduce(0, +) / Double(levels.count) >= 0.4)
     }
 
-    @Test("The made-up song's bars move as eased music's do: never more than a step at a time, and the bass still beats")
+    @Test("The made-up song's bars move as eased music's do: a reading at a time, 45 a second, the bass rising on each beat and falling away")
     func demoBarsEase() {
-        let step = 1 / Double(WaveformGlyph.demoRate)
-        var last = WaveformGlyph.demoLevels(at: 1000), most: Float = 0, bass: Float = 0
+        let rate = Double(WaveformGlyph.demoRate)
+        #expect(WaveformGlyph.demoRate == 45)
+        // One reading holds until the next is due.
+        #expect(WaveformGlyph.demoLevels(at: 1000.001) == WaveformGlyph.demoLevels(at: 1000.02))
+        var last = WaveformGlyph.demoLevels(at: 1000), most: Float = 0, bass: [Float] = []
         for i in 1...(WaveformGlyph.demoRate * 4) {
-            let levels = WaveformGlyph.demoLevels(at: 1000 + Double(i) * step)
+            let levels = WaveformGlyph.demoLevels(at: 1000 + Double(i) / rate)
+            #expect(levels.count == AudioLevels.bands)
             most = max(most, zip(levels, last).map { abs($0 - $1) }.max() ?? 0)
-            bass = max(bass, levels[Analyzer.beatBar])
+            bass.append(levels[Analyzer.beatBar])
             last = levels
         }
-        #expect(WaveformGlyph.demoRate >= 45)
-        #expect(most < 0.36)
-        #expect(bass > 0.85)
+        #expect(most < 0.4)
+        #expect((bass.max() ?? 0) > 0.8)
+        #expect((bass.max() ?? 0) - (bass.min() ?? 1) > 0.4)
+        // Every bar moves, none pinned at the top or a dot.
+        let spread = (0..<AudioLevels.bands).map { bar in
+            (0..<Int(rate * 4)).map { WaveformGlyph.demoLevels(at: 2000 + Double($0) / rate)[bar] }
+        }
+        for bar in spread { #expect((bar.max() ?? 0) - (bar.min() ?? 0) > 0.1 && (bar.max() ?? 1) < 1 && (bar.min() ?? 0) > 0) }
     }
 
     /// White with a black ball in the middle, the harshest a cover gets.
