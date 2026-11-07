@@ -75,7 +75,8 @@ struct WaveformGlyph: View {
 
     var body: some View {
         if demo {
-            TimelineView(.animation(minimumInterval: 1.0 / 20, paused: !isPlaying)) { context in
+            // As often as music's levels come, so it moves as smoothly.
+            TimelineView(.animation(minimumInterval: 1.0 / Double(Self.demoRate), paused: !isPlaying)) { context in
                 glyph(levels: Self.demoLevels(at: context.date.timeIntervalSinceReferenceDate))
             }
         } else if onScreen {
@@ -190,22 +191,29 @@ struct WaveformGlyph: View {
     /// How much wider a bar is than the gap beside it: 8 pixels to 6 on the iPhone.
     private static let barToGap: CGFloat = 8.0 / 6
 
-    /// A made-up beat, for the welcome tour: every bar at its own pace, and the bass's bar the kick,
-    /// a little under twice a second.
+    /// A made-up beat, for the welcome tour and the test scenes: every bar at its own pace, and the
+    /// bass's bar the kick, a little under twice a second, rising and falling as music's bars do once
+    /// they're eased, never leaping in one frame.
     static func demoLevels(at t: Double) -> [Float] {
         let kick = demoKick(at: t)
         let paces: [Double] = [5.3, 6.1, 3.7, 2.9, 2.3, 4.4]
         return paces.enumerated().map { bar, pace in
-            if bar == Analyzer.beatBar { return Float(max(kick, 0.2)) }
+            if bar == Analyzer.beatBar { return Float(0.22 + 0.72 * kick) }
             let level = 0.42 + 0.22 * sin(t * pace + Double(bar) * 1.7) + 0.14 * sin(t * pace * 2.3 + Double(bar))
             return Float(min(max(level, 0.1), 1))
         }
     }
 
+    /// How many times a second the made-up levels are drawn: as often as music's come.
+    static let demoRate = 45
+
     /// The made-up song's kick, 0 to 1, a little under twice a second, which the colors behind the
-    /// player pulse on too.
+    /// player pulse on too: up over its first 70 milliseconds and dying away, as a real kick does
+    /// once it's eased (see `Analyzer`).
     static func demoKick(at t: Double) -> Double {
-        pow(max(0, sin(t * 2 * .pi * 1.8)), 6)
+        let period = 1 / 1.8, rise = 0.07, fall = 0.15
+        let since = t.truncatingRemainder(dividingBy: period)
+        return since < rise ? (1 - cos(.pi * since / rise)) / 2 : exp(-(since - rise) / fall)
     }
 
     /// Where the bars draw together: a dot in the middle, where the symbol springs from.

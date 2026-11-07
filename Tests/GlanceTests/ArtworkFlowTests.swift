@@ -72,6 +72,21 @@ struct ArtworkFlowTests {
         #expect(levels.reduce(0, +) / Double(levels.count) >= 0.4)
     }
 
+    @Test("The made-up song's bars move as eased music's do: never more than a step at a time, and the bass still beats")
+    func demoBarsEase() {
+        let step = 1 / Double(WaveformGlyph.demoRate)
+        var last = WaveformGlyph.demoLevels(at: 1000), most: Float = 0, bass: Float = 0
+        for i in 1...(WaveformGlyph.demoRate * 4) {
+            let levels = WaveformGlyph.demoLevels(at: 1000 + Double(i) * step)
+            most = max(most, zip(levels, last).map { abs($0 - $1) }.max() ?? 0)
+            bass = max(bass, levels[Analyzer.beatBar])
+            last = levels
+        }
+        #expect(WaveformGlyph.demoRate >= 45)
+        #expect(most < 0.36)
+        #expect(bass > 0.85)
+    }
+
     /// White with a black ball in the middle, the harshest a cover gets.
     static func ball() -> NSImage {
         NSImage(size: NSSize(width: 128, height: 128), flipped: false) { rect in
