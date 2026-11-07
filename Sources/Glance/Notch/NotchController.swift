@@ -1914,9 +1914,31 @@ final class NotchController {
         }
     }
 
-    /// Swiped up: the open notch closes, and opened to an activity's own view, that goes too; the
-    /// closed notch's live activity goes, as the Dynamic Island's do when they're swiped away.
+    /// A swipe up, as the iPhone's island takes one. What's announced is a notice: it folds away, and
+    /// a timer that's ringing stops. What's going on is something being done: open, the notch closes
+    /// back to it beside the camera; closed, it steps away for a moment, unless it's a call or a
+    /// recording, which stay for as long as they last.
     private func pushedUp() {
+        if model.state == .open { return close(holdUntilExit: true) }
+        if let alert = model.alert {
+            if alert.kind == .timerDone { ClockActivity.shared.dismissRing() } else { Activities.shared.dismiss(alert.kind) }
+        } else if let first = model.activities.first, Self.stepsAway(first) {
+            dismiss(first)
+        } else {
+            return
+        }
+        // It stays closed until the pointer leaves it and comes back.
+        close(holdUntilExit: true)
+    }
+
+    /// Whether a swipe up on the closed notch puts it away for a moment: not a call or a recording.
+    nonisolated static func stepsAway(_ activity: NotchModel.Activity) -> Bool {
+        ![.call, .screenRecording, .voiceMemo].contains(activity)
+    }
+
+    /// From the menu, asked by name: what's announced folds away, or the notch's activity steps away
+    /// for a moment, whatever it is, and an opened notch closes first.
+    private func hideFirst() {
         if model.state == .open {
             let expanded = model.expanded
             close(holdUntilExit: true)
@@ -1924,14 +1946,12 @@ final class NotchController {
             return
         }
         if let alert = model.alert {
-            // A timer that's done stops ringing; anything else announced folds away.
             if alert.kind == .timerDone { ClockActivity.shared.dismissRing() } else { Activities.shared.dismiss(alert.kind) }
         } else if let first = model.activities.first {
             dismiss(first)
         } else {
             return
         }
-        // It stays closed until the pointer leaves it and comes back.
         close(holdUntilExit: true)
     }
 
@@ -1961,8 +1981,8 @@ final class NotchController {
         }
     }
 
-    /// From the menu, the same as swiping up on the notch, for anyone who can't swipe.
-    func putAway() { pushedUp() }
+    /// From the menu, by name, for anyone who can't swipe (see `hideFirst`).
+    func putAway() { hideFirst() }
 
     /// The pointer's on an announcement, which waits for it while it has a button.
     var holdsAlert: Bool {

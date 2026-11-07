@@ -93,7 +93,7 @@ than slide.
 | Hover | Opens the notch, after the hover delay; with two activities showing, opens the notch or the bubble once the pointer stops on it |
 | Click | Opens the notch; click and hold, if a hold time is set |
 | Swipe down with two fingers | Opens the notch |
-| Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away (see [Live Activities](#live-activities)) |
+| Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away, but not a call or a recording (see [Live Activities](#live-activities)) |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
 | Swipe left or right with three fingers, on the open notch | Stretches the notch and what's in it with your fingers and switches to the tray, and back to the player, springing into place as you let go (with `Accessibility` allowed) |
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead, and, scrolled on past the row's end, goes back to the player |
@@ -141,7 +141,7 @@ works with a finger:
 | --- | --- |
 | Tap | Opens the notch, whatever `Open with` is set to; on a bubble, opens its activity; on a ringing timer, presses its button |
 | Drag down | Opens the notch |
-| Drag up | Closes the notch; on the closed notch, swipes its live activity away |
+| Drag up | Closes the notch; on the closed notch, swipes its live activity away, but not a call or a recording |
 | Drag left or right | Changes songs; on the tray, scrolls it, gliding on as you let go |
 | Drag left or right with two fingers, on the open notch | Switches to the tray, and back to the player |
 | Touch and hold | Shows the menu; on an item in the tray, the item's menu |
@@ -340,12 +340,13 @@ the iPhone: an announcement folds away, a timer that's ringing stops, and a live
 activity steps away for two seconds, then comes back while it's still going. It
 comes back sooner when it changes: music with the next song or when it plays
 again, a timer or the stopwatch when it's started, paused or ended, AirDrop with
-the next file, AirPlay with the next speaker, a call when it's answered, and a
-voice memo when it's paused or resumed. Opened to a timer, the stopwatch,
-AirDrop, AirPlay or a recording, swiping up closes the notch and swipes that
-away too. Without swiping, right-click the notch and
-choose **Hide** with what it shows, such as **Hide Music**, **Hide Call** or
-**Hide Low Battery**.
+the next file, and AirPlay with the next speaker. A call or a recording is
+something you're doing rather than news, so it isn't swiped away: it stays
+beside the camera for as long as it lasts. On the open notch, swiping up only
+closes it, back to what shows beside the camera. Without swiping, right-click
+the notch and choose **Hide** with what it shows, such as **Hide Music**, **Hide
+Call** or **Hide Low Battery**. That hides a call or a recording too, until a
+call is answered or a voice memo is paused or resumed.
 
 Turn these off with `Cover and waveform` and `Announce new audio` in
 **Settings > Live Activities**.

@@ -1221,7 +1221,17 @@ struct SystemBannersTests {
         #expect(CGMutablePath().isEmpty)
     }
 
-    @Test("What a swipe puts away can be put away from the menu too, by name")
+    @Test("Swiped up, what's being done stays, a call or a recording; anything else going on steps away")
+    func swipeUp() {
+        for activity: NotchModel.Activity in [.call, .screenRecording, .voiceMemo] {
+            #expect(!NotchController.stepsAway(activity))
+        }
+        for activity: NotchModel.Activity in [.music, .airdrop, .timer, .stopwatch, .airplay] {
+            #expect(NotchController.stepsAway(activity))
+        }
+    }
+
+    @Test("What a swipe puts away, and a call or a recording too, can be put away from the menu by name")
     func putAwayFromMenu() {
         #expect(NotchController.putAwayTitle(alert: nil, first: .music) == "Hide Music")
         #expect(NotchController.putAwayTitle(alert: nil, first: .airplay) == "Hide AirPlay")

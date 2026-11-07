@@ -141,8 +141,10 @@
   activity away, as on the iPhone, until it changes: music until the next song
   or until it plays again, a timer until it's started, paused or ended, AirDrop
   until the next file, AirPlay until the next speaker. An announcement folds
-  away, and a timer that's ringing stops. The notch's right-click menu does the
-  same with **Hide** and what it shows, such as **Hide Music**.
+  away, and a timer that's ringing stops. A call or a recording stays, as
+  something you're doing, and on the open notch a swipe up only closes it. The
+  notch's right-click menu does the same with **Hide** and what it shows, such
+  as **Hide Music**, and hides a call or a recording too.
 - Added two activities at once, as the Dynamic Island shows them: the first
   keeps the left of the notch alone, and the second goes in a round bubble as
   tall as the notch off its right end. They take their turns in the order they
