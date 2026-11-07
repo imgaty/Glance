@@ -275,9 +275,10 @@
 
 ### Opening
 
-- Changed the closed notch to swell under the pointer only when there's more to
-  open to: not while it's as tall as the Alarm already, as for a call coming in
-  or a ringing timer.
+- Changed the closed notch not to swell under the pointer while it's as tall as
+  the Alarm already, as for a call coming in or a ringing timer. Whatever shows
+  beside the camera still swells, a screen recording's countdown included,
+  though it has nothing to open to.
 - Fixed the closed notch swelling under the pointer twice as much at its ends
   as at its bottom, with music's cover and waveform crowding its ends. It now
   swells as much all round, and they keep the same padding on every side.

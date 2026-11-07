@@ -906,17 +906,24 @@ struct SystemBannersTests {
         #expect(isClose(peek.bodyWidth - rest.bodyWidth, 2 * model.swell(in: .peek)) && isClose(peek.height - rest.height, model.swell(in: .peek)))
     }
 
-    @Test("The pointer swells only what has a view to open to: not a countdown, nor what's as tall as the Alarm")
+    @Test("The pointer swells whatever shows beside the camera, a countdown with nothing to open to as well, but not what's as tall as the Alarm")
     @MainActor
     func swellsWithSomethingToOpen() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.screenRecording = .countdown(from: 3, until: .now + 3)
-        #expect(model.opensToNothing && !model.swells)
         let rest = model.metrics(for: .closed)
         model.proximity = 1
-        #expect(model.metrics(for: .closed).bodyWidth == rest.bodyWidth && model.metrics(for: .closed).height == rest.height)
-        #expect(model.metrics(for: .peek).bodyWidth == rest.bodyWidth && model.metrics(for: .peek).height == rest.height)
-        // Recording, it has its opened view, and swells as anything else does.
+        // A countdown swells as Charging does, but opens to nothing.
+        #expect(model.opensToNothing && model.swells)
+        #expect(model.metrics(for: .closed).height > rest.height && model.metrics(for: .peek).height > rest.height)
+        // In the bubble beside a timer, the same.
+        model.timer = .running(until: .now + 300, total: 300)
+        model.screenRecording = nil
+        model.screenRecording = .countdown(from: 3, until: .now + 3)
+        #expect(model.detached == .screenRecording)
+        #expect(model.opensToNothing(fromBubble: true) && !model.opensToNothing(fromBubble: false))
+        model.timer = nil
+        // Recording, it has its opened view.
         model.screenRecording = .recording(since: .now)
         #expect(!model.opensToNothing && model.swells)
         #expect(model.metrics(for: .closed).height > model.restingHeight)

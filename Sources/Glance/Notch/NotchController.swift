@@ -1265,8 +1265,7 @@ final class NotchController {
             }
         }
         // The screen recording's countdown has nothing to open to, as on the iPhone.
-        let target = (model.bubbleHovered ? model.detached : nil) ?? model.activities.first
-        if !forDrop, target == .screenRecording, case .countdown? = model.screenRecording { return }
+        if !forDrop, model.opensToNothing(fromBubble: model.bubbleHovered) { return }
         // At the bench, it opens only to what's being tried, never to the player, unless what's tried
         // is announced, which is what opening is tried against.
         if !ActivityBench.opensToPlayer, model.expansion(fromBubble: model.bubbleHovered) == nil { return }

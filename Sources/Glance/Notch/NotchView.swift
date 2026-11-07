@@ -347,16 +347,20 @@ final class NotchModel: ObservableObject {
         }
     }
 
-    /// The notch has nothing to open to, as the screen recording's countdown hasn't, the iPhone's
-    /// having no opened view of it: the pointer neither swells nor opens it.
-    var opensToNothing: Bool {
-        guard alert == nil, activities.first == .screenRecording, case .countdown? = screenRecording else { return false }
+    /// What the notch or its bubble shows has nothing to open to, as the screen recording's
+    /// countdown hasn't, the iPhone's having no opened view of it: the pointer swells it, as it does
+    /// Charging, but neither resting on it nor a click opens it.
+    func opensToNothing(fromBubble onBubble: Bool) -> Bool {
+        guard alert == nil, (onBubble ? detached : nil) ?? activities.first == .screenRecording, case .countdown? = screenRecording else {
+            return false
+        }
         return true
     }
+    var opensToNothing: Bool { opensToNothing(fromBubble: false) }
 
-    /// The pointer swells it, as it does an activity with a view to open to; not what's as tall as
-    /// the Alarm, which is opened already, or what has nothing to open to.
-    var swells: Bool { !restingTall && !opensToNothing }
+    /// The pointer swells it, as it does whatever shows beside the camera; not what's as tall as the
+    /// Alarm, which is as large as it gets already.
+    var swells: Bool { !restingTall }
 
     /// An activity's recording, if it's one.
     func recording(of activity: Activity) -> Recording? {
