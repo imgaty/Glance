@@ -361,3 +361,41 @@ struct SettingsPaneTests {
         #expect(SettingsPane.matching("  ") == SettingsPane.allCases)
     }
 }
+
+/// How far a drag stretches the notch: after the fingers, more and more slowly, up to a limit, down
+/// and across alike.
+@MainActor
+@Suite("Stretching")
+struct StretchTests {
+    @Test("Down, across and pushed up, it stretches more slowly the further it goes, never past its limit")
+    func limits() {
+        for band in [NotchController.rubberBand, NotchController.sideBand] {
+            #expect(band(0) == 0)
+            #expect(band(10) > 0 && band(-10) < 0)
+            #expect(band(40) > band(20) && band(40) - band(20) < band(20) - band(0))
+        }
+        #expect(NotchController.rubberBand(10_000) <= 18)
+        #expect(NotchController.rubberBand(-10_000) >= -10)
+        #expect(NotchController.sideBand(10_000) <= 12 && NotchController.sideBand(-10_000) >= -12)
+        // Across, a little less than down.
+        #expect(NotchController.sideBand(60) < NotchController.rubberBand(60))
+        #expect(abs(NotchController.pageLean(10_000)) <= 20)
+    }
+
+    @Test("What's in the notch stretches half as much as the notch")
+    func contentGives() {
+        #expect(NotchModel.contentGive == 0.5)
+    }
+
+    @Test("A drag at a slant stretches the notch both ways at once")
+    func slant() {
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.state = .open
+        let still = model.metrics(for: .open)
+        model.stretch = NotchController.rubberBand(30)
+        model.lean = NotchController.sideBand(30)
+        let pulled = model.metrics(for: .open)
+        #expect(pulled.height > still.height)
+        #expect(pulled.bodyWidth > still.bodyWidth + model.lean)
+    }
+}

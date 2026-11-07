@@ -79,6 +79,9 @@ final class NotchController {
     /// After an explicit close, stay shut until the pointer leaves the notch.
     private var holdUntilExit = false
     private var pull: CGFloat = 0
+    /// How far the fingers have gone across, which stretches the notch sideways whichever way the
+    /// swipe goes.
+    private var across: CGFloat = 0
     private var pullFired = false
     /// Music's wings were swiped away, until the next song or until it plays again.
     private var musicDismissed = false
@@ -472,6 +475,7 @@ final class NotchController {
             model.proximity = 0
             model.pressed = false
             model.stretch = 0
+            model.lean = 0
         }
         Task { @MainActor in
             if !model.hasCamera {
@@ -1745,6 +1749,7 @@ final class NotchController {
     /// Fingers down on the notch, two on the trackpad or one on the display: a new swipe.
     private func swipeBegan() {
         pull = 0
+        across = 0
         swipe = 0
         pullFired = false
         scrollAxis = nil
@@ -1760,16 +1765,22 @@ final class NotchController {
             scrollAxis = abs(right) > abs(down) ? .horizontal : .vertical
         }
         if turnsPages { return swipedPage(by: scrollAxis == .horizontal ? scroll.x : scroll.y) }
+        // What it does goes one way, but it stretches the way the fingers go: at a slant, both ways.
+        pull += down
+        across += right
         let defaults = UserDefaults.standard
         if scrollAxis == .horizontal {
-            // The row scrolls the way everything else does on this Mac.
-            if model.state == .open, model.page == .tray { return scrollTray(by: scroll.x) }
+            // The row scrolls the way everything else does on this Mac, rather than the notch leaning.
+            if model.state == .open, model.page == .tray {
+                stretch(sideways: false)
+                return scrollTray(by: scroll.x)
+            }
+            stretch(sideways: true)
             // Songs change from the player, or the closed notch; never from the tray.
             let skips = defaults.bool(forKey: Preferences.swipeToSkip) && (model.state != .open || model.page == .player)
             return skips ? swiped(by: right) : ()
         }
         guard defaults.bool(forKey: Preferences.swipeToOpen) else { return }
-        pull += down
         // Pushing up on the closed notch, it waits to open on hover: it's being swiped away.
         if model.state != .open, pull < 0 { openTask?.cancel() }
         if !pullFired, model.state != .open, pull > 40 {
@@ -1781,9 +1792,17 @@ final class NotchController {
             pushedUp()
             return
         }
-        guard model.state == .open || pull > 0 else { return }
+        stretch(sideways: true)
+    }
+
+    /// The notch, and what's in it a little less, stretches after the fingers, down and across alike:
+    /// down only once it's open or pulled down, never pushed up past its closed size; across, either
+    /// way, alike on both sides, as it stays centered.
+    private func stretch(sideways: Bool) {
+        let open = model.state == .open
         withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) {
-            model.stretch = rubberBand(pull)
+            if open || pull > 0 { model.stretch = Self.rubberBand(pull) }
+            if sideways { model.lean = Self.sideBand(across) }
         }
     }
 
@@ -1792,8 +1811,10 @@ final class NotchController {
         pull = 0
         swipe = 0
         scrollAxis = nil
+        across = 0
         withAnimation(NotchMotion.spring(response: 0.45, dampingFraction: 0.5)) {
             model.stretch = 0
+            model.lean = 0
             model.nudge = 0
             model.pageStretch = 0
         }
@@ -1961,7 +1982,7 @@ final class NotchController {
     /// How far the notch has stretched sideways, more and more slowly, up to a limit, as it stretches
     /// when pulled down.
     nonisolated static func pageLean(_ swipe: CGFloat) -> CGFloat {
-        (swipe >= 0 ? 1 : -1) * 30 * (1 - 1 / (abs(swipe) * 0.012 + 1))
+        (swipe >= 0 ? 1 : -1) * 20 * (1 - 1 / (abs(swipe) * 0.012 + 1))
     }
 
     /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
@@ -2033,9 +2054,16 @@ final class NotchController {
         rightToLeft ? swipe > 0 : swipe < 0
     }
 
-    private func rubberBand(_ x: CGFloat) -> CGFloat {
-        let limit: CGFloat = x >= 0 ? 28 : 16
-        return (x >= 0 ? 1 : -1) * limit * (1 - 1 / (abs(x) * 0.55 / limit + 1))
+    /// Down, more and more slowly up to a limit; pushed up, less.
+    nonisolated static func rubberBand(_ x: CGFloat) -> CGFloat {
+        let limit: CGFloat = x >= 0 ? 18 : 10
+        return (x >= 0 ? 1 : -1) * limit * (1 - 1 / (abs(x) * 0.45 / limit + 1))
+    }
+
+    /// Across, the same way, less: the notch widens on both sides.
+    nonisolated static func sideBand(_ x: CGFloat) -> CGFloat {
+        let limit: CGFloat = 12
+        return (x >= 0 ? 1 : -1) * limit * (1 - 1 / (abs(x) * 0.35 / limit + 1))
     }
 
     // MARK: Geometry (screen coordinates)

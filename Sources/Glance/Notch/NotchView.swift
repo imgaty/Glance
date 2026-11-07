@@ -145,6 +145,11 @@ final class NotchModel: ObservableObject {
     @Published var proximity: CGFloat = 0
     /// Rubber-band offset from scroll gestures, in points. Negative squashes the open notch.
     @Published var stretch: CGFloat = 0
+    /// How far a drag across has stretched the notch sideways, either way, as it stretches down: a
+    /// drag at a slant stretches it both ways at once.
+    @Published var lean: CGFloat = 0
+    /// What's in the notch stretches this much of what the notch does.
+    static let contentGive: CGFloat = 0.5
     @Published var pressed = false
     /// Music is playing: the closed notch grows wings for the artwork and the waveform.
     @Published var activity = false {
@@ -467,38 +472,39 @@ final class NotchModel: ObservableObject {
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, short: Bool = false) -> NotchMetrics {
         let pull = max(stretch, 0)
+        let across = abs(lean)
         let resting = short ? closedSize.height : restingHeight
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed:
                 (
-                    restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4,
+                    restingWidth + 2 * Self.nearSwell * proximity + pull * 0.4 + across,
                     resting + Self.nearSwell * proximity + pull
                 )
             // Tall already, it's as large as it gets under the pointer.
-            case .peek where restingTall: (restingWidth + pull * 0.4, resting + pull)
-            case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4, resting + Self.peekSwell + pull)
+            case .peek where restingTall: (restingWidth + pull * 0.4 + across, resting + pull)
+            case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4 + across, resting + Self.peekSwell + pull)
             case .open where expanded == .airdrop:
                 (
-                    AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35,
+                    AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
                     TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where expanded == .call:
                 (
                     ExpandedCallView.width(
                         for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height, closedWidth: closedSize.width)
-                        + pull * 0.35,
+                        + pull * 0.35 + across,
                     ExpandedCallView.height(for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height) + pull
                 )
             case .open where expanded == .airplay:
                 (
                     ExpandedAirPlayView.width(for: airplay ?? AirPlayRoute(name: "", symbol: ""), restingHeight: closedSize.height)
-                        + pull * 0.35,
+                        + pull * 0.35 + across,
                     AirPlayLayout.height(closedSize.height) + pull
                 )
             case .open where expanded.flatMap(recording(of:)) != nil:
                 (
-                    expanded.flatMap(recording(of:)).map(openWidth(of:)).map { $0 + pull * 0.35 } ?? 0,
+                    expanded.flatMap(recording(of:)).map(openWidth(of:)).map { $0 + pull * 0.35 + across } ?? 0,
                     TimerLayout.tallHeight(closedSize.height) + pull
                 )
             case .open where expanded != nil:
@@ -506,11 +512,11 @@ final class NotchModel: ObservableObject {
                     ExpandedTimerView.width(
                         for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? String(localized: "Timer"),
                         restingHeight: closedSize.height, camera: camera)
-                        + pull * 0.35,
+                        + pull * 0.35 + across,
                     TimerLayout.tallHeight(closedSize.height) + pull
                 )
-            case .open where page == .tray: (trayWidth + pull * 0.35 + pageStretch, trayHeight + pull)
-            case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35 + pageStretch, openSize.height + pull)
+            case .open where page == .tray: (trayWidth + pull * 0.35 + pageStretch + across, trayHeight + pull)
+            case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35 + pageStretch + across, openSize.height + pull)
             }
         // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
         // which the glass, sized afresh with the notch, doesn't follow.
@@ -852,10 +858,8 @@ struct NotchView: View {
         .environment(\.demoPointer, model.demoPointer)
         // Stretched sideways, what's in it stretches with it, staying where it is.
         // Pulled down, too, what's in it stretches with it.
-        .scaleEffect(
-            x: m.bodyWidth / max(m.bodyWidth - model.pageStretch - max(model.stretch, 0) * (model.state == .open ? 0.35 : 0.4), 1),
-            y: m.height / max(m.height - max(model.stretch, 0), 1), anchor: .top
-        )
+        // Less than the notch does, so it gives a little rather than stretching as far.
+        .scaleEffect(contentStretch(m), anchor: .top)
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
         // end, all of it is hidden there, under what the notch shows.
@@ -905,6 +909,14 @@ struct NotchView: View {
         .animation(.easeInOut(duration: 0.45), value: darkness)
         .animation(.easeInOut(duration: 0.45), value: followsSystem)
         .animation(.easeInOut(duration: 0.45), value: blur)
+    }
+
+    /// How much what's in the notch stretches with it, sideways and down: part of the notch's own.
+    private func contentStretch(_ m: NotchMetrics) -> CGSize {
+        let give = NotchModel.contentGive
+        let down = max(model.stretch, 0)
+        let across = model.pageStretch + abs(model.lean) + down * (model.state == .open ? 0.35 : 0.4)
+        return CGSize(width: m.bodyWidth / max(m.bodyWidth - give * across, 1), height: m.height / max(m.height - give * down, 1))
     }
 
     /// The music's wings make way for what's announced, blurring away as the notch folds.
