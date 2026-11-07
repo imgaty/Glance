@@ -219,6 +219,7 @@ struct ExpandedTimerView: View {
     var closedDrop: CGFloat = 0
     @ObservedObject private var clock = ClockActivity.shared
     @State private var arrived = false
+    @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
         let h = restingHeight
@@ -239,8 +240,8 @@ struct ExpandedTimerView: View {
                 .frame(width: side, alignment: .leading)
             Color.clear.frame(width: camera)
             time(h)
-                .modifier(GrowsOut(out: out || closedWidth == nil, scale: small, anchor: .trailing, from: timeFrom))
-                .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                .modifier(GrowsOut(out: out || closedWidth == nil || !trailingGrows, scale: small, anchor: .trailing, from: timeFrom))
+                .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
                 .padding(.trailing, Self.timeEdge(h))
                 .frame(width: side, alignment: .trailing)
         }

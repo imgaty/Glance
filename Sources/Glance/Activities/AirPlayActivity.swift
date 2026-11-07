@@ -196,6 +196,7 @@ struct ExpandedAirPlayView: View {
     var closedDrop: CGFloat = 0
     @State private var hovering = false
     @State private var arrived = false
+    @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
         let h = restingHeight
@@ -229,8 +230,8 @@ struct ExpandedAirPlayView: View {
                 .modifier(IslandReveal(hidden: !revealed))
                 Spacer(minLength: h * 0.3)
                 AirPlayDevice(route: route, size: h * AirPlayLayout.bigDevice)
-                    .modifier(GrowsOut(out: out, scale: layout.device / layout.bigDevice, anchor: .trailing, from: deviceFrom))
-                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                    .modifier(GrowsOut(out: out || !trailingGrows, scale: layout.device / layout.bigDevice, anchor: .trailing, from: deviceFrom))
+                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
                     .padding(.trailing, PlayerLayout.padding - h * AirPlayLayout.bigDeviceMargin)
             }
             .frame(height: h * AirPlayLayout.header)

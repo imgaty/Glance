@@ -607,6 +607,7 @@ struct ExpandedRecordingView: View {
     var closedWidth: CGFloat? = nil
     var closedDrop: CGFloat = 0
     @State private var arrived = false
+    @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
         let h = restingHeight
@@ -647,8 +648,8 @@ struct ExpandedRecordingView: View {
             .font(.system(size: size, weight: .semibold).monospacedDigit())
             .foregroundStyle(RecordingLook.memoRed)
             .fixedSize()
-            .modifier(GrowsOut(out: grows, scale: text / size, anchor: .trailing, from: timeFrom))
-            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+            .modifier(GrowsOut(out: grows || !trailingGrows, scale: text / size, anchor: .trailing, from: timeFrom))
+            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
             .padding(.trailing, Self.memoTimeEdge(h))
             .frame(maxWidth: .infinity, alignment: .trailing)
         StopRecordingButton(memo: true, h: h) { VoiceMemoWatch.shared.stop() }
@@ -700,7 +701,9 @@ struct ExpandedRecordingView: View {
         let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
         ScreenRecordingButton(screen: screen, h: h)
             .modifier(
-                GrowsOut(out: grows || !screen.isSaving, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom)
+                GrowsOut(
+                    out: grows || !screen.isSaving || !trailingGrows, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing,
+                    from: ringFrom)
             )
             .modifier(IslandReveal(hidden: !revealed))
             .padding(.trailing, TimerLayout.buttonEdge(h))

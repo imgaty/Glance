@@ -58,7 +58,10 @@
   with the Mac's accent color in light mode and white in dark mode.
 - Changed opening with two live activities showing: the notch or the bubble opens
   once the pointer stops on it, so passing over them opens neither, and a click
-  on the bubble follows `Open with`, as one on the notch does.
+  on the bubble follows `Open with`, as one on the notch does. Opened from the
+  notch, the bubble first runs back into the notch's end, as on the iPhone, and
+  buds off again once the notch has closed; what showed beside the camera slides
+  out to its place and back, as it does with no bubble, rather than fading.
 - Changed `Hide in full screen` on a Mac with a notch: rather than sliding away,
   the notch folds back to the camera with nothing beside it, and still opens from
   there as usual. On a display with no camera, it hides with the menu bar.

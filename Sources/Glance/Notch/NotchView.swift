@@ -121,6 +121,9 @@ final class NotchModel: ObservableObject {
     }
     /// Opened by a click on the detached bubble, so it opens out of the bubble, and closes back into it.
     @Published var openedFromBubble = false
+    /// The bubble ran back into the notch's end as the notch opened from the notch, as the iPhone's
+    /// does, and buds off again once it has closed.
+    @Published var bubbleMerged = false
     /// How far past its trailing end the notch reaches toward the bubble: as far as the bubble's far
     /// side as it opens out of it, or closes back into it, and nothing otherwise. One outline grows
     /// from there, so the notch and the bubble are one shape, not two.
@@ -766,11 +769,15 @@ struct NotchView: View {
                 .frame(width: m.totalWidth, height: m.height, alignment: .top)
                 .allowsHitTesting(false)
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
-            expandedTimer(shown: expandedShown)
-            expandedAirPlay(shown: expandedShown)
-            expandedCall(shown: expandedShown)
-            expandedAirDrop(shown: expandedShown)
-            expandedRecording(shown: expandedShown)
+            Group {
+                expandedTimer(shown: expandedShown)
+                expandedAirPlay(shown: expandedShown)
+                expandedCall(shown: expandedShown)
+                expandedAirDrop(shown: expandedShown)
+                expandedRecording(shown: expandedShown)
+            }
+            // With another detached, the trailing side showed nothing beside the camera.
+            .environment(\.trailingGrows, model.second == nil)
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -934,7 +941,7 @@ struct NotchView: View {
         // off the camera's end, the notch's trailing wing folded away there.
         let restingEnd = model.closedSize.width / 2
         return IslandBubble(
-            shown: activity != nil, clock: activity.flatMap(model.clock(of:)),
+            shown: activity != nil && !model.bubbleMerged, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             recording: activity.flatMap(model.recording(of:)),
@@ -949,7 +956,8 @@ struct NotchView: View {
     /// How wide the notch is closed, when what it's open to shows beside the camera there, alone, and
     /// grows out of that; with another detached, or from a bubble, it doesn't.
     private var grownFrom: CGFloat? {
-        model.second == nil && model.expanded != nil && model.activities.first == model.expanded ? model.restingWidth + 2 * model.grownSwell : nil
+        !model.openedFromBubble && model.expanded != nil && model.activities.first == model.expanded
+            ? model.restingWidth + 2 * model.grownSwell : nil
     }
 
     /// How far below the closed notch's middle at rest its middle was, swollen as it opened.

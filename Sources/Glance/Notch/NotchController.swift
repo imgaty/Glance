@@ -729,6 +729,39 @@ final class NotchController {
         refitAsRecordingCounts()
     }
 
+    /// Opens the notch. With a bubble beside it and opened from the notch, the bubble runs back into
+    /// the notch's end first, as the iPhone's does, and the notch opens from there (see `budOff`).
+    /// With Reduce Motion on, it opens at once, the bubble fading where it rests.
+    private func openMerging() {
+        mergeTask?.cancel()
+        guard model.detached != nil, !model.openedFromBubble, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            return model.open()
+        }
+        withAnimation(IslandMotion.fold) { model.bubbleMerged = true }
+        mergeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.mergeTime))
+            guard let self, !Task.isCancelled else { return }
+            self.model.open()
+        }
+    }
+
+    /// Once the notch has closed, a bubble that ran into it buds off again, as the iPhone's does.
+    private func budOff() {
+        mergeTask?.cancel()
+        guard model.bubbleMerged else { return }
+        mergeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.budAfter))
+            guard let self, !Task.isCancelled, self.model.state != .open else { return }
+            withAnimation(IslandMotion.open) { self.model.bubbleMerged = false }
+        }
+    }
+
+    /// How long the bubble takes to run into the notch before it opens, and how long after closing it
+    /// buds off, from the user's iPhone recording: about 0.08 s, and once the notch is all but closed.
+    static let mergeTime = 0.08
+    static let budAfter = 0.25
+    private var mergeTask: Task<Void, Never>?
+
     /// How long the screen recording shows itself opened as it starts.
     static let startShown = 2.5
     private var presentTask: Task<Void, Never>?
@@ -1277,7 +1310,7 @@ final class NotchController {
                 model.airDropTargeted = false
             }
         }
-        model.open()
+        openMerging()
         Opening.tap()
         startPolling()
         // Accessibility may have been allowed since: three fingers can turn the page now.
@@ -1576,6 +1609,7 @@ final class NotchController {
         closeTask = nil
         holdUntilExit = hold
         model.close()
+        budOff()
         stopPolling()
         pointerMoved(to: NSEvent.mouseLocation)
     }

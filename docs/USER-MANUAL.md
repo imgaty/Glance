@@ -440,7 +440,11 @@ running. Once it's stopped, start it again or reset it.
 
 With two activities showing, the pointer passing over them opens neither: the
 notch or the bubble opens once the pointer stops on it, a little after the hover
-delay. A click opens either if **Open with** includes it.
+delay. A click opens either if **Open with** includes it. Opened from the notch,
+the bubble first runs back into the notch's end, as on the iPhone, and once the
+notch has closed it buds off again. Either way, what showed beside the camera
+slides out to its place in the open notch and back, while what the bubble hid
+fades in.
 
 Its buttons work as Clock's own do, and what they do shows at once: Glance opens
 Clock hidden, shows it for a moment behind every other window, and, if it wasn't

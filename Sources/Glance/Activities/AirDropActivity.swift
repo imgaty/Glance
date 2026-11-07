@@ -301,6 +301,7 @@ struct ExpandedAirDropView: View {
     var closedDrop: CGFloat = 0
     @State private var arrived = false
     @State private var hovering = false
+    @Environment(\.trailingGrows) private var trailingGrows
 
     /// Who it's with; going out, the file, until macOS's window says who it's going to.
     static func from(_ shown: AirDropShown) -> String {
@@ -336,8 +337,10 @@ struct ExpandedAirDropView: View {
         let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let ringFrom = CGSize(width: spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h), height: rise)
         let right = stopButton(h)
-            .modifier(GrowsOut(out: out || closedWidth == nil, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom))
-            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+            .modifier(
+                GrowsOut(out: out || closedWidth == nil || !trailingGrows, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom)
+            )
+            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
             .padding(.trailing, AirDropLayout.ringEdge(h))
         // AirDrop's name stops at the camera; who it's from, below it, runs on underneath.
         ZStack {

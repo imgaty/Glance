@@ -108,6 +108,9 @@ extension EnvironmentValues {
     @Entry var controlPlaces: ControlPlaces? = nil
     /// The notch itself on the screen, rather than a picture of it.
     @Entry var notchOnScreen = false
+    /// What an opened activity shows at its trailing end grows out of where it showed beside the
+    /// camera: not while another activity is detached in that side's place, when it fades in.
+    @Entry var trailingGrows = true
     /// Settings' pictures of the notch on pages not shown: nothing in them moves.
     @Entry var notchPaused = false
     /// Settings' small pictures of the notch, drawn whole at their own size: the glass as it looks,
