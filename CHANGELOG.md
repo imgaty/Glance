@@ -186,6 +186,8 @@
 
 ### Player
 
+- Changed the player with Increase Contrast on to keep the cover's colors behind
+  it, darker, in place of plain black, so its words still read on any cover.
 - Changed Spotify's DJ button to move for as long as the music plays, and clicking it
   to get different picks, by starting the DJ anew, rather than switching to Spotify.
 - Added the DJ's own cover while it talks: its green ring on blue, following the same

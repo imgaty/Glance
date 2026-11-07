@@ -666,8 +666,8 @@ struct NotchView: View {
         let closed = model.closedSize
         // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
         let visible: Double = model.state != .closed || tall ? 1 : 0
-        // With Increase Contrast on, the player's words and buttons sit on plain black.
-        let lit = playerShown && nowPlaying.artwork != nil && background != .none && !accessibility.increasesContrast
+        // With Increase Contrast on, the colors stay, darker (see `contrastDim`).
+        let lit = playerShown && nowPlaying.artwork != nil && background != .none
         let lyricsShown = heroOpen && model.showsLyrics
         // The closed notch swells under the pointer, and the artwork and waveform with it, their
         // padding too.
@@ -678,21 +678,24 @@ struct NotchView: View {
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
             // black at the top, just where the glass shows; as a spotlight, it's a soft circle around
             // the cover. Choosing between them morphs one into another.
-            ArtworkLight(dim: background == .spotlight ? 0 : Self.colorsDim, active: isOpen && !paused, spread: lightSpread)
-                .frame(width: lightSize.width, height: lightSize.height)
-                .mask {
-                    // It comes in as it's turned on or the notch opens: the background washing out of
-                    // the notch until it fills it, the spotlight popping out of the cover.
-                    lightShape(m, grown: lit, fills: background != .spotlight)
-                        .animation(lightGrowth(lit, fills: background != .spotlight), value: lit)
-                }
-                .mask { insideTheEdges(m, spotlight: background == .spotlight) }
-                .mask { belowTheBlack(lifted: background != .replaceGlass) }
-                .mask { awayFromCamera }
-                .animation(lit ? .easeOut(duration: 0.5).delay(0.1) : .easeOut(duration: 0.2)) {
-                    $0.opacity(lit ? lightOpacity : 0)
-                }
-                .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
+            ArtworkLight(
+                dim: accessibility.increasesContrast ? Self.contrastDim : background == .spotlight ? 0 : Self.colorsDim, active: isOpen && !paused,
+                spread: lightSpread
+            )
+            .frame(width: lightSize.width, height: lightSize.height)
+            .mask {
+                // It comes in as it's turned on or the notch opens: the background washing out of
+                // the notch until it fills it, the spotlight popping out of the cover.
+                lightShape(m, grown: lit, fills: background != .spotlight)
+                    .animation(lightGrowth(lit, fills: background != .spotlight), value: lit)
+            }
+            .mask { insideTheEdges(m, spotlight: background == .spotlight) }
+            .mask { belowTheBlack(lifted: background != .replaceGlass) }
+            .mask { awayFromCamera }
+            .animation(lit ? .easeOut(duration: 0.5).delay(0.1) : .easeOut(duration: 0.2)) {
+                $0.opacity(lit ? lightOpacity : 0)
+            }
+            .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
             // As wide as the notch is at each step, so what the wings show rides in and out with their
             // ends, as the Dynamic Island's activities do.
             LiveActivityView(restingHeight: closed.height, wing: model.wing, pop: model.pop, swell: swell)
@@ -753,7 +756,10 @@ struct NotchView: View {
             // slides off to the left as the tray comes in from the right, and back. The tray stays
             // here turned off, to slide away: not showing, it costs nothing (see `TrayView`).
             NowPlayingView(isVisible: playerShown && !paused, hero: hero)
-                .environment(\.playerOnLight, lit && background == .replaceGlass && nowPlaying.flow(from: accentSource)?.isLight == true)
+                .environment(
+                    \.playerOnLight,
+                    lit && background == .replaceGlass && !accessibility.increasesContrast && nowPlaying.flow(from: accentSource)?.isLight == true
+                )
                 .frame(width: model.openSize.width, height: model.openSize.height)
                 .padding(.trailing, model.showsLyrics ? model.lyricsWidth : 0)
                 .environment(\.notchControls, playerShown)
@@ -1023,7 +1029,12 @@ struct NotchView: View {
     /// In place of the glass, as Apple Music dims its own, measured from it: evenly, whatever the
     /// color, so white is a soft gray, and a red a deep one. With the colors' own dimming, a little
     /// over half of their brightness is left.
-    private static let colorsDim = 0.38
+    static let colorsDim = 0.38
+    /// The colors' brightest, a white cover's, before they're dimmed.
+    static let colorsBrightest = 0.88
+    /// With Increase Contrast on, dimmed further, so the artist's gray reads 4.5 to 1 even on a white
+    /// cover's colors, the title far more.
+    static let contrastDim = 0.77
 
     /// Dimmed while paused (see `PausedLook`).
     private var lightOpacity: Double {

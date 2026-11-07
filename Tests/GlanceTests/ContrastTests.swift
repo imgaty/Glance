@@ -48,6 +48,25 @@ struct ContrastTests {
         }
     }
 
+    @Test("With Increase Contrast on, the player's words read 4.5 to 1 on the lightest cover's colors, dimmed further")
+    func increasedContrast() {
+        func luminance(_ value: Double) -> Double { value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4) }
+        func contrast(_ color: Color, onGray gray: Double) -> Double {
+            let rgb = NSColor(color).usingColorSpace(.sRGB)!
+            let front = 0.2126 * luminance(rgb.redComponent) + 0.7152 * luminance(rgb.greenComponent) + 0.0722 * luminance(rgb.blueComponent)
+            return (max(front, luminance(gray)) + 0.05) / (min(front, luminance(gray)) + 0.05)
+        }
+        let usual = NotchView.colorsBrightest * (1 - NotchView.colorsDim)
+        let dimmed = NotchView.colorsBrightest * (1 - NotchView.contrastDim)
+        // The usual dimming leaves a white cover's colors about Apple Music's 139 gray.
+        #expect(abs(usual * 255 - 139) < 2)
+        #expect(contrast(NotchType.detailColor, onGray: usual) < 4.5)
+        #expect(contrast(NotchType.detailColor, onGray: dimmed) >= 4.5)
+        #expect(contrast(.white, onGray: dimmed) >= 7)
+        // Still some color left to show.
+        #expect(dimmed * 255 > 40)
+    }
+
     @Test("A color that already reads on black is left as it is")
     func light() {
         let yellow = Color(.sRGB, red: 1, green: 0.85, blue: 0.2)

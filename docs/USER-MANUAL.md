@@ -572,8 +572,8 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 
 With **Reduce transparency** or **Increase contrast** on in **System Settings >
 Accessibility > Display**, the notch is opaque, and with **Increase contrast**
-the player sits on plain black and a call's green Accept button is darker, so
-its phone stands out. With **Reduce motion** on, covers and their
+the cover's colors behind the player are darker, so its words read on any
+cover, and a call's green Accept button is darker, so its phone stands out. With **Reduce motion** on, covers and their
 colors hold still, without pulsing on the beat, and long titles end in an
 ellipsis instead of scrolling.
 
