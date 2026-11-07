@@ -26,6 +26,7 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityScreenRecording) private var screenRecording = true
     @AppStorage(Preferences.activityVoiceMemos) private var voiceMemos = true
     @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = false
+    @AppStorage(Preferences.hideMenuBarLiveActivities) private var hidesSystemActivities = true
     /// Taking macOS's timer out of the menu bar takes Accessibility.
     @State private var accessibilityAllowed = AXIsProcessTrusted()
     private let hasBattery = BatteryWatch.hasBattery
@@ -47,6 +48,23 @@ struct ActivitiesPage: View {
         Form {
             Section {
                 PageIntro(.activities, String(localized: "Shows what's going on beside the camera while the notch is closed."))
+            }
+            Section {
+                Toggle(isOn: $hidesSystemActivities) {
+                    Text("Hide macOS's Live Activities")
+                    Text("Turns them off in Menu Bar settings as they show, so they show only in the notch.")
+                }
+                // Said only when it's in the way.
+                if hidesSystemActivities, !accessibilityAllowed {
+                    CenteredRow {
+                        Text("Glance can't turn them off")
+                        Text("Allow it in Privacy & Security, under Accessibility.")
+                    } trailing: {
+                        Button("Open Privacy & Security…") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                        }
+                    }
+                }
             }
             Section {
                 Toggle(isOn: $liveActivity) {

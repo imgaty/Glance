@@ -632,6 +632,7 @@ on, it stays on what's playing.
 
 | Setting | Operation |
 | --- | --- |
+| `Hide macOS's Live Activities` | From macOS 27.3, macOS shows its own Live Activities in the menu bar, such as Now Playing and a screen recording. While this is on (on at first, with `Accessibility` allowed), Glance turns each one off as it first shows, with its switch in **System Settings > Menu Bar > Live Activities**, which opens behind your windows for a moment and closes. Turned off, Glance turns back on the ones it turned off; each shows again the next time it starts |
 | `Cover and waveform` | What's playing beside the camera while the notch is closed |
 | `Announce new audio` | Briefly shows what starts playing |
 | `Charging` | Shows the battery's level when you plug in (MacBooks only) |

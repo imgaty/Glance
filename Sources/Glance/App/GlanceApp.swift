@@ -239,6 +239,7 @@ enum Preferences {
             activityStopwatch: true,
             activityScreenRecording: true,
             activityVoiceMemos: true,
+            hideMenuBarLiveActivities: true,
             swipeToSwitch: true,
         ])
     }
@@ -342,6 +343,8 @@ enum Preferences {
     /// and Clock's stopwatch shows.
     static let activityClockTimers = "activityClockTimers"
     static let clockTimerHidesMenuBar = "clockTimerHidesMenuBar"
+    /// macOS's own Live Activities turned off in Menu Bar settings (see `MenuBarLiveActivities`).
+    static let hideMenuBarLiveActivities = "hideMenuBarLiveActivities"
     static let activityStopwatch = "activityStopwatch"
     /// The screen being recorded, and a voice memo being recorded, show (see `ScreenRecordingWatch`
     /// and `VoiceMemoWatch`).

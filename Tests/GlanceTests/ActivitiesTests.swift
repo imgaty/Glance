@@ -951,6 +951,14 @@ struct SystemBannersTests {
         #expect(isClose(m.bodyWidth / 2 - m.fold, 185 / 2 + model.pastHousing))
     }
 
+    @Test("macOS's own Live Activities in the menu bar are known by their pills' names")
+    @MainActor
+    func menuBarLiveActivities() {
+        #expect("live-activity-pill-com.apple.MediaRemoteUIService".hasPrefix(MenuBarLiveActivities.pillPrefix))
+        #expect(!"av-module-pill-45E3385A".hasPrefix(MenuBarLiveActivities.pillPrefix))
+        #expect(Preferences.hideMenuBarLiveActivities == "hideMenuBarLiveActivities")
+    }
+
     @Test("Opened, another app's call is one row as tall as the Alarm: the name, the speaker and, where it can be done, End")
     @MainActor
     func openedOtherAppCall() {

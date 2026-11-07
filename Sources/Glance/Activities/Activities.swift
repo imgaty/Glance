@@ -115,6 +115,7 @@ final class Activities: ObservableObject {
         AirDropWatch.shared.start()
         CallWatch.shared.start()
         ScreenRecordingWatch.shared.start()
+        MenuBarLiveActivities.shared.start()
         VoiceMemoWatch.shared.start()
     }
 

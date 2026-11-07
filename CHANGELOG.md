@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Added `Hide macOS's Live Activities` to **Settings > Live Activities**, on at
+  first: macOS 27.3's own Live Activities in the menu bar, such as Now Playing,
+  are turned off in **System Settings > Menu Bar** as they first show, so they
+  show only in the notch, and turned back on when it's turned off.
 - Added calls: one coming in shows as tall as the Alarm, with the caller, a red
   button to decline and a green one to accept, in place of macOS's popup; on a
   call, a green phone and its time beside the camera, and a waveform of both
