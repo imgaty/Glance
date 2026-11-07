@@ -164,13 +164,14 @@
 - Added a Live Activities page to Settings, to turn each one off, music's cover
   and waveform among them.
 - Added the screen being recorded with macOS's Screenshot, as the iPhone shows
-  it: a red dot beside the camera, pulsing gently while it records. Opened, it
-  shows the recording's time over `Screen Recording`, and a button to stop it.
-  It opens by itself for a moment as it starts, and again once you stop, with
-  `Saving Recording…` and the ring around the button going round, until the
-  square in it grows into the recording's first picture, which opens it, and it
-  says where it went, such as `Recording Saved to Desktop`. `Screen recording`
-  in **Settings > Live Activities** turns it off.
+  it: a red dot beside the camera, pulsing faintly while it records, after
+  macOS's countdown in a ring, which has nothing to open. Opened, it shows the
+  recording's time over `Screen Recording`, and a button to stop it. It opens by
+  itself once you stop, with `Saving Recording…` and the ring around the button
+  going round, until the square in it grows into the recording's first picture,
+  which opens it, and it says where it went, such as
+  `Recording Saved to Desktop`. `Screen recording` in **Settings > Live
+  Activities** turns it off.
 - Added Voice Memos recording, as the iPhone shows it: a red waveform of the
   sound beside the camera, and the recording's time, both still while it's
   paused. Opened, the waveform runs on in gray dots, with the time and a button

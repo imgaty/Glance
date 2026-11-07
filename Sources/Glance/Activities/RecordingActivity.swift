@@ -122,10 +122,10 @@ enum RecordingLook {
     static let track = Color.p3(0x4A, 0x4A, 0x4A)
     /// Counting down or being saved, the dot and the time are this faded, measured.
     static let dim: Double = 0.29
-    /// Recording, beside the camera, the dot fades to this and back, a slow, slight pulse, and
+    /// Recording, beside the camera, the dot fades to this and back, a slow, faint pulse, and
     /// takes this long; opened, the dot and the time fade further, a little faster (the user,
-    /// 2026-11-07, from their iPhone: the closed one less, the opened one faster).
-    static let pulseDim: Double = 0.55
+    /// 2026-11-07, from their iPhone, twice: the closed one fainter, the opened one faster).
+    static let pulseDim: Double = 0.75
     static let pulse: Double = 2
     static let openDim: Double = 0.35
     static let openPulse: Double = 1.5
@@ -273,6 +273,11 @@ struct RecordingMark: View {
                     .padding(.trailing, LiveActivityView.textEdge(restingHeight: h))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .islandFade(!leadingOnly)
+            case .screen(.countdown(let from, let until)) where leadingOnly:
+                // With another detached in its trailing side's place, its number inside its ring.
+                CountdownWithNumber(from: from, until: until, h: h)
+                    .padding(.leading, LiveActivityView.concentric(h * RecordingLook.bubbleRing, in: h))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             case .screen(.countdown(let from, let until)):
                 CountdownRing(from: from, until: until, diameter: h * TimerLayout.ring)
                     .padding(.leading, SystemActivityView.ringEdge(h))
@@ -440,6 +445,22 @@ struct CountdownNumber: View {
                     .transition(.opacity)
             }
             .animation(.easeInOut(duration: 0.35), value: step)
+        }
+    }
+}
+
+/// The countdown with its number inside its ring, as in the bubble, or beside a bubble.
+struct CountdownWithNumber: View {
+    let from: Int
+    let until: Date
+    let h: CGFloat
+
+    var body: some View {
+        ZStack {
+            CountdownRing(from: from, until: until, diameter: h * RecordingLook.bubbleRing)
+            CountdownNumber(from: from, until: until)
+                .font(.system(size: h * RecordingLook.bubbleNumber, weight: .semibold).monospacedDigit())
+                .foregroundStyle(.white)
         }
     }
 }
@@ -759,13 +780,12 @@ struct ScreenTime: View {
 }
 
 /// The button that stops a recording, as the iPhone's: a white ring around a red square with round
-/// corners, faintly lit under the pointer.
+/// corners. No light under the pointer, as the iPhone has none.
 struct StopRecordingButton: View {
     /// Voice Memos', whose square is a little larger and ring heavier than the screen recording's.
     let memo: Bool
     let h: CGFloat
     let action: () -> Void
-    @State private var hovering = false
 
     var body: some View {
         let side = TimerLayout.content(h)
@@ -773,7 +793,6 @@ struct StopRecordingButton: View {
         let ring = side * (memo ? RecordingLook.memoRing : RecordingLook.screenRing)
         Button(action: action) {
             ZStack {
-                Circle().fill(.white.opacity(hovering ? 0.12 : 0))
                 Circle().strokeBorder(.white, lineWidth: ring)
                 RoundedRectangle(cornerRadius: square * RecordingLook.squareCorner, style: .continuous)
                     .fill(RecordingLook.red(memo: memo))
@@ -781,10 +800,8 @@ struct StopRecordingButton: View {
             }
             .frame(width: side, height: side)
             .contentShape(Circle())
-            .animation(.easeOut(duration: 0.15), value: hovering)
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
-        .onHover { hovering = $0 }
         .notchControl()
         .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop Recording"), action: action)
         .accessibilityLabel(String(localized: "Stop Recording"))
@@ -807,12 +824,7 @@ struct RecordingBubbleGlyph: View {
             MemoWaveform(slots: 5, recorded: 5, height: h * RecordingLook.barMost, scale: h, open: false, live: memo.isRecording)
         case .screen(.countdown(let from, let until)):
             // Its number inside the ring, as the iPhone's in its bubble (the user, 2026-11-07).
-            ZStack {
-                CountdownRing(from: from, until: until, diameter: h * RecordingLook.bubbleRing)
-                CountdownNumber(from: from, until: until)
-                    .font(.system(size: h * RecordingLook.bubbleNumber, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.white)
-            }
+            CountdownWithNumber(from: from, until: until, h: h)
         case .screen(.recording):
             RecordingDot(diameter: h * RecordingLook.dot, blinking: true)
         case .screen(.saved):
@@ -832,7 +844,6 @@ struct RecordingBubbleGlyph: View {
 struct ScreenRecordingButton: View {
     let screen: ScreenRecording
     let h: CGFloat
-    @State private var hovering = false
 
     var body: some View {
         let side = TimerLayout.content(h)
@@ -845,7 +856,6 @@ struct ScreenRecordingButton: View {
         let label = saved ? String(localized: "Open Recording") : String(localized: "Stop Recording")
         Button(action: press) {
             ZStack {
-                Circle().fill(.white.opacity(hovering && !screen.isSaving && !saved ? 0.12 : 0))
                 Circle().strokeBorder(.white, lineWidth: line)
                     .opacity(screen.isSaving || saved ? 0 : 1)
                 SavingSpinner(diameter: side, line: line)
@@ -858,18 +868,15 @@ struct ScreenRecordingButton: View {
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
-                    .brightness(saved && hovering ? 0.06 : 0)
                     .frame(width: picture, height: picture)
             }
             .frame(width: side, height: side)
             .contentShape(Circle())
             .animation(NotchMotion.expand, value: saved)
             .animation(.easeOut(duration: 0.3), value: screen.isSaving)
-            .animation(.easeOut(duration: 0.15), value: hovering)
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
         .disabled(screen.isSaving)
-        .onHover { hovering = $0 }
         .notchControl(enabled: !screen.isSaving)
         .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: label, action: press)
         .accessibilityLabel(label)

@@ -703,14 +703,12 @@ final class NotchController {
     }
 
     /// A recording started counting down, started, was paused, is being saved, or ended: its wings
-    /// come, change, or go. As the screen recording starts, and while it's saved until it's said
-    /// where, it opens by itself for a moment, as the iPhone's does.
+    /// come, change, or go. While the screen recording is saved, until it's said where, it opens by
+    /// itself, as the iPhone's does; not as it starts, which the iPhone's doesn't.
     private func show(screen: ScreenRecording?, memo: VoiceMemo?) {
         let was = model.screenRecording
         defer {
-            if screen?.isRecording == true, was?.isRecording != true {
-                present(.screenRecording, for: Self.startShown)
-            } else if screen?.isSaving == true, was?.isSaving != true {
+            if screen?.isSaving == true, was?.isSaving != true {
                 present(.screenRecording, for: nil)
             } else if screen == nil, was != nil {
                 endPresenting()
@@ -762,8 +760,6 @@ final class NotchController {
     static let budAfter = 0.25
     private var mergeTask: Task<Void, Never>?
 
-    /// How long the screen recording shows itself opened as it starts.
-    static let startShown = 2.5
     private var presentTask: Task<Void, Never>?
 
     /// Opens to an activity by itself, for a while or until it's done, unless the notch is already
@@ -1268,6 +1264,9 @@ final class NotchController {
                 return
             }
         }
+        // The screen recording's countdown has nothing to open to, as on the iPhone.
+        let target = (model.bubbleHovered ? model.detached : nil) ?? model.activities.first
+        if !forDrop, target == .screenRecording, case .countdown? = model.screenRecording { return }
         // At the bench, it opens only to what's being tried, never to the player, unless what's tried
         // is announced, which is what opening is tried against.
         if !ActivityBench.opensToPlayer, model.expansion(fromBubble: model.bubbleHovered) == nil { return }

@@ -343,9 +343,16 @@ final class NotchModel: ObservableObject {
         }
     }
 
+    /// The notch has nothing to open to, as the screen recording's countdown hasn't, the iPhone's
+    /// having no opened view of it: the pointer neither swells nor opens it.
+    var opensToNothing: Bool {
+        guard alert == nil, activities.first == .screenRecording, case .countdown? = screenRecording else { return false }
+        return true
+    }
+
     /// The pointer swells it, as it does an activity with a view to open to; not what's as tall as
-    /// the Alarm, which is opened already.
-    var swells: Bool { !restingTall }
+    /// the Alarm, which is opened already, or what has nothing to open to.
+    var swells: Bool { !restingTall && !opensToNothing }
 
     /// An activity's recording, if it's one.
     func recording(of activity: Activity) -> Recording? {
