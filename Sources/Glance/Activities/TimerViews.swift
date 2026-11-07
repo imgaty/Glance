@@ -405,9 +405,13 @@ struct GrownFade: ViewModifier {
     let shown: Bool
     let grows: Bool
 
+    /// When what grew hands back to what's beside the camera, once it has all but shrunk there: the
+    /// fold's spring is within half a point of its place by then, so the two are one.
+    static let handBack = 0.4
+
     func body(content: Content) -> some View {
         if grows {
-            content.animation((shown ? Animation.linear(duration: 0.01) : .linear(duration: 0.08).delay(0.26)).paced) {
+            content.animation((shown ? Animation.linear(duration: 0.01) : .linear(duration: 0.08).delay(Self.handBack)).paced) {
                 $0.opacity(shown ? 1 : 0)
             }
         } else {

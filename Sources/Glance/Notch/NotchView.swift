@@ -117,6 +117,10 @@ final class NotchModel: ObservableObject {
             // How far the closed notch had swollen under the pointer as it opened, for what grows out
             // of it to start where it was (see `grownSwell`).
             if state == .open, oldValue != .open { grownSwell = swell(in: oldValue) }
+            // Closing, it shrinks back to where it's closing to: swollen still under the pointer, or at
+            // rest, so what shrinks back lands where it shows beside the camera, with no jump as it
+            // hands over.
+            if oldValue == .open, state != .open { grownSwell = swell(in: state) }
         }
     }
     /// Opened by a click on the detached bubble, so it opens out of the bubble, and closes back into it.
@@ -767,7 +771,10 @@ struct NotchView: View {
             )
             .atNotchStep(width: m.bodyWidth, height: m.height)
             .allowsHitTesting(false)
-            .islandFade(!isOpen)
+            // What grew out of it takes over and hands back on its own (see `GrownAway`): faded here
+            // too, it would dim for a moment as it hands back. AirDrop's symbol has nothing opened to
+            // hand back from, so it fades.
+            .islandFade(!isOpen || (grownFrom != nil && model.expanded != .airdrop))
             // The notch at rest, sharp, over what the wings show, as the Dynamic Island keeps its own
             // shape over an activity coming or going: what rides in with the wings' ends as they fold
             // passes under it. Kept at the closed size while open, so closing it never shrinks from the

@@ -541,7 +541,7 @@ private struct GrownAway: ViewModifier {
     let grown: Bool
 
     func body(content: Content) -> some View {
-        content.animation(grown ? .linear(duration: 0.01) : .linear(duration: 0.01).delay(0.26)) { $0.opacity(grown ? 0 : 1) }
+        content.animation((grown ? Animation.linear(duration: 0.01) : .linear(duration: 0.01).delay(GrownFade.handBack)).paced) { $0.opacity(grown ? 0 : 1) }
     }
 }
 

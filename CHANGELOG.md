@@ -178,6 +178,8 @@
   the time and a button to stop it, as Voice Memos' **Done** does. The waveform
   comes from the Mac's microphone once it's allowed, and nothing is recorded or
   kept. `Voice Memos` in **Settings > Live Activities** turns it off.
+- Fixed AirPlay's symbols jittering on their way back beside the camera as the
+  notch closed.
 
 ### Touch
 
