@@ -337,6 +337,8 @@ final class ScreenRecordingWatch: ObservableObject {
             findFile()
         case (nil, .saving?):
             if now.timeIntervalSince(savingSince) > Self.savingLimit { done(nil) }
+        case (nil, .saved?):
+            break
         case (nil, .countdown?):
             // Cancelled before it started.
             recording = nil
@@ -398,21 +400,30 @@ final class ScreenRecordingWatch: ObservableObject {
         files = query
     }
 
-    /// Saved, it's said where, with its first picture; or, never found, it just goes.
+    /// Saved, it says where, its square growing into its first picture, for a moment; or, never
+    /// found, it just goes.
     private func done(_ file: URL?) {
         files?.stop()
         files = nil
         guard case .saving(let length)? = recording else { return }
-        recording = nil
-        follow()
-        guard let file else { return }
+        guard let file else {
+            recording = nil
+            return follow()
+        }
         saved = file
         let folder = FileManager.default.displayName(atPath: file.deletingLastPathComponent().path)
         Task {
             let preview = await Self.firstPicture(of: file)
-            Activities.shared.post(Self.savedAlert(length: length, folder: folder, preview: preview))
+            guard case .saving? = self.recording else { return }
+            self.recording = .saved(length: length, folder: folder, preview: preview)
+            try? await Task.sleep(for: .seconds(Self.savedFor))
+            if case .saved? = self.recording { self.recording = nil }
+            self.follow()
         }
     }
+
+    /// How long it says where it was saved.
+    static let savedFor: TimeInterval = 4
 
     /// Its first picture, as its thumbnail.
     static func firstPicture(of file: URL) async -> NSImage? {
@@ -442,11 +453,4 @@ final class ScreenRecordingWatch: ObservableObject {
         self.recording = recording
     }
 
-    /// Saved, said for a moment: its length, the folder it went to, and its first picture.
-    static func savedAlert(length: TimeInterval, folder: String, preview: NSImage?) -> NotchAlert {
-        let time = NotchTimer.words(length.rounded(.down)) ?? Recording.reading(length, memo: false)
-        return NotchAlert(
-            kind: .recordingSaved, content: .recordingSaved(length: length, folder: folder, preview: preview),
-            spoken: String(localized: "Screen recording saved to \(folder), \(time)"), seconds: 4)
-    }
 }

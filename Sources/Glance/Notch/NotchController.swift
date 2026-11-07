@@ -134,6 +134,9 @@ final class NotchController {
         /// Something for the tray was dragged near it and rested there: it's open on the tray to
         /// take it, until the drag goes away or ends.
         case drag
+        /// It opened by itself, as the iPhone's screen recording does as it starts and as it's
+        /// saved: it stays open until that's done, or the pointer visits it and leaves.
+        case presented
     }
 
     private var holds: Set<Hold> = []
@@ -700,8 +703,21 @@ final class NotchController {
     }
 
     /// A recording started counting down, started, was paused, is being saved, or ended: its wings
-    /// come, change, or go.
+    /// come, change, or go. As the screen recording starts, and while it's saved until it's said
+    /// where, it opens by itself for a moment, as the iPhone's does.
     private func show(screen: ScreenRecording?, memo: VoiceMemo?) {
+        let was = model.screenRecording
+        defer {
+            if screen?.isRecording == true, was?.isRecording != true {
+                present(.screenRecording, for: Self.startShown)
+            } else if screen?.isSaving == true, was?.isSaving != true {
+                present(.screenRecording, for: nil)
+            } else if screen == nil, was != nil {
+                endPresenting()
+            } else if screen?.isSaved == true, was?.isSaved != true {
+                present(.screenRecording, for: nil)
+            }
+        }
         let ending = (screen == nil && model.screenRecording != nil) || (memo == nil && model.voiceMemo != nil)
         withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
             if (screen == nil) != (model.screenRecording == nil) { model.dismissed.remove(.screenRecording) }
@@ -711,6 +727,53 @@ final class NotchController {
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         refitAsRecordingCounts()
+    }
+
+    /// How long the screen recording shows itself opened as it starts.
+    static let startShown = 2.5
+    private var presentTask: Task<Void, Never>?
+
+    /// Opens to an activity by itself, for a while or until it's done, unless the notch is already
+    /// open for something else or tucked away.
+    private func present(_ activity: NotchModel.Activity, for seconds: Double?) {
+        if model.state == .open {
+            // Opened by the pointer or the keyboard: left as it is.
+            guard holds.contains(.presented) else { return }
+            withAnimation(NotchMotion.expand) { model.expanded = activity }
+        } else {
+            guard !tucked, model.alert == nil, model.activities.contains(activity) else { return }
+            openTask?.cancel()
+            closeTask?.cancel()
+            closeTask = nil
+            var still = Transaction()
+            still.disablesAnimations = true
+            withTransaction(still) {
+                model.switching = false
+                model.openedFromBubble = model.detached == activity
+                model.bubbleReach = model.openedFromBubble ? model.bubbleSpan : 0
+                model.bubbleHovered = false
+                model.expanded = activity
+                model.page = .player
+                model.pageStretch = 0
+            }
+            holds.insert(.presented)
+            model.open()
+            startPolling()
+        }
+        presentTask?.cancel()
+        guard let seconds else { return }
+        presentTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled else { return }
+            self?.endPresenting()
+        }
+    }
+
+    /// Done showing itself: it closes, unless the pointer came to it.
+    private func endPresenting() {
+        presentTask?.cancel()
+        guard holds.remove(.presented) != nil, model.state == .open else { return }
+        if !openZone.contains(NSEvent.mouseLocation) { close(holdUntilExit: false) }
     }
 
     /// Refits the notch as a recording's time gains a digit: at ten minutes, and at an hour.
@@ -902,7 +965,7 @@ final class NotchController {
             }
         case .open:
             // Once the pointer has been on it, it closes as usual when the pointer leaves.
-            if openZone.contains(p) { holds.subtract([.keyboard, .touch]) }
+            if openZone.contains(p) { holds.subtract([.keyboard, .touch, .presented]) }
             // Share's picker over it holds it open too, as a menu from it does.
             if !holds.isEmpty || Tray.shared.sharing || openZone.contains(p) {
                 closeTask?.cancel()
@@ -1007,9 +1070,6 @@ final class NotchController {
         case .stop: ClockActivity.shared.dismissRing()
         case .accept: CallWatch.shared.accept()
         case .decline: CallWatch.shared.decline()
-        case .openRecording:
-            ScreenRecordingWatch.shared.openSaved()
-            Activities.shared.dismiss(.recordingSaved)
         case .lowPower:
             LowPowerMode.shared.toggle()
             // Long enough to see it change, and then it's done with: it goes, reached or not.
@@ -1851,7 +1911,6 @@ final class NotchController {
             switch alert {
             case .incomingCall: return String(localized: "Hide Call")
             case .lowBattery: return String(localized: "Hide Low Battery")
-            case .recordingSaved: return String(localized: "Hide Screen Recording")
             default: return nil
             }
         }

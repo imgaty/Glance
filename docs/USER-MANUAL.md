@@ -506,11 +506,14 @@ with `Devices` in **Settings > Live Activities**.
 ### Screen recording
 
 While you record the screen with macOS's Screenshot (Shift-Command-5), the notch
-shows it as the iPhone does: a red dot at its left end, fading and coming back
-for as long as it records. Once you stop, the dot dims and a spinner shows at
-the right end while the recording is saved. Then the notch says where it went,
-such as `Recording Saved to Desktop`, beside its first picture: click the
-picture to open the recording.
+shows it as the iPhone does: a red dot at its left end, pulsing gently for as
+long as it records. As it starts, the notch opens by itself for a moment to show
+it. Once you stop, it opens again, with `Saving Recording…` under the time and
+the ring around the button going round; then the square in the ring grows into
+the recording's first picture, and the notch says where it went, such as
+`Recording Saved to Desktop`. Click the picture to open the recording. Moving
+the pointer onto the notch and away closes it sooner. With another activity
+started first, a countdown shows in the bubble, its number inside its ring.
 
 Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the recording's time over `Screen Recording`, and a button:

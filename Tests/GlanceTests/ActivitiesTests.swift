@@ -1515,7 +1515,7 @@ struct ActivityBenchTests {
             #expect(ActivityBench.parse(["Glance", "--bench", name])?.scenes.first?.rawValue == name)
         }
         #expect(ActivityBench.parse(["Glance", "--bench", "voiceMemo+music"])?.scenes == [.voiceMemo, .music])
-        #expect(ActivityBench.Scene.screenSaved.announces)
+        #expect(!ActivityBench.Scene.screenSaved.announces)
     }
 
     @Test("The menu lists every scene once, under a label, each by a name of its own")
@@ -1684,16 +1684,27 @@ struct RecordingTests {
         #expect(RecordingLook.openWaveWidth(h) + RecordingLook.timeWidth("0:00:00", size: NotchType.size * RecordingLook.memoTime) < room)
     }
 
-    @Test("Saved, it's said for a moment as tall as the Alarm, and the menu can hide it")
+    @Test("Being saved and saved, the screen recording says so under its time, and the menu can hide it")
     func saved() {
-        let alert = ScreenRecordingWatch.savedAlert(length: 11, folder: "Desktop", preview: nil)
-        #expect(alert.tall)
-        #expect(alert.kind == .recordingSaved)
-        #expect(!alert.stays)
-        #expect(RecordingSavedView.saved(to: "Desktop") == "Recording Saved to Desktop")
-        #expect(NotchController.putAwayTitle(alert: .recordingSaved, first: nil) == "Hide Screen Recording")
+        let saving = ScreenRecording.saving(length: 11)
+        let saved = ScreenRecording.saved(length: 11, folder: "Desktop", preview: nil)
+        #expect(ScreenRecording.recording(since: .now).title == "Screen Recording")
+        #expect(saving.title == "Saving Recording…" && saving.isSaving && !saving.isRecording)
+        #expect(saved.title == "Recording Saved to Desktop" && saved.isSaved && saved.length() == 11)
+        #expect(Recording.screen(saved).spoken().hasPrefix("Screen recording saved to Desktop"))
+        // Saved, it keeps the dot's side by the camera.
+        #expect(RecordingLook.wing(for: .screen(saved), restingHeight: 32) == RecordingLook.wing(for: .screen(.recording(since: .now)), restingHeight: 32))
         #expect(NotchController.putAwayTitle(alert: nil, first: .screenRecording) == "Hide Screen Recording")
         #expect(NotchController.putAwayTitle(alert: nil, first: .voiceMemo) == "Hide Voice Memo")
+        #expect(ScreenRecordingWatch.savedFor >= 3)
+    }
+
+    @Test("Beside the camera the dot pulses slightly; opened, the dot and time fade further, faster; the stop ring is fine")
+    func pulses() {
+        #expect(RecordingLook.pulseDim > RecordingLook.openDim && RecordingLook.openDim > RecordingLook.dim)
+        #expect(RecordingLook.openPulse < RecordingLook.pulse)
+        #expect(RecordingLook.screenRing * TimerLayout.content(32) < 2.5)
+        #expect(RecordingLook.memoRing < 0.0645)
     }
 
     @Test("Screenshot's countdown is read from its menu bar item, and its stop button is anything else")

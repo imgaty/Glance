@@ -36,12 +36,37 @@ enum ScreenRecording: Equatable {
     case recording(since: Date)
     /// Stopped, its file being written: how long it is.
     case saving(length: TimeInterval)
+    /// Saved, for a moment: how long it is, the folder it went to, as Finder names it, and its first
+    /// picture.
+    case saved(length: TimeInterval, folder: String, preview: NSImage?)
 
     func length(at date: Date = .now) -> TimeInterval {
         switch self {
         case .countdown: 0
         case .recording(let since): max(date.timeIntervalSince(since), 0)
-        case .saving(let length): length
+        case .saving(let length), .saved(let length, _, _): length
+        }
+    }
+
+    var isRecording: Bool {
+        if case .recording = self { return true }
+        return false
+    }
+    var isSaving: Bool {
+        if case .saving = self { return true }
+        return false
+    }
+    var isSaved: Bool {
+        if case .saved = self { return true }
+        return false
+    }
+
+    /// Its name under its time, opened: what it's doing.
+    var title: String {
+        switch self {
+        case .countdown, .recording: String(localized: "Screen Recording")
+        case .saving: String(localized: "Saving Recording…")
+        case .saved(_, let folder, _): String(localized: "Recording Saved to \(folder)")
         }
     }
 
@@ -74,6 +99,9 @@ enum Recording: Equatable {
             return String(localized: "Recording the screen, \(time)")
         case .screen(.saving):
             return String(localized: "Saving the screen recording")
+        case .screen(.saved(let length, let folder, _)):
+            let time = NotchTimer.words(length.rounded(.down)) ?? Self.reading(length, memo: false)
+            return String(localized: "Screen recording saved to \(folder), \(time)")
         }
     }
 }
@@ -92,10 +120,15 @@ enum RecordingLook {
     static let later = Color.p3(0x4B, 0x4B, 0x4B)
     static let laterNS = NSColor(displayP3Red: 0x4B / 255, green: 0x4B / 255, blue: 0x4B / 255, alpha: 1)
     static let track = Color.p3(0x4A, 0x4A, 0x4A)
-    /// Recording, the dot and the time fade to this and back.
+    /// Counting down or being saved, the dot and the time are this faded, measured.
     static let dim: Double = 0.29
-    /// How long they take to fade and come back: not measured, no video of it seen.
-    static let blink: Double = 2
+    /// Recording, beside the camera, the dot fades to this and back, a slow, slight pulse, and
+    /// takes this long; opened, the dot and the time fade further, a little faster (the user,
+    /// 2026-11-07, from their iPhone: the closed one less, the opened one faster).
+    static let pulseDim: Double = 0.55
+    static let pulse: Double = 2
+    static let openDim: Double = 0.35
+    static let openPulse: Double = 1.5
 
     // Beside the camera.
     /// The screen's dot, by the notch's height, for the Timer's ring as the iPhone draws both.
@@ -104,6 +137,10 @@ enum RecordingLook {
     static let ringLine: CGFloat = 0.139
     /// The countdown's number, by the size of the time beside the camera, and lighter.
     static let countdown: CGFloat = 1.16
+    /// In the bubble, the countdown's ring, as large as a ring with a number in it is, and the
+    /// number inside it.
+    static let bubbleRing: CGFloat = 0.68
+    static let bubbleNumber: CGFloat = 0.3
     /// The spinner's arc, of the circle.
     static let spinnerArc: CGFloat = 0.845
     /// Voice Memos' waveform beside the camera: so many bars, from its end, how far apart, how wide,
@@ -132,9 +169,9 @@ enum RecordingLook {
     static let memoTime: CGFloat = 1.16
     /// The stop button: its square, its ring's line, by its size, and the square's corners.
     static let memoSquare: CGFloat = 0.432
-    static let memoRing: CGFloat = 0.0645
+    static let memoRing: CGFloat = 0.045
     static let screenSquare: CGFloat = 0.403
-    static let screenRing: CGFloat = 0.058
+    static let screenRing: CGFloat = 0.04
     static let squareCorner: CGFloat = 0.25
     /// The screen recording opened: its dot, and the gap after it, by the words' size; between the
     /// lines, baseline to baseline.
@@ -193,7 +230,7 @@ enum RecordingLook {
             let ring = SystemActivityView.ringEdge(h) + h * TimerLayout.ring + gap
             let number = gap + timeWidth(String(from), size: text * countdown, weight: .regular) + words
             return max(ring, number)
-        case .screen(.recording):
+        case .screen(.recording), .screen(.saved):
             return LiveActivityView.concentric(h * dot, in: h) + h * dot + gap
         case .screen(.saving):
             return SystemActivityView.ringEdge(h) + h * TimerLayout.ring + gap
@@ -249,6 +286,10 @@ struct RecordingMark: View {
                     .islandFade(!leadingOnly)
             case .screen(.recording):
                 RecordingDot(diameter: h * RecordingLook.dot, blinking: true)
+                    .padding(.leading, LiveActivityView.concentric(h * RecordingLook.dot, in: h))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            case .screen(.saved):
+                RecordingDot(diameter: h * RecordingLook.dot, blinking: false)
                     .padding(.leading, LiveActivityView.concentric(h * RecordingLook.dot, in: h))
                     .frame(maxWidth: .infinity, alignment: .leading)
             case .screen(.saving):
@@ -340,8 +381,8 @@ final class BlinkingDotView: NSView {
         guard window != nil else { return }
         let fade = CABasicAnimation(keyPath: "opacity")
         fade.fromValue = 1
-        fade.toValue = RecordingLook.dim
-        fade.duration = RecordingLook.blink / 2
+        fade.toValue = RecordingLook.pulseDim
+        fade.duration = RecordingLook.pulse / 2
         fade.autoreverses = true
         fade.repeatCount = .infinity
         fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
@@ -378,8 +419,9 @@ struct CountdownRing: View {
         .accessibilityHidden(true)
     }
 
-    /// How a step slides: not measured, no video of it seen.
-    static let slide = Animation.easeInOut(duration: 0.45)
+    /// How a step slides: speeding up out of one mark and slowing into the next, over most of the
+    /// second (the user, 2026-11-07, from their iPhone).
+    static let slide = Animation.timingCurve(0.65, 0, 0.35, 1, duration: 0.8)
 }
 
 /// The countdown's number, which changes as its ring steps.
@@ -391,9 +433,13 @@ struct CountdownNumber: View {
         let start = until - Double(from)
         TimelineView(.explicit((0...from).map { start + Double($0) })) { context in
             let step = max(ScreenRecording.step(from: from, until: until, at: context.date), 1)
-            Text(String(step))
-                .contentTransition(.numericText(countsDown: true))
-                .animation(.snappy, value: step)
+            // One number fades out as the next fades in, as the iPhone's do.
+            ZStack {
+                Text(String(step))
+                    .id(step)
+                    .transition(.opacity)
+            }
+            .animation(.easeInOut(duration: 0.35), value: step)
         }
     }
 }
@@ -401,11 +447,13 @@ struct CountdownNumber: View {
 /// The screen recording being saved: a white arc going round.
 struct SavingSpinner: View {
     let diameter: CGFloat
+    /// Its line: as heavy as the countdown's ring beside the camera, unless given.
+    var line: CGFloat? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var turned = false
 
     var body: some View {
-        let line = diameter * RecordingLook.ringLine
+        let line = line ?? diameter * RecordingLook.ringLine
         Circle()
             .trim(from: 0, to: RecordingLook.spinnerArc)
             .stroke(.white, style: StrokeStyle(lineWidth: line, lineCap: .round))
@@ -634,55 +682,57 @@ struct ExpandedRecordingView: View {
                     .foregroundStyle(RecordingLook.screenRed)
                     .modifier(IslandReveal(hidden: !revealed))
             }
-            .modifier(RecordingBlink(recording: { if case .recording = screen { true } else { false } }(), shown: revealed))
-            Text("Screen Recording")
+            .modifier(RecordingBlink(recording: screen.isRecording, faded: !screen.isRecording && !screen.isSaved, shown: revealed))
+            Text(screen.title)
                 .font(NotchType.title)
                 .foregroundStyle(.white)
                 .lineLimit(1)
+                .truncationMode(.middle)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.3), value: screen.title)
                 .padding(.top, RecordingLook.lineGap)
                 .modifier(IslandReveal(hidden: !revealed))
         }
         .fixedSize()
         .padding(.leading, edge)
         .frame(maxWidth: .infinity, alignment: .leading)
-        Group {
-            if case .saving = screen {
-                let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
-                SavingSpinner(diameter: TimerLayout.content(h))
-                    .modifier(GrowsOut(out: grows, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom))
-                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
-            } else {
-                StopRecordingButton(memo: false, h: h) { ScreenRecordingWatch.shared.stop() }
-                    .modifier(IslandReveal(hidden: !revealed))
-            }
-        }
-        .padding(.trailing, TimerLayout.buttonEdge(h))
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        // Being saved, the spinner beside the camera grows into the ring around the square.
+        let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
+        ScreenRecordingButton(screen: screen, h: h)
+            .modifier(
+                GrowsOut(out: grows || !screen.isSaving, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom)
+            )
+            .modifier(IslandReveal(hidden: !revealed))
+            .padding(.trailing, TimerLayout.buttonEdge(h))
+            .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     /// How far above the open notch's middle the first line's middle is.
     static func firstLineRise(_ h: CGFloat) -> CGFloat { NotchType.size * RecordingLook.lines / 2 }
 }
 
-/// Recording, what it's on fades and comes back; counting down or being saved, it stays faded.
-/// Only while it shows, as the open view stays, hidden, once the notch closes; with Reduce Motion on,
-/// it stays.
+/// Recording, what it's on fades and comes back; counting down or being saved, it stays faded; saved,
+/// it's whole. Only while it shows, as the open view stays, hidden, once the notch closes; with
+/// Reduce Motion on, it stays.
 private struct RecordingBlink: ViewModifier {
     let recording: Bool
+    /// Faded, still: counting down or being saved.
+    let faded: Bool
     let shown: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var faded = false
+    @State private var pulsed = false
 
     func body(content: Content) -> some View {
         content
-            .opacity(!recording ? RecordingLook.dim : faded ? RecordingLook.dim : 1)
+            .opacity(faded ? RecordingLook.dim : pulsed ? RecordingLook.openDim : 1)
+            .animation(.easeInOut(duration: 0.3), value: faded)
             .onChange(of: recording && shown && !reduceMotion, initial: true) { _, blinks in
                 if blinks {
-                    withAnimation(.easeInOut(duration: RecordingLook.blink / 2).repeatForever(autoreverses: true)) { faded = true }
+                    withAnimation(.easeInOut(duration: RecordingLook.openPulse / 2).repeatForever(autoreverses: true)) { pulsed = true }
                 } else {
                     var still = Transaction()
                     still.disablesAnimations = true
-                    withTransaction(still) { faded = false }
+                    withTransaction(still) { pulsed = false }
                 }
             }
     }
@@ -753,75 +803,80 @@ struct RecordingBubbleGlyph: View {
         case .voiceMemo(let memo):
             MemoWaveform(slots: 5, recorded: 5, height: h * RecordingLook.barMost, scale: h, open: false, live: memo.isRecording)
         case .screen(.countdown(let from, let until)):
-            CountdownRing(from: from, until: until, diameter: h * TimerLayout.ring)
+            // Its number inside the ring, as the iPhone's in its bubble (the user, 2026-11-07).
+            ZStack {
+                CountdownRing(from: from, until: until, diameter: h * RecordingLook.bubbleRing)
+                CountdownNumber(from: from, until: until)
+                    .font(.system(size: h * RecordingLook.bubbleNumber, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+            }
         case .screen(.recording):
             RecordingDot(diameter: h * RecordingLook.dot, blinking: true)
+        case .screen(.saved):
+            RecordingDot(diameter: h * RecordingLook.dot, blinking: false)
         case .screen(.saving):
             SavingSpinner(diameter: h * TimerLayout.ring)
         }
     }
 }
 
-// MARK: - Saved
+// MARK: - The screen recording's button
 
-/// The screen recording saved, said for a moment as tall as the Alarm, as the iPhone says it: its
-/// red dot and length over where it went, and its first picture, which opens it.
-struct RecordingSavedView: View {
-    let length: TimeInterval
-    /// The folder it went to, as Finder names it.
-    let folder: String
-    let preview: NSImage?
-    let restingHeight: CGFloat
-    let hovered: Bool
+/// The screen recording's button, as the iPhone's: a ring around a red square that stops it. Being
+/// saved, the ring turns into a spinner around the square, as large and as fine; saved, the spinner
+/// fades and the square grows into the recording's first picture, which opens it (the user,
+/// 2026-11-07, from their iPhone).
+struct ScreenRecordingButton: View {
+    let screen: ScreenRecording
+    let h: CGFloat
+    @State private var hovering = false
 
     var body: some View {
-        let h = restingHeight
-        let size = NotchType.size
         let side = TimerLayout.content(h)
-        ZStack {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: size * RecordingLook.openDotGap) {
-                    Circle().fill(RecordingLook.screenRed).frame(width: size * RecordingLook.openDot, height: size * RecordingLook.openDot)
-                    Text(Recording.reading(length, memo: false))
-                        .font(NotchType.title.monospacedDigit())
-                        .foregroundStyle(RecordingLook.screenRed)
-                }
-                Text(Self.saved(to: folder))
-                    .font(NotchType.title)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .padding(.top, RecordingLook.lineGap)
-            }
-            .padding(.leading, PlayerLayout.padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Group {
-                if let preview {
-                    Image(nsImage: preview).resizable().aspectRatio(contentMode: .fill)
-                } else {
-                    Image(nsImage: NSWorkspace.shared.icon(for: .movie)).resizable().aspectRatio(contentMode: .fit)
-                }
+        let square = side * RecordingLook.screenSquare
+        let line = side * RecordingLook.screenRing
+        let saved = screen.isSaved
+        let picture = saved ? side : square
+        let corner = saved ? side * PlayerLayout.thumbnailCorner : square * RecordingLook.squareCorner
+        let preview: NSImage? = { if case .saved(_, _, let preview) = screen { preview } else { nil } }()
+        let label = saved ? String(localized: "Open Recording") : String(localized: "Stop Recording")
+        Button(action: press) {
+            ZStack {
+                Circle().fill(.white.opacity(hovering && !screen.isSaving && !saved ? 0.12 : 0))
+                Circle().strokeBorder(.white, lineWidth: line)
+                    .opacity(screen.isSaving || saved ? 0 : 1)
+                SavingSpinner(diameter: side, line: line)
+                    .opacity(screen.isSaving ? 1 : 0)
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .fill(RecordingLook.screenRed)
+                    .overlay {
+                        if let preview {
+                            Image(nsImage: preview).resizable().aspectRatio(contentMode: .fill)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+                    .brightness(saved && hovering ? 0.06 : 0)
+                    .frame(width: picture, height: picture)
             }
             .frame(width: side, height: side)
-            .clipShape(RoundedRectangle(cornerRadius: side * PlayerLayout.thumbnailCorner, style: .continuous))
-            .brightness(hovered ? 0.06 : 0)
-            .reportsFrame(.openRecording)
-            .spokenButton(String(localized: "Open Recording")) { ScreenRecordingWatch.shared.openSaved() }
-            .padding(.trailing, TimerLayout.buttonEdge(h))
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            .contentShape(Circle())
+            .animation(NotchMotion.expand, value: saved)
+            .animation(.easeOut(duration: 0.3), value: screen.isSaving)
+            .animation(.easeOut(duration: 0.15), value: hovering)
         }
-        .frame(maxHeight: .infinity)
+        .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+        .disabled(screen.isSaving)
+        .onHover { hovering = $0 }
+        .notchControl(enabled: !screen.isSaving)
+        .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: label, action: press)
+        .accessibilityLabel(label)
     }
 
-    static func saved(to folder: String) -> String { String(localized: "Recording Saved to \(folder)") }
-
-    /// Each wing: the dot and the time beside the camera, its words running on under it; the
-    /// picture on the other side.
-    @MainActor
-    static func wing(length: TimeInterval, restingHeight h: CGFloat) -> CGFloat {
-        let gap = LiveActivityView.cameraGap
-        let left = PlayerLayout.padding + RecordingLook.firstLineWidth(length) + gap
-        let right = gap + TimerLayout.content(h) + TimerLayout.buttonEdge(h)
-        return max(left, right)
+    private func press() {
+        switch screen {
+        case .countdown, .recording: ScreenRecordingWatch.shared.stop()
+        case .saved: ScreenRecordingWatch.shared.openSaved()
+        case .saving: break
+        }
     }
 }

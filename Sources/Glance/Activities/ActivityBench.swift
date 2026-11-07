@@ -35,7 +35,7 @@ final class ActivityBench {
         case lowBatteryReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery, .screenSaved].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery].contains(self) }
 
         /// How the menu names it, in English, as the menu is only in builds made from source.
         var title: String {
@@ -177,7 +177,7 @@ final class ActivityBench {
         case .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread: await callState(scene)
         case .screenRecording: await screenRecording()
         case .screenCountdown, .screenSaving: await screenState(scene)
-        case .screenSaved: await announce([{ Self.saved() }], every: 7)
+        case .screenSaved: await screenState(scene)
         case .voiceMemo: await voiceMemo(paused: false)
         case .voiceMemoPaused: await voiceMemo(paused: true)
         case .charging: await announce(Self.charging(), every: 6)
@@ -265,9 +265,10 @@ final class ActivityBench {
             let length = Date.now.timeIntervalSince(start)
             watch.bench(.saving(length: length))
             await wait(1.5)
+            watch.bench(Self.saved(length: length))
+            await wait(ScreenRecordingWatch.savedFor)
             watch.bench(nil)
-            Activities.shared.post(Self.saved(length: length))
-            await wait(4 + Self.rest)
+            await wait(Self.rest)
         }
     }
 
@@ -279,7 +280,7 @@ final class ActivityBench {
                 watch.bench(.countdown(from: 3, until: .now + 3))
                 await wait(4)
             } else {
-                watch.bench(.saving(length: 11))
+                watch.bench(scene == .screenSaved ? Self.saved() : .saving(length: 11))
                 await round(of: .screenRecording)
                 watch.bench(nil)
                 await wait(Self.rest)
@@ -288,8 +289,8 @@ final class ActivityBench {
     }
 
     /// Saved, with one of macOS's own pictures for its first frame.
-    private static func saved(length: TimeInterval = 11) -> NotchAlert {
-        ScreenRecordingWatch.savedAlert(length: length, folder: FileManager.default.displayName(atPath: NSHomeDirectory() + "/Desktop"), preview: photo())
+    private static func saved(length: TimeInterval = 11) -> ScreenRecording {
+        .saved(length: length, folder: FileManager.default.displayName(atPath: NSHomeDirectory() + "/Desktop"), preview: photo())
     }
 
     /// A voice memo recording for the round, or until it's stopped; or paused at 20 seconds.
