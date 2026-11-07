@@ -265,16 +265,29 @@ final class AudioOutput: NSObject, ObservableObject {
 }
 
 /// The playing app's volume in the sound output menu, laid out as the Mac's Sound menu: Apple's own
-/// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right.
-private final class VolumeMenuSlider: NSView {
+/// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right. An
+/// AppKit slider, as the Mac's own menu has: a SwiftUI one in a menu doesn't take the click, as a
+/// menu's window is never the key window.
+final class VolumeMenuSlider: NSView {
     private let volume: AppVolume
+    let slider: NSSlider
 
     init(volume: AppVolume) {
         self.volume = volume
+        slider = NSSlider(value: volume.level, minValue: 0, maxValue: 1, target: nil, action: nil)
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
         // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
-        let slider = NSHostingView(rootView: VolumeSlider(volume: volume))
+        slider.target = self
+        slider.action = #selector(moved(_:))
+        slider.isContinuous = true
+        slider.controlSize = .regular
+        // Filled white, or with the Mac's accent color in a light menu, whether or not Glance is the
+        // app in front: a menu otherwise takes its app's look, and leaves it gray.
+        slider.trackFillColor = NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .controlAccentColor
+        }
+        slider.isEnabled = volume.canChange
         // As the Mac's Sound menu: the speakers at the edges of the menu's own column, in line
         // with its headings and its separators, the slider filling the room between them. Each is
         // centered on the slider's track by its symbol's own alignment box, as the Mac's menus
@@ -293,6 +306,15 @@ private final class VolumeMenuSlider: NSView {
             quiet.centerYAnchor.constraint(equalTo: slider.centerYAnchor, constant: -0.5),
             loud.centerYAnchor.constraint(equalTo: slider.centerYAnchor),
         ])
+        // Music's and Spotify's own volume, read afresh as the menu opens.
+        Task { [weak self] in
+            await volume.refresh()
+            self?.slider.doubleValue = volume.level
+        }
+    }
+
+    @objc private func moved(_ sender: NSSlider) {
+        volume.set(sender.doubleValue)
     }
 
     required init?(coder: NSCoder) { nil }
@@ -312,36 +334,6 @@ private final class VolumeMenuSlider: NSView {
         return image
     }
 
-}
-
-/// Apple's slider, with its Liquid Glass knob, filled white, or with the Mac's accent color in a light
-/// menu, whether or not Glance is the app in front: a menu otherwise takes its app's look, and leaves
-/// it gray.
-private struct VolumeSlider: View {
-    let volume: AppVolume
-    @State private var level = 1.0
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Slider(
-            value: Binding(
-                get: { level },
-                set: {
-                    level = $0
-                    volume.set($0)
-                })
-        )
-        .tint(colorScheme == .dark ? Color.white : .accentColor)
-        .environment(\.controlActiveState, .key)
-        .disabled(!volume.canChange)
-        .labelsHidden()
-        .task {
-            level = volume.level
-            // Music's and Spotify's own volume, read afresh as the menu opens.
-            await volume.refresh()
-            level = volume.level
-        }
-    }
 }
 
 /// The sound output menu's measures, as the Mac's Sound menu has them: no check marks, its
