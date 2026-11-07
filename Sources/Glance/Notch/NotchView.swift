@@ -872,7 +872,7 @@ struct NotchView: View {
         // whole notch, glass and all, keeps together.
         // What's in it stays where it is while the notch reaches out to the bubble.
         .offset(x: -model.bubbleReach / 2)
-        .modifier(SteppedFrame(width: m.bodyWidth + model.bubbleReach, height: m.height, corners: model.corners))
+        .modifier(SteppedFrame(width: m.bodyWidth + model.bubbleReach, height: m.height, corners: model.corners, least: model.collapsed ? .zero : model.closedSize))
         .coordinateSpace(.named(Self.bodySpace))
         .environment(\.demoPointer, model.demoPointer)
         // Stretched sideways, what's in it stretches with it, staying where it is.
@@ -1347,6 +1347,10 @@ private struct SteppedFrame: ViewModifier, Animatable {
     var width: CGFloat
     var height: CGFloat
     let corners: NotchCorners
+    /// Never smaller than the camera housing, however hard a spring carries it: closing just after it
+    /// opened, still moving inward from its bounce, it would otherwise shrink past the housing and
+    /// show its edge.
+    var least = CGSize.zero
 
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(width, height) }
@@ -1354,6 +1358,7 @@ private struct SteppedFrame: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
+        let width = max(width, least.width), height = max(height, least.height)
         content.frame(width: width + corners.radii(forHeight: height).flare * 2, height: height, alignment: .top)
     }
 }

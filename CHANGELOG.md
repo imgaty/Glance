@@ -280,6 +280,8 @@
 - Fixed the cover swinging out under the camera as the notch closed, its middle
   rushing back with the notch's end ahead of its size. It flies straight back
   to its place now, inside the notch all the way.
+- Fixed the notch shrinking past the camera housing as it closed just after
+  opening, its edge showing under the camera for a moment.
 
 ### Displays
 
