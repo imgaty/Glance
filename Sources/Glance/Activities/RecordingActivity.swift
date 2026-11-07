@@ -566,6 +566,10 @@ private struct LiveMemoBars: NSViewRepresentable {
 
 final class MemoBarsView: NSView {
     private var bars: [CALayer] = []
+    /// The recorded bars, which scroll, clipped to their places; and the dots still to come, which
+    /// stay.
+    private let recorded = CALayer()
+    private let later = CALayer()
     private let spec: MemoBars.Spec
     private var hearing: Any?
 
@@ -573,10 +577,13 @@ final class MemoBarsView: NSView {
         self.spec = spec
         super.init(frame: .zero)
         wantsLayer = true
+        recorded.masksToBounds = true
+        layer?.addSublayer(recorded)
+        layer?.addSublayer(later)
         for index in 0..<spec.slots {
             let bar = CALayer()
             bar.backgroundColor = (index < spec.recorded ? RecordingLook.memoRedNS : RecordingLook.laterNS).cgColor
-            layer?.addSublayer(bar)
+            (index < spec.recorded ? recorded : later).addSublayer(bar)
             bars.append(bar)
         }
     }
@@ -591,16 +598,25 @@ final class MemoBarsView: NSView {
             window == nil
             ? nil
             : RecordingLevels.shared.$levels.sink { [weak self] levels in
-                MainActor.assumeIsolated { self?.draw(levels) }
+                MainActor.assumeIsolated { self?.draw(levels, scrolls: true) }
             }
     }
 
     override func layout() {
         super.layout()
-        draw(RecordingLevels.shared.levels)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        recorded.frame = CGRect(x: 0, y: 0, width: spec.pitch * CGFloat(spec.recorded - 1) + spec.barWidth, height: bounds.height)
+        later.frame = bounds
+        CATransaction.commit()
+        draw(RecordingLevels.shared.levels, scrolls: false)
     }
 
-    private func draw(_ levels: [CGFloat]) {
+    /// Each new level takes the newest place and every bar moves on one; drawn there at once, the
+    /// bars are slid back a place and glide into it over the time the next takes to come, so the
+    /// waveform scrolls along as the iPhone's does rather than stepping. With Reduce Motion on, it
+    /// steps.
+    private func draw(_ levels: [CGFloat], scrolls: Bool) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         // Laid out from the top, as SwiftUI's own.
@@ -609,6 +625,13 @@ final class MemoBarsView: NSView {
             bar.cornerRadius = frame.width / 2
         }
         CATransaction.commit()
+        guard scrolls, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let glide = CABasicAnimation(keyPath: "sublayerTransform.translation.x")
+        glide.fromValue = spec.pitch
+        glide.toValue = 0
+        glide.duration = RecordingLook.barTime
+        glide.timingFunction = CAMediaTimingFunction(name: .linear)
+        recorded.add(glide, forKey: "glide")
     }
 }
 

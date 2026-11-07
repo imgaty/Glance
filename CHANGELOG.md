@@ -173,11 +173,11 @@
   `Recording Saved to Desktop`. `Screen recording` in **Settings > Live
   Activities** turns it off.
 - Added Voice Memos recording, as the iPhone shows it: a red waveform of the
-  sound beside the camera, and the recording's time, both still while it's
-  paused. Opened, the waveform runs on in gray dots, with the time and a button
-  to stop it, as Voice Memos' **Done** does. The waveform comes from the Mac's
-  microphone once it's allowed, and nothing is recorded or kept. `Voice Memos`
-  in **Settings > Live Activities** turns it off.
+  sound beside the camera, gliding along as it comes, and the recording's time,
+  both still while it's paused. Opened, the waveform runs on in gray dots, with
+  the time and a button to stop it, as Voice Memos' **Done** does. The waveform
+  comes from the Mac's microphone once it's allowed, and nothing is recorded or
+  kept. `Voice Memos` in **Settings > Live Activities** turns it off.
 
 ### Touch
 
