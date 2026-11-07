@@ -144,6 +144,8 @@ struct SystemActivityView: View {
                     // From its end, as far as from the top and bottom.
                     .padding(.leading, Self.ringEdge(restingHeight))
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // Nothing opened takes its place: it fades as the notch opens, and back as it closes.
+                    .islandFade(!grown)
                     TimelineView(.periodic(from: .now, by: shown.countsDown ? 0.5 : 1)) { context in
                         let reading = Self.reading(shown, at: context.date)
                         HStack(spacing: Self.pauseGap) {
