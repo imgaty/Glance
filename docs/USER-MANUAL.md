@@ -537,8 +537,10 @@ is recorded or kept.
 
 Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the waveform running on in gray dots, the time, and a button:
-click it to stop the recording and keep it, as Voice Memos' **Done** does. Turn
-it off with `Voice Memos` in **Settings > Live Activities**.
+click it to stop the recording and keep it, as Voice Memos' **Done** does. It
+opens wide enough for the bars recorded so far to end beside the camera, as the
+iPhone's do, and only the dots still to come pass beneath it. Turn it off with
+`Voice Memos` in **Settings > Live Activities**.
 
 <br>
 

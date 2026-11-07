@@ -342,7 +342,7 @@ final class NotchModel: ObservableObject {
     /// time needs.
     func openWidth(of recording: Recording) -> CGFloat {
         switch recording {
-        case .voiceMemo: RecordingLook.memoWidth(restingHeight: closedSize.height)
+        case .voiceMemo: RecordingLook.memoWidth(restingHeight: closedSize.height, camera: camera)
         case .screen(let screen): RecordingLook.screenWidth(restingHeight: closedSize.height, camera: camera, length: screen.length())
         }
     }

@@ -187,6 +187,9 @@
 - Fixed the notch's end beside the bubble showing the camera housing's own
   corner, which is cut sharper than the other end's. It now reaches just past
   the housing, its corner as round as the other end's.
+- Fixed the opened Voice Memos waveform rising under the camera housing, where
+  it couldn't be seen. The notch opens wider, so the bars recorded so far end
+  beside the camera.
 
 ### Touch
 

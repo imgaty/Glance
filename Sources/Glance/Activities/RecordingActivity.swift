@@ -184,8 +184,16 @@ enum RecordingLook {
     /// What brings the second line's baseline as close under the first's as the iPhone's.
     static var lineGap: CGFloat { NotchType.size * lines - LiveActivityView.lineHeight(NotchType.size) }
 
-    /// Opened to Voice Memos: as wide, for its height, as the iPhone's island.
-    static func memoWidth(restingHeight h: CGFloat) -> CGFloat { (TimerLayout.tallHeight(h) * openWidth).rounded() }
+    /// Opened to Voice Memos: as wide, for its height, as the iPhone's island, and wider if need be for
+    /// the bars recorded so far to end beside the camera housing, as the iPhone's end beside its
+    /// camera: under the housing they'd rise out of sight, and only the dots still to come, low in
+    /// the middle, pass beneath it.
+    static func memoWidth(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
+        let tall = TimerLayout.tallHeight(h)
+        let recorded = tall * (openPitch * CGFloat(openRecorded - 1) + openBarWidth)
+        let beside = PlayerLayout.padding + recorded + LiveActivityView.cameraGap
+        return max(tall * openWidth, camera + 2 * beside).rounded(.up)
+    }
 
     /// Opened to the screen recording: the dot and the time beside the camera, its name running on
     /// under it, and on the other side, the same room for the button.

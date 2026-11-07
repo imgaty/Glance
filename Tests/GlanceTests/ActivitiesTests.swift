@@ -1726,16 +1726,21 @@ struct RecordingTests {
         #expect(long > memo)
     }
 
-    @Test("Opened, Voice Memos is as wide as the iPhone's island for its height; the screen as its first line needs")
+    @Test("Opened, Voice Memos is as wide as the iPhone's island for its height, or more, for its recorded bars to end beside the camera housing; the screen as its first line needs")
     func openWidths() {
         let h: CGFloat = 32
-        #expect(RecordingLook.memoWidth(restingHeight: h) == (TimerLayout.tallHeight(h) * 374 / 84).rounded())
+        let tall = TimerLayout.tallHeight(h)
+        // Beside a small camera, as the iPhone's island; beside a Mac's housing, wider.
+        #expect(RecordingLook.memoWidth(restingHeight: h, camera: 100) == (tall * 374 / 84).rounded(.up))
+        let memo = RecordingLook.memoWidth(restingHeight: h, camera: 185)
+        let recordedEnd = PlayerLayout.padding + tall * (RecordingLook.openPitch * CGFloat(RecordingLook.openRecorded - 1) + RecordingLook.openBarWidth)
+        #expect(recordedEnd + LiveActivityView.cameraGap <= (memo - 185) / 2)
         let short = RecordingLook.screenWidth(restingHeight: h, camera: 185, length: 8)
         let long = RecordingLook.screenWidth(restingHeight: h, camera: 185, length: 3725)
         #expect(short >= 185 + 2 * (TimerLayout.content(h) + TimerLayout.buttonEdge(h)))
         #expect(long > short)
         // Its waveform and time fit beside its button.
-        let room = RecordingLook.memoWidth(restingHeight: h) - PlayerLayout.padding - ExpandedRecordingView.memoTimeEdge(h)
+        let room = memo - PlayerLayout.padding - ExpandedRecordingView.memoTimeEdge(h)
         #expect(RecordingLook.openWaveWidth(h) + RecordingLook.timeWidth("0:00:00", size: NotchType.size * RecordingLook.memoTime) < room)
     }
 
