@@ -17,7 +17,7 @@ struct HeroArtwork: View {
     @ObservedObject private var motion = MotionArtworkStore.shared
     @Environment(\.playerLayout) private var layout
     @AppStorage(Preferences.musicAnimatedArtwork) private var animated = true
-    @AppStorage(Preferences.musicAppBadge) private var showsBadge = false
+    @AppStorage(Preferences.musicAppBadge) private var showsBadge = true
     let isOpen: Bool
     /// The artwork's side in the closed notch.
     let restingSide: CGFloat

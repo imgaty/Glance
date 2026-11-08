@@ -618,9 +618,9 @@ cover, and long titles end in an ellipsis instead of scrolling.
 | `Layout` | `Cover on top` or `Cover on the side` |
 | `Controls` | The two buttons beside the playback controls |
 | `Lyrics` | Whether clicking the waveform shows the words |
-| `Tint progress bar` | Colors the progress bar with the accent color |
+| `Tint progress bar` | Colors the progress bar with the accent color (off at first) |
 | `Animated cover` | Plays an album's animated cover, when it has one |
-| `Show app icon on cover` | Shows the playing app's icon on the cover (off at first) |
+| `Show app icon on cover` | Shows the playing app's icon on the cover (on at first) |
 | `Show audio from` | Which apps' audio Glance shows; **Add App…** adds an app, and right-clicking one offers **Remove from List** |
 | `Show new apps` | Whether apps that start playing are added turned on |
 

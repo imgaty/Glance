@@ -240,12 +240,14 @@ extension AppDelegate: NSMenuItemValidation {
 }
 
 enum Preferences {
-    /// Settings whose first value has changed, with what it was before. Someone who had Glance
-    /// already keeps what they had, chosen or not; only a new install starts with the new value.
-    static let earlierDefaults: [String: Any] = [
-        musicBackground: MusicBackground.replaceGlass.rawValue
+    /// Settings whose first value has changed, with what it was before, by the change that made
+    /// it. Someone who had Glance already keeps what they had, chosen or not; only a new install
+    /// starts with the new value.
+    static let earlierDefaults: [Int: [String: Any]] = [
+        1: [musicBackground: MusicBackground.replaceGlass.rawValue],
+        2: [musicAccentTimeline: true, musicAppBadge: false],
     ]
-    /// Which change of first values this install has been through, so it's done once.
+    /// The last change of first values this install has been through, so each is done once.
     static let defaultsVersion = "defaultsVersion"
 
     /// Writes down, for someone who had Glance before, the first value of each setting that has
@@ -256,11 +258,15 @@ enum Preferences {
     static func keepEarlierDefaults(_ defaults: UserDefaults = .standard, domain: String? = Bundle.main.bundleIdentifier) {
         guard let domain else { return }
         let stored = defaults.persistentDomain(forName: domain) ?? [:]
-        guard (stored[defaultsVersion] as? Int ?? 0) < 1 else { return }
+        let done = stored[defaultsVersion] as? Int ?? 0
+        let latest = earlierDefaults.keys.max() ?? 0
+        guard done < latest else { return }
         if stored[onboardingDone] != nil || stored.keys.contains(where: { $0.hasPrefix(glassDarkness + ":") }) {
-            for (key, value) in earlierDefaults where stored[key] == nil { defaults.set(value, forKey: key) }
+            for (version, values) in earlierDefaults where version > done {
+                for (key, value) in values where stored[key] == nil { defaults.set(value, forKey: key) }
+            }
         }
-        defaults.set(1, forKey: defaultsVersion)
+        defaults.set(latest, forKey: defaultsVersion)
     }
 
     /// What each setting is until it's changed.
@@ -271,7 +277,8 @@ enum Preferences {
             musicBackground: MusicBackground.none.rawValue,
             musicAnimatedArtwork: true,
             musicShowsNewApps: true,
-            musicAppBadge: false,
+            musicAppBadge: true,
+            musicAccentTimeline: false,
             musicTrackPop: true,
             notchEnabled: true,
             swipeToOpen: true,

@@ -16,8 +16,8 @@ struct PlayerPage: View {
     @AppStorage(Preferences.musicSeenApps) private var seenApps = ""
     @AppStorage(Preferences.musicShowsNewApps) private var showsNewApps = true
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
-    @AppStorage(Preferences.musicAccentTimeline) private var accentTimeline = true
-    @AppStorage(Preferences.musicAppBadge) private var appBadge = false
+    @AppStorage(Preferences.musicAccentTimeline) private var accentTimeline = false
+    @AppStorage(Preferences.musicAppBadge) private var appBadge = true
     @AppStorage(Preferences.musicAnimatedArtwork) private var animatedArtwork = true
 
     var body: some View {

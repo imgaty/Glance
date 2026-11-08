@@ -247,6 +247,8 @@
   It holds still while paused, and with Reduce Motion on.
 - Changed `Background` to start as `None` on a new install. If you had Glance
   before, it stays as it was, whether or not you ever chose it.
+- Changed `Tint progress bar` to start off and `Show app icon on cover` to start
+  on, on a new install. If you had Glance before, both stay as they were.
 - Changed the player with Increase Contrast on to keep the cover's colors behind
   it, darker, in place of plain black, so its words still read on any cover.
 - Fixed Spotify's DJ not showing in the player: while the DJ chooses the music,

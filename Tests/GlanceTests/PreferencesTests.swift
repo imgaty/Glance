@@ -192,7 +192,8 @@ struct PreferencesTests {
         #expect(registered[Preferences.musicBackground] as? String == MusicBackground.none.rawValue)
         #expect(registered[Preferences.musicAnimatedArtwork] as? Bool == true)
         #expect(registered[Preferences.musicShowsNewApps] as? Bool == true)
-        #expect(registered[Preferences.musicAppBadge] as? Bool == false)
+        #expect(registered[Preferences.musicAppBadge] as? Bool == true)
+        #expect(registered[Preferences.musicAccentTimeline] as? Bool == false)
         #expect(registered[Preferences.musicTrackPop] as? Bool == true)
         #expect(registered[Preferences.notchEnabled] as? Bool == true)
         #expect(registered[Preferences.swipeToOpen] as? Bool == true)
@@ -220,9 +221,10 @@ struct PreferencesTests {
         defer { defaults.removePersistentDomain(forName: name) }
 
         // Had it before, and never set these.
+        let earlier = Preferences.earlierDefaults.values.reduce(into: [String: Any]()) { $0.merge($1) { first, _ in first } }
         defaults.set(true, forKey: Preferences.onboardingDone)
         Preferences.keepEarlierDefaults(defaults, domain: name)
-        for (key, value) in Preferences.earlierDefaults {
+        for (key, value) in earlier {
             #expect(stored(key) == value as? NSObject, "\(key)")
         }
         // Once only: what they set afterwards stays.
@@ -240,10 +242,19 @@ struct PreferencesTests {
         // A new install writes nothing down, and takes the new first values.
         defaults.removePersistentDomain(forName: name)
         Preferences.keepEarlierDefaults(defaults, domain: name)
-        for key in Preferences.earlierDefaults.keys {
+        for key in earlier.keys {
             #expect(stored(key) == nil, "\(key)")
         }
-        #expect(stored(Preferences.defaultsVersion) == 1 as NSNumber)
+        #expect(stored(Preferences.defaultsVersion) == Preferences.earlierDefaults.keys.max()! as NSNumber)
+
+        // Someone who went through an earlier change only gets the later ones.
+        defaults.removePersistentDomain(forName: name)
+        defaults.set(true, forKey: Preferences.onboardingDone)
+        defaults.set(1, forKey: Preferences.defaultsVersion)
+        Preferences.keepEarlierDefaults(defaults, domain: name)
+        #expect(stored(Preferences.musicBackground) == nil)
+        #expect(stored(Preferences.musicAccentTimeline) == true as NSNumber)
+        #expect(stored(Preferences.musicAppBadge) == false as NSNumber)
     }
 
     @Test("The layout falls back to the cover on top")

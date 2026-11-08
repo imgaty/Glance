@@ -20,7 +20,7 @@ struct NowPlayingView: View {
     @ObservedObject private var output = AudioOutput.shared
     @Environment(\.playerLayout) private var layout
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
-    @AppStorage(Preferences.musicAccentTimeline) private var accentTimeline = true
+    @AppStorage(Preferences.musicAccentTimeline) private var accentTimeline = false
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.musicLeftButton) private var leftSlot = PlayerSlot.favorite
     @AppStorage(Preferences.musicRightButton) private var rightSlot = PlayerSlot.output
