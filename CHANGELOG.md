@@ -244,19 +244,23 @@
 
 - Changed the player with Increase Contrast on to keep the cover's colors behind
   it, darker, in place of plain black, so its words still read on any cover.
-- Changed clicking Spotify's DJ button to get different picks, by starting the DJ
-  anew, rather than switching to Spotify.
-- Fixed Shuffle taking up to ten seconds to take the DJ button's place after
-  leaving Spotify's DJ for a playlist. It now does within about three.
-- Fixed the DJ button not showing when Glance opened while the DJ played, until
-  the DJ next talked.
+- Fixed Spotify's DJ not showing in the player: while the DJ chooses the music,
+  its symbol takes the left button's place, drawn as Spotify draws it, its
+  corner moving as the DJ talks. Clicking it gets different picks, as Spotify's
+  own button does.
+- Fixed shuffle and repeat looking available while Spotify's DJ or a podcast
+  plays, when Spotify doesn't offer them.
 - Added the DJ's own cover while it talks: its green ring on blue, following the same
   sound as the waveform, with the colors behind the player turning blue and `--:--`
   for the times.
 - Added `Spotify DJ` to Customize Controls, to keep the left button as it is while
   the DJ plays.
-- Fixed clicking the cover opening a Spotify song's own page, rather than the
-  playlist or album it plays from, for songs Spotify hadn't yet written down.
+- Fixed clicking the cover, or the app's icon on it, not going where the music
+  plays from: it opens the browser tab playing it, the playlist or album Spotify
+  plays it from, or the song in the playlist Music plays it from.
+- Fixed the cover giving no sign it can be clicked: it lifts gently under the
+  pointer, with a soft shadow, squashes as it's pressed, and springs back as
+  it's let go.
 - Fixed the lyrics saying a song has none when LRCLIB can't be reached. They
   say so instead, and ask again by themselves.
 - Changed the sound output menu to look like the Mac's Sound menu: Sound above
@@ -331,12 +335,19 @@
 - Changed quitting Glance to close the notch away first, as turning it off does,
   however Glance is quit: its menus, Command-Q, Activity Monitor's `Quit`, a
   script, or Terminal. `Force Quit` still stops it at once.
+- Fixed the notch opening, turning between the player and the tray, and widening
+  for the lyrics without the Dynamic Island's bounce: it grows past its size and
+  settles back, as the island does. With Reduce Motion on, it goes straight to
+  its size.
 
 ### Displays
 
 - Changed every display to show the notch. The Dynamic Island style is gone.
 - Changed `Show on displays without a notch` to `Show on external displays`:
   the Mac's own display always has a notch.
+- Fixed `Hide in full screen` doing nothing on a Mac with a notch: apps in full
+  screen sit below the camera there, so the notch never noticed them. It now
+  hides whenever an app is in full screen, and comes back as the app leaves it.
 
 ### Settings
 
@@ -384,6 +395,10 @@
   **Settings > General > Permissions** from **Allow** to **Request…**, as they
   only bring up macOS's own question, and `Accessibility` to say everything
   it's used for.
+- Fixed toggles and the `Layout` choice lagging on the Settings pages with the
+  notch's preview.
+- Fixed Settings, opened from the menu bar, sometimes coming up a second or more
+  late, behind other apps, or drawn gray as if behind them while in use.
 
 ### Tray
 
@@ -393,6 +408,11 @@
   or take it out once something takes it.
 - Added screen recordings to the tray, which join as soon as they're saved, as
   screenshots do.
+- Fixed the photo in the tray's demo being enlarged from a smaller picture.
+- Fixed the tray's glass adding a blur and a darker tint of its own: it looks as
+  it's set in **Settings > Appearance**, as the player's does.
+- Fixed a mouse's wheel with Shift held never leaving a tray with more than
+  fits: scrolled on past the row's end, it goes back to the player.
 
 ### Additional
 
@@ -427,59 +447,6 @@
   down arrows go from row to row, the switch among them, Return or Space chooses
   the one lit, a letter goes to the next row starting with it, and VoiceOver
   says where you are.
-
-<br>
-
-## Release 0.2.1
-
-`Released: not yet`
-
-### Player
-
-- Fixed Spotify's DJ not showing in the player: while the DJ chooses the music,
-  its symbol takes the left button's place, drawn as Spotify draws it, its
-  corner moving as the DJ talks. Clicking it switches to Spotify.
-- Fixed shuffle and repeat looking available while Spotify's DJ or a podcast
-  plays, when Spotify doesn't offer them.
-- Fixed the waveform not keeping the song's time: its color rises to the top of
-  its bars on each beat, and its bars fall back at the song's pace.
-- Fixed the cover's colors behind the player standing still through the song:
-  they pulse with the beat, as in Apple Music.
-- Fixed clicking the cover, or the app's icon on it, not going where the music
-  plays from: it opens the browser tab playing it, the playlist or album Spotify
-  plays it from, or the song in the playlist Music plays it from.
-- Fixed the cover giving no sign it can be clicked: it lifts gently under the
-  pointer, with a soft shadow, squashes as it's pressed, and springs back as
-  it's let go.
-- Fixed the waveform's color pulsing with the beat while Reduce Motion is on.
-
-### Tray
-
-- Fixed the photo in the tray's demo being enlarged from a smaller picture.
-- Fixed the tray's glass adding a blur and a darker tint of its own: it looks as
-  it's set in **Settings > Appearance**, as the player's does.
-- Fixed a mouse's wheel with Shift held never leaving a tray with more than
-  fits: scrolled on past the row's end, it goes back to the player.
-
-### Opening
-
-- Fixed the notch opening, turning between the player and the tray, and widening
-  for the lyrics without the Dynamic Island's bounce: it grows past its size and
-  settles back, as the island does. With Reduce Motion on, it goes straight to
-  its size.
-
-### Displays
-
-- Fixed `Hide in full screen` doing nothing on a Mac with a notch: apps in full
-  screen sit below the camera there, so the notch never noticed them. It now
-  hides whenever an app is in full screen, and comes back as the app leaves it.
-
-### Settings
-
-- Fixed toggles and the `Layout` choice lagging on the Settings pages with the
-  notch's preview.
-- Fixed Settings, opened from the menu bar, sometimes coming up a second or more
-  late, behind other apps, or drawn gray as if behind them while in use.
 
 <br>
 
