@@ -39,6 +39,16 @@ enum NotchSpace {
             })
     }
 
+    /// Whether WindowServer is sliding from one Space to another on a display, by its identifier.
+    /// Until it's done, nothing drawn above the Spaces in the meantime shows, so a change made then
+    /// plays unseen and only its end appears.
+    static func isSwitching(_ display: String) -> Bool {
+        guard let calls, let isAnimating else { return false }
+        let connection = calls.connection()
+        // With one set of Spaces for every display, WindowServer knows them all as "Main".
+        return isAnimating(connection, display as CFString) || isAnimating(connection, "Main" as CFString)
+    }
+
     /// A full-screen app's Space, among WindowServer's kinds of Space.
     private static let fullScreenKind = 4
 
@@ -46,6 +56,12 @@ enum NotchSpace {
     private static let copySpaces: CopySpaces? = {
         guard let skyLight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY) else { return nil }
         return dlsym(skyLight, "SLSCopyManagedDisplaySpaces").map { unsafeBitCast($0, to: CopySpaces.self) }
+    }()
+
+    private typealias IsAnimating = @convention(c) (Int32, CFString) -> Bool
+    private static let isAnimating: IsAnimating? = {
+        guard let skyLight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY) else { return nil }
+        return dlsym(skyLight, "SLSManagedDisplayIsAnimating").map { unsafeBitCast($0, to: IsAnimating.self) }
     }()
 
     /// Made once, shown above every other Space, and kept for as long as Glance runs.

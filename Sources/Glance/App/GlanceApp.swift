@@ -559,13 +559,41 @@ final class NotchManager {
         .joined(separator: "; ")
     }
 
-    /// Hides each notch while a full-screen app covers its display, if the user chose that.
-    private func updateFullScreen() {
+    /// Hides each notch while a full-screen app covers its display, if the user chose that. While
+    /// macOS is still sliding into or out of the full-screen Space, the change waits for the slide
+    /// to end, or the notch would fold away unseen and simply vanish; `late` stops waiting.
+    private func updateFullScreen(late: Bool = false) {
         let covered = Self.fullScreenDisplays()
+        var sliding: [String] = []
         for controller in controllers {
-            controller.fullScreen = controller.hidesInFullScreen && covered.contains(controller.screenFrame)
+            let hides = controller.hidesInFullScreen && covered.contains(controller.screenFrame)
+            guard hides != controller.fullScreen else { continue }
+            if !late, NotchSpace.isSwitching(controller.screenID) {
+                sliding.append(controller.screenID)
+                continue
+            }
+            controller.fullScreen = hides
         }
+        guard !sliding.isEmpty, slideWait == nil else { return }
+        // Checked every frame, on the run loop: a block on the main queue can be held up while the
+        // slide runs. A slide takes about half a second; past a second and a half, it's let go.
+        let since = Date()
+        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let late = Date().timeIntervalSince(since) > 1.5
+                guard late || !sliding.contains(where: NotchSpace.isSwitching) else { return }
+                self.slideWait?.invalidate()
+                self.slideWait = nil
+                self.updateFullScreen(late: late)
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        slideWait = timer
     }
+
+    /// Waiting for macOS to finish sliding between Spaces (see `updateFullScreen`).
+    private var slideWait: Timer?
 
     /// Displays showing a full-screen app: in a Space of its own, as WindowServer tells, where on a
     /// display with a camera it sits below the housing; or, for apps that fill the screen without

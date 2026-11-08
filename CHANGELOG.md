@@ -348,6 +348,9 @@
 - Fixed `Hide in full screen` doing nothing on a Mac with a notch: apps in full
   screen sit below the camera there, so the notch never noticed them. It now
   hides whenever an app is in full screen, and comes back as the app leaves it.
+- Fixed the notch disappearing at once as an app went full screen, rather than
+  folding back to the camera: it now folds once macOS has finished moving to the
+  app, as it already grew out on leaving.
 
 ### Settings
 
