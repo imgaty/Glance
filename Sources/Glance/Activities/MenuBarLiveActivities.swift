@@ -15,6 +15,8 @@ import ApplicationServices
 /// macOS's Live Activities is on, Glance turns those switches off as soon as a pill shows, pressing
 /// them through Accessibility in a System Settings of its own, opened in the background beside any
 /// the user has open and quit after. Turned back off, it turns on again the ones it turned off.
+/// Turned on, it turns every switch off at once, but Screenshot's waits for a recording to end, as
+/// one turned off mid-recording loses the recording's only stop button until it ends.
 /// Behind a full-screen app, that System Settings' window opens on another Space, where
 /// Accessibility can take many seconds to see it; if it never does, Glance waits for the Space to
 /// change, or a minute, before trying again, rather than opening System Settings over and over.
@@ -39,6 +41,28 @@ final class MenuBarLiveActivities {
     private static let patience: Duration = .seconds(20)
     private static let retryDelay: TimeInterval = 60
     private var wasOn = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
+    /// Every switch is to be turned off, not only those whose pill shows: just turned on, or with
+    /// Screenshot's left on during a recording.
+    private var allPending = false
+
+    /// Screenshot's pill's app.
+    nonisolated static let capture = "com.apple.screencaptureui"
+    /// While the screen is being recorded, Screenshot's switch and pill are left as they are: turned
+    /// off mid-recording, its pill goes and nothing takes its place, and the recording can't be
+    /// followed or stopped until it ends. Once it's off, a recording shows Screenshot's own stop
+    /// button instead. With the notch's screen recording turned off, the notch doesn't show one at
+    /// all, so Screenshot's is always left.
+    static var capturing: Bool {
+        guard UserDefaults.standard.bool(forKey: Preferences.activityScreenRecording) else { return true }
+        switch ScreenRecordingWatch.shared.recording {
+        case .countdown?, .recording?: return true
+        default: return false
+        }
+    }
+    /// Screenshot's name, as System Settings lists it.
+    nonisolated static var screenshotName: String {
+        FileManager.default.displayName(atPath: "/System/Applications/Utilities/Screenshot.app").replacingOccurrences(of: ".app", with: "")
+    }
 
     func start() {
         guard ActivityBench.scene == nil, timer == nil else { return }
@@ -54,6 +78,8 @@ final class MenuBarLiveActivities {
                 let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
                 guard on != MenuBarLiveActivities.shared.wasOn else { return }
                 MenuBarLiveActivities.shared.wasOn = on
+                // Turned on, every switch goes off at once, so nothing starts with its pill.
+                MenuBarLiveActivities.shared.allPending = on
                 MenuBarLiveActivities.shared.check()
             }
         }
@@ -74,12 +100,20 @@ final class MenuBarLiveActivities {
         let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
         guard on || !hidden.isEmpty else { return }
+        let capturing = Self.capturing
+        // Turning every switch off waits for a recording to end, for Screenshot's sake.
+        if on, allPending, capturing { return }
         working = true
         Task {
-            let showing = await Task.detached { Self.pillShowing() }.value
+            // Screenshot's pill shows only while the screen is being recorded or counted down to, so
+            // it never sets this off: its switch goes off once the recording ends.
+            let (showing, screenshot) = await Task.detached { (Self.pillShowing(ignoring: [Self.capture]), Self.pillShowing(only: Self.capture)) }.value
+            let recording = capturing || screenshot
+            if on, screenshot { allPending = true }
             var reached = true
-            if on, showing {
-                reached = await switchApps(off: true)
+            if on, showing || (allPending && !recording) {
+                reached = await switchApps(off: true, sparing: recording ? [Self.screenshotName] : [])
+                if reached { allPending = recording }
             } else if !on {
                 reached = await switchApps(off: false)
             }
@@ -88,14 +122,27 @@ final class MenuBarLiveActivities {
         }
     }
 
-    /// A Live Activity's pill in the menu bar, any app's.
-    nonisolated static func pillShowing() -> Bool {
+    /// One app's pill in the menu bar, by its bundle ID.
+    nonisolated static func pillShowing(only app: String) -> Bool {
+        guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return false }
+        let element = AXUIElementCreateApplication(agent.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 0.2)
+        guard let bar = SystemNotices.value(element, kAXExtrasMenuBarAttribute) else { return false }
+        return !SystemNotices.findAll(in: bar as! AXUIElement) { SystemNotices.value($0, kAXIdentifierAttribute) as? String == pillPrefix + app }.isEmpty
+    }
+
+    /// A Live Activity's pill in the menu bar, any app's but those `ignoring`, by their bundle IDs.
+    nonisolated static func pillShowing(ignoring: [String] = []) -> Bool {
         guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return false }
         let app = AXUIElementCreateApplication(agent.processIdentifier)
         // Never kept waiting by the menu bar.
         AXUIElementSetMessagingTimeout(app, 0.2)
         func find(_ element: AXUIElement, _ depth: Int) -> Bool {
-            if (SystemNotices.value(element, kAXIdentifierAttribute) as? String)?.hasPrefix(pillPrefix) == true { return true }
+            if let identifier = SystemNotices.value(element, kAXIdentifierAttribute) as? String, identifier.hasPrefix(pillPrefix),
+                !ignoring.contains(String(identifier.dropFirst(pillPrefix.count)))
+            {
+                return true
+            }
             guard depth < 10 else { return false }
             return (SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).contains { find($0, depth + 1) }
         }
@@ -114,7 +161,7 @@ final class MenuBarLiveActivities {
     /// Opens Menu Bar settings in a System Settings of Glance's own, in the background, turns each app's
     /// switch off, or back on those Glance turned off, and quits it. False if its switches were never
     /// seen.
-    private func switchApps(off: Bool) async -> Bool {
+    private func switchApps(off: Bool, sparing: [String] = []) async -> Bool {
         guard let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.settingsApp) else { return false }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
@@ -137,7 +184,7 @@ final class MenuBarLiveActivities {
         var hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
         for row in rows {
             let isOn = SystemNotices.value(row.box, kAXValueAttribute) as? Int == 1
-            if off, isOn {
+            if off, isOn, !sparing.contains(row.name) {
                 AXUIElementPerformAction(row.box, kAXPressAction as CFString)
                 if !hidden.contains(row.name) { hidden.append(row.name) }
             } else if !off, !isOn, hidden.contains(row.name) {
