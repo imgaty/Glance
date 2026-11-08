@@ -339,6 +339,9 @@
   for the lyrics without the Dynamic Island's bounce: it grows past its size and
   settles back, as the island does. With Reduce Motion on, it goes straight to
   its size.
+- Fixed what's behind the notch flickering sharp as it opened with `Blur` set
+  in **Settings > Appearance**, the blur only taking hold once it had stopped
+  growing. It's blurred all the way now.
 
 ### Displays
 

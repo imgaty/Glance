@@ -1527,6 +1527,10 @@ final class GlassBlurView: NSView {
     /// window, too slow to do each time the notch moves or redraws, so they're kept, and looked
     /// for again only once one has gone (SwiftUI made the glass anew).
     private let backdrops = NSHashTable<CALayer>.weakObjects()
+    /// The blur last given to the glass. SwiftUI sets the glass's filters afresh each frame the
+    /// notch changes size, dropping the blur; while this is set, a missing blur was dropped that
+    /// way, not turned on.
+    private var given: CGFloat = 0
 
     func apply() {
         guard var root = layer, bounds.width > 0 else { return }
@@ -1538,6 +1542,7 @@ final class GlassBlurView: NSView {
             find(in: root)
         }
         for backdrop in backdrops.allObjects { set(backdrop) }
+        given = radius
     }
 
     private func find(in root: CALayer) {
@@ -1606,7 +1611,11 @@ final class GlassBlurView: NSView {
             // Blurred right to the glass's edges, with nothing faded in from outside them.
             blur.setValue(true, forKey: "inputNormalizeEdges")
             backdrop.filters = [blur] + filters
-            ease(backdrop, from: 0, to: radius)
+            // Only a blur being turned on eases in. One SwiftUI dropped goes straight back as it
+            // was: easing in from nothing each frame, it would never build up while the notch opens,
+            // and what's behind would flicker sharp. An ease under way carries on, as it goes by
+            // the blur's name.
+            if given <= 0.01 { ease(backdrop, from: 0, to: radius) }
         }
         // The glass's own blur, which it uses in a window that doesn't look active: none, so the
         // blur above is all there is either way.
