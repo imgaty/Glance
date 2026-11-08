@@ -189,6 +189,8 @@
   behind the pause button.
 - Changed the song's progress bar to be one bar, its played part cut straight
   where it ends, rather than a second, rounded bar laid over the gray one.
+- Fixed the volume slider in the sound menu not moving, and its played part
+  showing gray, while Glance wasn't the app in front.
 - Fixed a screen recording disappearing from the notch and from the menu bar,
   with nothing left to stop it, when `Hide macOS's Live Activities` hid
   macOS's own as it started. A recording going on keeps it until it ends.

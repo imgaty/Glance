@@ -274,7 +274,7 @@ final class VolumeMenuSlider: NSView {
 
     init(volume: AppVolume) {
         self.volume = volume
-        slider = NSSlider(value: volume.level, minValue: 0, maxValue: 1, target: nil, action: nil)
+        slider = MenuSlider(value: volume.level, minValue: 0, maxValue: 1, target: nil, action: nil)
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
         // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
@@ -318,6 +318,37 @@ final class VolumeMenuSlider: NSView {
     }
 
     required init?(coder: NSCoder) { nil }
+
+    /// Apple's slider, taking the first click into the menu: Glance is rarely the app in front.
+    final class MenuSlider: NSSlider {
+        override class var cellClass: AnyClass? {
+            get { MenuSliderCell.self }
+            set {}
+        }
+
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    }
+
+    /// Its played part always filled, white in a dark menu and the accent color in a light one, as the
+    /// Mac's Sound menu has it: a menu opened while Glance isn't the app in front otherwise draws it in
+    /// the inactive gray, the same as the rest of the track.
+    final class MenuSliderCell: NSSliderCell {
+        override func drawBar(inside rect: NSRect, flipped: Bool) {
+            super.drawBar(inside: rect, flipped: flipped)
+            guard let slider = controlView as? NSSlider, slider.isEnabled else { return }
+            let span = maxValue - minValue
+            let fraction = span > 0 ? CGFloat((doubleValue - minValue) / span) : 0
+            let bar = barRect(flipped: flipped)
+            // Up to the knob's middle, which covers its end.
+            let knobMiddle = bar.minX + knobThickness / 2 + (bar.width - knobThickness) * fraction
+            let played = NSRect(x: bar.minX, y: bar.minY, width: max(knobMiddle - bar.minX, 0), height: bar.height)
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(roundedRect: bar, xRadius: bar.height / 2, yRadius: bar.height / 2).addClip()
+            (slider.trackFillColor ?? .controlAccentColor).setFill()
+            played.fill()
+            NSGraphicsContext.restoreGraphicsState()
+        }
+    }
 
     /// Where the menu starts and ends its headings, rows and separators, in from its sides.
     private static let column = (leading: SoundMenu.inset, trailing: SoundMenu.inset)
