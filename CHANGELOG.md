@@ -187,6 +187,8 @@
   notch closed.
 - Fixed the timer's ring and the stopwatch's symbol staying in the opened notch,
   behind the pause button.
+- Fixed the order of two activities changing when Glance opened again: what was
+  still going on takes its place back as it's found, first come, first served.
 - Fixed a call in the bubble beside the notch showing nothing. It shows the
   call's time, as large as fits, and the phone while it rings or goes out.
 - Fixed the bubble vanishing as the notch opened from its own end. It runs into

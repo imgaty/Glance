@@ -290,7 +290,7 @@ final class NotchModel: ObservableObject {
 
     /// What can show at once: a call, the screen being recorded, a voice memo being recorded, music, a
     /// file coming in over AirDrop, Clock's timer, its stopwatch, AirPlay.
-    enum Activity: Hashable {
+    enum Activity: String, Hashable {
         case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay
     }
 
@@ -299,11 +299,54 @@ final class NotchModel: ObservableObject {
     private var arrivals: [Activity: Int] = [:]
     private var arrivalCount = 0
 
+    /// The order they started in is kept for when Glance opens again, or the notch is made again: one
+    /// still going takes its place back as it's found, if that's soon after (see `keepsOrder`). Only
+    /// the notch on the screen keeps it, not Settings' pictures of it or a test's.
+    var keepsOrder = false {
+        didSet { if keepsOrder, !oldValue { restoreOrder() } }
+    }
+    /// Each activity going on before, by its place then, all before anything new.
+    private var restoredOrder: [Activity: Int] = [:]
+    private var restoredUntil = Date.distantPast
+    /// How long after the notch is made what was going on before is waited for: a call in another
+    /// app takes a few seconds to be found again.
+    static let restoreWindow: TimeInterval = 30
+    static let orderKey = "activityOrder"
+
+    private func restoreOrder() {
+        let saved = (UserDefaults.standard.stringArray(forKey: Self.orderKey) ?? []).compactMap(Activity.init(rawValue:))
+        restoredOrder = Dictionary(saved.enumerated().map { ($1, $0 - saved.count) }, uniquingKeysWith: { first, _ in first })
+        restoredUntil = .now + Self.restoreWindow
+        // Any found already take their places back too.
+        for (activity, place) in restoredOrder where arrivals[activity] != nil {
+            arrivals[activity] = place
+            restoredOrder[activity] = nil
+        }
+        saveOrder()
+    }
+
     private func arrived(_ activity: Activity, _ present: Bool) {
-        guard present else { return arrivals[activity] = nil }
+        guard present else {
+            arrivals[activity] = nil
+            return saveOrder()
+        }
         guard arrivals[activity] == nil else { return }
-        arrivalCount += 1
-        arrivals[activity] = arrivalCount
+        if Date.now < restoredUntil, let place = restoredOrder.removeValue(forKey: activity) {
+            arrivals[activity] = place
+        } else {
+            arrivalCount += 1
+            arrivals[activity] = arrivalCount
+        }
+        saveOrder()
+    }
+
+    /// Those going on, in the order they started, with any still waited for from before in their
+    /// places among them.
+    private func saveOrder() {
+        guard keepsOrder else { return }
+        let waiting = Date.now < restoredUntil ? restoredOrder : [:]
+        let order = arrivals.merging(waiting) { now, _ in now }.sorted { $0.value < $1.value }.map(\.key.rawValue)
+        UserDefaults.standard.set(order, forKey: Self.orderKey)
     }
 
     /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop, AirPlay. Music's

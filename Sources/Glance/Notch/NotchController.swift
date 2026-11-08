@@ -231,6 +231,8 @@ final class NotchController {
         topY = frame.maxY
         // Open, the player fills the notch; its artwork sits up beside the camera.
         model = NotchModel(closedSize: closedSize, layout: PlayerLayout.current, hasCamera: resting.camera)
+        // What was going on before keeps its order, first come, first served, as Glance opens again.
+        model.keepsOrder = ActivityBench.scene == nil
 
         // Room for the largest layout with the lyrics open, and for the tray at its widest, so
         // switching layouts or the tray growing never resizes it.

@@ -431,12 +431,13 @@ seconds, with the pause symbol while it's stopped.
 With two activities going on, the one that started first keeps the left of the
 notch, and the other moves out into a round bubble of its own off the notch's
 right end, as the iPhone shows two activities at once: with music playing first,
-the music shows its cover and the timer its ring in the bubble. A third waits its
-turn. As on the iPhone, they take their turns in the order they started,
+the music shows its cover and the timer its ring in the bubble. A third waits
+its turn. As on the iPhone, they take their turns in the order they started,
 whatever they are; one that ends and starts again, such as music paused for a
-while, goes to the back. While a new song's name shows, the bubble runs back into the notch, and
-comes out again after it. With Reduce Motion on, it fades in and out where it
-rests.
+while, goes to the back. The order is kept when Glance opens again: what was
+still going on takes its place back as it's found. While a new song's name
+shows, the bubble runs back into the notch, and comes out again after it. With
+Reduce Motion on, it fades in and out where it rests.
 
 Hover over or click the notch while a timer has it, or click the timer's bubble,
 and it opens to the timer, as tall as the iPhone's: pause or resume it, or

@@ -675,6 +675,39 @@ struct ActivitiesTests {
         #expect(ExpandedAirDropView.spoken(transfer) == "AirDrop from iPhone, 40 percent")
     }
 
+    @Test("The order activities started in is kept as Glance opens again: one still going takes its place back")
+    func orderKept() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: NotchModel.orderKey)
+        defer { defaults.removeObject(forKey: NotchModel.orderKey) }
+        let call = CallShown(name: "Alex Morgan", over: "Discord", phase: .connected(since: .now - 600))
+        // A call, then music beside it.
+        let before = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        before.keepsOrder = true
+        before.call = call
+        before.activity = true
+        #expect(before.activities == [.call, .music])
+        // Opened again, music is found first, the call a few seconds later: the call keeps the notch.
+        let after = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        after.keepsOrder = true
+        after.activity = true
+        #expect(after.activities == [.music])
+        after.call = call
+        #expect(after.activities == [.call, .music])
+        #expect(after.detached == .music)
+        // Anything new comes after what was going on before.
+        let again = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        again.keepsOrder = true
+        again.timer = .running(until: .now + 300, total: 300)
+        again.activity = true
+        #expect(again.activities == [.music, .timer])
+        // Settings' pictures of the notch keep nothing.
+        defaults.removeObject(forKey: NotchModel.orderKey)
+        let picture = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        picture.activity = true
+        #expect(defaults.stringArray(forKey: NotchModel.orderKey) == nil)
+    }
+
     @Test("One swiped away leaves the notch to the next, and the one after is detached")
     func swipedAway() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
