@@ -421,6 +421,8 @@
   waveform and the announcement of what starts playing, `Battery` for charging
   and low battery, `Recordings` for screen recordings and voice memos, and
   `Clock` for timers and the stopwatch, beside `Devices`, `Calls` and `AirDrop`.
+- Fixed the link to Menu Bar settings under `Hide in menu bar` showing as
+  plain text, with its address in brackets.
 
 ### Tray
 

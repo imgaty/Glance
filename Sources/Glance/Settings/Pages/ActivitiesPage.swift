@@ -139,11 +139,13 @@ struct ActivitiesPage: View {
                 }
             } footer: {
                 // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
+                // Read as Markdown, so its link is one.
                 Text(
-                    String(
-                        localized:
-                            "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
-                    )
+                    (try? AttributedString(
+                        markdown: String(
+                            localized:
+                                "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
+                        ))) ?? ""
                 )
             }
         }
