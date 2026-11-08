@@ -240,12 +240,35 @@ extension AppDelegate: NSMenuItemValidation {
 }
 
 enum Preferences {
+    /// Settings whose first value has changed, with what it was before. Someone who had Glance
+    /// already keeps what they had, chosen or not; only a new install starts with the new value.
+    static let earlierDefaults: [String: Any] = [
+        musicBackground: MusicBackground.replaceGlass.rawValue
+    ]
+    /// Which change of first values this install has been through, so it's done once.
+    static let defaultsVersion = "defaultsVersion"
+
+    /// Writes down, for someone who had Glance before, the first value of each setting that has
+    /// since changed and that they never set, so a new first value doesn't change it under them.
+    /// It goes by what's stored in `domain` alone, as the values registered at launch would hide
+    /// which were never set. Someone had Glance before if the welcome tour was closed once, or a
+    /// display's look was kept, which every launch does.
+    static func keepEarlierDefaults(_ defaults: UserDefaults = .standard, domain: String? = Bundle.main.bundleIdentifier) {
+        guard let domain else { return }
+        let stored = defaults.persistentDomain(forName: domain) ?? [:]
+        guard (stored[defaultsVersion] as? Int ?? 0) < 1 else { return }
+        if stored[onboardingDone] != nil || stored.keys.contains(where: { $0.hasPrefix(glassDarkness + ":") }) {
+            for (key, value) in earlierDefaults where stored[key] == nil { defaults.set(value, forKey: key) }
+        }
+        defaults.set(1, forKey: defaultsVersion)
+    }
+
     /// What each setting is until it's changed.
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
             showOnExternalDisplays: true,
             liveActivity: true,
-            musicBackground: MusicBackground.replaceGlass.rawValue,
+            musicBackground: MusicBackground.none.rawValue,
             musicAnimatedArtwork: true,
             musicShowsNewApps: true,
             musicAppBadge: false,
@@ -454,6 +477,7 @@ final class NotchManager {
     private var fullScreenTimer: Timer?
 
     func start() {
+        Preferences.keepEarlierDefaults()
         Preferences.registerDefaults()
         reload()
         Activities.shared.holding = { [weak self] in self?.controllers.contains(where: \.holdsAlert) == true }

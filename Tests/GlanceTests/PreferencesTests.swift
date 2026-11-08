@@ -53,6 +53,7 @@ struct PreferencesTests {
             (Preferences.trayClipboardKeep, "trayClipboardKeep"),
             (Preferences.swipeToSwitch, "swipeToSwitch"),
             (Preferences.trayScreenshots, "trayScreenshots"),
+            (Preferences.defaultsVersion, "defaultsVersion"),
         ])
     func keys(key: String, stored: String) {
         #expect(key == stored)
@@ -188,7 +189,7 @@ struct PreferencesTests {
         let registered = UserDefaults.standard.volatileDomain(forName: UserDefaults.registrationDomain)
         #expect(registered[Preferences.showOnExternalDisplays] as? Bool == true)
         #expect(registered[Preferences.liveActivity] as? Bool == true)
-        #expect(registered[Preferences.musicBackground] as? String == MusicBackground.replaceGlass.rawValue)
+        #expect(registered[Preferences.musicBackground] as? String == MusicBackground.none.rawValue)
         #expect(registered[Preferences.musicAnimatedArtwork] as? Bool == true)
         #expect(registered[Preferences.musicShowsNewApps] as? Bool == true)
         #expect(registered[Preferences.musicAppBadge] as? Bool == false)
@@ -208,6 +209,41 @@ struct PreferencesTests {
         #expect(registered[Preferences.trayClipboardKeep] as? String == ClipboardKeep.eightHours.rawValue)
         #expect(registered[Preferences.swipeToSwitch] as? Bool == true)
         #expect(registered[Preferences.trayScreenshots] as? Bool == true)
+    }
+
+    @Test("Someone who had Glance keeps a first value that has since changed, once, never over their own choice; a new install takes the new one")
+    func earlierDefaults() throws {
+        let name = "dev.vibe.Glance.tests.earlier-defaults"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        func stored(_ key: String) -> NSObject? { defaults.persistentDomain(forName: name)?[key] as? NSObject }
+        defaults.removePersistentDomain(forName: name)
+        defer { defaults.removePersistentDomain(forName: name) }
+
+        // Had it before, and never set these.
+        defaults.set(true, forKey: Preferences.onboardingDone)
+        Preferences.keepEarlierDefaults(defaults, domain: name)
+        for (key, value) in Preferences.earlierDefaults {
+            #expect(stored(key) == value as? NSObject, "\(key)")
+        }
+        // Once only: what they set afterwards stays.
+        defaults.set(MusicBackground.spotlight.rawValue, forKey: Preferences.musicBackground)
+        Preferences.keepEarlierDefaults(defaults, domain: name)
+        #expect(stored(Preferences.musicBackground) == MusicBackground.spotlight.rawValue as NSString)
+
+        // What someone chose is never written over.
+        defaults.removePersistentDomain(forName: name)
+        defaults.set(true, forKey: Preferences.onboardingDone)
+        defaults.set(MusicBackground.none.rawValue, forKey: Preferences.musicBackground)
+        Preferences.keepEarlierDefaults(defaults, domain: name)
+        #expect(stored(Preferences.musicBackground) == MusicBackground.none.rawValue as NSString)
+
+        // A new install writes nothing down, and takes the new first values.
+        defaults.removePersistentDomain(forName: name)
+        Preferences.keepEarlierDefaults(defaults, domain: name)
+        for key in Preferences.earlierDefaults.keys {
+            #expect(stored(key) == nil, "\(key)")
+        }
+        #expect(stored(Preferences.defaultsVersion) == 1 as NSNumber)
     }
 
     @Test("The layout falls back to the cover on top")

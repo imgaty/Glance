@@ -73,7 +73,7 @@ private struct LookEditor: View {
         _followsSystem = AppStorage(wrappedValue: false, key(Preferences.glassFollowsSystem))
         _darkness = AppStorage(wrappedValue: 0, key(Preferences.glassDarkness))
         _blur = AppStorage(wrappedValue: 0, key(Preferences.glassBlur))
-        _background = AppStorage(wrappedValue: .replaceGlass, key(Preferences.musicBackground))
+        _background = AppStorage(wrappedValue: .none, key(Preferences.musicBackground))
     }
 
     var body: some View {

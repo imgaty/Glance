@@ -287,7 +287,7 @@ private struct SettingChoice: View {
     init(setting: OnboardingSetting, display: String) {
         self.setting = setting
         self.display = display
-        _shownBackground = AppStorage(wrappedValue: .replaceGlass, Preferences.lookKey(Preferences.musicBackground, display: display))
+        _shownBackground = AppStorage(wrappedValue: .none, Preferences.lookKey(Preferences.musicBackground, display: display))
     }
 
     var body: some View {

@@ -748,7 +748,7 @@ struct NotchView: View {
         _followsSystem = AppStorage(wrappedValue: false, key(Preferences.glassFollowsSystem))
         _chosenDarkness = AppStorage(wrappedValue: 0, key(Preferences.glassDarkness))
         _blur = AppStorage(wrappedValue: 0, key(Preferences.glassBlur))
-        _chosenBackground = AppStorage(wrappedValue: .replaceGlass, key(Preferences.musicBackground))
+        _chosenBackground = AppStorage(wrappedValue: .none, key(Preferences.musicBackground))
         self.backgroundShown = background
     }
 

@@ -245,6 +245,8 @@
 - Changed the `Spotlight` background to travel slowly round the open notch from
   the cover, its colors turning, rather than staying in the bottom left corner.
   It holds still while paused, and with Reduce Motion on.
+- Changed `Background` to start as `None` on a new install. If you had Glance
+  before, it stays as it was, whether or not you ever chose it.
 - Changed the player with Increase Contrast on to keep the cover's colors behind
   it, darker, in place of plain black, so its words still read on any cover.
 - Fixed Spotify's DJ not showing in the player: while the DJ chooses the music,
