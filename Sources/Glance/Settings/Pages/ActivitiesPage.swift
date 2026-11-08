@@ -114,14 +114,6 @@ struct ActivitiesPage: View {
                 }
             }
             Section {
-                CenteredRow {
-                    Text("Clock")
-                    Text("Timers and the stopwatch are Clock's, started there, in Control Center or with Siri.")
-                } trailing: {
-                    Button("Open Clock…") {
-                        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Clock.app"))
-                    }
-                }
                 Toggle(isOn: $timers) {
                     Text("Timers")
                     Text("Counts down beside the camera, and says when it's done.")

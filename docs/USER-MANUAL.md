@@ -421,8 +421,7 @@ it. Turn each of these off in **Settings > Live Activities**.
 ### Timer and stopwatch
 
 The timer and the stopwatch are Clock's: start them in the Clock app, in Control
-Center or with Siri, and the notch shows them. **Open Clock…** in
-**Settings > Live Activities** opens Clock.
+Center or with Siri, and the notch shows them.
 
 A timer counts down beside the camera as the iPhone's Timer does, a ring
 emptying beside the time left: in minutes from ten minutes up, then in minutes
@@ -652,7 +651,6 @@ on, it stays on what's playing.
 | `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect, and sound going to AirPlay |
 | `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
-| `Clock` | **Open Clock…** opens the Clock app, where timers and the stopwatch start |
 | `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
 | `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |
 | `Screen recording` | Shows the screen being recorded with macOS's Screenshot, until it's saved, with a button to stop it |

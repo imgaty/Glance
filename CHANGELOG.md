@@ -415,6 +415,7 @@
   fold, and turn between the player and the tray with the notch's own motion
   as you move between pages, bounce included.
 - Changed `Hide macOS's Live Activities` to `Hide native Live Activities`.
+- Removed **Open Clock…** from **Settings > Live Activities**.
 
 ### Tray
 
