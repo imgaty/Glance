@@ -172,11 +172,16 @@ struct Scrubber: View {
             let width = proxy.size.width
             let clamp = { (x: CGFloat) in Double(min(max(x / max(width, 1), 0), 1)) }
             let pointed = proxy.frame(in: .named(NotchView.bodySpace)).holds(demoPointer)
-            ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.2))
-                Capsule().fill(color).frame(width: width * min(max(fraction, 0), 1))
+            // One bar, its played part and the rest side by side within its shape, rather than a second
+            // bar laid over the first: the played part ends in a straight edge, however short, and the
+            // gray never shows through it.
+            let played = width * min(max(fraction, 0), 1)
+            HStack(spacing: 0) {
+                Rectangle().fill(color).frame(width: played)
+                Rectangle().fill(.white.opacity(0.2))
             }
             .frame(height: 6)
+            .clipShape(Capsule())
             // Thickened as a whole rather than laid out again, so it grows evenly.
             .scaleEffect(x: 1, y: hovering || pointed ? 1.35 : 1)
             .animation(.easeOut(duration: 0.18), value: pointed)

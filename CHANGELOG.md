@@ -187,6 +187,8 @@
   notch closed.
 - Fixed the timer's ring and the stopwatch's symbol staying in the opened notch,
   behind the pause button.
+- Changed the song's progress bar to be one bar, its played part cut straight
+  where it ends, rather than a second, rounded bar laid over the gray one.
 - Fixed the order of two activities changing when Glance opened again: what was
   still going on takes its place back as it's found, first come, first served.
 - Fixed a call in the bubble beside the notch showing nothing. It shows the
