@@ -785,22 +785,31 @@ struct NotchView: View {
         ZStack(alignment: .top) {
             shade
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
-            // black at the top, just where the glass shows; as a spotlight, it's a soft circle around
-            // the cover. Choosing between them morphs one into another.
-            ArtworkLight(
-                dim: accessibility.increasesContrast ? Self.contrastDim : background == .spotlight ? 0 : Self.colorsDim, active: isOpen && !paused,
-                spread: lightSpread
-            )
-            .frame(width: lightSize.width, height: lightSize.height)
-            .mask {
-                // It comes in as it's turned on or the notch opens: the background washing out of
-                // the notch until it fills it, the spotlight popping out of the cover.
-                lightShape(m, grown: lit, fills: background != .spotlight)
-                    .animation(lightGrowth(lit, fills: background != .spotlight), value: lit)
+            // black at the top, just where the glass shows; as a spotlight, it's a soft circle that
+            // comes out of the cover and travels round the open notch, its colors turning. Choosing
+            // between them morphs one into another.
+            let travels = background == .spotlight && !reduceMotion
+            LightClock(running: travels && lit && isOpen && !paused && nowPlaying.isPlaying, shown: lit) { travelled in
+                let spot = spotlightCenter(m, travelled: travels ? travelled : 0)
+                ArtworkLight(
+                    dim: accessibility.increasesContrast ? Self.contrastDim : background == .spotlight ? 0 : Self.colorsDim,
+                    active: isOpen && !paused, spread: lightSpread
+                )
+                .frame(width: lightSize.width, height: lightSize.height)
+                .rotationEffect(
+                    .radians(travels ? travelled * Self.spotlightTurn : 0),
+                    anchor: UnitPoint(x: spot.x / lightSize.width, y: spot.y / lightSize.height)
+                )
+                .mask {
+                    // It comes in as it's turned on or the notch opens: the background washing out of
+                    // the notch until it fills it, the spotlight popping out of the cover.
+                    lightShape(m, grown: lit, fills: background != .spotlight, spot: spot)
+                        .animation(lightGrowth(lit, fills: background != .spotlight), value: lit)
+                }
+                .mask { insideTheEdges(m, spotlight: background == .spotlight) }
+                .mask { belowTheBlack(lifted: background != .replaceGlass) }
+                .mask { awayFromCamera }
             }
-            .mask { insideTheEdges(m, spotlight: background == .spotlight) }
-            .mask { belowTheBlack(lifted: background != .replaceGlass) }
-            .mask { awayFromCamera }
             .animation(lit ? .easeOut(duration: 0.5).delay(0.1) : .easeOut(duration: 0.2)) {
                 $0.opacity(lit ? lightOpacity : 0)
             }
@@ -1184,16 +1193,11 @@ struct NotchView: View {
     }
 
     /// One circle: for the background, centered on the notch at the top, from the notch's own
-    /// width to large enough to fill everything; for the spotlight, a soft glow around the cover,
-    /// from nothing. It grows and shrinks between them, so one morphs into the other.
-    private func lightShape(_ m: NotchMetrics, grown: Bool, fills: Bool) -> some View {
+    /// width to large enough to fill everything; for the spotlight, a soft glow at `spot`, from
+    /// nothing. It grows and shrinks between them, so one morphs into the other.
+    private func lightShape(_ m: NotchMetrics, grown: Bool, fills: Bool, spot: CGPoint) -> some View {
         let size = lightSize
         let artwork = model.layout.artwork
-        // Below and left of the cover's middle, so the glow shows around its bottom and left and
-        // stays off its top right, where the camera housing is only a few points away.
-        let cover = CGPoint(
-            x: size.width / 2 - m.bodyWidth / 2 + PlayerLayout.padding + artwork * 0.36,
-            y: PlayerLayout.padding + artwork * 0.64)
         // The background grows out of the middle of the open notch, evenly to both sides, to just
         // past its far corners, so the whole growth is seen.
         let middle = CGPoint(x: size.width / 2, y: model.openSize.height / 2)
@@ -1202,8 +1206,38 @@ struct NotchView: View {
         return Circle()
             .frame(width: diameter, height: diameter)
             .blur(radius: fills ? 30 : artwork * 0.14)
-            .position(fills ? middle : cover)
+            .position(fills ? middle : spot)
             .frame(width: size.width, height: size.height)
+    }
+
+    /// One loop round the open notch, in seconds, and how fast the spotlight's colors turn, in
+    /// radians a second: slow enough to read as light drifting, not as something to watch.
+    static let spotlightLoop: TimeInterval = 20
+    static let spotlightTurn = 2 * Double.pi / 14
+
+    /// Where the spotlight is, `travelled` seconds into its journey. It comes out below and left
+    /// of the cover's middle, so the glow first shows around its bottom and left, off its top
+    /// right, where the camera housing is only a few points away; over the first second and a
+    /// half it eases onto a loop round the open notch, as far in from its sides as that, and
+    /// clockwise round from there. The loop keeps to the lower part, low enough that the glow
+    /// never reaches the camera housing, whose cut-out has a hard edge.
+    private func spotlightCenter(_ m: NotchMetrics, travelled: TimeInterval) -> CGPoint {
+        let size = lightSize
+        let artwork = model.layout.artwork
+        let cover = CGPoint(
+            x: size.width / 2 - m.bodyWidth / 2 + PlayerLayout.padding + artwork * 0.36,
+            y: PlayerLayout.padding + artwork * 0.64)
+        guard travelled > 0 else { return cover }
+        let middle = CGPoint(x: size.width / 2, y: m.height * 0.7)
+        let across = max(middle.x - cover.x, 1)
+        let down = m.height * 0.12
+        // Starting at the point of the loop toward the cover.
+        let start = atan2((cover.y - middle.y) / down, (cover.x - middle.x) / across)
+        let angle = start + travelled / Self.spotlightLoop * 2 * .pi
+        let loop = CGPoint(x: middle.x + across * cos(angle), y: middle.y + down * sin(angle))
+        let onto = min(travelled / 1.5, 1)
+        let eased = onto * onto * (3 - 2 * onto)
+        return CGPoint(x: cover.x + (loop.x - cover.x) * eased, y: cover.y + (loop.y - cover.y) * eased)
     }
 
     /// The spotlight fades out softly a few points before the notch's edges, so its rounded
@@ -1283,6 +1317,36 @@ struct NotchView: View {
 /// How everything on a page comes and goes as the notch opens, closes, or turns to the other page:
 /// the player's words and buttons, its cover and its waveform, and the tray, all with one fade and
 /// one blur, so nothing lingers or leaves ahead of the rest.
+/// Seconds that run only while `running`, from nothing each time `shown` comes back: how far the
+/// spotlight has travelled, which holds where it is while the music pauses, and starts at the
+/// cover again each time it comes out.
+private struct LightClock<Content: View>: View {
+    let running: Bool
+    let shown: Bool
+    @ViewBuilder let content: (TimeInterval) -> Content
+    @State private var banked: TimeInterval = 0
+    @State private var since: Date?
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !running)) { context in
+            content(banked + (since.map { max(context.date.timeIntervalSince($0), 0) } ?? 0))
+        }
+        .onChange(of: running, initial: true) { _, running in
+            if running {
+                since = .now
+            } else if let start = since {
+                banked += Date.now.timeIntervalSince(start)
+                since = nil
+            }
+        }
+        .onChange(of: shown) { _, shown in
+            guard shown else { return }
+            banked = 0
+            since = running ? .now : nil
+        }
+    }
+}
+
 struct PageFade: ViewModifier {
     let hidden: Bool
 

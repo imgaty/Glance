@@ -602,14 +602,14 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 | `Liquid Glass` | From clear glass to black |
 | `Blur` | How much the glass blurs what's behind it |
 | `Use cover colors` | Tints the notch with the cover's colors; off, with your Mac's accent color |
-| `Background` | `Replace glass`, `Spotlight`, or `None` behind the player |
+| `Background` | `Replace glass`, `Spotlight`, or `None` behind the player. `Spotlight` is a glow of the cover's colors that comes out of the cover and travels slowly round the open notch, its colors turning; it holds still while paused |
 
 With **Reduce transparency** or **Increase contrast** on in **System Settings >
 Accessibility > Display**, the notch is opaque, and with **Increase contrast**
 the cover's colors behind the player are darker, so its words read on any
 cover, and a call's green Accept button is darker, so its phone stands out. With **Reduce motion** on, covers and their
-colors hold still, without pulsing on the beat, and long titles end in an
-ellipsis instead of scrolling.
+colors hold still, without pulsing on the beat, the spotlight stays by the
+cover, and long titles end in an ellipsis instead of scrolling.
 
 ### Player
 
