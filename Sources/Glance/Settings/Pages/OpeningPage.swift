@@ -32,21 +32,17 @@ struct OpeningPage: View {
                 }
                 Toggle("Haptic feedback", isOn: $haptics)
             }
-            // As Trackpad settings lists its gestures: what each does, and under it, how it's done.
+            // One switch for every swipe, on the trackpad and on a display with Touch, and under it
+            // what each does, as Trackpad settings says how its gestures are done.
             Section {
-                Toggle(isOn: $swipeToOpen) {
-                    Text("Open and close")
-                    Text("Swipe down with two fingers to open, and up to close or to swipe a live activity away.")
-                }
-                Toggle(isOn: $swipeToSkip) {
-                    Text("Change songs")
-                    Text("Swipe left or right with two fingers.")
-                }
-                if trayOn {
-                    Toggle(isOn: $swipeToSwitch) {
-                        Text("Swipe between tools")
-                        Text("Swipe left or right with three fingers on the open notch, or scroll holding Shift.")
-                    }
+                Toggle(isOn: gestures) {
+                    Text("Gestures")
+                    Text(
+                        trayOn
+                            ? String(localized: "Swipe down with two fingers to open the notch, up to close it or swipe a live activity away, and left or right to change songs.")
+                                + " " + String(localized: "Swipe with three fingers on the open notch, or scroll holding Shift, to go between tools.")
+                            : String(localized: "Swipe down with two fingers to open the notch, up to close it or swipe a live activity away, and left or right to change songs.")
+                    )
                 }
             }
             Section {
@@ -55,6 +51,17 @@ struct OpeningPage: View {
                     .disabled(!trayOn)
             }
         }
+    }
+
+    /// On while any swipe is, turning them all on or off.
+    private var gestures: Binding<Bool> {
+        Binding(
+            get: { swipeToOpen || swipeToSkip || swipeToSwitch },
+            set: {
+                swipeToOpen = $0
+                swipeToSkip = $0
+                swipeToSwitch = $0
+            })
     }
 
     /// As System Settings' notched sliders, like Key Repeat: no wait to a second, with a notch every

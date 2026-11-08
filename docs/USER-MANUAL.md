@@ -149,9 +149,9 @@ works with a finger:
 
 A finger brings no pointer to leave the notch with, so once it opens the notch,
 the notch stays open until you swipe it up, tap just outside it, switch to
-another app, or move the pointer onto it and away. Dragging follows the same
-settings in **Settings > Opening** as swiping on the trackpad. Three fingers on
-the display are macOS's, as they are on the trackpad.
+another app, or move the pointer onto it and away. Dragging is turned on and off
+with swiping on the trackpad, by `Gestures` in **Settings > Opening**. Three
+fingers on the display are macOS's, as they are on the trackpad.
 
 <br>
 
@@ -663,9 +663,7 @@ on, it stays on what's playing.
 | `Hover delay` | How long the pointer rests on the notch before it opens |
 | `Click and hold` | How long a click is held before it opens |
 | `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
-| `Open and close` | Two-finger swipes down and up, and dragging down and up on the display |
-| `Change songs` | Two-finger swipes left and right, and dragging left and right on the display |
-| `Swipe between tools` | Three-finger swipes on the open notch, scrolling sideways with Shift held, and dragging sideways with two fingers on the display. Scrolling goes the way your Mac scrolls |
+| `Gestures` | Two-finger swipes down to open and up to close, and left and right to change songs; three-finger swipes on the open notch and scrolling sideways with Shift held to go between tools; and the same drags on a display with Touch, two fingers sideways for the tools. Scrolling goes the way your Mac scrolls |
 | `Open the player` | The keyboard shortcut, ⌥⇧1 at first; click it and type another, or Control-click it to restore ⌥⇧1 |
 | `Open the tray` | The tray's shortcut, ⌥⇧2 at first, changed the same way |
 

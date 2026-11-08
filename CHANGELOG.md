@@ -423,6 +423,8 @@
   `Clock` for timers and the stopwatch, beside `Devices`, `Calls` and `AirDrop`.
 - Fixed the link to Menu Bar settings under `Hide in menu bar` showing as
   plain text, with its address in brackets.
+- Changed `Open and close`, `Change songs` and `Swipe between tools` in
+  **Settings > Opening** to one switch, `Gestures`, saying what each swipe does.
 
 ### Tray
 

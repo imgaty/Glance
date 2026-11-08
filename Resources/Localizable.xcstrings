@@ -12509,214 +12509,6 @@
         }
       }
     },
-    "Change songs": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تغيير الأغاني"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Canviar de cançó"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Měnit skladby"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skift sang"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Songs wechseln"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Αλλαγή τραγουδιών"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambiar de canción"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vaihda kappaletta"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Changer de morceau"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "החלפת שירים"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "गीत बदलें"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mijenjaj pjesme"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dalok váltása"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ganti lagu"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambia brano"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曲を変更"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노래 변경"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tukar lagu"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bytt sang"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Van nummer wisselen"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zmieniaj utwory"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mudar de música"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mudar de música"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schimbă melodiile"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Менять песни"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meniť skladby"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menjaj skladbe"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Byt låt"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "เปลี่ยนเพลง"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Şarkı değiştir"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Змінювати пісні"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đổi bài hát"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切换歌曲"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切換歌曲"
-          }
-        }
-      }
-    },
     "Charging": {
       "localizations": {
         "ar": {
@@ -26681,6 +26473,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "一般"
+          }
+        }
+      }
+    },
+    "Gestures": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإيماءات"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestos"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesta"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bevægelser"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesten"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Χειρονομίες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eleet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestes"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחוות"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जेस्चर"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geste"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kézmozdulatok"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerakan"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ジェスチャ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제스처"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerak Isyarat"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bevegelser"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebaren"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesty"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestos"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestos"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesturi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жесты"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestá"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kretnje"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gester"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "คำสั่งนิ้ว"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hareketler"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жести"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cử chỉ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手势"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手勢"
           }
         }
       }
@@ -43551,214 +43551,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open with"
-          }
-        }
-      }
-    },
-    "Open and close": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "الفتح والإغلاق"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obrir i tancar"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otevírání a zavírání"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Åbn og luk"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnen und schließen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Άνοιγμα και κλείσιμο"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir y cerrar"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avaa ja sulje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir et fermer"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "פתיחה וסגירה"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "खोलें और बंद करें"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otvori i zatvori"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nyitás és zárás"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka dan tutup"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apri e chiudi"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開閉"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "열기 및 닫기"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka dan tutup"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Åpne og lukk"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Openen en sluiten"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwieranie i zamykanie"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir e fechar"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir e fechar"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deschidere și închidere"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открытие и закрытие"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otváranie a zatváranie"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odpri in zapri"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öppna och stäng"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "เปิดและปิด"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aç ve kapat"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Відкриття і закриття"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mở và đóng"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开和关闭"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開啟和關閉"
           }
         }
       }
@@ -65391,834 +65183,418 @@
         }
       }
     },
-    "Swipe between tools": {
+    "Swipe down with two fingers to open the notch, up to close it or swipe a live activity away, and left or right to change songs.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "التحريك بين الأدوات"
+            "value": "حرّك بإصبعين لأسفل لفتح الشق، ولأعلى لإغلاقه أو لإبعاد نشاط مباشر، ويمينًا أو يسارًا لتغيير الأغاني."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lliscar entre eines"
+            "value": "Llisca cap avall amb dos dits per obrir el notch, cap amunt per tancar-lo o apartar una activitat en directe, i a l’esquerra o a la dreta per canviar de cançó."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Přejíždění mezi nástroji"
+            "value": "Přejeďte dvěma prsty dolů pro otevření výřezu, nahoru pro jeho zavření nebo odsunutí živé aktivity a vlevo nebo vpravo pro změnu skladby."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skub mellem værktøjer"
+            "value": "Skub ned med to fingre for at åbne notchen, op for at lukke den eller skubbe en liveaktivitet væk, og til venstre eller højre for at skifte sang."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zwischen Werkzeugen streichen"
+            "value": "Streiche mit zwei Fingern nach unten, um die Notch zu öffnen, nach oben, um sie zu schließen oder eine Live-Aktivität wegzuwischen, und nach links oder rechts, um Songs zu wechseln."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Σάρωση μεταξύ εργαλείων"
+            "value": "Σαρώστε προς τα κάτω με δύο δάχτυλα για να ανοίξετε την εγκοπή, προς τα πάνω για να την κλείσετε ή να απομακρύνετε μια ζωντανή δραστηριότητα, και αριστερά ή δεξιά για αλλαγή τραγουδιού."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deslizar entre herramientas"
+            "value": "Desliza hacia abajo con dos dedos para abrir el notch, hacia arriba para cerrarlo o descartar una actividad en vivo, y a izquierda o derecha para cambiar de canción."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pyyhkäise työkalujen välillä"
+            "value": "Avaa lovi pyyhkäisemällä alas kahdella sormella, sulje se tai pyyhkäise livetoiminta pois pyyhkäisemällä ylös, ja vaihda kappaletta pyyhkäisemällä vasemmalle tai oikealle."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Balayer entre les outils"
+            "value": "Balayez vers le bas avec deux doigts pour ouvrir l’encoche, vers le haut pour la fermer ou écarter une activité en direct, et à gauche ou à droite pour changer de morceau."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "החלקה בין כלים"
+            "value": "יש להחליק למטה בשתי אצבעות לפתיחת המגרעת, למעלה לסגירתה או להרחקת פעילות בזמן אמת, וימינה או שמאלה להחלפת שירים."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "टूल के बीच स्वाइप करें"
+            "value": "नॉच खोलने के लिए दो उँगलियों से नीचे स्वाइप करें, उसे बंद करने या लाइव ऐक्टिविटी हटाने के लिए ऊपर, और गीत बदलने के लिए बाएँ या दाएँ।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Povlačenje između alata"
+            "value": "Povucite prema dolje s dva prsta za otvaranje zareza, prema gore za zatvaranje ili uklanjanje aktivnosti uživo, a ulijevo ili udesno za promjenu pjesme."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Legyintés az eszközök között"
+            "value": "Legyintsen le két ujjal a notch megnyitásához, fel a bezárásához vagy egy élő tevékenység elsöpréséhez, balra vagy jobbra pedig a dalok váltásához."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gesek antar alat"
+            "value": "Gesek ke bawah dengan dua jari untuk membuka takik, ke atas untuk menutupnya atau menyingkirkan aktivitas langsung, dan ke kiri atau kanan untuk mengganti lagu."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scorri tra gli strumenti"
+            "value": "Scorri in basso con due dita per aprire il notch, in alto per chiuderlo o scartare un’attività live, e a sinistra o a destra per cambiare brano."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ツール間をスワイプ"
+            "value": "2本指で下にスワイプしてノッチを開き、上にスワイプして閉じるかライブアクティビティを消し、左右にスワイプして曲を変更します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "도구 간 쓸어넘기기"
+            "value": "두 손가락으로 아래로 쓸어 노치를 열고, 위로 쓸어 닫거나 실시간 현황을 치우며, 왼쪽이나 오른쪽으로 쓸어 노래를 변경합니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leret antara alat"
+            "value": "Leret ke bawah dengan dua jari untuk membuka takuk, ke atas untuk menutupnya atau meleret pergi aktiviti langsung, dan ke kiri atau kanan untuk menukar lagu."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sveip mellom verktøy"
+            "value": "Sveip ned med to fingre for å åpne notchen, opp for å lukke den eller sveipe bort en liveaktivitet, og mot venstre eller høyre for å bytte sang."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Veeg tussen gereedschappen"
+            "value": "Veeg met twee vingers omlaag om de notch te openen, omhoog om hem te sluiten of een live-activiteit weg te vegen, en naar links of rechts om van nummer te wisselen."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Przesuwanie między narzędziami"
+            "value": "Przesuń dwoma palcami w dół, aby otworzyć notch, w górę, aby go zamknąć lub odsunąć aktywność na żywo, a w lewo lub w prawo, aby zmienić utwór."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deslizar entre ferramentas"
+            "value": "Deslize para baixo com dois dedos para abrir o notch, para cima para fechá-lo ou dispensar uma atividade ao vivo, e para a esquerda ou direita para mudar de música."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deslizar entre ferramentas"
+            "value": "Deslize para baixo com dois dedos para abrir o notch, para cima para o fechar ou afastar uma atividade em direto, e para a esquerda ou direita para mudar de música."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glisare între instrumente"
+            "value": "Glisați în jos cu două degete pentru a deschide notch-ul, în sus pentru a-l închide sau a înlătura o activitate live, și la stânga sau la dreapta pentru a schimba melodia."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Смахивание между инструментами"
+            "value": "Смахните вниз двумя пальцами, чтобы открыть вырез, вверх, чтобы закрыть его или смахнуть живое действие, и влево или вправо, чтобы сменить песню."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Potiahnutie medzi nástrojmi"
+            "value": "Potiahnite dvoma prstami nadol na otvorenie výrezu, nahor na jeho zatvorenie alebo odsunutie živej aktivity a doľava alebo doprava na zmenu skladby."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Podrsaj med orodji"
+            "value": "Podrsajte navzdol z dvema prstoma za odpiranje izreza, navzgor za zapiranje ali odstranitev dejavnosti v živo, levo ali desno pa za menjavo skladbe."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Svep mellan verktyg"
+            "value": "Svep nedåt med två fingrar för att öppna notchen, uppåt för att stänga den eller svepa bort en liveaktivitet, och åt vänster eller höger för att byta låt."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ปัดระหว่างเครื่องมือ"
+            "value": "ปัดลงด้วยสองนิ้วเพื่อเปิดรอยบาก ปัดขึ้นเพื่อปิดหรือปัดกิจกรรมสดออก และปัดซ้ายหรือขวาเพื่อเปลี่ยนเพลง"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Araçlar arasında kaydır"
+            "value": "Çentiği açmak için iki parmakla aşağı, kapatmak veya bir canlı etkinliği atmak için yukarı, şarkı değiştirmek için sola veya sağa kaydırın."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Змахування між інструментами"
+            "value": "Змахніть униз двома пальцями, щоб відкрити виріз, вгору, щоб закрити його або змахнути активність наживо, і ліворуч чи праворуч, щоб змінити пісню."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuốt giữa các công cụ"
+            "value": "Vuốt xuống bằng hai ngón để mở phần khuyết, lên để đóng hoặc vuốt đi một hoạt động trực tiếp, và sang trái hoặc phải để đổi bài hát."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在工具之间轻扫"
+            "value": "用两根手指向下轻扫打开刘海，向上轻扫关闭或移走实时活动，向左或向右轻扫切换歌曲。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在工具之間滑動"
+            "value": "用兩指向下滑動開啟瀏海，向上滑動關閉或移開即時動態，向左或向右滑動切換歌曲。"
           }
         }
       }
     },
-    "Swipe down with two fingers to open, and up to close or to swipe a live activity away.": {
+    "Swipe with three fingers on the open notch, or scroll holding Shift, to go between tools.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "حرّك بإصبعين لأسفل للفتح، ولأعلى للإغلاق أو لإبعاد نشاط مباشر."
+            "value": "حرّك بثلاثة أصابع على الشق المفتوح، أو مرّر مع الضغط على Shift، للتنقل بين الأدوات."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Llisca cap avall amb dos dits per obrir, i cap amunt per tancar o apartar una activitat en directe."
+            "value": "Llisca amb tres dits al notch obert, o desplaça’t mantenint premuda la tecla Majúscules, per anar d’una eina a l’altra."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Přejeďte dvěma prsty dolů pro otevření a nahoru pro zavření nebo odsunutí živé aktivity."
+            "value": "Přejeďte třemi prsty na otevřeném výřezu, nebo posouvejte s podrženým Shiftem, a přepínejte mezi nástroji."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skub ned med to fingre for at åbne, og op for at lukke eller skubbe en liveaktivitet væk."
+            "value": "Skub med tre fingre på den åbne notch, eller rul med Skift nede, for at skifte mellem værktøjer."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Streiche mit zwei Fingern nach unten zum Öffnen, nach oben zum Schließen oder um eine Live-Aktivität wegzuwischen."
+            "value": "Streiche mit drei Fingern auf der geöffneten Notch oder scrolle mit gedrückter Umschalttaste, um zwischen Werkzeugen zu wechseln."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Σαρώστε προς τα κάτω με δύο δάχτυλα για άνοιγμα, και προς τα πάνω για κλείσιμο ή για απομάκρυνση ζωντανής δραστηριότητας."
+            "value": "Σαρώστε με τρία δάχτυλα στην ανοιχτή εγκοπή, ή κάντε κύλιση κρατώντας το Shift, για εναλλαγή μεταξύ εργαλείων."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Desliza hacia abajo con dos dedos para abrir, y hacia arriba para cerrar o descartar una actividad en vivo."
+            "value": "Desliza con tres dedos sobre el notch abierto, o desplázate manteniendo Mayús, para pasar de una herramienta a otra."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avaa pyyhkäisemällä alas kahdella sormella, ja sulje tai pyyhkäise livetoiminta pois pyyhkäisemällä ylös."
+            "value": "Siirry työkalusta toiseen pyyhkäisemällä kolmella sormella avatulla lovella tai vierittämällä Vaihto painettuna."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Balayez vers le bas avec deux doigts pour ouvrir, et vers le haut pour fermer ou écarter une activité en direct."
+            "value": "Balayez avec trois doigts sur l’encoche ouverte, ou faites défiler en maintenant Maj, pour passer d’un outil à l’autre."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "יש להחליק למטה בשתי אצבעות לפתיחה, ולמעלה לסגירה או להרחקת פעילות בזמן אמת."
+            "value": "יש להחליק בשלוש אצבעות על המגרעת הפתוחה, או לגלול בלחיצה על Shift, כדי לעבור בין כלים."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "खोलने के लिए दो उँगलियों से नीचे स्वाइप करें, और बंद करने या लाइव ऐक्टिविटी हटाने के लिए ऊपर।"
+            "value": "टूल के बीच जाने के लिए खुले नॉच पर तीन उँगलियों से स्वाइप करें, या Shift दबाकर स्क्रोल करें।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Povucite prema dolje s dva prsta za otvaranje, a prema gore za zatvaranje ili uklanjanje aktivnosti uživo."
+            "value": "Povucite s tri prsta na otvorenom zarezu ili listajte držeći Shift za prelazak između alata."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Legyintsen le két ujjal a megnyitáshoz, fel a bezáráshoz vagy egy élő tevékenység elsöpréséhez."
+            "value": "Az eszközök közötti váltáshoz legyintsen három ujjal a nyitott notchon, vagy görgessen a Shift lenyomásával."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gesek ke bawah dengan dua jari untuk membuka, dan ke atas untuk menutup atau menyingkirkan aktivitas langsung."
+            "value": "Gesek dengan tiga jari pada takik yang terbuka, atau gulir sambil menahan Shift, untuk berpindah antar alat."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scorri in basso con due dita per aprire, e in alto per chiudere o scartare un’attività live."
+            "value": "Scorri con tre dita sul notch aperto, o scorri tenendo premuto Maiusc, per passare da uno strumento all’altro."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "2本指で下にスワイプして開き、上にスワイプして閉じるかライブアクティビティを消します。"
+            "value": "開いたノッチ上で3本指でスワイプするか、Shiftを押しながらスクロールして、ツールを切り替えます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "두 손가락으로 아래로 쓸어 열고, 위로 쓸어 닫거나 실시간 현황을 치웁니다."
+            "value": "열린 노치에서 세 손가락으로 쓸거나 Shift를 누른 채 스크롤하여 도구 간에 이동합니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leret ke bawah dengan dua jari untuk membuka, dan ke atas untuk menutup atau meleret pergi aktiviti langsung."
+            "value": "Leret dengan tiga jari pada takuk yang terbuka, atau skrol sambil menahan Shift, untuk beralih antara alat."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sveip ned med to fingre for å åpne, og opp for å lukke eller sveipe bort en liveaktivitet."
+            "value": "Sveip med tre fingre på den åpne notchen, eller rull mens du holder Skift, for å bytte mellom verktøy."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Veeg met twee vingers omlaag om te openen, en omhoog om te sluiten of een live-activiteit weg te vegen."
+            "value": "Veeg met drie vingers op de geopende notch, of scrol met Shift ingedrukt, om tussen gereedschappen te wisselen."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Przesuń dwoma palcami w dół, aby otworzyć, a w górę, aby zamknąć lub odsunąć aktywność na żywo."
+            "value": "Przesuń trzema palcami na otwartym notchu albo przewijaj z klawiszem Shift, aby przechodzić między narzędziami."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deslize para baixo com dois dedos para abrir, e para cima para fechar ou dispensar uma atividade ao vivo."
+            "value": "Deslize com três dedos no notch aberto, ou role segurando Shift, para alternar entre ferramentas."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deslize para baixo com dois dedos para abrir, e para cima para fechar ou afastar uma atividade em direto."
+            "value": "Deslize com três dedos no notch aberto, ou percorra mantendo Shift premida, para alternar entre ferramentas."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glisați în jos cu două degete pentru a deschide și în sus pentru a închide sau a înlătura o activitate live."
+            "value": "Glisați cu trei degete pe notch-ul deschis sau derulați ținând apăsat Shift pentru a trece de la un instrument la altul."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Смахните вниз двумя пальцами, чтобы открыть, и вверх, чтобы закрыть или смахнуть живое действие."
+            "value": "Смахните тремя пальцами по открытому вырезу или прокрутите, удерживая Shift, чтобы переключаться между инструментами."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Potiahnite dvoma prstami nadol na otvorenie a nahor na zatvorenie alebo odsunutie živej aktivity."
+            "value": "Potiahnite troma prstami na otvorenom výreze, alebo posúvajte s podržaným Shiftom, a prepínajte medzi nástrojmi."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Podrsajte navzdol z dvema prstoma za odpiranje in navzgor za zapiranje ali odstranitev dejavnosti v živo."
+            "value": "Podrsajte s tremi prsti na odprtem izrezu ali se pomikajte ob držanju tipke Shift za preklop med orodji."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Svep nedåt med två fingrar för att öppna, och uppåt för att stänga eller svepa bort en liveaktivitet."
+            "value": "Svep med tre fingrar på den öppna notchen, eller rulla medan du håller ned Skift, för att byta mellan verktyg."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ปัดลงด้วยสองนิ้วเพื่อเปิด และปัดขึ้นเพื่อปิดหรือปัดกิจกรรมสดออก"
+            "value": "ปัดด้วยสามนิ้วบนรอยบากที่เปิดอยู่ หรือเลื่อนขณะกด Shift ค้างไว้ เพื่อสลับระหว่างเครื่องมือ"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Açmak için iki parmakla aşağı, kapatmak veya bir canlı etkinliği atmak için yukarı kaydırın."
+            "value": "Araçlar arasında geçmek için açık çentikte üç parmakla kaydırın ya da Shift’e basılı tutarak kaydırın."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Змахніть униз двома пальцями, щоб відкрити, і вгору, щоб закрити або змахнути активність наживо."
+            "value": "Змахніть трьома пальцями на відкритому вирізі чи прокрутіть, утримуючи Shift, щоб переходити між інструментами."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuốt xuống bằng hai ngón để mở, và lên để đóng hoặc vuốt đi một hoạt động trực tiếp."
+            "value": "Vuốt bằng ba ngón trên phần khuyết đang mở, hoặc cuộn trong khi giữ Shift, để chuyển giữa các công cụ."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用两根手指向下轻扫打开，向上轻扫关闭或移走实时活动。"
+            "value": "在打开的刘海上用三根手指轻扫，或按住 Shift 键滚动，即可在工具之间切换。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "用兩指向下滑動開啟，向上滑動關閉或移開即時動態。"
-          }
-        }
-      }
-    },
-    "Swipe left or right with three fingers on the open notch, or scroll holding Shift.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حرّك يمينًا أو يسارًا بثلاثة أصابع على الشق المفتوح، أو مرّر مع الضغط على Shift."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Llisca a l’esquerra o a la dreta amb tres dits al notch obert, o desplaça’t mantenint premuda la tecla Majúscules."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Přejeďte vlevo nebo vpravo třemi prsty na otevřeném výřezu, nebo posouvejte s podrženým Shiftem."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skub til venstre eller højre med tre fingre på den åbne notch, eller rul med Skift nede."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Streiche mit drei Fingern auf der geöffneten Notch nach links oder rechts, oder scrolle mit gedrückter Umschalttaste."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Σαρώστε αριστερά ή δεξιά με τρία δάχτυλα στην ανοιχτή εγκοπή, ή κάντε κύλιση κρατώντας το Shift."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desliza a izquierda o derecha con tres dedos sobre el notch abierto, o desplázate manteniendo Mayús."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pyyhkäise vasemmalle tai oikealle kolmella sormella avatulla lovella, tai vieritä Vaihto painettuna."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Balayez à gauche ou à droite avec trois doigts sur l’encoche ouverte, ou faites défiler en maintenant Maj."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "יש להחליק ימינה או שמאלה בשלוש אצבעות על המגרעת הפתוחה, או לגלול בלחיצה על Shift."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "खुले नॉच पर तीन उँगलियों से बाएँ या दाएँ स्वाइप करें, या Shift दबाकर स्क्रोल करें।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Povucite ulijevo ili udesno s tri prsta na otvorenom zarezu ili listajte držeći Shift."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Legyintsen balra vagy jobbra három ujjal a nyitott notchon, vagy görgessen a Shift lenyomásával."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gesek ke kiri atau kanan dengan tiga jari pada takik yang terbuka, atau gulir sambil menahan Shift."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scorri a sinistra o a destra con tre dita sul notch aperto, o scorri tenendo premuto Maiusc."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開いたノッチ上で3本指で左右にスワイプするか、Shiftを押しながらスクロールします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "열린 노치에서 세 손가락으로 왼쪽이나 오른쪽으로 쓸거나, Shift를 누른 채 스크롤합니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leret ke kiri atau kanan dengan tiga jari pada takuk yang terbuka, atau skrol sambil menahan Shift."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sveip mot venstre eller høyre med tre fingre på den åpne notchen, eller rull mens du holder Skift."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Veeg met drie vingers naar links of rechts op de geopende notch, of scrol met Shift ingedrukt."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przesuń w lewo lub w prawo trzema palcami na otwartym notchu albo przewijaj z klawiszem Shift."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deslize para a esquerda ou direita com três dedos no notch aberto, ou role segurando Shift."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deslize para a esquerda ou direita com três dedos no notch aberto, ou percorra mantendo Shift premida."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glisați la stânga sau la dreapta cu trei degete pe notch-ul deschis sau derulați ținând apăsat Shift."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Смахните влево или вправо тремя пальцами по открытому вырезу или прокрутите, удерживая Shift."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Potiahnite doľava alebo doprava troma prstami na otvorenom výreze, alebo posúvajte s podržaným Shiftom."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Podrsajte levo ali desno s tremi prsti na odprtem izrezu ali se pomikajte ob držanju tipke Shift."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Svep åt vänster eller höger med tre fingrar på den öppna notchen, eller rulla medan du håller ned Skift."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ปัดซ้ายหรือขวาด้วยสามนิ้วบนรอยบากที่เปิดอยู่ หรือเลื่อนขณะกด Shift ค้างไว้"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Açık çentikte üç parmakla sola veya sağa kaydırın ya da Shift’e basılı tutarak kaydırın."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Змахніть ліворуч або праворуч трьома пальцями на відкритому вирізі чи прокрутіть, утримуючи Shift."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vuốt sang trái hoặc phải bằng ba ngón trên phần khuyết đang mở, hoặc cuộn trong khi giữ Shift."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在打开的刘海上用三根手指向左或向右轻扫，或按住 Shift 键滚动。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在開啟的瀏海上用三指向左或向右滑動，或按住 Shift 鍵捲動。"
-          }
-        }
-      }
-    },
-    "Swipe left or right with two fingers.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حرّك يمينًا أو يسارًا بإصبعين."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Llisca a l’esquerra o a la dreta amb dos dits."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Přejeďte vlevo nebo vpravo dvěma prsty."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skub til venstre eller højre med to fingre."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Streiche mit zwei Fingern nach links oder rechts."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Σαρώστε αριστερά ή δεξιά με δύο δάχτυλα."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desliza a izquierda o derecha con dos dedos."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pyyhkäise vasemmalle tai oikealle kahdella sormella."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Balayez à gauche ou à droite avec deux doigts."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "יש להחליק ימינה או שמאלה בשתי אצבעות."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "दो उँगलियों से बाएँ या दाएँ स्वाइप करें।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Povucite ulijevo ili udesno s dva prsta."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Legyintsen balra vagy jobbra két ujjal."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gesek ke kiri atau kanan dengan dua jari."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scorri a sinistra o a destra con due dita."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2本指で左右にスワイプします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "두 손가락으로 왼쪽이나 오른쪽으로 쓸어넘깁니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leret ke kiri atau kanan dengan dua jari."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sveip mot venstre eller høyre med to fingre."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Veeg met twee vingers naar links of rechts."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przesuń w lewo lub w prawo dwoma palcami."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deslize para a esquerda ou direita com dois dedos."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deslize para a esquerda ou direita com dois dedos."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glisați la stânga sau la dreapta cu două degete."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Смахните влево или вправо двумя пальцами."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Potiahnite doľava alebo doprava dvoma prstami."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Podrsajte levo ali desno z dvema prstoma."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Svep åt vänster eller höger med två fingrar."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ปัดซ้ายหรือขวาด้วยสองนิ้ว"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "İki parmakla sola veya sağa kaydırın."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Змахніть ліворуч або праворуч двома пальцями."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vuốt sang trái hoặc phải bằng hai ngón."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用两根手指向左或向右轻扫。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用兩指向左或向右滑動。"
+            "value": "在開啟的瀏海上用三指滑動，或按住 Shift 鍵捲動，即可在工具之間切換。"
           }
         }
       }
