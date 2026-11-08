@@ -980,6 +980,7 @@ struct NotchView: View {
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             recording: activity.flatMap(model.recording(of:)),
+            call: activity == .call ? model.call : nil,
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },

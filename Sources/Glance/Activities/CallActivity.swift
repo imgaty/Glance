@@ -273,6 +273,95 @@ struct CallTime: View {
     }
 }
 
+/// A call in the bubble, off the notch's end, when another activity started first: its time, as large
+/// as the notch's time beside the camera when it fits, smaller when it doesn't, never under the Mac's
+/// smallest text; and the green phone before it, only where both fit (the user, 2026-11-08: "it
+/// should show the time, and if it fits the phone icon"). Measured at a 32 point notch: m:ss is 29.5
+/// points at the notch's 13.6 point text and the circle holds about 28, so it's drawn a little
+/// smaller; mm:ss fits at about 10; with the phone, even m:ss would need 31 at 10, so the phone doesn't
+/// show at 32 or 37 points. Past an hour it goes on counting minutes, as h:mm:ss can't fit at 10.
+/// Ringing or going out, it's the phone alone, as large as any mark in the bubble.
+struct CallBubbleMark: View {
+    let call: CallShown
+    let restingHeight: CGFloat
+
+    var body: some View {
+        let h = restingHeight
+        switch call.phase {
+        case .connected(let since):
+            TimelineView(.periodic(from: since, by: 1)) { context in
+                let text = Self.text(max(Int(context.date.timeIntervalSince(since)), 0))
+                let fit = Self.fit(text, restingHeight: h)
+                HStack(spacing: fit.size * Self.gap) {
+                    if fit.phone {
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: fit.size * Self.phone, weight: .medium))
+                            .rotationEffect(.degrees(CallLook.phoneTilt))
+                    }
+                    Text(text)
+                        .font(.system(size: fit.size, weight: .semibold).monospacedDigit())
+                        .fixedSize()
+                }
+                .foregroundStyle(CallLook.green)
+            }
+        case .ringing, .calling:
+            Image(systemName: "phone.fill")
+                .font(.system(size: h * Self.mark, weight: .medium))
+                .foregroundStyle(CallLook.green)
+                .rotationEffect(.degrees(CallLook.phoneTilt))
+        }
+    }
+
+    /// The phone's size beside the time, as beside the camera; the gap between them, both as shares of
+    /// the text's size; alone, as wide as the timer's ring by its ink.
+    static let phone: CGFloat = CallLook.phone / 0.426
+    static let gap: CGFloat = CallLook.timeGap / (32 * 0.426)
+    static let mark: CGFloat = TimerLayout.ring / 0.936
+    /// How far in from the circle's edge the time keeps, as a share of the notch's height.
+    static let margin: CGFloat = 0.05
+
+    /// The time as the bubble shows it: minutes and seconds, past 59 minutes too, as h:mm:ss can't fit
+    /// and h:mm would read as minutes; hours and minutes only from 100 minutes, which can't fit either.
+    static func text(_ seconds: Int) -> String {
+        seconds < 100 * 60 ? String(format: "%d:%02d", seconds / 60, seconds % 60) : String(format: "%d:%02d", seconds / 3600, seconds / 60 % 60)
+    }
+
+    /// The time's size and whether the phone shows: the largest that fits across the circle at the
+    /// text's height, the notch's size at most and the Mac's smallest at least, the phone only if it
+    /// fits there too.
+    static func fit(_ text: String, restingHeight h: CGFloat) -> (size: CGFloat, phone: Bool) {
+        let most = LiveActivityView.textSize(for: h), least = StopwatchReading.smallest
+        func width(_ size: CGFloat, phone: Bool) -> CGFloat {
+            let digits = text.replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
+            let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
+            var width = (digits as NSString).size(withAttributes: [.font: font]).width
+            if phone,
+                let symbol = NSImage(systemSymbolName: "phone.fill", accessibilityDescription: nil)?
+                    .withSymbolConfiguration(.init(pointSize: size * Self.phone, weight: .medium))
+            {
+                width += symbol.size.width + size * Self.gap
+            }
+            return width
+        }
+        func room(_ size: CGFloat) -> CGFloat {
+            // Across the circle where the digits' tops and bottoms reach, less the margin each side.
+            let half = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold).capHeight / 2
+            let r = h / 2
+            return 2 * (r * r - half * half).squareRoot() - 2 * h * Self.margin
+        }
+        func largest(phone: Bool) -> CGFloat? {
+            var size = most
+            while size >= least {
+                if width(size, phone: phone) <= room(size) { return size }
+                size -= 0.25
+            }
+            return nil
+        }
+        if let size = largest(phone: true) { return (size, true) }
+        return (largest(phone: false) ?? least, false)
+    }
+}
+
 /// The waveform beside the camera on a call: the other person's voice from the left, yours from the
 /// right, each crossing the whole of it and fading on the way, yellow where they overlap.
 struct CallWaveform: View {

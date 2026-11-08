@@ -187,6 +187,8 @@
   notch closed.
 - Fixed the timer's ring and the stopwatch's symbol staying in the opened notch,
   behind the pause button.
+- Fixed a call in the bubble beside the notch showing nothing. It shows the
+  call's time, as large as fits, and the phone while it rings or goes out.
 - Fixed the bubble vanishing as the notch opened from its own end. It runs into
   the notch's end and rides out on it as the notch opens, until the end takes it
   in, as on the iPhone.

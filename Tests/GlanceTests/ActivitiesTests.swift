@@ -1308,6 +1308,21 @@ struct SystemBannersTests {
         #expect(CallLook.accept(.standard) == CallLook.accept)
     }
 
+    @Test("A call in the bubble shows its time as large as fits, never under the Mac's smallest text, and the phone only where both fit")
+    func callBubble() {
+        #expect(CallBubbleMark.text(5) == "0:05")
+        #expect(CallBubbleMark.text(754) == "12:34")
+        #expect(CallBubbleMark.text(3753) == "62:33")
+        #expect(CallBubbleMark.text(100 * 60 + 5) == "1:40")
+        let short = CallBubbleMark.fit("0:05", restingHeight: 32), long = CallBubbleMark.fit("12:34", restingHeight: 32)
+        #expect(short.size <= LiveActivityView.textSize(for: 32) && short.size > long.size)
+        #expect(long.size >= StopwatchReading.smallest)
+        // At the usual notch, the phone and the time don't fit together.
+        #expect(!short.phone && !long.phone)
+        // A notch twice as tall has room for both.
+        #expect(CallBubbleMark.fit("0:05", restingHeight: 64).phone)
+    }
+
     @Test("The stopwatch's hundredths are never under the Mac's smallest text")
     func stopwatchSmallest() {
         #expect(13.6 * StopwatchReading.share(13.6) >= 10)

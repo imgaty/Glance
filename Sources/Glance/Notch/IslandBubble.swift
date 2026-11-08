@@ -11,13 +11,13 @@ import SwiftUI
 /// The second activity, detached, as the Dynamic Island's minimal presentation shows one beside
 /// another: only ever off the notch's trailing end, the first staying attached at its leading end.
 /// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
-/// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or AirPlay's
-/// symbol in it as beside the camera. It leaves the notch's end as a drop of water does: the end
-/// draws back from it on a neck that thins until it parts, and it runs back into the end as it goes.
-/// Opened from the notch, it runs into the notch's end and rides on it as the notch opens, until the
-/// end takes it in; opened from the bubble, it stays where it rests, and the notch comes out over it.
-/// With Reduce Motion on, it fades in and out where it rests.
-/// VoiceOver names it, and opens it as a click does.
+/// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or
+/// AirPlay's symbol in it as beside the camera, or a call's time. It leaves the notch's end as a
+/// drop of water does: the end draws back from it on a neck that thins until it parts, and it runs
+/// back into the end as it goes. Opened from the notch, it runs into the notch's end and rides on
+/// it as the notch opens, until the end takes it in; opened from the bubble, it stays where it
+/// rests, and the notch comes out over it. With Reduce Motion on, it fades in and out where it
+/// rests. VoiceOver names it, and opens it as a click does.
 struct IslandBubble: View {
     /// Out of the notch; in it, it's hidden in its end.
     let shown: Bool
@@ -28,6 +28,8 @@ struct IslandBubble: View {
     var airdrop: AirDropShown? = nil
     /// Or a recording: the screen's dot, or Voice Memos' waveform.
     var recording: Recording? = nil
+    /// Or a call, by its time.
+    var call: CallShown? = nil
     /// Or music, by its cover in a circle, or a note without one.
     var music = false
     var artwork: NSImage? = nil
@@ -53,10 +55,11 @@ struct IslandBubble: View {
     @State private var keptRoute: AirPlayRoute?
     @State private var keptAirDrop: AirDropShown?
     @State private var keptRecording: Recording?
+    @State private var keptCall: CallShown?
     @State private var keptMusic = false
     @State private var keptArtwork: NSImage?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0)
+    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0, call: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -103,6 +106,8 @@ struct IslandBubble: View {
                             .overlay(Color.black.opacity(paused ? 1 - PausedLook.kept : 0))
                             .animation(.easeInOut(duration: 0.3), value: paused)
                             .clipShape(RoundedRectangle(cornerRadius: side * ArtworkShape.restingRadius, style: .continuous))
+                        } else if let keptCall {
+                            CallBubbleMark(call: keptCall, restingHeight: h)
                         } else if let keptRecording {
                             RecordingBubbleGlyph(recording: keptRecording, restingHeight: h)
                         } else if let keptAirDrop {
@@ -137,6 +142,12 @@ struct IslandBubble: View {
                             .accessibilityAddTraits(.isButton)
                             .accessibilityAction(.default, open)
                     }
+                } else if shown, !hidden, let call {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel(call.rings ? String(localized: "\(call.name), incoming call") : String(localized: "\(call.name), on a call"))
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
                 } else if shown, !hidden, let airdrop {
                     Color.clear
                         .accessibilityElement()
@@ -173,7 +184,7 @@ struct IslandBubble: View {
             $0.opacity(hidden ? 0 : 1)
         }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
-        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptMusic ? 1 : 0) }
+        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptMusic ? 1 : 0) }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1
@@ -214,6 +225,15 @@ struct IslandBubble: View {
                 if changes.recording == change { keptRecording = nil }
             }
         }
+        .onChange(of: call, initial: true) { _, new in
+            changes.call += 1
+            if let new { return keptCall = new }
+            let change = changes.call
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.call == change { keptCall = nil }
+            }
+        }
         .onChange(of: route, initial: true) { _, new in
             changes.route += 1
             if let new { return keptRoute = new }
@@ -241,9 +261,6 @@ private struct BubbleGlyph: ViewModifier, Animatable {
     }
 }
 
-/// The notch's end and the bubble running together as two drops do: two circles, one in the notch's
-/// end, blurred and cut back to a hard edge, so that where they're near, their blurs add up past the
-/// cut into a neck that thins and parts, as nothing drawn by hand does.
 /// Moved by an offset laid out afresh at every step as it animates, as the notch's frame is, rather
 /// than one only its picture follows: a late frame delays both alike, and the bubble stays on the
 /// notch's end.
@@ -260,6 +277,9 @@ private struct SteppedOffset: ViewModifier, Animatable {
     }
 }
 
+/// The notch's end and the bubble running together as two drops do: two circles, one in the notch's
+/// end, blurred and cut back to a hard edge, so that where they're near, their blurs add up past the
+/// cut into a neck that thins and parts, as nothing drawn by hand does.
 struct BubbleBlend: View, Animatable {
     /// 0 with the bubble in the notch's end, 1 where it rests.
     var out: CGFloat
