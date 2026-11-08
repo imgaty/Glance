@@ -13,8 +13,13 @@ import ApplicationServices
 /// Settings' own, under Menu Bar > Live Activities, one for each app (the private call behind them
 /// takes Apple's entitlement, and a pill takes no Accessibility action but Press). So while Hide
 /// macOS's Live Activities is on, Glance turns those switches off as soon as a pill shows, pressing
-/// them through Accessibility in System Settings, opened in the background and closed after. Turned
-/// back off, it turns on again the ones it turned off.
+/// them through Accessibility in a System Settings of its own, opened in the background beside any
+/// the user has open and quit after. Turned back off, it turns on again the ones it turned off.
+/// Behind a full-screen app, that System Settings' window opens on another Space, where
+/// Accessibility can take many seconds to see it; if it never does, Glance waits for the Space to
+/// change, or a minute, before trying again, rather than opening System Settings over and over.
+/// macOS's microphone and camera indicator isn't one of these: it has no switch, and hiding it is
+/// kept to Apple's own processes.
 @MainActor
 final class MenuBarLiveActivities {
     static let shared = MenuBarLiveActivities()
@@ -27,6 +32,12 @@ final class MenuBarLiveActivities {
     private var timer: Timer?
     private var working = false
     private var settingObserver: NSObjectProtocol?
+    private var spaceObserver: NSObjectProtocol?
+    /// After System Settings' switches couldn't be reached, not before this, or the Space changing.
+    private var retryAfter = Date.distantPast
+    /// How long System Settings' switches are waited for, and how long before trying again without.
+    private static let patience: Duration = .seconds(20)
+    private static let retryDelay: TimeInterval = 60
     private var wasOn = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
 
     func start() {
@@ -46,31 +57,39 @@ final class MenuBarLiveActivities {
                 MenuBarLiveActivities.shared.check()
             }
         }
+        // Off a full-screen app, System Settings' window opens where it can be seen.
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                MenuBarLiveActivities.shared.retryAfter = .distantPast
+                MenuBarLiveActivities.shared.check()
+            }
+        }
         check()
     }
 
-    /// Hides any that show, or, turned off, shows again what Glance hid.
+    /// Hides any that show, or, turned off, shows again what Glance hid. Nothing here waits on the
+    /// thread that draws the notch.
     private func check() {
-        guard !working, AXIsProcessTrusted() else { return }
+        guard !working, Date.now >= retryAfter, AXIsProcessTrusted() else { return }
         let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
-        if on, Self.pillShowing() {
-            working = true
-            Task {
-                await switchApps(off: true)
-                working = false
+        guard on || !hidden.isEmpty else { return }
+        working = true
+        Task {
+            let showing = await Task.detached { Self.pillShowing() }.value
+            var reached = true
+            if on, showing {
+                reached = await switchApps(off: true)
+            } else if !on {
+                reached = await switchApps(off: false)
             }
-        } else if !on, !hidden.isEmpty {
-            working = true
-            Task {
-                await switchApps(off: false)
-                working = false
-            }
+            if !reached { retryAfter = .now + Self.retryDelay }
+            working = false
         }
     }
 
     /// A Live Activity's pill in the menu bar, any app's.
-    static func pillShowing() -> Bool {
+    nonisolated static func pillShowing() -> Bool {
         guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return false }
         let app = AXUIElementCreateApplication(agent.processIdentifier)
         // Never kept waiting by the menu bar.
@@ -87,24 +106,34 @@ final class MenuBarLiveActivities {
     nonisolated static let pillPrefix = "live-activity-pill-"
 
     /// The section's heading, in the Mac's language, as System Settings words it.
-    private static var sectionName: String {
+    nonisolated private static var sectionName: String {
         let bundle = Bundle(path: "/System/Library/ExtensionKit/Extensions/ControlCenterSettings.appex")
         return bundle?.localizedString(forKey: "Live Activities", value: "Live Activities", table: "Localizable") ?? "Live Activities"
     }
 
-    /// Opens Menu Bar settings in the background, turns each app's switch off, or back on those Glance
-    /// turned off, and closes System Settings again if it wasn't open.
-    private func switchApps(off: Bool) async {
-        let wasOpen = !NSRunningApplication.runningApplications(withBundleIdentifier: Self.settingsApp).isEmpty
+    /// Opens Menu Bar settings in a System Settings of Glance's own, in the background, turns each app's
+    /// switch off, or back on those Glance turned off, and quits it. False if its switches were never
+    /// seen.
+    private func switchApps(off: Bool) async -> Bool {
+        guard let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.settingsApp) else { return false }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
-        _ = try? await NSWorkspace.shared.open(Self.pane, configuration: configuration)
-        var rows: [(name: String, box: AXUIElement)] = []
-        for _ in 0..<40 {
-            try? await Task.sleep(for: .milliseconds(150))
-            rows = Self.rows()
-            if !rows.isEmpty { break }
-        }
+        // Beside any the user has open, which may be on another Space, and left as it is.
+        configuration.createsNewApplicationInstance = true
+        guard let instance = try? await NSWorkspace.shared.open([Self.pane], withApplicationAt: settings, configuration: configuration) else { return false }
+        defer { instance.terminate() }
+        let pid = instance.processIdentifier
+        let rows = await Task.detached { () -> [(name: String, box: AXUIElement)] in
+            let clock = ContinuousClock()
+            let deadline = clock.now + Self.patience
+            while clock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(250))
+                let rows = Self.rows(in: pid)
+                if !rows.isEmpty { return rows }
+            }
+            return []
+        }.value
+        guard !rows.isEmpty else { return false }
         var hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
         for row in rows {
             let isOn = SystemNotices.value(row.box, kAXValueAttribute) as? Int == 1
@@ -116,17 +145,15 @@ final class MenuBarLiveActivities {
             }
         }
         UserDefaults.standard.set(off ? hidden : [], forKey: Self.turnedOffKey)
-        if !wasOpen {
-            try? await Task.sleep(for: .milliseconds(300))
-            NSRunningApplication.runningApplications(withBundleIdentifier: Self.settingsApp).first?.terminate()
-        }
+        // Long enough for the switches to be written before it quits.
+        try? await Task.sleep(for: .milliseconds(300))
+        return true
     }
 
     /// Each app's name and switch in Menu Bar settings' Live Activities section: the checkboxes after
     /// its heading, each after its name, until its buttons.
-    private static func rows() -> [(name: String, box: AXUIElement)] {
-        guard let settings = NSRunningApplication.runningApplications(withBundleIdentifier: settingsApp).first else { return [] }
-        let app = AXUIElementCreateApplication(settings.processIdentifier)
+    nonisolated private static func rows(in pid: pid_t) -> [(name: String, box: AXUIElement)] {
+        let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 1)
         var flat: [AXUIElement] = []
         func walk(_ element: AXUIElement, _ depth: Int) {

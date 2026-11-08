@@ -189,6 +189,10 @@
   behind the pause button.
 - Changed the song's progress bar to be one bar, its played part cut straight
   where it ends, rather than a second, rounded bar laid over the gray one.
+- Fixed `Hide macOS's Live Activities` not working behind a full-screen app or
+  with System Settings open on another Space, and opening System Settings again
+  every few seconds when it couldn't. It now uses a System Settings of its own,
+  waits longer for it, and tries again when you switch Spaces.
 - Fixed the order of two activities changing when Glance opened again: what was
   still going on takes its place back as it's found, first come, first served.
 - Fixed a call in the bubble beside the notch showing nothing. It shows the
