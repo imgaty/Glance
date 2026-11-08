@@ -49,6 +49,24 @@ struct ActivitiesTests {
         #expect(activities.alert == nil)
     }
 
+    @Test("One that stays with a time limit goes by itself once it's up, as a timer that's done does")
+    func expiring() async throws {
+        let activities = Activities()
+        var alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
+        alert.expires = 0.2
+        activities.post(alert)
+        #expect(activities.alert?.kind == .timerDone)
+        try await Task.sleep(for: .seconds(0.1))
+        #expect(activities.alert?.kind == .timerDone)
+        for _ in 0..<20 where activities.alert != nil { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(activities.alert == nil)
+    }
+
+    @Test("A timer that's done goes by itself after ten seconds")
+    func timerRingsFor() {
+        #expect(ClockActivity.ringsFor == 10)
+    }
+
     @Test("Plugged in is announced with the level; running low, at 20% and again at 10%")
     func battery() {
         typealias Reading = BatteryWatch.Reading

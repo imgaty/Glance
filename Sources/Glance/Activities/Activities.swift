@@ -58,6 +58,10 @@ struct NotchAlert: Identifiable, Equatable {
     /// to open until it starts to fold; one that stays shows until it's dismissed.
     var seconds: Double = 2.82
     var stays = false
+    /// One that stays goes by itself this long after it shows, as `expired` puts it away; nil for
+    /// one that stays until it's answered, as a call does.
+    var expires: Double?
+    var expired: (@MainActor () -> Void)?
     /// Waits while its button is being reached.
     var waitsToBeReached: Bool { kind.hasButton }
     /// A device's name, as it extends under the pointer.
@@ -174,7 +178,19 @@ final class Activities: ObservableObject {
             element: NSApp as Any, notification: .announcementRequested,
             userInfo: [.announcement: alert.spoken, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         shownTask?.cancel()
-        guard !alert.stays else { return }
+        if alert.stays {
+            guard let expires = alert.expires else { return }
+            shownTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(expires))
+                // Not while it's being reached: its buttons may be just about to be pressed.
+                while !Task.isCancelled, Self.assisted || self?.holding?() == true {
+                    try? await Task.sleep(for: .seconds(0.5))
+                }
+                guard !Task.isCancelled, let self, self.alert?.id == alert.id else { return }
+                if let expired = alert.expired { expired() } else { self.next() }
+            }
+            return
+        }
         shownTask = Task { [weak self] in
             // To the frame, as the Dynamic Island's: the system would otherwise wake it when it suits.
             try? await Task.sleep(for: .seconds(alert.seconds), tolerance: .zero)

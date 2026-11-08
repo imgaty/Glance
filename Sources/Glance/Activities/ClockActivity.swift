@@ -230,9 +230,19 @@ final class ClockActivity: ObservableObject {
     private func say(_ rung: Rung) {
         rang = (rung.length, rung.title, rung.date)
         let name = rung.title ?? String(localized: "Timer")
-        activities.post(
-            NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: String(localized: "\(name) done"), stays: true))
+        var alert = NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: String(localized: "\(name) done"), stays: true)
+        // Rung and said, it goes by itself, its chime with it, as Stop would put it away.
+        alert.expires = Self.ringsFor
+        alert.expired = { [weak self] in
+            self?.dismissRing()
+            Activities.shared.dismiss(.timerDone)
+        }
+        activities.post(alert)
     }
+
+    /// How long a timer that's done is said, ringing, before it goes by itself: long enough to reach
+    /// Repeat.
+    static let ringsFor: TimeInterval = 10
 
     // MARK: At the bench (see `ActivityBench`)
 

@@ -467,7 +467,8 @@ When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
 and rings with the timer's sound, as chosen in Clock, in place of macOS's own
 alert, which it takes away. Click **Repeat** to start the same length again, or
 **✕** to stop it; both leave the notch closed. Opening the notch stops it too.
-With no one there, it stops ringing after five minutes.
+Left alone, it goes by itself after ten seconds and stops ringing, as **✕**
+would, though not while the pointer is on it.
 
 Without `Accessibility`, macOS's own alert and chime show beside the notch:
 **Repeat** and **✕** answer that alert too, which stops its chime, and stopped

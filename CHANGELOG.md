@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Changed a timer that's done to go from the notch by itself after ten seconds,
+  its ringing with it, as **✕** would, rather than ringing for up to five
+  minutes. It stays while the pointer is on it.
 - Added `Hide macOS's Live Activities` to **Settings > Live Activities**, on at
   first: macOS 27.3's own Live Activities in the menu bar, such as Now Playing,
   are turned off in **System Settings > Menu Bar** as they first show, so they
