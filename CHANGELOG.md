@@ -411,6 +411,9 @@
 - Fixed clicking the waveform in the picture of the notch in Settings doing
   nothing: it shows the lyrics of the song playing, as the notch does, and the
   picture draws back to make room for them.
+- Changed the picture of the notch in Settings and in the welcome tour to open,
+  fold, and turn between the player and the tray with the notch's own motion
+  as you move between pages, bounce included.
 
 ### Tray
 

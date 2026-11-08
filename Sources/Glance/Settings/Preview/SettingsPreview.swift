@@ -72,14 +72,15 @@ final class SettingsPreview: ObservableObject {
     private var pressBeganClosed = false
 
     /// On the Opening page it closes, to be opened; leaving, it opens again and stays open, as it
-    /// does after the Tray page's drag, which leaves it closed.
+    /// does after the Tray page's drag, which leaves it closed. It folds and opens as the notch on
+    /// screen does.
     func setInteractive(_ on: Bool, animated: Bool) {
         guard on != interactive || (!on && revealed && model.state != .open) else { return }
         interactive = on
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil
-        var transaction = Transaction(animation: animated ? .spring(response: on ? 0.36 : 0.42, dampingFraction: on ? 0.88 : 1) : nil)
+        var transaction = Transaction(animation: animated ? (on ? IslandMotion.fold : NotchMotion.expand) : nil)
         transaction.disablesAnimations = !animated
         if on {
             revealTask?.cancel()
@@ -417,11 +418,11 @@ struct PreviewHeader: View {
         .onDisappear { preview.slidesTray(nil) }
     }
 
-    /// As this page wants it.
+    /// As this page wants it: from the player to the tray and back as swiping turns them.
     private func settle(animated: Bool) {
         preview.setInteractive(pane.restsClosed, animated: animated)
         let page: NotchPage = onTray ? .tray : .player
-        withAnimation(animated ? .spring(response: 0.4, dampingFraction: 1) : nil) { preview.model.page = page }
+        withAnimation(animated ? NotchMotion.expand : nil) { preview.model.page = page }
     }
 
     /// What the preview shows: another display, the shared look, or the display's notch made anew.
