@@ -13,7 +13,7 @@ import SwiftUI
 @MainActor
 final class OnboardingWindowController {
     private var window: NSWindow?
-    private let permissions = Permissions()
+    private let permissions = Permissions.shared
 
     func show() {
         let view = OnboardingView(permissions: permissions) { [weak self] in self?.window?.performClose(nil) }

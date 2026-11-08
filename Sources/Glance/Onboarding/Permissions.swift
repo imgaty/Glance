@@ -8,17 +8,34 @@
 import AppKit
 import SwiftUI
 
-/// The permissions Glance can ask for, read and requested without side effects.
+/// The permissions Glance can ask for, read and requested without side effects. One set for the
+/// app, read as Glance starts and again each time it comes forward, as from System Settings, so the
+/// permissions show as they are the moment they're opened.
 @MainActor
 final class Permissions: ObservableObject {
+    static let shared = Permissions()
+
     enum State {
         case granted, denied, notDetermined, notInstalled
     }
 
-    @Published private(set) var audio = State.notDetermined
+    // What can be told at once; the rest as soon as it's read.
+    @Published private(set) var audio = Permissions.audioCapture
     @Published private(set) var musicControl = State.notDetermined
     @Published private(set) var spotifyControl = State.notDetermined
-    @Published private(set) var accessibility = State.notDetermined
+    @Published private(set) var accessibility: State = SpotifyMenu.allowed ? .granted : .notDetermined
+
+    private var watching = false
+
+    /// Reads them now, and whenever Glance comes forward.
+    func start() {
+        refresh()
+        guard !watching else { return }
+        watching = true
+        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { Permissions.shared.refresh() }
+        }
+    }
 
     /// Spotify's one row: control through AppleScript, and Accessibility for Repeat One.
     var spotify: State {

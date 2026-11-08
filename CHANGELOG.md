@@ -418,6 +418,9 @@
 - Changed **Settings > General > Permissions > Review…** to open over the
   Settings window, as **Customize Controls** does, rather than in a window of
   its own, and without `Open at login`, which is on the General page itself.
+- Fixed the permissions showing **Request…** for a moment as they were opened,
+  before showing which are allowed: Glance reads them as it starts, and again
+  whenever it comes forward.
 - Fixed Settings, opened from the menu bar, sometimes coming up a second or more
   late, behind other apps, or drawn gray as if behind them while in use.
 - Fixed clicking the waveform in the picture of the notch in Settings doing

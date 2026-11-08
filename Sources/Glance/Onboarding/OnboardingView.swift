@@ -360,7 +360,7 @@ private struct SettingChoice: View {
 /// Customize Controls is, with Done to close it. Whether Glance opens at login is on the page
 /// itself, so the sheet leaves it out.
 struct PermissionsSheet: View {
-    @StateObject private var permissions = Permissions()
+    @ObservedObject private var permissions = Permissions.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -376,11 +376,8 @@ struct PermissionsSheet: View {
         .frame(width: OnboardingView.size.width)
         // As tall as its rows once their words have wrapped.
         .fixedSize(horizontal: false, vertical: true)
+        // Already read, as Glance started: read again in case, keeping what shows meanwhile.
         .onAppear { permissions.refresh() }
-        // Coming back from System Settings, show what changed there.
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            permissions.refresh()
-        }
     }
 }
 

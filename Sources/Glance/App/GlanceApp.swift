@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = makeMainMenu()
         nowPlaying.start()
         Updater.shared.start()
+        // Read now, so they show as they are the moment they're opened.
+        Permissions.shared.start()
         let statusBar = StatusBarController()
         statusBar.onOpenSettings = { [settings] in settings.show() }
         settings.nowPlaying = nowPlaying
