@@ -109,7 +109,6 @@ final class Activities: ObservableObject {
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) {
             [weak self] _ in
             MainActor.assumeIsolated { self?.wokeAt = .now }
-            MenuBarBanners.shared.woke()
         }
         let battery = BatteryWatch(), devices = DeviceWatch()
         battery.start()

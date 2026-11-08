@@ -409,14 +409,15 @@ are taken away as it shows, since the notch says so. Low Battery stays while the
 pointer is on it, and with VoiceOver or Switch Control on, it stays until you
 press its button or choose **Hide Low Battery**.
 
-What's connected when Glance starts, or reconnects as the Mac wakes, isn't
-announced. With the pointer on the notch, an announcement stays, and the notch
-swells a little around it, opening once it's over. A device extends instead, as
-tall as a timer: the device and its ring grow with the notch, and its name and
-its level in numbers show. Sliding down on it, or clicking it if **Open with**
-allows that, puts it away and opens the notch at once. With the notch open, it
-closes to say what happened, and opens again after, if the pointer is still on
-it. Turn these off with `Battery`, `Devices` and `Calls` in
+What's connected when Glance starts isn't announced. What reconnects as the Mac
+wakes is announced only if macOS shows its own banner for it, and then in the
+banner's place. With the pointer on the notch, an announcement stays, and the
+notch swells a little around it, opening once it's over. A device extends
+instead, as tall as a timer: the device and its ring grow with the notch, and
+its name and its level in numbers show. Sliding down on it, or clicking it if
+**Open with** allows that, puts it away and opens the notch at once. With the
+notch open, it closes to say what happened, and opens again after, if the
+pointer is still on it. Turn these off with `Battery`, `Devices` and `Calls` in
 **Settings > Live Activities**.
 
 ### Timer and stopwatch

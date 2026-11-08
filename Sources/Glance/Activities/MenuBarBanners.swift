@@ -43,8 +43,7 @@ final class MenuBarBanners: @unchecked Sendable {
     private static let away = CGPoint(x: -20000, y: -20000)
 
     private let lock = NSLock()
-    private var wokeAt = Date.distantPast
-    private var shown: (@MainActor @Sendable () -> Void)?
+    private var shown: (@MainActor @Sendable (_ taken: [String]?) -> Void)?
     /// macOS has just said the battery's low, in a banner.
     private var saidLowBattery: (@MainActor @Sendable () -> Void)?
 
@@ -72,8 +71,9 @@ final class MenuBarBanners: @unchecked Sendable {
         return loop!
     }()
 
-    /// Starts following the menu bar. `shown` is called for each banner, shown or not.
-    func watch(shown: @escaping @MainActor @Sendable () -> Void) {
+    /// Starts following the menu bar. `shown` is called for each banner, with its words when it's
+    /// taken away for the notch to say instead, and nil when it's left.
+    func watch(shown: @escaping @MainActor @Sendable (_ taken: [String]?) -> Void) {
         lock.withLock { self.shown = shown }
         follow()
     }
@@ -91,11 +91,6 @@ final class MenuBarBanners: @unchecked Sendable {
         else { return }
         CFRunLoopPerformBlock(runLoop, CFRunLoopMode.defaultMode.rawValue) { [self] in attach(to: agent) }
         CFRunLoopWakeUp(runLoop)
-    }
-
-    /// What's reconnected as the Mac wakes isn't announced, so for a moment its banner stays.
-    func woke() {
-        lock.withLock { wokeAt = .now }
     }
 
     private func attach(to agent: pid_t) {
@@ -128,9 +123,9 @@ final class MenuBarBanners: @unchecked Sendable {
             last = window
             switch banner {
             case .device:
-                if hides { take(window, backTo: values[1]) }
+                let taken = hides ? take(window, backTo: values[1]) : nil
                 let shown = lock.withLock { self.shown }
-                DispatchQueue.main.async { MainActor.assumeIsolated { shown?() } }
+                DispatchQueue.main.async { MainActor.assumeIsolated { shown?(taken) } }
             case .lowBattery:
                 guard hidesLowBattery else { continue }
                 var point = Self.away
@@ -145,7 +140,7 @@ final class MenuBarBanners: @unchecked Sendable {
         let defaults = UserDefaults.standard
         // At the bench, devices are off, but what's tried isn't to be talked over.
         let devices = defaults.bool(forKey: Preferences.activityDevices) || ActivityBench.scene != nil
-        return defaults.bool(forKey: Preferences.notchEnabled) && devices && lock.withLock { Date.now.timeIntervalSince(wokeAt) >= 10 }
+        return defaults.bool(forKey: Preferences.notchEnabled) && devices
     }
 
     private var hidesLowBattery: Bool {
@@ -154,23 +149,24 @@ final class MenuBarBanners: @unchecked Sendable {
     }
 
     /// Taken away before there's anything to read in it, and put back unless it turns out to be one
-    /// the notch says too.
-    private func take(_ banner: AXUIElement, backTo place: AnyObject) {
+    /// the notch says too. What it says, when it stays away.
+    private func take(_ banner: AXUIElement, backTo place: AnyObject) -> [String]? {
         var point = Self.away
         guard let away = AXValueCreate(.cgPoint, &point),
             AXUIElementSetAttributeValue(banner, kAXPositionAttribute as CFString, away) == .success
-        else { return }
+        else { return nil }
         for _ in 0..<25 {
             let words = SystemNotices.findAll(in: banner) { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXStaticTextRole }
             let said = words.compactMap { SystemNotices.value($0, kAXValueAttribute) as? String }
             if Self.showsBattery(said) {
                 // This thread can wait: the banner's out of sight meanwhile.
-                if Self.notchShows(said, connected: DeviceWatch.readBluetoothReport()) { return }
+                if Self.notchShows(said, connected: DeviceWatch.readBluetoothReport()) { return said }
                 break
             }
             usleep(20_000)
         }
         AXUIElementSetAttributeValue(banner, kAXPositionAttribute as CFString, place)
+        return nil
     }
 
     /// Whether the notch shows the device a banner names, by its name with or without its owner's.

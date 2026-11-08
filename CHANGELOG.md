@@ -44,15 +44,17 @@
   ripple stops, and it says `Low Power Mode enabled`. Clicking it again turns
   it off.
 - Added AirPods and Beats announced as they connect, as the iPhone shows them:
-  in 3D, from Apple's and Beats' own models, turning as the iPhone turns AirPods,
-  beside their battery as a ring. A device with no such model, such as AirPods 1
-  and 2 and older Beats, isn't shown, and macOS's own banner stays for it. With the pointer on it, it extends to show its
-  name and its level in numbers, the device and its ring growing into place.
-  One whose battery runs down past 20% or 10% is announced the same way, its
-  ring red with its level in numbers inside, in place of macOS's own banner,
-  which is hidden, and AirPods' own notification, which is taken away. With
-  `Accessibility` allowed, macOS's banner under the menu bar for AirPods
-  connecting or running low is hidden too.
+  in 3D, from Apple's and Beats' own models, turning as the iPhone turns
+  AirPods, beside their battery as a ring. A device with no such model, such as
+  AirPods 1 and 2 and older Beats, isn't shown, and macOS's own banner stays for
+  it. With the pointer on it, it extends to show its name and its level in
+  numbers, the device and its ring growing into place. One whose battery runs
+  down past 20% or 10% is announced the same way, its ring red with its level in
+  numbers inside, in place of macOS's own banner, which is hidden, and AirPods'
+  own notification, which is taken away. With `Accessibility` allowed, macOS's
+  banner under the menu bar for AirPods connecting or running low is hidden too.
+  As the Mac wakes, what reconnects is announced only if macOS shows its banner
+  for it, in the banner's place.
 - Added a low battery alert of its own for the charging case of AirPods and
   Beats earbuds: at 20% and again at 10%, the case on its own, closed and turning
   in 3D, from Apple's and Beats' own models, beside its red ring. It starts from

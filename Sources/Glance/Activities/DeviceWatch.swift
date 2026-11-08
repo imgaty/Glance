@@ -13,7 +13,8 @@ import UniformTypeIdentifiers
 /// over Bluetooth with a 3D model of their maker's, as Core Audio sees them arrive, by their model and
 /// battery as System Information reports them. Nothing else is announced, and macOS's own banner stays
 /// for those (see `MenuBarBanners`). None of it needs a permission. What's connected as Glance starts,
-/// or reconnects as the Mac wakes, isn't announced.
+/// or reconnects as the Mac wakes, isn't announced, unless macOS announces it with a banner of its own:
+/// then the notch says it in the banner's place.
 /// The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device whose battery
 /// runs down past 20% or 10% is announced the same way, its ring red, as the iPhone announces AirPods
 /// running low; macOS's own banner for it, and AirPods' notification, are taken away (see
@@ -190,7 +191,10 @@ final class DeviceWatch {
             guard app?.bundleIdentifier == SystemNotices.bluetoothBanners else { return }
             MainActor.assumeIsolated { self?.readBatteries() }
         }
-        MenuBarBanners.shared.watch { [weak self] in self?.readBatteries() }
+        MenuBarBanners.shared.watch { [weak self] taken in
+            self?.readBatteries()
+            if let taken { self?.bannerTaken(taken) }
+        }
         readBatteries()
     }
 
@@ -281,10 +285,13 @@ final class DeviceWatch {
 
     // MARK: Announcing
 
-    private func announce(_ name: String, model: Headphones, battery: Int?) {
+    /// `news` when macOS announced it too, which it may as the Mac wakes, when what reconnects isn't
+    /// otherwise announced.
+    private func announce(_ name: String, model: Headphones, battery: Int?, news: Bool = false) {
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
-        guard recent[name] == nil, !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices) else {
+        guard recent[name] == nil, news || !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices)
+        else {
             return
         }
         // A device is announced with its battery, as AirPods are; one that doesn't tell it, not at all.
@@ -293,6 +300,25 @@ final class DeviceWatch {
         Activities.shared.post(Self.alert(name: Self.shortName(name), model: model, battery: battery))
         // macOS's own banner for it says the same.
         SystemNotices.hideBluetoothBanner()
+    }
+
+    /// macOS announced a device with a banner, which was taken away for the notch to say the same.
+    /// Just after waking, what reconnects isn't announced otherwise, so the notch says it here; at
+    /// other times it already does, as the device connects.
+    private func bannerTaken(_ words: [String]) {
+        guard Activities.shared.settling else { return }
+        Task { [weak self] in
+            let report = await Self.bluetoothReport()
+            let said = Set(words.map { Self.shortName($0).lowercased() })
+            // Named as the Mac names it, rather than in the report's lowercase.
+            let devices = AudioOutput.outputs().filter { Self.isBluetooth($0.transport) }
+            guard
+                let device = devices.first(where: { said.contains(Self.shortName($0.name).lowercased()) && report[$0.name.lowercased()]?.model != nil }),
+                let info = report[device.name.lowercased()], let model = info.model, let battery = Battery(info),
+                await DeviceTurn.prepare(model) != nil
+            else { return }
+            self?.announce(device.name, model: model, battery: battery.percent, news: true)
+        }
     }
 
     /// Without its owner's name, as the iPhone names AirPods: Sam's AirPods Pro as AirPods Pro.
