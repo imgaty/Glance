@@ -242,6 +242,9 @@
 
 ### Player
 
+- Fixed Glance freezing, and the whole Mac with it, as the volume slider in the
+  sound output menu was dragged. Should Glance ever stop answering for ten
+  seconds, it now quits by itself.
 - Changed the `Spotlight` background to travel slowly round the open notch from
   the cover, its colors turning, rather than staying in the bottom left corner.
   It holds still while paused, and with Reduce Motion on.

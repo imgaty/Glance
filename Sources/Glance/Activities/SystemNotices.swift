@@ -141,9 +141,21 @@ enum SystemNotices {
         Bundle(url: app)?.localizedString(forKey: key, value: key, table: table) ?? key
     }
 
+    /// An attribute of another app's element; nothing for one of Glance's own.
     nonisolated static func value(_ element: AXUIElement, _ name: String) -> AnyObject? {
+        guard !isGlance(element) else { return nil }
         var value: AnyObject?
         return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
+    }
+
+    /// One of Glance's own elements. Other apps' trees can hold them: MenuBarAgent hosts each app's
+    /// menu bar item, Glance's included, and its windows lead into that app's whole interface.
+    /// Accessibility answers Glance's own elements in Glance, on the thread asking, so read from
+    /// another thread they run Glance's menus and views there, against the main thread: walked every
+    /// few seconds, that locked up Glance while its volume slider was dragged. So they're never read.
+    nonisolated static func isGlance(_ element: AXUIElement) -> Bool {
+        var pid: pid_t = 0
+        return AXUIElementGetPid(element, &pid) == .success && pid == getpid()
     }
 
     nonisolated static func findAll(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> [AXUIElement] {

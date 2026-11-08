@@ -758,6 +758,11 @@ their signature matches the one built into Glance.
     **System Settings > General > Login Items & Extensions**, in Sharing, or
     from **Settings > Tray**, which shows the way while it's off.
 
+12. **Glance quit by itself.** If Glance stops answering for ten seconds, it
+    quits rather than holding up the Mac, which can't be used while an app
+    frozen with a menu open holds the pointer. Open it again from the
+    Applications folder.
+
 <br>
 
 ## Uninstalling

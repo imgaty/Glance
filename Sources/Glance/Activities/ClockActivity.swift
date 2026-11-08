@@ -521,8 +521,7 @@ final class ClockActivity: ObservableObject {
     }
 
     private static func value(_ element: AXUIElement, _ name: String) -> AnyObject? {
-        var value: AnyObject?
-        return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
+        SystemNotices.value(element, name)
     }
 
     private static func find(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> AXUIElement? {

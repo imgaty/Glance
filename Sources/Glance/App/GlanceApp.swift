@@ -40,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         quitOnSignals()
+        watchMainThread()
         ActivityBench.shared.isolate()
         NSApp.mainMenu = makeMainMenu()
         nowPlaying.start()
@@ -107,6 +108,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     private var signalSources: [DispatchSourceSignal] = []
+
+    /// Should the main thread stop answering for ten seconds, Glance stops itself. Frozen with a menu
+    /// open, as it once was while its volume slider was dragged, it held the pointer and the keyboard,
+    /// and neither Quit nor Force Quit could be reached. Never while a debugger holds it.
+    private func watchMainThread() {
+        let watch = MainThreadWatch()
+        Thread.detachNewThread {
+            while true {
+                watch.ask()
+                Thread.sleep(forTimeInterval: 2)
+                guard watch.silent > MainThreadWatch.limit, !MainThreadWatch.debugged else { continue }
+                NSLog("Glance stopped itself: its main thread hadn't answered for %.0f seconds", watch.silent)
+                kill(getpid(), SIGKILL)
+            }
+        }
+    }
 
     /// Settings that rebuild the notches or reshape the player when they change.
     private func watchSettings() {
@@ -716,5 +733,32 @@ final class NotchManager {
     private func clickedElsewhere() {
         let location = NSEvent.mouseLocation
         controllers.forEach { $0.clicked(outsideAt: location) }
+    }
+}
+
+/// When the main thread last answered, asked from another thread. Time stands still while the Mac
+/// sleeps, as `DispatchTime` does, so waking isn't taken for silence.
+final class MainThreadWatch: @unchecked Sendable {
+    static let limit: TimeInterval = 10
+    private let lock = NSLock()
+    private var answered = DispatchTime.now()
+
+    func ask() {
+        DispatchQueue.main.async { [self] in lock.withLock { answered = .now() } }
+    }
+
+    /// Seconds since the main thread last answered.
+    var silent: TimeInterval {
+        let last = lock.withLock { answered }
+        return Double(DispatchTime.now().uptimeNanoseconds - last.uptimeNanoseconds) / 1e9
+    }
+
+    /// Glance is being debugged, and stopped at a breakpoint is no reason to quit.
+    static var debugged: Bool {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var name: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&name, 4, &info, &size, nil, 0) == 0 else { return false }
+        return info.kp_proc.p_flag & P_TRACED != 0
     }
 }

@@ -160,8 +160,7 @@ enum PlayingSource {
         let element = AXUIElementCreateApplication(running.processIdentifier)
         AXUIElementSetMessagingTimeout(element, 0.5)
         func value(_ element: AXUIElement, _ name: String) -> AnyObject? {
-            var value: AnyObject?
-            return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
+            SystemNotices.value(element, name)
         }
         func find(_ element: AXUIElement, depth: Int) -> AXUIElement? {
             let role = value(element, kAXRoleAttribute) as? String ?? ""

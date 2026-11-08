@@ -61,9 +61,7 @@ enum SpotifyMenu {
     }
 
     private static func value<T>(of element: AXUIElement, _ attribute: String) -> T? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
-        return value as? T
+        SystemNotices.value(element, attribute) as? T
     }
 
     private static func children(of element: AXUIElement) -> [AXUIElement] {
