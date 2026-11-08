@@ -7,6 +7,7 @@
 
 import AppKit
 import CoreAudio
+import os
 
 /// How loud the playing app plays, apart from the Mac's own volume, for the slider in the sound
 /// output menu. Music and Spotify have a volume of their own, which their scripting sets. Any other
@@ -28,6 +29,10 @@ final class AppVolume: ObservableObject {
     /// The latest volume for Music or Spotify, sent once the one before it has been.
     private var wanted: Int?
     private var sending = false
+    /// When the slider last moved: each move after a pause is written in the log.
+    private var movedAt = Date.distantPast
+    /// What the slider does, in the system log, so a slider that does nothing can be traced.
+    nonisolated static let log = Logger(subsystem: "dev.vibe.Glance", category: "volume")
 
     private init() {
         // An app that quits takes its tap with it.
@@ -61,6 +66,7 @@ final class AppVolume: ObservableObject {
         let samePlayer = app == self.app
         self.app = app
         self.pid = pid
+        Self.log.notice("Following \(app ?? "no app", privacy: .public), pid \(pid, privacy: .public)")
         guard let app else { return level = 1 }
         if Self.scriptable(app) {
             if !samePlayer { Task { await refresh() } }
@@ -83,13 +89,17 @@ final class AppVolume: ObservableObject {
     func set(_ value: Double) {
         let value = min(max(value, 0), 1)
         level = value
+        if Date.now.timeIntervalSince(movedAt) > 1 {
+            Self.log.notice("Slider to \(Int((value * 100).rounded()), privacy: .public)% for \(self.app ?? "no app", privacy: .public), pid \(self.pid, privacy: .public)")
+        }
+        movedAt = .now
         guard let app else { return }
         if Self.scriptable(app) { return send(Int((value * 100).rounded()), to: app) }
         if value > 0.995 {
             // Back to full: the tap goes, and the app plays straight to the speakers again.
             levels[app] = nil
             taps.removeValue(forKey: app)?.stop()
-        } else if let tap = taps[app] {
+        } else if let tap = taps[app], !tap.ended {
             levels[app] = value
             tap.gain = Float(value)
         } else {
@@ -98,9 +108,13 @@ final class AppVolume: ObservableObject {
         }
     }
 
+    /// A tap that has stopped by itself, its sound never heard, is made again on the next move.
     private func tap(_ app: String) {
         taps.removeValue(forKey: app)?.stop()
-        guard pid > 0, Permissions.audioCapture == .granted else { return }
+        guard pid > 0, Permissions.audioCapture == .granted else {
+            Self.log.notice("No tap for \(app, privacy: .public): pid \(self.pid, privacy: .public), audio capture \(String(describing: Permissions.audioCapture), privacy: .public)")
+            return
+        }
         taps[app] = VolumeTap(pid: pid, gain: Float(levels[app] ?? 1))
     }
 
@@ -121,7 +135,9 @@ final class AppVolume: ObservableObject {
         Task {
             while let volume = wanted {
                 wanted = nil
-                _ = await PlayerScripting.run(PlayerScripting.tell(app, "set sound volume to \(volume)"))
+                if await PlayerScripting.run(PlayerScripting.tell(app, "set sound volume to \(volume)")) == nil {
+                    Self.log.error("\(app, privacy: .public) didn't take its volume")
+                }
             }
             sending = false
         }
@@ -144,6 +160,10 @@ private final class VolumeTap: @unchecked Sendable {
     private var tapID = AudioObjectID(0)
     private var aggregateID = AudioObjectID(0)
     private var ioProc: AudioDeviceIOProcID?
+    private let endedLock = NSLock()
+    private var endedValue = false
+    /// Stopped, by itself or asked to: its app plays straight to the speakers again.
+    var ended: Bool { endedLock.withLock { endedValue } }
 
     var gain: Float {
         get { gainBox.pointee }
@@ -154,10 +174,15 @@ private final class VolumeTap: @unchecked Sendable {
         gainBox.initialize(to: gain)
         heard.initialize(to: false)
         queue.async { [self] in
-            guard start(pid) else { return tearDown() }
+            guard start(pid) else {
+                AppVolume.log.error("Couldn't tap pid \(pid, privacy: .public)")
+                return tearDown()
+            }
             // Quieted but never heard, the app would go silent: without the tap's sound, it's let go.
             queue.asyncAfter(deadline: .now() + 0.5) { [self] in
-                if !heard.pointee { tearDown() }
+                guard !heard.pointee else { return }
+                AppVolume.log.error("Tap of pid \(pid, privacy: .public) heard nothing")
+                tearDown()
             }
         }
     }
@@ -210,6 +235,7 @@ private final class VolumeTap: @unchecked Sendable {
     }
 
     private func tearDown() {
+        endedLock.withLock { endedValue = true }
         if aggregateID != 0 {
             if let ioProc {
                 AudioDeviceStop(aggregateID, ioProc)
