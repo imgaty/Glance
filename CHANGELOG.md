@@ -250,8 +250,9 @@
   seconds, it now quits by itself.
 - Fixed the volume slider doing nothing for an app such as Safari once turning
   it down had once failed, until Glance was opened again.
-- Changed the `Spotlight` background to travel slowly round the open notch from
-  the cover, its colors turning, rather than staying in the bottom left corner.
+- Changed the `Spotlight` background to travel slowly round the cover, in the
+  cover's own colors, turning, rather than staying in the bottom left corner.
+  Passing the camera, it goes behind the cover, so the camera never cuts it off.
   It holds still while paused, and with Reduce Motion on.
 - Changed `Background` to start as `None` on a new install. If you had Glance
   before, it stays as it was, whether or not you ever chose it.

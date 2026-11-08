@@ -240,6 +240,41 @@ struct PlayerOptionsTests {
         #expect(MusicBackground.allCases.map(\.title) == ["Replace glass", "Spotlight", "None"])
     }
 
+    @Test("The spotlight goes round the cover and nowhere else, and never reaches the camera housing")
+    func spotlightRoundTheCover() {
+        let closed = CGSize(width: 185, height: 32)
+        for layout in PlayerLayout.allCases {
+            let open = layout.size(closed: closed)
+            let artwork = layout.artwork
+            // In the open notch's own points: the cover up in its top left corner, the housing in the
+            // middle of its top edge.
+            let cover = CGPoint(x: PlayerLayout.padding + artwork / 2, y: PlayerLayout.padding + artwork / 2)
+            let camera = CGRect(x: open.width / 2 - closed.width / 2, y: 0, width: closed.width, height: closed.height)
+            var widths: [CGFloat] = []
+            for step in 0..<240 {
+                let t = Spotlight.loop * Double(step) / 240
+                let spot = Spotlight.spot(cover: cover, artwork: artwork, camera: camera, travelled: t)
+                // Round the cover, at the same distance all the way.
+                #expect(abs(hypot(spot.center.x - cover.x, spot.center.y - cover.y) - artwork * Spotlight.reach) < 0.01)
+                // Its soft edge stops short of the housing, even at its corner; right beside it, it's gone.
+                let nearest = CGPoint(x: min(max(spot.center.x, camera.minX), camera.maxX), y: min(spot.center.y, camera.maxY))
+                let gap = hypot(spot.center.x - nearest.x, spot.center.y - nearest.y) - spot.diameter / 2 - Spotlight.fringe(artwork: artwork)
+                #expect(spot.diameter == 0 || gap >= Spotlight.clearance - 0.01, "\(layout) at \(t) s: \(gap)")
+                widths.append(spot.diameter)
+                // Without a housing, it never shrinks.
+                #expect(Spotlight.spot(cover: cover, artwork: artwork, camera: nil, travelled: t).diameter == artwork * Spotlight.width)
+            }
+            // Full width away from the housing, shrinking behind the cover toward it.
+            #expect(widths.max() == artwork * Spotlight.width)
+            #expect(widths.min() == 0)
+            // It comes out below and left of the cover's middle, and goes up its left side first.
+            let first = Spotlight.spot(cover: cover, artwork: artwork, camera: camera, travelled: 0).center
+            let next = Spotlight.spot(cover: cover, artwork: artwork, camera: camera, travelled: 1).center
+            #expect(first.x < cover.x && first.y > cover.y)
+            #expect(next.x < first.x && next.y < first.y)
+        }
+    }
+
     @Test("Accent colors are named as System Settings names them")
     func accentTitles() {
         #expect(

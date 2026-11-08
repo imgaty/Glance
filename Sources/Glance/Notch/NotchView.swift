@@ -786,19 +786,25 @@ struct NotchView: View {
             shade
             // The artwork's light: in place of the glass, it fills the bottom and fades out under the
             // black at the top, just where the glass shows; as a spotlight, it's a soft circle that
-            // comes out of the cover and travels round the open notch, its colors turning. Choosing
-            // between them morphs one into another.
+            // comes out of the cover and travels round it, its colors turning. Choosing between them
+            // morphs one into another.
             let travels = background == .spotlight && !reduceMotion
             LightClock(running: travels && lit && isOpen && !paused && nowPlaying.isPlaying, shown: lit) { travelled in
-                let spot = spotlightCenter(m, travelled: travels ? travelled : 0)
+                let spot = spotlight(m, travelled: travels ? travelled : 0)
                 ArtworkLight(
                     dim: accessibility.increasesContrast ? Self.contrastDim : background == .spotlight ? 0 : Self.colorsDim,
                     active: isOpen && !paused, spread: lightSpread
                 )
                 .frame(width: lightSize.width, height: lightSize.height)
+                // The spotlight shows the middle of the cover's colors wherever it is, rather than
+                // the part of them laid out under it: up by the cover, that's its edge, often dark.
+                .offset(
+                    background == .spotlight
+                        ? CGSize(width: spot.center.x - lightSize.width / 2, height: spot.center.y - lightSize.height / 2) : .zero
+                )
                 .rotationEffect(
                     .radians(travels ? travelled * Self.spotlightTurn : 0),
-                    anchor: UnitPoint(x: spot.x / lightSize.width, y: spot.y / lightSize.height)
+                    anchor: UnitPoint(x: spot.center.x / lightSize.width, y: spot.center.y / lightSize.height)
                 )
                 .mask {
                     // It comes in as it's turned on or the notch opens: the background washing out of
@@ -1195,49 +1201,34 @@ struct NotchView: View {
     /// One circle: for the background, centered on the notch at the top, from the notch's own
     /// width to large enough to fill everything; for the spotlight, a soft glow at `spot`, from
     /// nothing. It grows and shrinks between them, so one morphs into the other.
-    private func lightShape(_ m: NotchMetrics, grown: Bool, fills: Bool, spot: CGPoint) -> some View {
+    private func lightShape(_ m: NotchMetrics, grown: Bool, fills: Bool, spot: Spotlight.Spot) -> some View {
         let size = lightSize
-        let artwork = model.layout.artwork
         // The background grows out of the middle of the open notch, evenly to both sides, to just
         // past its far corners, so the whole growth is seen.
         let middle = CGPoint(x: size.width / 2, y: model.openSize.height / 2)
         let reach = hypot(model.openSize.width / 2 + (model.showsLyrics ? model.lyricsWidth / 2 : 0) + 40, model.openSize.height / 2 + 40)
-        let diameter = fills ? (grown ? reach * 2 + 80 : 0) : (grown ? artwork * 1.2 : 0)
+        let diameter = fills ? (grown ? reach * 2 + 80 : 0) : (grown ? spot.diameter : 0)
         return Circle()
             .frame(width: diameter, height: diameter)
-            .blur(radius: fills ? 30 : artwork * 0.14)
-            .position(fills ? middle : spot)
+            .blur(radius: fills ? 30 : Spotlight.blur(artwork: model.layout.artwork))
+            .position(fills ? middle : spot.center)
             .frame(width: size.width, height: size.height)
     }
 
-    /// One loop round the open notch, in seconds, and how fast the spotlight's colors turn, in
-    /// radians a second: slow enough to read as light drifting, not as something to watch.
-    static let spotlightLoop: TimeInterval = 20
+    /// How fast the spotlight's colors turn, in radians a second: slow enough to read as light
+    /// drifting, not as something to watch.
     static let spotlightTurn = 2 * Double.pi / 14
 
-    /// Where the spotlight is, `travelled` seconds into its journey. It comes out below and left
-    /// of the cover's middle, so the glow first shows around its bottom and left, off its top
-    /// right, where the camera housing is only a few points away; over the first second and a
-    /// half it eases onto a loop round the open notch, as far in from its sides as that, and
-    /// clockwise round from there. The loop keeps to the lower part, low enough that the glow
-    /// never reaches the camera housing, whose cut-out has a hard edge.
-    private func spotlightCenter(_ m: NotchMetrics, travelled: TimeInterval) -> CGPoint {
+    /// The spotlight, `travelled` seconds into its journey round the cover (see `Spotlight`).
+    private func spotlight(_ m: NotchMetrics, travelled: TimeInterval) -> Spotlight.Spot {
         let size = lightSize
         let artwork = model.layout.artwork
         let cover = CGPoint(
-            x: size.width / 2 - m.bodyWidth / 2 + PlayerLayout.padding + artwork * 0.36,
-            y: PlayerLayout.padding + artwork * 0.64)
-        guard travelled > 0 else { return cover }
-        let middle = CGPoint(x: size.width / 2, y: m.height * 0.7)
-        let across = max(middle.x - cover.x, 1)
-        let down = m.height * 0.12
-        // Starting at the point of the loop toward the cover.
-        let start = atan2((cover.y - middle.y) / down, (cover.x - middle.x) / across)
-        let angle = start + travelled / Self.spotlightLoop * 2 * .pi
-        let loop = CGPoint(x: middle.x + across * cos(angle), y: middle.y + down * sin(angle))
-        let onto = min(travelled / 1.5, 1)
-        let eased = onto * onto * (3 - 2 * onto)
-        return CGPoint(x: cover.x + (loop.x - cover.x) * eased, y: cover.y + (loop.y - cover.y) * eased)
+            x: size.width / 2 - m.bodyWidth / 2 + PlayerLayout.padding + artwork / 2,
+            y: PlayerLayout.padding + artwork / 2)
+        let closed = model.closedSize
+        let camera = model.hasCamera ? CGRect(x: size.width / 2 - closed.width / 2, y: 0, width: closed.width, height: closed.height) : nil
+        return Spotlight.spot(cover: cover, artwork: artwork, camera: camera, travelled: travelled)
     }
 
     /// The spotlight fades out softly a few points before the notch's edges, so its rounded
@@ -1311,6 +1302,51 @@ struct NotchView: View {
             return .init(color: .black.opacity(inverted ? 1 - black : black), location: start + (1 - start) * t)
         }
         return [.init(color: .black.opacity(inverted ? 0 : 1), location: 0)] + fade
+    }
+}
+
+/// The `Spotlight` background's path: a soft glow of the cover's colors, behind the cover, going
+/// round it and nowhere else. It comes out below and left of the cover's middle and circles it
+/// clockwise, up its left side, over its top, down its right and back along its bottom. The camera
+/// housing is only a few points from the cover's top right, and cuts whatever reaches it off hard,
+/// so as the glow passes that side it shrinks behind the cover, just enough that its soft edge
+/// never meets the housing, and grows back as it comes round.
+enum Spotlight {
+    struct Spot: Equatable {
+        var center: CGPoint
+        var diameter: CGFloat
+    }
+
+    /// One loop round the cover, in seconds.
+    static let loop: TimeInterval = 12
+    /// How far from the cover's middle the glow goes, out to the middle of each of its edges, so half
+    /// of it shows round the cover; and how wide it is at most, both by the cover's side.
+    static let reach: CGFloat = 0.5
+    static let width: CGFloat = 1.2
+    /// Where it comes out: below and left of the cover's middle, a quarter of the way round from
+    /// its bottom.
+    static let start = 0.75 * Double.pi
+    /// Kept between the glow's soft edge and the camera housing, in points.
+    static let clearance: CGFloat = 2
+
+    /// How soft its edge is, by the cover's side.
+    static func blur(artwork: CGFloat) -> CGFloat { artwork * 0.14 }
+
+    /// How far the soft edge shows past the glow's circle: twice its blur, beyond which it's gone.
+    static func fringe(artwork: CGFloat) -> CGFloat { blur(artwork: artwork) * 2 }
+
+    /// The glow `travelled` seconds round the cover whose middle is `cover`, with the camera housing
+    /// at `camera`, if there is one.
+    static func spot(cover: CGPoint, artwork: CGFloat, camera: CGRect?, travelled: TimeInterval) -> Spot {
+        let angle = start + travelled / loop * 2 * .pi
+        let center = CGPoint(x: cover.x + artwork * reach * cos(angle), y: cover.y + artwork * reach * sin(angle))
+        var diameter = artwork * width
+        if let camera {
+            let nearest = CGPoint(x: min(max(center.x, camera.minX), camera.maxX), y: min(max(center.y, camera.minY), camera.maxY))
+            let room = hypot(center.x - nearest.x, center.y - nearest.y) - fringe(artwork: artwork) - clearance
+            diameter = min(diameter, max(room, 0) * 2)
+        }
+        return Spot(center: center, diameter: diameter)
     }
 }
 
