@@ -10429,6 +10429,214 @@
         }
       }
     },
+    "Battery": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البطارية"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bateria"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baterie"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteri"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batterie"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μπαταρία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batería"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akku"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batterie"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סוללה"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैटरी"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baterija"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akkumulátor"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baterai"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッテリー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배터리"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bateri"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteri"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batterij"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bateria"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bateria"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bateria"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baterie"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аккумулятор"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batéria"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baterija"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteri"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แบตเตอรี่"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pil"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Акумулятор"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电池"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電池"
+          }
+        }
+      }
+    },
     "Black": {
       "localizations": {
         "ar": {
@@ -11049,214 +11257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "書籤"
-          }
-        }
-      }
-    },
-    "Briefly shows what starts playing.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "يعرض لفترة وجيزة ما يبدأ تشغيله."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra breument el que comença a sonar."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Krátce ukáže, co začíná hrát."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viser kort, hvad der begynder at spille."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeigt kurz an, was gerade zu spielen beginnt."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Δείχνει για λίγο τι αρχίζει να παίζει."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Muestra brevemente lo que empieza a sonar."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näyttää hetken, mitä alkaa soida."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affiche brièvement ce qui commence à jouer."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "מציג לרגע את מה שמתחיל לנגן."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "जो चलना शुरू हो रहा है उसे कुछ देर दिखाता है।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nakratko prikazuje što počinje svirati."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rövid ideig mutatja, mi kezd el szólni."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menampilkan sebentar apa yang mulai diputar."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra per un attimo ciò che inizia a suonare."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "再生が始まったものを短く表示します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "재생이 시작된 항목을 잠시 표시합니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menunjukkan seketika apa yang mula dimainkan."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viser kort hva som begynner å spille."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toont even wat begint te spelen."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Krótko pokazuje, co zaczyna grać."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra rapidamente o que começa a tocar."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra por breves instantes o que começa a tocar."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arată pe scurt ce începe să se redea."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ненадолго показывает, что начинает играть."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Krátko ukáže, čo začína hrať."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Na kratko pokaže, kaj se začne predvajati."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visar kort vad som börjar spelas."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "แสดงสิ่งที่เริ่มเล่นชั่วครู่"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Çalmaya başlayanı kısa süreliğine gösterir."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Коротко показує, що починає грати."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hiển thị nhanh nội dung bắt đầu phát."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "短暂显示开始播放的内容。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "短暫顯示開始播放的內容。"
           }
         }
       }
@@ -19161,418 +19161,210 @@
         }
       }
     },
-    "Counts down beside the camera, and says when it's done.": {
+    "Counts Clock's timers down and its stopwatch up beside the camera, and says when a timer is done.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يعدّ تنازليًا بجانب الكاميرا ويخبرك عند الانتهاء."
+            "value": "يعدّ مؤقتات الساعة تنازليًا وساعة الإيقاف تصاعديًا بجانب الكاميرا، ويخبرك عند انتهاء المؤقت."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fa el compte enrere al costat de la càmera i avisa quan acaba."
+            "value": "Fa el compte enrere dels temporitzadors del Rellotge i compta amb el cronòmetre al costat de la càmera, i avisa quan acaba un temporitzador."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odpočítává vedle kamery a oznámí konec."
+            "value": "Odpočítává minutky z Hodin a počítá stopky vedle kamery a oznámí, když minutka skončí."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tæller ned ved siden af kameraet og siger til, når den er færdig."
+            "value": "Tæller Urs tidtagninger ned og stopuret op ved siden af kameraet og siger til, når en tidtagning er færdig."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zählt neben der Kamera herunter und meldet das Ende."
+            "value": "Zählt die Timer der Uhr herunter und ihre Stoppuhr hoch, neben der Kamera, und meldet, wenn ein Timer abgelaufen ist."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Μετρά αντίστροφα δίπλα στην κάμερα και ειδοποιεί στο τέλος."
+            "value": "Μετρά αντίστροφα τους χρονοδιακόπτες του Ρολογιού και μετρά με το χρονόμετρο δίπλα στην κάμερα, και ειδοποιεί όταν τελειώνει ένας χρονοδιακόπτης."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hace la cuenta atrás junto a la cámara y avisa al terminar."
+            "value": "Hace la cuenta atrás de los temporizadores del Reloj y cuenta con el cronómetro junto a la cámara, y avisa cuando termina un temporizador."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Laskee alaspäin kameran vieressä ja kertoo, kun aika on täynnä."
+            "value": "Laskee Kellon ajastimia alaspäin ja ajanottoa ylöspäin kameran vieressä ja kertoo, kun ajastin päättyy."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fait le compte à rebours à côté de la caméra et signale la fin."
+            "value": "Fait le compte à rebours des minuteurs d’Horloge et compte le temps du chronomètre à côté de la caméra, et signale la fin d’un minuteur."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "סופר לאחור ליד המצלמה ומודיע בסיום."
+            "value": "סופר לאחור את ספירות הלאחור של השעון וסופר קדימה את שעון העצר ליד המצלמה, ומודיע כשספירה לאחור מסתיימת."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "कैमरा के पास काउंटडाउन करता है और समाप्त होने पर बताता है।"
+            "value": "कैमरा के पास घड़ी के टाइमर का काउंटडाउन और विराम घड़ी का समय गिनता है, और टाइमर समाप्त होने पर बताता है।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odbrojava pored kamere i javlja kad završi."
+            "value": "Odbrojava brojače iz Sata i broji vrijeme štoperice pored kamere te javlja kad brojač završi."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visszaszámol a kamera mellett, és jelzi, ha lejárt."
+            "value": "A kamera mellett visszaszámolja az Óra időzítőit, méri a stopperórát, és jelzi, ha egy időzítő lejárt."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menghitung mundur di samping kamera, dan memberi tahu saat selesai."
+            "value": "Menghitung mundur timer Jam dan menghitung naik stopwatch-nya di samping kamera, dan memberi tahu saat timer selesai."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fa il conto alla rovescia accanto alla fotocamera e avvisa alla fine."
+            "value": "Fa il conto alla rovescia dei timer di Orologio e conta il tempo del cronometro accanto alla fotocamera, e avvisa quando un timer finisce."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カメラの横でカウントダウンし、終わるとお知らせします。"
+            "value": "カメラの横で時計のタイマーをカウントダウンし、ストップウォッチをカウントアップして、タイマーが終わるとお知らせします。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "카메라 옆에서 카운트다운하고 끝나면 알려줍니다."
+            "value": "카메라 옆에서 시계의 타이머를 카운트다운하고 스톱워치로 시간을 세며, 타이머가 끝나면 알려줍니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mengira detik di sebelah kamera, dan memberitahu apabila selesai."
+            "value": "Mengira detik pemasa Jam dan mengira naik jam randiknya di sebelah kamera, dan memberitahu apabila pemasa selesai."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Teller ned ved siden av kameraet og sier fra når det er ferdig."
+            "value": "Teller Klokkes nedtellinger ned og stoppeklokken opp ved siden av kameraet, og sier fra når en nedtelling er ferdig."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Telt af naast de camera en meldt wanneer het klaar is."
+            "value": "Telt de timers van Klok af en de stopwatch op naast de camera, en meldt wanneer een timer klaar is."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odlicza czas obok kamery i informuje o końcu."
+            "value": "Odlicza minutniki z Zegara i mierzy czas stoperem obok kamery oraz informuje o końcu minutnika."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Faz a contagem regressiva ao lado da câmera e avisa quando termina."
+            "value": "Faz a contagem regressiva dos timers do Relógio e conta o tempo do cronômetro ao lado da câmera, e avisa quando um timer termina."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Faz a contagem decrescente ao lado da câmara e avisa quando termina."
+            "value": "Faz a contagem decrescente dos temporizadores do Relógio e conta o tempo do cronómetro ao lado da câmara, e avisa quando um temporizador termina."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Numără invers lângă cameră și anunță când s-a terminat."
+            "value": "Numără invers temporizatoarele din Ceas și numără cronometrul lângă cameră și anunță când s-a terminat un temporizator."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ведёт обратный отсчёт рядом с камерой и сообщает об окончании."
+            "value": "Ведёт обратный отсчёт таймеров Часов и отсчёт секундомера рядом с камерой и сообщает, когда таймер закончился."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odpočítava vedľa kamery a oznámi koniec."
+            "value": "Odpočítava časovače z Hodín a počíta stopky vedľa kamery a oznámi, keď časovač skončí."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odšteva poleg kamere in pove, ko konča."
+            "value": "Odšteva časovnike Ure in šteje čas štoparice poleg kamere ter pove, ko časovnik konča."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Räknar ner bredvid kameran och säger till när det är klart."
+            "value": "Räknar ner Klockans timer och räknar upp dess tidtagarur bredvid kameran, och säger till när en timer är klar."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "นับถอยหลังข้างกล้องและแจ้งเมื่อเสร็จ"
+            "value": "นับถอยหลังนาฬิกานับถอยหลังของนาฬิกาและนับเวลานาฬิกาจับเวลาข้างกล้อง และแจ้งเมื่อการนับถอยหลังเสร็จ"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kameranın yanında geri sayar ve bitince bildirir."
+            "value": "Kameranın yanında Saat’in sayaçlarını geri, kronometresini ileri sayar ve bir sayaç bitince bildirir."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Веде зворотний відлік поруч із камерою та повідомляє про завершення."
+            "value": "Веде зворотний відлік таймерів Годинника і відлік секундоміра поруч із камерою та повідомляє, коли таймер завершено."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Đếm ngược bên cạnh camera và báo khi xong."
+            "value": "Đếm ngược hẹn giờ của Đồng hồ và đếm lên bấm giờ bên cạnh camera, và báo khi hẹn giờ xong."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在相机旁倒计时，结束时提醒。"
+            "value": "在相机旁为“时钟”的计时器倒计时、为秒表正计时，并在计时器结束时提醒。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在相機旁倒數計時，結束時提醒。"
-          }
-        }
-      }
-    },
-    "Counts up beside the camera.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "يعدّ تصاعديًا بجانب الكاميرا."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Compta el temps al costat de la càmera."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Počítá čas vedle kamery."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tæller op ved siden af kameraet."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zählt neben der Kamera hoch."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Μετρά τον χρόνο δίπλα στην κάμερα."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuenta el tiempo junto a la cámara."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Laskee ylöspäin kameran vieressä."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Compte le temps à côté de la caméra."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "סופר קדימה ליד המצלמה."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "कैमरा के पास समय गिनता है।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Broji vrijeme pored kamere."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Számol a kamera mellett."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menghitung naik di samping kamera."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conta il tempo accanto alla fotocamera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カメラの横でカウントアップします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카메라 옆에서 시간을 셉니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mengira naik di sebelah kamera."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Teller opp ved siden av kameraet."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telt op naast de camera."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mierzy czas obok kamery."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conta o tempo ao lado da câmera."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conta o tempo ao lado da câmara."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Numără lângă cameră."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ведёт отсчёт рядом с камерой."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Počíta čas vedľa kamery."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Šteje čas poleg kamere."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Räknar upp bredvid kameran."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "นับเวลาข้างกล้อง"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kameranın yanında ileri sayar."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Веде відлік поруч із камерою."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đếm lên bên cạnh camera."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在相机旁正计时。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在相機旁正向計時。"
+            "value": "在相機旁為「時鐘」的計時器倒數、為碼錶正向計時，並在計時器結束時提醒。"
           }
         }
       }
@@ -37505,214 +37297,6 @@
         }
       }
     },
-    "Low battery": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "البطارية منخفضة"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bateria baixa"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slabá baterie"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lavt batteri"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Batterie schwach"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Χαμηλή μπαταρία"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Batería baja"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akku vähissä"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Batterie faible"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "סוללה חלשה"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "बैटरी कम"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slaba baterija"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lemerülőben"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Baterai lemah"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Batteria scarica"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バッテリー残量低下"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "배터리 부족"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bateri lemah"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lavt batteri"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Batterij bijna leeg"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Niski poziom baterii"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bateria fraca"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bateria fraca"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Baterie slabă"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Низкий заряд"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slabá batéria"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nizka baterija"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Svagt batteri"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "แบตเตอรี่ต่ำ"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pil zayıf"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Низький заряд"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pin yếu"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电量不足"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "電量不足"
-          }
-        }
-      }
-    },
     "Low battery, %lld percent": {
       "localizations": {
         "ar": {
@@ -41465,6 +41049,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "未安裝"
+          }
+        }
+      }
+    },
+    "Now Playing": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قيد التشغيل"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ara sona"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Právě hraje"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afspiller nu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt läuft"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Παίζει τώρα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora suena"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toistossa nyt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À l’écoute"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מופעל כעת"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी चल रहा है"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Izvodi se"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lejátszás alatt"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sedang Diputar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In riproduzione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 재생 중"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kini Dimainkan"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spilles nå"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huidig onderdeel"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduzindo"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reproduzir"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "În redare"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Исполняется"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Práve hrá"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predvaja se"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spelas nu"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "กำลังเล่นอยู่"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şu An Çalınan"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зараз грає"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang phát"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放中"
           }
         }
       }
@@ -50203,6 +49995,214 @@
         }
       }
     },
+    "Recordings": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التسجيلات"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravacions"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Záznamy"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optagelser"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufnahmen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εγγραφές"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabaciones"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tallenteet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrements"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטות"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिकॉर्डिंग"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snimke"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Felvételek"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rekaman"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画と録音"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹화 및 녹음"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rakaman"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opptak"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opnamen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nagrania"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravações"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravações"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Înregistrări"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записи"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nahrávky"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posnetki"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspelningar"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "การบันทึก"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıtlar"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записи"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bản ghi"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄製"
+          }
+        }
+      }
+    },
     "Redo": {
       "localizations": {
         "ar": {
@@ -55611,214 +55611,6 @@
         }
       }
     },
-    "Screen recording": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تسجيل الشاشة"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gravació de pantalla"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Záznam obrazovky"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skærmoptagelse"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bildschirmaufnahme"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Εγγραφή οθόνης"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grabación de pantalla"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näyttötallennus"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrement de l’écran"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "הקלטת מסך"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "स्क्रीन रिकॉर्डिंग"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Snimka zaslona"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Képernyőfelvétel"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perekaman layar"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registrazione schermo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画面収録"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "화면 기록"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rakaman skrin"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skjermopptak"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schermopname"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nagranie z ekranu"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gravação de tela"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gravação do ecrã"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Înregistrare ecran"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запись экрана"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Záznam obrazovky"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Snemanje zaslona"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skärminspelning"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "การบันทึกหน้าจอ"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ekran kaydı"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запис екрана"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ghi màn hình"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "录屏"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "螢幕錄影"
-          }
-        }
-      }
-    },
     "Screen recording saved to %@, %@": {
       "localizations": {
         "ar": {
@@ -60603,214 +60395,6 @@
         }
       }
     },
-    "Shows a voice memo being recorded, with its sound as it comes in, and a button to stop it.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "يعرض مذكرة صوتية أثناء تسجيلها، مع صوتها لحظة بلحظة، وزرًا لإيقافها."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra una nota de veu mentre es grava, amb el so a mesura que entra, i un botó per aturar-la."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobrazuje nahrávání hlasového záznamu, jeho zvuk během nahrávání a tlačítko k zastavení."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viser et memo, mens det optages, med lyden, som den kommer ind, og en knap til at stoppe det."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeigt ein Sprachmemo während der Aufnahme mit seinem Ton und einer Taste zum Stoppen."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Εμφανίζει ένα φωνητικό μήνυμα κατά την εγγραφή, με τον ήχο του καθώς εισέρχεται, και ένα κουμπί για διακοπή."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Muestra una nota de voz mientras se graba, con su sonido a medida que entra, y un botón para detenerla."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näyttää äänitettävän sanelun, sen äänen sitä mukaa kuin se tulee, ja painikkeen sen lopettamiseen."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affiche un mémo vocal en cours d’enregistrement, avec son son au fur et à mesure, et un bouton pour l’arrêter."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "מציג הקלטה קולית בזמן ההקלטה, עם הצליל שלה בזמן אמת, וכפתור לעצירתה."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "रिकॉर्ड हो रहे वॉइस मेमो को उसकी आवाज़ के साथ दिखाता है, और उसे रोकने का बटन भी।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prikazuje audio snimku dok se snima, s njezinim zvukom kako pristiže, i tipku za zaustavljanje."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Megjeleníti a felvétel alatt álló hangjegyzetet a beérkező hanggal és egy leállítógombbal."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menampilkan memo suara yang sedang direkam, dengan suaranya saat masuk, dan tombol untuk menghentikannya."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra un memo vocale in registrazione, con il suono mentre arriva, e un pulsante per interromperlo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "録音中のボイスメモを、入ってくる音と停止ボタンとともに表示します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 중인 음성 메모를 들어오는 소리와 중단 버튼과 함께 표시합니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menunjukkan memo suara yang sedang dirakam, dengan bunyinya semasa masuk, dan butang untuk menghentikannya."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viser et taleopptak mens det tas opp, med lyden etter hvert som den kommer inn, og en knapp for å stoppe det."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toont een gesproken memo terwijl hij wordt opgenomen, met het geluid terwijl het binnenkomt, en een knop om hem te stoppen."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokazuje nagrywaną notatkę głosową, z jej dźwiękiem na bieżąco, i przycisk do zatrzymania."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra uma gravação do Gravador em andamento, com o som enquanto entra, e um botão para pará-la."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra uma gravação do Dictafone em curso, com o som à medida que entra, e um botão para a parar."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afișează un memo vocal în timp ce se înregistrează, cu sunetul pe măsură ce intră, și un buton pentru a-l opri."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показывает идущую голосовую запись, ее звук по мере поступления и кнопку остановки."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobrazuje nahrávanie v Diktafóne, jeho zvuk počas nahrávania a tlačidlo na zastavenie."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prikazuje glasovni zapisek med snemanjem, z zvokom, kot prihaja, in gumb za ustavitev."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visar ett röstmemo medan det spelas in, med ljudet allteftersom det kommer in, och en knapp för att stoppa det."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "แสดงบันทึกเสียงที่กำลังบันทึก พร้อมเสียงที่เข้ามาและปุ่มสำหรับหยุด"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kaydedilen bir sesli notu, gelen sesiyle ve durdurma düğmesiyle gösterir."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показує голосову нотатку під час записування, з її звуком у реальному часі та кнопкою, щоб зупинити її."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hiện bản ghi âm đang được ghi, với âm thanh khi thu vào, và một nút để dừng."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示正在录制的语音备忘录，实时显示声音，并提供停止按钮。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顯示正在錄製的語音備忘錄，即時顯示聲音，並提供停止按鈕。"
-          }
-        }
-      }
-    },
     "Shows calls coming in and the call you're on, in place of macOS's popup.": {
       "localizations": {
         "ar": {
@@ -61435,626 +61019,626 @@
         }
       }
     },
-    "Shows the battery's level when you plug in.": {
+    "Shows the battery's level when you plug in, and warns at 20% and again at 10%.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يعرض مستوى البطارية عند التوصيل بالطاقة."
+            "value": "يعرض مستوى البطارية عند التوصيل بالطاقة، وينبّه عند 20% ومرة أخرى عند 10%."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra el nivell de bateria en connectar al corrent."
+            "value": "Mostra el nivell de bateria en connectar al corrent, i avisa al 20% i de nou al 10%."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí stav baterie po připojení k napájení."
+            "value": "Zobrazí stav baterie po připojení k napájení a upozorní při 20 % a znovu při 10 %."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser batteriniveauet, når du tilslutter."
+            "value": "Viser batteriniveauet, når du tilslutter, og advarer ved 20 % og igen ved 10 %."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeigt den Batteriestand beim Anschließen."
+            "value": "Zeigt den Batteriestand beim Anschließen und warnt bei 20 % und nochmals bei 10 %."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Εμφανίζει το επίπεδο μπαταρίας όταν συνδέετε το ρεύμα."
+            "value": "Εμφανίζει το επίπεδο μπαταρίας όταν συνδέετε το ρεύμα, και προειδοποιεί στο 20% και ξανά στο 10%."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra el nivel de batería al conectar a la corriente."
+            "value": "Muestra el nivel de batería al conectar a la corriente, y avisa al 20% y de nuevo al 10%."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Näyttää akun varaustason, kun liität virtalähteen."
+            "value": "Näyttää akun varaustason, kun liität virtalähteen, ja varoittaa 20 %:ssa ja uudelleen 10 %:ssa."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Affiche le niveau de la batterie au branchement."
+            "value": "Affiche le niveau de la batterie au branchement, et prévient à 20 % puis à 10 %."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "מציג את רמת הסוללה בחיבור לחשמל."
+            "value": "מציג את רמת הסוללה בחיבור לחשמל, ומזהיר ב-20% ושוב ב-10%."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "प्लग इन करने पर बैटरी का स्तर दिखाता है।"
+            "value": "प्लग इन करने पर बैटरी का स्तर दिखाता है, और 20% पर और फिर 10% पर चेतावनी देता है।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikazuje razinu baterije kad priključite napajanje."
+            "value": "Prikazuje razinu baterije kad priključite napajanje te upozorava na 20 % i ponovno na 10 %."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mutatja az akkumulátor szintjét csatlakoztatáskor."
+            "value": "Csatlakoztatáskor mutatja az akkumulátor szintjét, és figyelmeztet 20%-nál és újra 10%-nál."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menampilkan tingkat baterai saat Anda menghubungkan daya."
+            "value": "Menampilkan tingkat baterai saat Anda menghubungkan daya, dan memperingatkan pada 20% dan lagi pada 10%."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra il livello della batteria quando colleghi l’alimentazione."
+            "value": "Mostra il livello della batteria quando colleghi l’alimentazione, e avvisa al 20% e di nuovo al 10%."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "電源接続時にバッテリー残量を表示します。"
+            "value": "電源接続時にバッテリー残量を表示し、20%と10%で警告します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "전원에 연결할 때 배터리 잔량을 표시합니다."
+            "value": "전원에 연결할 때 배터리 잔량을 표시하고, 20%와 10%에서 경고합니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menunjukkan tahap bateri apabila anda memalamkan kuasa."
+            "value": "Menunjukkan tahap bateri apabila anda memalamkan kuasa, dan memberi amaran pada 20% dan sekali lagi pada 10%."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser batterinivået når du kobler til."
+            "value": "Viser batterinivået når du kobler til, og varsler ved 20 % og igjen ved 10 %."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toont het batterijniveau bij het aansluiten."
+            "value": "Toont het batterijniveau bij het aansluiten, en waarschuwt bij 20% en nogmaals bij 10%."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokazuje poziom baterii po podłączeniu zasilania."
+            "value": "Pokazuje poziom baterii po podłączeniu zasilania i ostrzega przy 20% i ponownie przy 10%."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra o nível da bateria ao conectar na energia."
+            "value": "Mostra o nível da bateria ao conectar na energia, e avisa em 20% e novamente em 10%."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra o nível da bateria ao ligar à corrente."
+            "value": "Mostra o nível da bateria ao ligar à corrente, e avisa aos 20% e novamente aos 10%."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arată nivelul bateriei când conectați alimentarea."
+            "value": "Arată nivelul bateriei când conectați alimentarea și avertizează la 20% și din nou la 10%."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывает уровень заряда при подключении к сети."
+            "value": "Показывает уровень заряда при подключении к сети и предупреждает при 20% и снова при 10%."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí stav batérie po pripojení k napájaniu."
+            "value": "Zobrazí stav batérie po pripojení k napájaniu a upozorní pri 20 % a znova pri 10 %."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokaže raven baterije ob priklopu."
+            "value": "Pokaže raven baterije ob priklopu ter opozori pri 20 % in znova pri 10 %."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visar batterinivån när du kopplar in."
+            "value": "Visar batterinivån när du kopplar in, och varnar vid 20 % och igen vid 10 %."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "แสดงระดับแบตเตอรี่เมื่อคุณเสียบปลั๊ก"
+            "value": "แสดงระดับแบตเตอรี่เมื่อคุณเสียบปลั๊ก และเตือนที่ 20% และอีกครั้งที่ 10%"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prize taktığınızda pil düzeyini gösterir."
+            "value": "Prize taktığınızda pil düzeyini gösterir, %20’de ve yeniden %10’da uyarır."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показує рівень заряду під час під’єднання до живлення."
+            "value": "Показує рівень заряду під час під’єднання до живлення та попереджає на 20% і знову на 10%."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hiện mức pin khi bạn cắm nguồn."
+            "value": "Hiện mức pin khi bạn cắm nguồn, và cảnh báo ở 20% và lại ở 10%."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "接通电源时显示电池电量。"
+            "value": "接通电源时显示电池电量，并在 20% 和 10% 时提醒。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "接上電源時顯示電池電量。"
+            "value": "接上電源時顯示電池電量，並在 20% 和 10% 時提醒。"
           }
         }
       }
     },
-    "Shows the cover on one side of the camera and a waveform on the other.": {
+    "Shows the cover and a waveform beside the camera, and briefly shows what starts playing.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يعرض الغلاف على أحد جانبي الكاميرا وموجة صوتية على الجانب الآخر."
+            "value": "يعرض الغلاف وموجة صوتية بجانب الكاميرا، ويعرض لفترة وجيزة ما يبدأ تشغيله."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra la portada a un costat de la càmera i una forma d’ona a l’altre."
+            "value": "Mostra la portada i una forma d’ona al costat de la càmera, i mostra breument el que comença a sonar."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí obal na jedné straně kamery a vlnu na druhé."
+            "value": "Zobrazí obal a vlnu vedle kamery a krátce ukáže, co začíná hrát."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser coveret på den ene side af kameraet og en bølgeform på den anden."
+            "value": "Viser coveret og en bølgeform ved siden af kameraet og viser kort, hvad der begynder at spille."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeigt das Cover auf einer Seite der Kamera und eine Wellenform auf der anderen."
+            "value": "Zeigt das Cover und eine Wellenform neben der Kamera und kurz an, was gerade zu spielen beginnt."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Εμφανίζει το εξώφυλλο στη μία πλευρά της κάμερας και κυματομορφή στην άλλη."
+            "value": "Εμφανίζει το εξώφυλλο και κυματομορφή δίπλα στην κάμερα, και δείχνει για λίγο τι αρχίζει να παίζει."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra la portada a un lado de la cámara y una forma de onda al otro."
+            "value": "Muestra la portada y una forma de onda junto a la cámara, y muestra brevemente lo que empieza a sonar."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Näyttää kannen kameran toisella puolella ja aaltomuodon toisella."
+            "value": "Näyttää kannen ja aaltomuodon kameran vieressä ja hetken, mitä alkaa soida."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Affiche la pochette d’un côté de la caméra et une forme d’onde de l’autre."
+            "value": "Affiche la pochette et une forme d’onde à côté de la caméra, et brièvement ce qui commence à jouer."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "מציג את העטיפה בצד אחד של המצלמה וצורת גל בצד השני."
+            "value": "מציג את העטיפה וצורת גל ליד המצלמה, ולרגע את מה שמתחיל לנגן."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "कैमरा के एक ओर कवर और दूसरी ओर वेवफ़ॉर्म दिखाता है।"
+            "value": "कैमरा के पास कवर और वेवफ़ॉर्म दिखाता है, और जो चलना शुरू हो रहा है उसे कुछ देर दिखाता है।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikazuje omot s jedne strane kamere i valni oblik s druge."
+            "value": "Prikazuje omot i valni oblik pored kamere te nakratko što počinje svirati."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A kamera egyik oldalán a borítót, a másikon hullámformát mutat."
+            "value": "A kamera mellett mutatja a borítót és egy hullámformát, és rövid ideig azt, ami elkezd szólni."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menampilkan sampul di satu sisi kamera dan bentuk gelombang di sisi lainnya."
+            "value": "Menampilkan sampul dan bentuk gelombang di samping kamera, dan sebentar menampilkan apa yang mulai diputar."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra la copertina da un lato della fotocamera e una forma d’onda dall’altro."
+            "value": "Mostra la copertina e una forma d’onda accanto alla fotocamera, e per un attimo ciò che inizia a suonare."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カメラの片側にカバー、反対側に波形を表示します。"
+            "value": "カメラの横にカバーと波形を表示し、再生が始まったものを短く表示します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "카메라 한쪽에 커버를, 다른 쪽에 파형을 표시합니다."
+            "value": "카메라 옆에 커버와 파형을 표시하고, 재생이 시작된 항목을 잠시 표시합니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menunjukkan kulit pada satu sisi kamera dan bentuk gelombang pada sisi lain."
+            "value": "Menunjukkan kulit dan bentuk gelombang di sebelah kamera, dan menunjukkan seketika apa yang mula dimainkan."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser omslaget på den ene siden av kameraet og en bølgeform på den andre."
+            "value": "Viser omslaget og en bølgeform ved siden av kameraet, og viser kort hva som begynner å spille."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toont de hoes aan één kant van de camera en een golfvorm aan de andere."
+            "value": "Toont de hoes en een golfvorm naast de camera, en even wat begint te spelen."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokazuje okładkę po jednej stronie kamery, a falę dźwiękową po drugiej."
+            "value": "Pokazuje okładkę i falę dźwiękową obok kamery oraz krótko to, co zaczyna grać."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra a capa de um lado da câmera e uma forma de onda do outro."
+            "value": "Mostra a capa e uma forma de onda ao lado da câmera, e mostra rapidamente o que começa a tocar."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra a capa de um lado da câmara e uma forma de onda do outro."
+            "value": "Mostra a capa e uma forma de onda ao lado da câmara, e por breves instantes o que começa a tocar."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arată coperta pe o parte a camerei și o formă de undă pe cealaltă."
+            "value": "Arată coperta și o formă de undă lângă cameră și, pe scurt, ce începe să se redea."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывает обложку с одной стороны камеры и волну с другой."
+            "value": "Показывает обложку и волну рядом с камерой, а также ненадолго то, что начинает играть."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí obal na jednej strane kamery a vlnu na druhej."
+            "value": "Zobrazí obal a vlnu vedľa kamery a krátko ukáže, čo začína hrať."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokaže naslovnico na eni strani kamere in valovno obliko na drugi."
+            "value": "Pokaže naslovnico in valovno obliko poleg kamere ter na kratko, kaj se začne predvajati."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visar omslaget på ena sidan av kameran och en vågform på den andra."
+            "value": "Visar omslaget och en vågform bredvid kameran, och kort vad som börjar spelas."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "แสดงปกด้านหนึ่งของกล้องและรูปคลื่นอีกด้านหนึ่ง"
+            "value": "แสดงปกและรูปคลื่นข้างกล้อง และแสดงสิ่งที่เริ่มเล่นชั่วครู่"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kameranın bir yanında kapağı, diğer yanında dalga biçimini gösterir."
+            "value": "Kameranın yanında kapağı ve dalga biçimini, kısa süreliğine de çalmaya başlayanı gösterir."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показує обкладинку з одного боку камери і хвилю з іншого."
+            "value": "Показує обкладинку і хвилю поруч із камерою та коротко показує, що починає грати."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hiện bìa ở một bên camera và dạng sóng ở bên kia."
+            "value": "Hiện bìa và dạng sóng bên cạnh camera, và hiển thị nhanh nội dung bắt đầu phát."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在相机一侧显示封面，另一侧显示波形。"
+            "value": "在相机旁显示封面和波形，并短暂显示开始播放的内容。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在相機一側顯示封面，另一側顯示波形。"
+            "value": "在相機旁顯示封面和波形，並短暫顯示開始播放的內容。"
           }
         }
       }
     },
-    "Shows the screen being recorded, from its countdown until it's saved, with a button to stop it.": {
+    "Shows the screen or a voice memo being recorded, with a button to stop it.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يعرض الشاشة أثناء تسجيلها، من العد التنازلي حتى حفظها، مع زر لإيقافها."
+            "value": "يعرض الشاشة أو مذكرة صوتية أثناء تسجيلها، مع زر لإيقافها."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra la pantalla mentre es grava, des del compte enrere fins que es desa, amb un botó per aturar-la."
+            "value": "Mostra la pantalla o una nota de veu mentre es grava, amb un botó per aturar-ho."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazuje nahrávání obrazovky od odpočtu až po uložení, s tlačítkem k jeho zastavení."
+            "value": "Zobrazuje nahrávání obrazovky nebo hlasového záznamu s tlačítkem k zastavení."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser skærmen, mens den optages, fra nedtællingen til den er arkiveret, med en knap til at stoppe den."
+            "value": "Viser skærmen eller et memo, mens det optages, med en knap til at stoppe det."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeigt die Bildschirmaufnahme vom Countdown bis zum Sichern, mit einer Taste zum Stoppen."
+            "value": "Zeigt die Bildschirmaufnahme oder ein Sprachmemo während der Aufnahme, mit einer Taste zum Stoppen."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Εμφανίζει την εγγραφή της οθόνης, από την αντίστροφη μέτρηση μέχρι την αποθήκευση, με ένα κουμπί για διακοπή."
+            "value": "Εμφανίζει την εγγραφή οθόνης ή ενός φωνητικού μηνύματος, με ένα κουμπί για διακοπή."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra la grabación de la pantalla, desde la cuenta atrás hasta que se guarda, con un botón para detenerla."
+            "value": "Muestra la pantalla o una nota de voz mientras se graba, con un botón para detenerla."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Näyttää näytön tallennuksen lähtölaskennasta tallentamiseen asti ja painikkeen sen lopettamiseen."
+            "value": "Näyttää tallennettavan näytön tai sanelun ja painikkeen tallennuksen lopettamiseen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Affiche l’enregistrement de l’écran, du compte à rebours jusqu’à sa sauvegarde, avec un bouton pour l’arrêter."
+            "value": "Affiche l’écran ou un mémo vocal en cours d’enregistrement, avec un bouton pour l’arrêter."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "מציג את הקלטת המסך, מהספירה לאחור ועד שהיא נשמרת, עם כפתור לעצירתה."
+            "value": "מציג את המסך או הקלטה קולית בזמן ההקלטה, עם כפתור לעצירה."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "स्क्रीन रिकॉर्डिंग को उलटी गिनती से सहेजे जाने तक दिखाता है, उसे रोकने के बटन के साथ।"
+            "value": "रिकॉर्ड हो रही स्क्रीन या वॉइस मेमो दिखाता है, और उसे रोकने का बटन भी।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikazuje snimanje zaslona, od odbrojavanja do spremanja, s tipkom za zaustavljanje."
+            "value": "Prikazuje snimanje zaslona ili audio snimke, s tipkom za zaustavljanje."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Megjeleníti a képernyő felvételét a visszaszámlálástól a mentésig, egy leállítógombbal."
+            "value": "Megjeleníti a felvétel alatt álló képernyőt vagy hangjegyzetet egy leállítógombbal."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menampilkan layar yang sedang direkam, dari hitung mundur hingga disimpan, dengan tombol untuk menghentikannya."
+            "value": "Menampilkan layar atau memo suara yang sedang direkam, dengan tombol untuk menghentikannya."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra la registrazione dello schermo, dal conto alla rovescia fino al salvataggio, con un pulsante per interromperla."
+            "value": "Mostra lo schermo o un memo vocale in registrazione, con un pulsante per interromperlo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "画面収録をカウントダウンから保存まで表示し、停止ボタンも表示します。"
+            "value": "収録中の画面またはボイスメモを、停止ボタンとともに表示します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "화면 기록을 카운트다운부터 저장될 때까지 표시하며, 중단 버튼도 제공합니다."
+            "value": "기록 중인 화면이나 녹음 중인 음성 메모를 중단 버튼과 함께 표시합니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menunjukkan skrin yang sedang dirakam, dari kiraan detik hingga disimpan, dengan butang untuk menghentikannya."
+            "value": "Menunjukkan skrin atau memo suara yang sedang dirakam, dengan butang untuk menghentikannya."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser skjermen mens den tas opp, fra nedtellingen til den er lagret, med en knapp for å stoppe den."
+            "value": "Viser skjermen eller et taleopptak mens det tas opp, med en knapp for å stoppe det."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toont de schermopname, van het aftellen tot hij is bewaard, met een knop om hem te stoppen."
+            "value": "Toont het scherm of een gesproken memo terwijl het wordt opgenomen, met een knop om te stoppen."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokazuje nagrywanie ekranu, od odliczania do zachowania, z przyciskiem do zatrzymania."
+            "value": "Pokazuje nagrywanie ekranu lub notatki głosowej z przyciskiem do zatrzymania."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra a gravação da tela, da contagem regressiva até ser salva, com um botão para pará-la."
+            "value": "Mostra a tela ou uma gravação do Gravador em andamento, com um botão para pará-la."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra a gravação do ecrã, da contagem decrescente até ser guardada, com um botão para a parar."
+            "value": "Mostra o ecrã ou uma gravação do Dictafone em curso, com um botão para a parar."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Afișează înregistrarea ecranului, de la numărătoarea inversă până la salvare, cu un buton pentru a o opri."
+            "value": "Afișează ecranul sau un memo vocal în timp ce se înregistrează, cu un buton pentru a opri."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывает запись экрана от обратного отсчета до сохранения, с кнопкой остановки."
+            "value": "Показывает запись экрана или голосовую запись и кнопку остановки."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazuje záznam obrazovky od odpočítavania až po uloženie, s tlačidlom na zastavenie."
+            "value": "Zobrazuje nahrávanie obrazovky alebo nahrávky v Diktafóne s tlačidlom na zastavenie."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikazuje snemanje zaslona, od odštevanja do shranjevanja, z gumbom za ustavitev."
+            "value": "Prikazuje snemanje zaslona ali glasovnega zapiska, z gumbom za ustavitev."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visar skärmen medan den spelas in, från nedräkningen tills den sparas, med en knapp för att stoppa den."
+            "value": "Visar skärmen eller ett röstmemo medan det spelas in, med en knapp för att stoppa det."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "แสดงการบันทึกหน้าจอตั้งแต่การนับถอยหลังจนบันทึกเสร็จ พร้อมปุ่มสำหรับหยุด"
+            "value": "แสดงหน้าจอหรือบันทึกเสียงที่กำลังบันทึก พร้อมปุ่มสำหรับหยุด"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ekran kaydını geri sayımdan kaydedilene kadar, durdurma düğmesiyle gösterir."
+            "value": "Kaydedilen ekranı veya sesli notu, durdurma düğmesiyle gösterir."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показує запис екрана від зворотного відліку до збереження, з кнопкою, щоб зупинити його."
+            "value": "Показує записування екрана або голосової нотатки з кнопкою, щоб зупинити його."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hiện màn hình đang được ghi, từ lúc đếm ngược đến khi được lưu, với một nút để dừng."
+            "value": "Hiện màn hình hoặc bản ghi âm đang được ghi, với một nút để dừng."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示正在录制的屏幕，从倒计时到存储完成，并提供停止按钮。"
+            "value": "显示正在录制的屏幕或语音备忘录，并提供停止按钮。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "顯示正在錄製的螢幕，從倒數到儲存完成，並提供停止按鈕。"
+            "value": "顯示正在錄製的螢幕或語音備忘錄，並提供停止按鈕。"
           }
         }
       }
@@ -68719,214 +68303,6 @@
         }
       }
     },
-    "Timers": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "المؤقتات"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporitzadors"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minutky"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidtagninger"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Χρονοδιακόπτες"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporizadores"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajastimet"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minuteurs"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ספירות לאחור"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "टाइमर"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brojači"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Időzítők"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "タイマー"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "타이머"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pemasa"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nedtellinger"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timers"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minutniki"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timers"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporizadores"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporizatoare"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Таймеры"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Časovače"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Časovniki"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "นาฬิกานับถอยหลัง"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sayaçlar"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Таймери"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hẹn giờ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "计时器"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "計時器"
-          }
-        }
-      }
-    },
     "Timers, AirDrop and more, beside the camera.": {
       "localizations": {
         "ar": {
@@ -74775,214 +74151,6 @@
         }
       }
     },
-    "Voice Memos": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "مذكرات صوتية"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notes de Veu"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diktafon"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memoer"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sprachmemos"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Μαγνητόφωνο"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notas de Voz"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sanelin"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dictaphone"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "הקלטות קוליות"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "वॉइस मेमो"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diktafon"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hangjegyzetek"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memo Suara"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memo Vocali"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ボイスメモ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "음성 메모"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memo Suara"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Taleopptak"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dictafoon"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dyktafon"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gravador"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dictafone"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reportofon"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Диктофон"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diktafón"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glasovni zapiski"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Röstmemon"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "เสียงบันทึก"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sesli Notlar"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Диктофон"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ghi âm"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "语音备忘录"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "語音備忘錄"
-          }
-        }
-      }
-    },
     "Voice memo paused, %@": {
       "localizations": {
         "ar": {
@@ -75395,214 +74563,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "音量 %lld%%"
-          }
-        }
-      }
-    },
-    "Warns at 20% and again at 10%.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ينبّه عند 20% ومرة أخرى عند 10%."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avisa al 20% i de nou al 10%."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upozorní při 20 % a znovu při 10 %."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Advarer ved 20 % og igen ved 10 %."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warnt bei 20 % und nochmals bei 10 %."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Προειδοποιεί στο 20% και ξανά στο 10%."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avisa al 20% y de nuevo al 10%."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Varoittaa 20 %:ssa ja uudelleen 10 %:ssa."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prévient à 20 % puis à 10 %."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "מזהיר ב-20% ושוב ב-10%."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "20% पर और फिर 10% पर चेतावनी देता है।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upozorava na 20 % i ponovno na 10 %."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Figyelmeztet 20%-nál és újra 10%-nál."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memperingatkan pada 20% dan lagi pada 10%."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avvisa al 20% e di nuovo al 10%."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "20%と10%で警告します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "20%와 10%에서 경고합니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memberi amaran pada 20% dan sekali lagi pada 10%."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Varsler ved 20 % og igjen ved 10 %."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waarschuwt bij 20% en nogmaals bij 10%."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ostrzega przy 20% i ponownie przy 10%."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avisa em 20% e novamente em 10%."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avisa aos 20% e novamente aos 10%."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avertizează la 20% și din nou la 10%."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Предупреждает при 20% и снова при 10%."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upozorní pri 20 % a znova pri 10 %."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opozori pri 20 % in znova pri 10 %."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Varnar vid 20 % och igen vid 10 %."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "เตือนที่ 20% และอีกครั้งที่ 10%"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%20’de ve yeniden %10’da uyarır."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Попереджає на 20% і знову на 10%."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cảnh báo ở 20% và lại ở 10%."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 20% 和 10% 时提醒。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 20% 和 10% 時提醒。"
           }
         }
       }

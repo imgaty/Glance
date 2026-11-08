@@ -416,6 +416,11 @@
   as you move between pages, bounce included.
 - Changed `Hide macOS's Live Activities` to `Hide native Live Activities`.
 - Removed **Open Clock…** from **Settings > Live Activities**.
+- Changed **Settings > Live Activities** to one switch for each kind of live
+  activity, each in a section of its own: `Now Playing` for the cover, the
+  waveform and the announcement of what starts playing, `Battery` for charging
+  and low battery, `Recordings` for screen recordings and voice memos, and
+  `Clock` for timers and the stopwatch, beside `Devices`, `Calls` and `AirDrop`.
 
 ### Tray
 

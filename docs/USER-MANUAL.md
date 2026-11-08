@@ -353,8 +353,7 @@ the notch and choose **Hide** with what it shows, such as **Hide Music**, **Hide
 Call** or **Hide Low Battery**. That hides a call or a recording too, until a
 call is answered or a voice memo is paused or resumed.
 
-Turn these off with `Cover and waveform` and `Announce new audio` in
-**Settings > Live Activities**.
+Turn both off with `Now Playing` in **Settings > Live Activities**.
 
 ### What the Mac announces
 
@@ -416,12 +415,14 @@ tall as a timer: the device and its ring grow with the notch, and its name and
 its level in numbers show. Sliding down on it, or clicking it if **Open with**
 allows that, puts it away and opens the notch at once. With the notch open, it
 closes to say what happened, and opens again after, if the pointer is still on
-it. Turn each of these off in **Settings > Live Activities**.
+it. Turn these off with `Battery`, `Devices` and `Calls` in
+**Settings > Live Activities**.
 
 ### Timer and stopwatch
 
 The timer and the stopwatch are Clock's: start them in the Clock app, in Control
-Center or with Siri, and the notch shows them.
+Center or with Siri, and the notch shows them. Turn both off with `Clock` in
+**Settings > Live Activities**.
 
 A timer counts down beside the camera as the iPhone's Timer does, a ring
 emptying beside the time left: in minutes from ten minutes up, then in minutes
@@ -537,8 +538,8 @@ the dot and time pulsing as the dot does beside the camera, and a button: click
 it to stop the recording, as the stop button in the menu bar does. From macOS
 27.3, where the recording shows as a Live Activity in the menu bar, its own
 **Stop Recording** is pressed, so macOS's Live Activity opens under the menu bar
-for an instant as the recording stops. Turn it off with `Screen recording` in
-**Settings > Live Activities**.
+for an instant as the recording stops. Turn it off, with voice memos, with
+`Recordings` in **Settings > Live Activities**.
 
 ### Voice Memos
 
@@ -554,8 +555,8 @@ recording and keep it, as Voice Memos' **Done** does. After the bars recorded
 so far, gray dots stand for what's still to come: they move along with the
 waveform, and each turns red and rises to the sound as it reaches the recorded
 bars. It opens wide enough for the recorded bars to end beside the camera, as
-the iPhone's do, and only the dots pass beneath it. Turn it off with
-`Voice Memos` in **Settings > Live Activities**.
+the iPhone's do, and only the dots pass beneath it. Turn it off, with screen
+recordings, with `Recordings` in **Settings > Live Activities**.
 
 <br>
 
@@ -645,16 +646,13 @@ on, it stays on what's playing.
 | Setting | Operation |
 | --- | --- |
 | `Hide native Live Activities` | From macOS 27.3, macOS shows its own Live Activities in the menu bar, such as Now Playing and a screen recording. While this is on (on at first, with `Accessibility` allowed), Glance turns each one off as it first shows, with its switch in **System Settings > Menu Bar > Live Activities**, in a System Settings of its own that opens behind your windows for a moment and closes, leaving any you have open as it is. Behind a full-screen app it can take a few more seconds, and if it doesn't work there, Glance tries again when you switch Spaces. Turned on, it turns them all off at once, except that a screen recording going on keeps its own until it ends, so it can still be stopped; recordings after that show their stop button in the menu bar as before macOS 27.3. Turned off, Glance turns back on the ones it turned off; each shows again the next time it starts. macOS's microphone and camera indicator can't be hidden: macOS has no switch for it, and keeps hiding it to itself |
-| `Cover and waveform` | What's playing beside the camera while the notch is closed |
-| `Announce new audio` | Briefly shows what starts playing |
-| `Charging` | Shows the battery's level when you plug in (MacBooks only) |
-| `Low battery` | Warns at 20% and again at 10% (MacBooks only) |
+| `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
+| `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect, and sound going to AirPlay |
+| `Calls` | Shows calls coming in and the call you're on, in place of macOS's popup |
 | `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
-| `Timers` | Shows Clock's timers counting down beside the camera, and says when one rings |
-| `Stopwatch` | Shows Clock's stopwatch counting up beside the camera |
-| `Screen recording` | Shows the screen being recorded with macOS's Screenshot, until it's saved, with a button to stop it |
-| `Voice Memos` | Shows a voice memo being recorded, with its sound, and a button to stop it |
+| `Recordings` | Shows the screen being recorded with macOS's Screenshot, until it's saved, and a voice memo being recorded, with its sound, each with a button to stop it |
+| `Clock` | Shows Clock's timers counting down beside the camera, saying when one rings, and its stopwatch counting up. Start them in the Clock app, in Control Center or with Siri |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed (off at first). macOS keeps it out even after this is off; **Menu Bar settings**, under it, opens **System Settings > Menu Bar** to bring it back |
 
 ### Opening

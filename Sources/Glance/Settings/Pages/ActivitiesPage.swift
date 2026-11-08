@@ -8,9 +8,9 @@
 import AppKit
 import SwiftUI
 
-/// What shows beside the camera, each turned on or off, as the iPhone's Dynamic Island shows them:
-/// what's playing, what the Mac announces, and Clock's timer and stopwatch. The battery's choices
-/// show only on a Mac with one.
+/// What shows beside the camera, each kind turned on or off, as the iPhone's Dynamic Island shows
+/// them: what's playing, what the Mac announces, recordings, and Clock's timers and stopwatch. The
+/// battery's switch shows only on a Mac with one.
 struct ActivitiesPage: View {
     @EnvironmentObject private var preview: SettingsPreview
     @Environment(\.shownPage) private var shownPage
@@ -40,6 +40,16 @@ struct ActivitiesPage: View {
         (Preferences.activityScreenRecording, .screenRecording), (Preferences.activityVoiceMemos, .voiceMemo),
     ]
 
+    /// One switch for a kind of activity: on while any of its own is, turning them all on or off.
+    private func kind(_ first: Binding<Bool>, _ second: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { first.wrappedValue || second.wrappedValue },
+            set: {
+                first.wrappedValue = $0
+                second.wrappedValue = $0
+            })
+    }
+
     /// Each switch, on or off, in that order; read on every change of one of them, as each is kept
     /// here.
     private var switches: [Bool] { Self.previews.map { UserDefaults.standard.object(forKey: $0.key) as? Bool ?? true } }
@@ -66,26 +76,19 @@ struct ActivitiesPage: View {
                     }
                 }
             }
+            // One switch for each kind, as Menu Bar settings lists its Live Activities, each turning
+            // on or off everything of that kind.
             Section {
-                Toggle(isOn: $liveActivity) {
-                    Text("Cover and waveform")
-                    Text("Shows the cover on one side of the camera and a waveform on the other.")
+                Toggle(isOn: kind($liveActivity, $trackPop)) {
+                    Text("Now Playing")
+                    Text("Shows the cover and a waveform beside the camera, and briefly shows what starts playing.")
                 }
-                Toggle(isOn: $trackPop) {
-                    Text("Announce new audio")
-                    Text("Briefly shows what starts playing.")
-                }
-                .disabled(!liveActivity)
             }
             if hasBattery {
                 Section {
-                    Toggle(isOn: $charging) {
-                        Text("Charging")
-                        Text("Shows the battery's level when you plug in.")
-                    }
-                    Toggle(isOn: $lowBattery) {
-                        Text("Low battery")
-                        Text("Warns at 20% and again at 10%.")
+                    Toggle(isOn: kind($charging, $lowBattery)) {
+                        Text("Battery")
+                        Text("Shows the battery's level when you plug in, and warns at 20% and again at 10%.")
                     }
                 }
             }
@@ -94,33 +97,29 @@ struct ActivitiesPage: View {
                     Text("Devices")
                     Text("Shows AirPods and Beats as they connect, and sound going to AirPlay.")
                 }
+            }
+            Section {
                 Toggle(isOn: $calls) {
                     Text("Calls")
                     Text("Shows calls coming in and the call you're on, in place of macOS's popup.")
                 }
+            }
+            Section {
                 Toggle(isOn: $airDrop) {
                     Text("AirDrop")
                     Text("Shows files coming in and going out over AirDrop, as they go.")
                 }
             }
             Section {
-                Toggle(isOn: $screenRecording) {
-                    Text("Screen recording")
-                    Text("Shows the screen being recorded, from its countdown until it's saved, with a button to stop it.")
-                }
-                Toggle(isOn: $voiceMemos) {
-                    Text("Voice Memos")
-                    Text("Shows a voice memo being recorded, with its sound as it comes in, and a button to stop it.")
+                Toggle(isOn: kind($screenRecording, $voiceMemos)) {
+                    Text("Recordings")
+                    Text("Shows the screen or a voice memo being recorded, with a button to stop it.")
                 }
             }
             Section {
-                Toggle(isOn: $timers) {
-                    Text("Timers")
-                    Text("Counts down beside the camera, and says when it's done.")
-                }
-                Toggle(isOn: $stopwatch) {
-                    Text("Stopwatch")
-                    Text("Counts up beside the camera.")
+                Toggle(isOn: kind($timers, $stopwatch)) {
+                    Text("Clock")
+                    Text("Counts Clock's timers down and its stopwatch up beside the camera, and says when a timer is done.")
                 }
                 Toggle(isOn: $hidesMenuBar) {
                     Text("Hide in menu bar")
