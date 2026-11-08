@@ -200,19 +200,21 @@ button.
 | `None` | Leaves the place empty |
 
 While Spotify's DJ chooses the music, its symbol takes the left button's place,
-as it takes shuffle's in Spotify, moving for as long as the music plays. Click
-it for different picks: Glance presses Spotify's own button for them, through
-`Accessibility`. Spotify shows its buttons to other apps only when it's started
-with a switch for it, so the first click in a Spotify opened without it starts
-Spotify again with it, which stops the music for a few seconds, and then presses
-the button. Spotify shows that button only while the DJ plays, so with the DJ
-paused, it's played first. Glance tells the DJ from other music by that same
-button, round and blue beside `Lyrics` in Spotify's bar; before Spotify has been
-started with the switch, by hearing the DJ talk. Shuffle and repeat show dimmed with the DJ or a podcast,
-because Spotify doesn't offer them then.
+as it takes shuffle's in Spotify. It stays still while the music plays, and
+moves with the DJ's voice while the DJ talks. Click it for different picks:
+Glance presses Spotify's own button for them, through `Accessibility`. Spotify
+shows its buttons to other apps only when it's started with a switch for it, so
+the first click in a Spotify opened without it starts Spotify again with it,
+which stops the music for a few seconds, and then presses the button. Spotify
+shows that button only while the DJ plays, so with the DJ paused, it's played
+first. Glance tells the DJ from other music by that same button, round and blue
+beside `Lyrics` in Spotify's bar; before Spotify has been started with the
+switch, by what Spotify was last asked to play. Shuffle and repeat show dimmed
+with the DJ or a podcast, because Spotify doesn't offer them then.
 
-While the DJ talks, the cover becomes its green ring on blue, following the same sound
-as the waveform, the colors behind the player turn blue, and the times show `--:--`.
+While the DJ talks, the cover becomes its green ring on blue, following the same
+sound as the waveform, the colors behind the player turn blue, and the times
+show `--:--`.
 
 To keep the left button as it is while the DJ plays, turn off `Spotify DJ` in
 Customize Controls.

@@ -244,10 +244,12 @@
 
 - Changed the player with Increase Contrast on to keep the cover's colors behind
   it, darker, in place of plain black, so its words still read on any cover.
-- Changed Spotify's DJ button to move for as long as the music plays, and clicking it
-  to get different picks, by starting the DJ anew, rather than switching to Spotify.
+- Changed clicking Spotify's DJ button to get different picks, by starting the DJ
+  anew, rather than switching to Spotify.
 - Fixed Shuffle taking up to ten seconds to take the DJ button's place after
   leaving Spotify's DJ for a playlist. It now does within about three.
+- Fixed the DJ button not showing when Glance opened while the DJ played, until
+  the DJ next talked.
 - Added the DJ's own cover while it talks: its green ring on blue, following the same
   sound as the waveform, with the colors behind the player turning blue and `--:--`
   for the times.

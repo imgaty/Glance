@@ -51,17 +51,32 @@ enum PlayingSource {
     /// but Spotify keeps what was last asked to play, and every song it has played beside where it
     /// was played from, the latest first.
     static func spotifyContext(of track: String) -> URL? {
-        let users = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Application Support/Spotify/PersistentCache/Users")
-        let folders = (try? FileManager.default.contentsOfDirectory(at: users, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-        // The account last used.
-        let latest = folders.filter { $0.lastPathComponent.hasSuffix("-user") }.max {
-            (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                < (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-        }
-        guard let latest else { return nil }
+        guard let latest = spotifyUser else { return nil }
         let history = addresses(in: latest.appending(path: "list_player_play_history"))
         let request = addresses(in: latest.appending(path: "list_player_play_request"))
         return context(of: track, history: history, request: request).flatMap(URL.init(string:))
+    }
+
+    /// Where Spotify keeps what it plays for the account last used.
+    nonisolated private static var spotifyUser: URL? {
+        let users = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Application Support/Spotify/PersistentCache/Users")
+        let folders = (try? FileManager.default.contentsOfDirectory(at: users, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        return folders.filter { $0.lastPathComponent.hasSuffix("-user") }.max {
+            (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+                < (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        }
+    }
+
+    /// Whether what Spotify was last asked to play is its DJ, which Spotify writes down as it's
+    /// asked, whoever asks and however Spotify was started; nil where it has nothing written.
+    nonisolated static func spotifyAskedForDJ() -> Bool? {
+        guard let user = spotifyUser else { return nil }
+        let request = addresses(in: user.appending(path: "list_player_play_request"))
+        return request.isEmpty ? nil : askedForDJ(request: request)
+    }
+
+    nonisolated static func askedForDJ(request: [String]) -> Bool {
+        request.first(where: isContext) == PlayerScripting.djAddress
     }
 
     /// Where the song is played from: what was last asked to play, whichever of its songs has come
@@ -75,13 +90,13 @@ enum PlayingSource {
         return history[(index + 1)...].prefix(1).first(where: isContext)
     }
 
-    private static func isContext(_ address: String) -> Bool {
+    nonisolated private static func isContext(_ address: String) -> Bool {
         let kind = address.split(separator: ":").dropFirst().first ?? ""
         return !["track", "episode", "media", "local"].contains(kind)
     }
 
     /// Spotify's addresses written in a file, in order.
-    private static func addresses(in file: URL) -> [String] {
+    nonisolated private static func addresses(in file: URL) -> [String] {
         guard let data = try? Data(contentsOf: file), let text = String(data: data, encoding: .isoLatin1) else { return [] }
         let pattern = #/spotify(?::[A-Za-z0-9_.\-]+)+/#
         return text.matches(of: pattern).map { String($0.output) }

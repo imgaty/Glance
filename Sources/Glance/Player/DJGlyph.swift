@@ -21,15 +21,15 @@ enum DJLook {
 /// picks.
 struct DJButton: View {
     let color: Color
-    /// It moves whenever the music plays, the DJ talking or not.
+    /// The music plays.
     let moving: Bool
-    /// The DJ is talking, as VoiceOver says.
+    /// The DJ is talking, as VoiceOver says: only then does it move, with his voice.
     let talking: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            DJGlyph(color: color, moving: moving, follows: talking)
+            DJGlyph(color: color, moving: moving && talking)
                 .frame(width: PlayerLayout.optionGlyph * 1.2, height: PlayerLayout.optionGlyph * 1.2)
         }
         .buttonStyle(IslandPress())
@@ -42,15 +42,14 @@ struct DJButton: View {
 }
 
 /// The DJ drawn as Spotify draws it: a ring with its top right pressed in, and two fainter rings
-/// trailing behind that corner, the nearer pressed in less, the farther bowed out. While it moves,
-/// its corner comes out as the sound falls and presses back in as it rises, as the cover's does, and
-/// the trailing rings follow it a moment later. Still, it's Spotify's symbol, as at its loudest.
+/// trailing behind that corner, the nearer pressed in less, the farther bowed out. While the DJ
+/// talks, its corner comes out as his voice falls and presses back in as it rises, as the cover's
+/// does, and the trailing rings follow it a moment later. Otherwise, music playing or not, it's
+/// still: Spotify's symbol, as at its loudest, as Spotify's own button is.
 struct DJGlyph: View {
     let color: Color
+    /// The DJ is talking and the sound plays.
     let moving: Bool
-    /// The DJ is talking: it follows his voice. Otherwise it keeps its own even pace, whatever the
-    /// music does.
-    var follows = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Front to back: how far each ring's corner is pressed in at rest and at its loudest, as a share
@@ -66,7 +65,7 @@ struct DJGlyph: View {
         let animates = moving && !reduceMotion
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animates)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            let strength = animates ? (follows ? Self.strength() : Self.idle) : 0
+            let strength = animates ? Self.strength() : 0
             GeometryReader { proxy in
                 let side = min(proxy.size.width, proxy.size.height)
                 let line = side * 0.1
@@ -89,9 +88,6 @@ struct DJGlyph: View {
         let wave = 0.55 * sin(t * 2 * .pi * 4.1) + 0.3 * sin(t * 2 * .pi * 6.7 + 1.3) + 0.25 * sin(t * 2 * .pi * 2.3 + 0.4)
         return min(max(0.35 + 0.6 * wave, 0), 1)
     }
-
-    /// How far in it goes while the music plays and the DJ isn't talking.
-    static let idle = 0.5
 
     /// How far in it goes: never still while it animates, and further the louder the sound.
     private static func strength() -> Double {

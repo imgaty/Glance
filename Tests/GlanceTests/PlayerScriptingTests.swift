@@ -432,6 +432,23 @@ struct PlayerScriptingTests {
         #expect(PlayingSource.context(of: track, history: [], request: [track]) == nil)
     }
 
+    @Test("The DJ is known from what Spotify was last asked to play, as written on 2026-11-08 while it played")
+    func askedForDJ() {
+        let dj = PlayerScripting.djAddress
+        // As Spotify wrote it: the DJ, then three of its songs.
+        #expect(PlayingSource.askedForDJ(request: [dj, "spotify:track:AAA", "spotify:track:BBB", "spotify:track:CCC"]))
+        #expect(!PlayingSource.askedForDJ(request: ["spotify:album:6i02UIhGdlmQcX6xnL0wCFj", "spotify:track:AAA"]))
+        // A song asked for on its own isn't the DJ, though the DJ played one like it.
+        #expect(!PlayingSource.askedForDJ(request: ["spotify:track:AAA"]))
+        // Unread, Spotify's bar gives way to it: off once the DJ's button has been gone the patience.
+        var reading = DJReading()
+        let start = Date(timeIntervalSince1970: 0)
+        let seen = reading.update(talking: false, inBar: true, now: start)
+        let gone = reading.update(talking: false, inBar: false, now: start + 1)
+        let over = reading.update(talking: false, inBar: false, now: start + 1 + DJReading.patience)
+        #expect(seen && gone && !over)
+    }
+
     @Test("A browser's tab is found by what's playing, its title kept whole in the script")
     @MainActor
     func browserTab() {

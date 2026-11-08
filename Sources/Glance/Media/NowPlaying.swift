@@ -173,10 +173,12 @@ final class NowPlaying: ObservableObject {
             let reply = await PlayerScripting.run(script)
             guard app == appBundleID else { return }
             // Spotify's own bar says whether the DJ chooses the music, where Spotify shows it; where it
-            // doesn't, having heard the DJ talk is all there is to go by.
+            // doesn't (a Spotify started without its accessibility switch), what Spotify was last
+            // asked to play, which also holds from the moment Glance opens, the DJ silent or not.
             var dj: Bool?
             if app == PlayerScripting.spotify {
-                let inBar = await SpotifyDJ.djInBar()
+                var inBar = await SpotifyDJ.djInBar()
+                if inBar == nil { inBar = await Task.detached { PlayingSource.spotifyAskedForDJ() }.value }
                 dj = djReading.update(talking: djTalking, inBar: inBar, now: .now)
             }
             guard app == appBundleID else { return }
