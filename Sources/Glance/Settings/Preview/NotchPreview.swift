@@ -47,7 +47,9 @@ struct NotchPreview: View {
         let hinting = interactive && hintsOpening && !paused && !hovering && !pressing
         GeometryReader { proxy in
             // With the lyrics open beside the player, it draws back to make room for them.
-            let scale = Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: model.showsLyrics && model.state == .open)
+            let full = Self.scale(for: scaleWidth ?? proxy.size.width, model: model)
+            let least = Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: true)
+            let scale = model.showsLyrics && model.state == .open ? least : full
             let geometry = SettingsPreview.Geometry(
                 rect: { state in
                     let m = model.metrics(for: state)
@@ -56,8 +58,13 @@ struct NotchPreview: View {
                         width: m.totalWidth * scale, height: m.height * scale)
                 }, scale: scale)
             ZStack(alignment: .top) {
-                ScreenPicture(top: top, size: CGSize(width: proxy.size.width / scale, height: proxy.size.height / scale)) {
-                    ApplePage(scrolls: !still, scale: scale)
+                // Laid out once, as large as it's ever seen, drawn back with the lyrics, so drawing
+                // back only scales it: laid out afresh at each scale, the page, menu bar and window
+                // behind the notch all moved with the animation, and held it still for a third of a
+                // second. The page is drawn for the larger scale, so it's never drawn smaller than
+                // it's seen.
+                ScreenPicture(top: top, size: CGSize(width: proxy.size.width / least, height: proxy.size.height / least)) {
+                    ApplePage(scrolls: !still, scale: full)
                 } notch: {
                     // Its sizes change as a whole: drawn smaller, the glass otherwise loses its place
                     // as the notch changes size, and stays there.
@@ -66,6 +73,7 @@ struct NotchPreview: View {
                 }
                 .scaleEffect(scale, anchor: .top)
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                .clipped()
                 if interactive, hintsOpening {
                     let path = hintPath(proxy.size, geometry)
                     TryItPointer(from: path.from, to: path.to, active: hinting, start: hintStart, trigger: trigger)

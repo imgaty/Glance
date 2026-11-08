@@ -427,6 +427,12 @@
 - Fixed the permissions showing **Request…** for a moment as they were opened,
   before showing which are allowed: Glance reads them as it starts, and again
   whenever it comes forward.
+- Fixed the picture of the notch in Settings freezing for up to half a second
+  as the lyrics opened or closed, and as it turned between the player and the
+  tray with the lyrics open.
+- Fixed the waveform in the pictures of the notch, in Settings and the welcome
+  tour, stepping about twelve times a second: each reading now eases in, as in
+  the notch itself.
 - Fixed Settings, opened from the menu bar, sometimes coming up a second or more
   late, behind other apps, or drawn gray as if behind them while in use.
 - Fixed clicking the waveform in the picture of the notch in Settings doing

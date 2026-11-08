@@ -116,14 +116,15 @@ struct WaveformGlyph: View {
                             }
                             .animation(.spring(response: 0.26, dampingFraction: 0.9), value: folded)
                         }
+                        // Each reading eased in as the notch on screen eases it (see `LiveBarsView`):
+                        // drawn as it came, the bars stepped about twelve times a second.
+                        .animation(Self.readingCurve, value: shown)
                         .frame(width: size.width, height: size.height, alignment: .topLeading)
                     }
                 lyricsSymbol(in: size)
             }
             .frame(width: size.width, height: size.height)
         }
-        // Only a picture of the notch, so each reading is drawn as it comes: animating each one too
-        // would keep SwiftUI animating the whole time music played.
         .animation(Self.settling, value: isPlaying)
     }
 
@@ -182,6 +183,7 @@ struct WaveformGlyph: View {
     /// How long each new reading takes to ease in, on Apple's ease-out, and how long the bars take to
     /// settle into dots or back out of them, on Apple's own curve for pausing.
     static let readingIn = 0.08
+    static let readingCurve = Animation.timingCurve(0, 0, 0.58, 1, duration: readingIn)
     static let settlingIn = 0.9
     static let settling = Animation.timingCurve(0.33, 1, 0.67, 1, duration: settlingIn)
     static let settlingCurve = CAMediaTimingFunction(controlPoints: 0.33, 1, 0.67, 1)
