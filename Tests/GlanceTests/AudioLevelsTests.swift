@@ -10,7 +10,8 @@ import Testing
 
 @testable import Glance
 
-/// The beat the colors behind the player pulse on, and how what's heard is held back until it is.
+/// The beat the colors behind the player pulse on, the bars as Apple's own waveform makes them, and
+/// how what's heard is held back until it is.
 @Suite("Audio levels")
 struct AudioLevelsTests {
     static let rate = 48_000.0
@@ -43,7 +44,7 @@ struct AudioLevelsTests {
         var last: Float = 0
         var found: [Double] = []
         for end in stride(from: Analyzer.size, through: samples.count, by: hop) {
-            let beat = analyzer.reading(Array(samples[(end - Analyzer.size)..<end])).beat
+            let beat = analyzer.beat(Array(samples[(end - Analyzer.size)..<end]))
             if beat >= 0.4, last < 0.4 { found.append(Double(end) / rate) }
             last = beat
         }
@@ -63,64 +64,51 @@ struct AudioLevelsTests {
         }
     }
 
-    /// The bars after a second of a sound, made of tones at these pitches and loudnesses.
-    static func bars(of tones: [(hertz: Double, amplitude: Double)], seconds: Double = 1.5) -> [Float] {
-        let analyzer = Analyzer(sampleRate: rate)
-        let count = Int(seconds * rate)
-        let samples = (0..<count).map { i in
+    /// The bars from one window of a sound made of tones at these pitches and loudnesses.
+    static func bars(of tones: [(hertz: Double, amplitude: Double)]) -> [Float] {
+        let samples = (0..<BinnedFFT.size).map { i in
             Float(tones.reduce(0) { $0 + $1.amplitude * sin(2 * .pi * $1.hertz * Double(i) / rate) })
         }
-        var last = [Float]()
-        for end in stride(from: Analyzer.size, through: samples.count, by: hop) {
-            last = analyzer.reading(Array(samples[(end - Analyzer.size)..<end])).levels
-        }
-        return last
+        return BinnedFFT(sampleRate: rate).levels(samples)
     }
 
-    /// Where a band's bar is, left to right.
-    static func bar(ofBand band: Int) -> Int { Analyzer.order.firstIndex(of: band)! }
+    @Test("Each bar sums the bins of its band, counted off from 20 Hz a bin's width at a time, as Apple's do")
+    func bins() {
+        let hertzPerBin = Float(Self.rate) / Float(BinnedFFT.size)
+        // The last bin each bar takes, at 48 kHz: 20 Hz plus a bin's width each, below its band's top.
+        let last = [5, 12, 43, 126, 382, 851]
+        for (bar, bin) in last.enumerated() {
+            for (spike, expected) in [(bin, bar), (bin + 1, bar + 1)] {
+                var magnitudes = [Float](repeating: 0, count: BinnedFFT.size / 2)
+                magnitudes[spike] = 0.01
+                let bars = BinnedFFT.bars(magnitudes, hertzPerBin: hertzPerBin)
+                let raised = bars.indices.filter { bars[$0] > 0 }
+                #expect(raised == (expected < bars.count ? [expected] : []), "bin \(spike)")
+            }
+        }
+    }
 
-    @Test("The bars follow the pitch: a low note raises the bass's bar, a high one a treble bar")
+    @Test("A bar's height is Apple's curve: none at none, all at one, a third at a half")
+    func curve() {
+        #expect(BinnedFFT.height(of: 0) == 0)
+        #expect(abs(BinnedFFT.height(of: 1) - 1) < 0.001)
+        #expect(abs(BinnedFFT.height(of: 0.5) - 0.3472) < 0.001)
+        #expect(abs(BinnedFFT.height(of: 0.3) - 0.1818) < 0.001)
+        // Kept between 0 and 1, however loud.
+        for v in stride(from: Float(0), through: 3, by: 0.05) { #expect((0...1).contains(BinnedFFT.height(of: v))) }
+    }
+
+    @Test("A tone raises its own band's bar, bass at the left and treble at the right")
     func pitch() {
-        let low = Self.bars(of: [(70, 0.5)])
-        #expect(low.indices.max { low[$0] < low[$1] } == Self.bar(ofBand: 0))
-        let high = Self.bars(of: [(4_000, 0.5)])
-        #expect(high.indices.max { high[$0] < high[$1] } == Self.bar(ofBand: 4))
-        let middle = Self.bars(of: [(550, 0.5)])
-        #expect(middle.indices.max { middle[$0] < middle[$1] } == Self.bar(ofBand: 2))
-        // Far from the note, a bar is a dot.
-        #expect(low[Self.bar(ofBand: 5)] < 0.1)
+        for (bar, hertz) in [50.0, 120, 300, 1_000, 3_000, 7_000].enumerated() {
+            let bars = Self.bars(of: [(hertz, 0.05)])
+            #expect(bars.indices.max { bars[$0] < bars[$1] } == bar, "\(hertz) Hz: \(bars)")
+        }
     }
 
-    @Test("Bars differ as the sound does, rather than all standing alike")
-    func uneven() {
-        // A chord, loud in the low mids, softer up high.
-        let chord = Self.bars(of: [(200, 0.4), (1_400, 0.08), (9_000, 0.02)])
-        let tallest = chord.max() ?? 0, shortest = chord.min() ?? 0
-        #expect(tallest - shortest > 0.4)
-        #expect(chord[Self.bar(ofBand: 1)] > chord[Self.bar(ofBand: 3)])
-        #expect(chord[Self.bar(ofBand: 3)] > chord[Self.bar(ofBand: 5)])
-    }
-
-    @Test("Music's falling spectrum reads about level across the bars")
-    func tilt() {
-        // A dense spread of pitches, 4.5 dB quieter an octave up, as music tends to be.
-        var random = SystemRandomNumberGenerator()
-        let pitches = stride(from: 40.0, through: 12_000, by: 25).map { hertz in
-            (hertz, pow(hertz / 40, -Double(Analyzer.tilt) / (20 * log10(2))), Double.random(in: 0..<(2 * .pi), using: &random))
-        }
-        let count = Int(1.5 * Self.rate)
-        let scale = 0.4 / pitches.reduce(0) { $0 + $1.1 }.squareRoot()
-        let samples = (0..<count).map { i in
-            let t = Double(i) / Self.rate
-            return Float(scale * pitches.reduce(0) { $0 + $1.1 * sin(2 * .pi * $1.0 * t + $1.2) })
-        }
-        let analyzer = Analyzer(sampleRate: Self.rate)
-        var level = [Float]()
-        for end in stride(from: Analyzer.size, through: samples.count, by: Self.hop) {
-            level = analyzer.reading(Array(samples[(end - Analyzer.size)..<end])).levels
-        }
-        #expect((level.max() ?? 0) - (level.min() ?? 0) < 0.3, "\(level)")
+    @Test("Silence is six dots")
+    func silence() {
+        #expect(Self.bars(of: []) == [Float](repeating: 0, count: 6))
     }
 
     @Test("The colors' pulse rises and falls more gently than the beat, and follows it")

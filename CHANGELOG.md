@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 7 November 2026`
+`Created: 11 October 2026` | `Last updated: 8 November 2026`
 
 <br>
 
@@ -255,22 +255,18 @@
   another.
 - Changed the progress bar and the colors behind the player to share one
   palette: the cover's strongest colors, each one it really has.
-- Changed the waveform to show the cover itself through its bars, blurred, as
-  the iPhone's does: a red cover with a blue middle gives red outer bars and
-  blue middles. Each bar is a band of the sound, from bass to treble, as tall as
-  it is against the others, so the bars follow the music's pitch rather than
-  standing alike.
+- Changed the waveform to work and look exactly as macOS's own does in the menu
+  bar: six bands of the sound, bass at the left and treble at the right, read
+  about twelve times a second, each new reading easing in; round bars, a little
+  wider the taller they are; the cover itself showing through them, blurred,
+  more saturated and washed with white when it's dark, and dimmed when it's
+  bright. While the music is paused, the bars rest in a still arch.
 - Changed `Replace glass` to show all of the cover's colors, more strongly, just
   where the glass shows, so a white cover looks white and its red shows too. The
   times and side buttons turn lighter over a light cover.
 - Removed the `Fullscreen` background. If it was chosen, the notch goes back to
   `Replace glass`.
-- Changed the waveform's bars to keep round ends however tall they grow, a
-  little wider, as the iPhone's are.
 - Added the cover's colors pulsing gently on the music's beat, as you hear it.
-- Changed the waveform to move more softly, as the iPhone's does: each bar
-  eases toward its level over a tenth of a second or so, rather than leaping
-  to every hit.
 - Changed the lyrics to fade at their top as they do at their bottom, above the
   line being sung, so its first words are never dimmed.
 - Changed the cover, the colors behind the player and the lyrics to dim by the
@@ -294,8 +290,8 @@
 - Fixed the star for songs streamed from `Music`: it stays lit while `Music`
   saves the song, it removes the song from favorites, and it follows changes
   made in `Music`.
-- Fixed the waveform going gray and faint on a dark cover: its bars are
-  brightened as much as they need to read on black, as the iPhone's are.
+- Fixed the waveform going gray and faint on a dark cover: its bars are washed
+  with white, as macOS's own are, so they read on black.
 - Fixed the waveform in the welcome tour and the test scenes jumping and
   jittering, most of all in the open player. The made-up song's bars now move
   exactly as music's do: rising quickly on each beat and falling away slowly, as

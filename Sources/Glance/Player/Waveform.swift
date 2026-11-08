@@ -55,12 +55,14 @@ struct HeroWaveform: View {
     }
 }
 
-/// Six bars that follow the music from bass to treble, drawn like the iPhone's, measured from it:
-/// each bar a third wider than the gaps, with round ends however tall it grows, from a dot up, and
-/// dots when nothing plays. As the iPhone fills its waveform, the bars show the cover itself,
-/// blurred, laid across all six at once (see `ArtworkFlow.bars`). Folded, it becomes Apple's lyrics symbol, the
-/// way Apple swaps one symbol for another: the bars draw together into a point and are gone, and
-/// the symbol springs out of it.
+/// Six bars that follow the music from bass, at the left, to treble, drawn exactly as Apple's own
+/// waveform draws them (`MediaCoreUI`'s `WaveformLayer`, measured from its layers on macOS 27.3):
+/// each a dot at rest, as tall as the waveform at full, a little wider the taller it is, round at
+/// the ends, each new reading eased in over 80 ms. Paused, they settle over 0.9 s into a still arch,
+/// as Apple's do in the menu bar. They show the cover itself, as Apple's do, through the bars laid
+/// across all six at once (see `ArtworkFlow.bars`). Folded, it becomes Apple's lyrics symbol, the way
+/// Apple swaps one symbol for another: the bars draw together into a point and are gone, and the
+/// symbol springs out of it.
 struct WaveformGlyph: View {
     let color: Color
     /// The colors the bars show; without them, the color alone.
@@ -87,7 +89,7 @@ struct WaveformGlyph: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
         } else if demo {
             // As often as music's levels come.
-            TimelineView(.animation(minimumInterval: 1.0 / Double(Self.demoRate), paused: !isPlaying)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / Self.demoRate, paused: !isPlaying)) { context in
                 glyph(levels: Self.demoLevels(at: context.date.timeIntervalSinceReferenceDate))
             }
         } else {
@@ -98,15 +100,13 @@ struct WaveformGlyph: View {
     private func glyph(levels: [Float]) -> some View {
         GeometryReader { proxy in
             let size = proxy.size
-            let bar = Self.barWidth(in: size.width)
+            let shown = isPlaying ? levels : Self.resting
             ZStack(alignment: .topLeading) {
                 paint(moving: isPlaying)
                     .mask {
                         ZStack(alignment: .topLeading) {
                             ForEach(0..<AudioLevels.bands, id: \.self) { index in
-                                let rect =
-                                    folded
-                                    ? gathered(in: size, dot: bar) : Self.bar(index, level: levels[index], playing: isPlaying, in: size, width: bar)
+                                let rect = folded ? gathered(in: size) : Self.bar(index, level: shown[index], in: size)
                                 // Circular: a continuous curve stretches along a tall bar, so
                                 // its ends would grow pointed as it grows.
                                 Capsule(style: .circular)
@@ -122,10 +122,9 @@ struct WaveformGlyph: View {
             }
             .frame(width: size.width, height: size.height)
         }
-        // The levels arrive 45 times a second, already eased (each bar with its own attack and
-        // release), so they're drawn as they come. Animating each change as well kept SwiftUI
-        // animating at the display's full rate the whole time music played: three times the work.
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPlaying)
+        // Only a picture of the notch, so each reading is drawn as it comes: animating each one too
+        // would keep SwiftUI animating the whole time music played.
+        .animation(Self.settling, value: isPlaying)
     }
 
     /// Apple's lyrics symbol, in the waveform's colors. Its tail hangs below the bubble, so it's
@@ -160,15 +159,30 @@ struct WaveformGlyph: View {
         }
     }
 
-    /// A dot when nothing plays or nothing can be heard; a short dash when quiet; full height on the
-    /// loudest beats.
-    static func bar(_ index: Int, level: Float, playing: Bool, in size: CGSize, width: CGFloat) -> CGRect {
-        let level = CGFloat(level)
-        let sounding = width + (size.height - width) * min(max(level, 0), 1)
-        // Settling into a dot as the sound fades out, rather than stopping at a dash.
-        let height = playing ? width + (sounding - width) * min(level / 0.05, 1) : width
-        return CGRect(x: CGFloat(index) * width * (1 + 1 / barToGap), y: (size.height - height) / 2, width: width, height: height)
+    /// Apple's measures, as shares of the waveform's width: a bar at rest is a dot this wide, and at
+    /// full height this wide; the bars' middles are evenly apart, the outer ones half a full bar in.
+    static let restWidth: CGFloat = 5.0 / 48
+    static let fullWidth: CGFloat = 7.0 / 60
+
+    /// Where a bar of `level`, 0 to 1, is: as tall as its share of the waveform, a dot at least, and a
+    /// little wider the taller it is.
+    static func bar(_ index: Int, level: Float, in size: CGSize) -> CGRect {
+        let level = CGFloat(min(max(level, 0), 1))
+        let rest = size.width * restWidth, full = size.width * fullWidth
+        let width = rest + (full - rest) * level
+        // Never shorter than it's wide, so its ends stay round.
+        let height = max(width, size.height * level)
+        let middle = full / 2 + CGFloat(index) * (size.width - full) / CGFloat(AudioLevels.bands - 1)
+        return CGRect(x: middle - width / 2, y: (size.height - height) / 2, width: width, height: height)
     }
+
+    /// The bars while nothing plays: a still arch, as Apple's menu bar shows its waveform paused.
+    static let resting: [Float] = [0.25, 0.5, 0.75, 0.75, 0.5, 0.25]
+    /// How long each new reading takes to ease in, and how long the bars take to settle into the arch
+    /// or back out of it, both on Apple's ease-out.
+    static let readingIn = 0.08
+    static let settlingIn = 0.9
+    static let settling = Animation.timingCurve(0, 0, 0.58, 1, duration: settlingIn)
 
     /// A bar as a capsule drawn the same way whatever its height, a dot included, so that as one
     /// shape turns into another every point has a partner and nothing twists on the way.
@@ -186,39 +200,25 @@ struct WaveformGlyph: View {
         path.closeSubpath()
     }
 
-    /// How wide a bar is, for how wide the waveform is.
-    static func barWidth(in width: CGFloat) -> CGFloat { width / (6 + 5 / barToGap) }
-
-    /// How much wider a bar is than the gap beside it: 8 pixels to 6 on the iPhone.
-    private static let barToGap: CGFloat = 8.0 / 6
-
-    /// The made-up song's bars, for the welcome tour and the test scenes: a made-up beat as the
-    /// analysis would hear it, eased exactly as music's levels are (see `Analyzer.shape`), each bar
-    /// rising quickly and falling away slowly, at the same 45 readings a second. The easing only
-    /// remembers the last second or so, so the readings of the second before are eased through
-    /// again each time, and the bars stay a picture of the moment.
+    /// The made-up song's bars, for the welcome tour and the test scenes: a made-up beat, as the
+    /// analysis would hear it, a reading at a time, as often as music's come.
     static func demoLevels(at t: Double) -> [Float] {
-        let rate = Double(demoRate)
-        let now = (t * rate).rounded(.down)
-        var reference: Float? = 0
-        var smoothed = [Float](repeating: 0, count: AudioLevels.bands)
-        var bars = smoothed
-        for reading in stride(from: now - rate, through: now, by: 1) {
-            bars = Analyzer.shape(demoHeard(at: reading / rate), reference: &reference, volume: 1, smoothed: &smoothed)
+        let reading = (t * demoRate).rounded(.down) / demoRate
+        return demoHeard(at: reading).enumerated().map { band, loudness in
+            BinnedFFT.height(of: (1 - BinnedFFT.tilt * Float(band)) * Float(0.3 + 0.75 * loudness))
         }
-        return bars
     }
 
     /// How many times a second the made-up song is read: as often as music is.
-    static let demoRate = 45
+    static let demoRate = 48_000 / Double(BinnedFFT.size)
 
     /// The made-up song's beats a second: a little under two, as the colors behind the player pulse.
     private static let demoTempo = 1.8
 
-    /// How loud the made-up song is in each band, in decibels against its loudest, as the analysis
-    /// would hear it: a kick on every beat, a snare on every other, a bass line and hi-hats on every
-    /// half beat, each a little harder or softer as played, and a voice wandering through the mids.
-    static func demoHeard(at t: Double) -> [Float] {
+    /// How loud the made-up song is in each band, 0 to 1, left to right: a kick on every beat, a bass
+    /// line on every half beat, a voice wandering through the mids, a snare on every other beat and
+    /// hi-hats on every half beat, each a little harder or softer as played.
+    static func demoHeard(at t: Double) -> [Double] {
         let beats = t * demoTempo
         let beat = beats.rounded(.down)
         let sinceBeat = (beats - beat) / demoTempo
@@ -231,15 +231,11 @@ struct WaveformGlyph: View {
         let hat = exp(-sinceHalf / 0.06) * played
         let note = exp(-sinceHalf / 0.25) * played
         let voice = 0.55 + 0.2 * sin(t * 2 * .pi / 4.4) + 0.15 * sin(t * 2 * .pi * 2.9 + 2 * sin(t * 1.3))
-        // Bass, low mids, mids, upper mids, presence and air, as `Analyzer.bands`.
         let loudness = [
             0.2 + 0.8 * kick, 0.25 + 0.55 * note, voice, 0.2 + 0.3 * voice + 0.45 * snare, 0.2 + 0.5 * snare + 0.3 * hat,
             0.15 + 0.7 * hat,
         ]
-        // Untilted, as the analysis tilts what it hears.
-        return loudness.enumerated().map { band, level in
-            Analyzer.span * Float(min(max(level, 0), 1) - 1) - Analyzer.tilt * Float(log2(Analyzer.middles[band] / Analyzer.middles[0]))
-        }
+        return loudness.map { min(max($0, 0), 1) }
     }
 
     /// 0 to 1, the same for the same half beat, different from one to the next.
@@ -258,8 +254,9 @@ struct WaveformGlyph: View {
     }
 
     /// Where the bars draw together: a dot in the middle, where the symbol springs from.
-    private func gathered(in size: CGSize, dot: CGFloat) -> CGRect {
-        CGRect(x: size.width / 2 - dot / 2, y: size.height / 2 - dot / 2, width: dot, height: dot)
+    private func gathered(in size: CGSize) -> CGRect {
+        let dot = size.width * Self.restWidth
+        return CGRect(x: size.width / 2 - dot / 2, y: size.height / 2 - dot / 2, width: dot, height: dot)
     }
 }
 
@@ -271,9 +268,9 @@ private struct HeardLevels<Content: View>: View {
     var body: some View { content(audio.levels) }
 }
 
-/// The bars in the notch on the screen, drawn by Core Animation. The levels come 45 times a second,
-/// and through SwiftUI each one would redraw the whole notch, which took about half of a core with
-/// the notch closed. Here each only reshapes one layer over the cover's colors.
+/// The bars in the notch on the screen, drawn by Core Animation. Through SwiftUI each reading would
+/// redraw the whole notch, which took about half of a core with the notch closed. Here each only
+/// reshapes one layer over the cover's colors, eased in from where the bars are as Apple's are.
 private struct LiveBars: NSViewRepresentable {
     let color: NSColor
     let flow: ArtworkFlow?
@@ -303,7 +300,7 @@ final class LiveBarsView: NSView {
     var isPlaying = false {
         didSet {
             frames?.isPaused = !isPlaying
-            if isPlaying != oldValue { redraw(animated: true) }
+            if isPlaying != oldValue { redraw(over: WaveformGlyph.settlingIn) }
         }
     }
 
@@ -355,10 +352,10 @@ final class LiveBarsView: NSView {
             link.add(to: .main, forMode: .common)
             frames = link
         } else {
-            hearing = AudioLevels.shared.$levels.sink { [weak self] levels in
+            hearing = AudioLevels.shared.$levels.removeDuplicates().sink { [weak self] levels in
                 MainActor.assumeIsolated {
                     self?.levels = levels
-                    self?.redraw()
+                    self?.redraw(over: WaveformGlyph.readingIn)
                 }
             }
         }
@@ -368,11 +365,11 @@ final class LiveBarsView: NSView {
     /// the player, drawn only when a new reading is due, as music's are.
     @objc private func nextFrame(_ link: CADisplayLink) {
         let t = Date.now.timeIntervalSinceReferenceDate + link.targetTimestamp - CACurrentMediaTime()
-        let now = (t * Double(WaveformGlyph.demoRate)).rounded(.down)
+        let now = (t * WaveformGlyph.demoRate).rounded(.down)
         guard now != reading else { return }
         reading = now
         levels = WaveformGlyph.demoLevels(at: t)
-        redraw()
+        redraw(over: WaveformGlyph.readingIn)
     }
 
     override func layout() {
@@ -387,21 +384,23 @@ final class LiveBarsView: NSView {
         redraw()
     }
 
-    private func redraw(animated: Bool = false) {
-        let width = WaveformGlyph.barWidth(in: bounds.width)
-        guard width > 0 else { return }
+    /// The bars as they are now, eased in over `duration` from where they show, as Apple's are; at
+    /// once with none.
+    private func redraw(over duration: Double = 0) {
+        guard bounds.width > 0 else { return }
+        let shown = isPlaying ? levels : WaveformGlyph.resting
         let path = CGMutablePath()
-        for (index, level) in levels.enumerated() {
-            let bar = WaveformGlyph.bar(index, level: level, playing: isPlaying, in: bounds.size, width: width)
-            WaveformGlyph.addCapsule(bar, to: path)
+        for (index, level) in shown.enumerated() {
+            WaveformGlyph.addCapsule(WaveformGlyph.bar(index, level: level, in: bounds.size), to: path)
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        if animated, let shown = shape.path {
+        if duration > 0, let from = shape.presentation()?.path ?? shape.path {
             let change = CABasicAnimation(keyPath: "path")
-            change.fromValue = shown
-            change.duration = 0.3
-            change.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            change.fromValue = from
+            change.duration = duration
+            // Apple's ease-out, for a reading and for settling alike.
+            change.timingFunction = CAMediaTimingFunction(controlPoints: 0, 0, 0.58, 1)
             shape.add(change, forKey: "path")
         }
         shape.path = path

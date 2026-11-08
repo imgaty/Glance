@@ -81,7 +81,8 @@ final class AudioLevels: ObservableObject {
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
                     guard let self else { return }
-                    self.levels = reading.levels
+                    // Only a new reading moves the bars: each one is animated in.
+                    if let levels = reading.levels, levels != self.levels { self.levels = levels }
                     self.beat = reading.beat
                     self.pulse = Self.eased(self.pulse, toward: reading.beat)
                 }
@@ -106,10 +107,12 @@ final class AudioLevels: ObservableObject {
     }
 }
 
-/// What the analysis hears at a moment: the bars' levels and the beat.
+/// What the analysis hears at a moment: the bars' levels, when there's a new reading of them, the
+/// beat, and how loud the sound is, 0 to 1.
 struct AudioReading: Equatable {
-    var levels: [Float]
+    var levels: [Float]?
     var beat: Float
+    var loudness: Float = 0
 }
 
 /// Readings held back until the sound they were made from is heard: the tap hears the player as it
@@ -139,15 +142,19 @@ final class TapPipeline: @unchecked Sendable {
     }
 
     private let queue = DispatchQueue(label: "Glance.AudioLevels")
-    private let ring = SampleRing(capacity: 4096)
+    private let ring = SampleRing(capacity: BinnedFFT.size * 2)
     private let publish: (AudioReading) -> Void
+    /// The beat and the bars, each held back until it's heard.
     private var heard = HeardLater()
+    private var heardBars = HeardLater()
     private var ticks = 0
     private var tapID = AudioObjectID(0)
     private var aggregateID = AudioObjectID(0)
     private var ioProc: AudioDeviceIOProcID?
     private var timer: DispatchSourceTimer?
+    private var barsTimer: DispatchSourceTimer?
     private var analyzer: Analyzer?
+    private var binned: BinnedFFT?
 
     init(target: Target, publish: @escaping (AudioReading) -> Void) {
         self.publish = publish
@@ -193,7 +200,9 @@ final class TapPipeline: @unchecked Sendable {
         ]
         guard AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID) == noErr, aggregateID != 0
         else { return false }
-        analyzer = Analyzer(sampleRate: Self.sampleRate(of: aggregateID))
+        let rate = Self.sampleRate(of: aggregateID)
+        analyzer = Analyzer(sampleRate: rate)
+        binned = BinnedFFT(sampleRate: rate)
 
         let ring = ring
         let created = AudioDeviceCreateIOProcIDWithBlock(&ioProc, aggregateID, nil) { _, input, _, output, _ in
@@ -211,18 +220,36 @@ final class TapPipeline: @unchecked Sendable {
             guard let self, let analyzer, let samples = ring.latest(Analyzer.size) else { return }
             // The sound can move to other speakers or headphones as it plays: how late it's heard is
             // read again every second.
-            if ticks % 45 == 0 { heard.delay = Self.heardAfter(aggregate: aggregateID) }
+            if ticks % 45 == 0 {
+                heard.delay = Self.heardAfter(aggregate: aggregateID, window: Analyzer.size)
+                heardBars.delay = Self.heardAfter(aggregate: aggregateID, window: BinnedFFT.size)
+            }
             ticks += 1
-            if let due = heard.take(analyzer.reading(samples), at: ProcessInfo.processInfo.systemUptime) { publish(due) }
+            let beat = analyzer.beat(samples)
+            let reading = AudioReading(levels: nil, beat: beat, loudness: analyzer.loudness)
+            if let due = heard.take(reading, at: ProcessInfo.processInfo.systemUptime) { publish(due) }
         }
         timer.resume()
         self.timer = timer
+        // The bars, as Apple's own waveform reads them: each window of samples once, as it fills,
+        // about 12 times a second.
+        let barsTimer = DispatchSource.makeTimerSource(queue: queue)
+        barsTimer.schedule(deadline: .now(), repeating: Double(BinnedFFT.size) / rate)
+        barsTimer.setEventHandler { [weak self] in
+            guard let self, let binned, let samples = ring.latest(BinnedFFT.size) else { return }
+            let reading = AudioReading(levels: binned.levels(samples), beat: analyzer?.lastBeat ?? 0, loudness: analyzer?.loudness ?? 0)
+            if let due = heardBars.take(reading, at: ProcessInfo.processInfo.systemUptime) { publish(due) }
+        }
+        barsTimer.resume()
+        self.barsTimer = barsTimer
         return true
     }
 
     private func tearDown() {
         timer?.cancel()
         timer = nil
+        barsTimer?.cancel()
+        barsTimer = nil
         if aggregateID != 0 {
             if let ioProc {
                 AudioDeviceStop(aggregateID, ioProc)
@@ -256,14 +283,14 @@ final class TapPipeline: @unchecked Sendable {
     }
 
     /// How much later the sound is heard than the tap hears it: as long as the Mac's sound output
-    /// takes to play it, less what the aggregate's buffer and the analysis's window already hold
-    /// it back.
-    private static func heardAfter(aggregate: AudioObjectID) -> TimeInterval {
+    /// takes to play it, less what the aggregate's buffer and the analysis's window of `window`
+    /// samples already hold it back.
+    private static func heardAfter(aggregate: AudioObjectID, window: Int) -> TimeInterval {
         var output = AudioObjectID(0)
         guard AudioProperty.read(system, kAudioHardwarePropertyDefaultOutputDevice, &output), output != 0 else { return 0 }
         var buffer: UInt32 = 0
         _ = AudioProperty.read(aggregate, kAudioDevicePropertyBufferFrameSize, &buffer)
-        let own = (Double(buffer) + Double(Analyzer.size) / 2) / sampleRate(of: aggregate)
+        let own = (Double(buffer) + Double(window) / 2) / sampleRate(of: aggregate)
         return max(AudioProperty.outputLatency(of: output) - own, 0)
     }
 
@@ -329,33 +356,16 @@ private final class SampleRing: @unchecked Sendable {
     }
 }
 
-/// Turns 1024 samples into six bar heights, as Apple's waveform does (`MediaCoreUI`'s binned FFT):
-/// six bands of the spectrum, each as loud as it is against the loudest of them, so the bars say
-/// where the sound is, low or high. How loud the music really is sets how tall the bars can grow,
-/// so a quiet song stays low. Apart from them, the beat, which the colors behind the player pulse
-/// on: the bass rising more sharply than it has been lately, to well above its usual level, as a
-/// kick or a bass note starts; no sooner than a fifth of a second after the last.
+/// The beat, which the colors behind the player pulse on, from 1024 samples at a time, 45 times a
+/// second: the bass rising more sharply than it has been lately, to well above its usual level, as a
+/// kick or a bass note starts; no sooner than a fifth of a second after the last. The bars come from
+/// `BinnedFFT`.
 final class Analyzer {
     static let size = 1024
-    /// Bass, low mids, mids, upper mids, presence and air, in hertz.
-    static let bands: [(Double, Double)] = [(45, 90), (150, 260), (400, 700), (1_100, 1_800), (3_000, 5_000), (7_000, 12_000)]
-    /// Bands to bars: bass sits right of center, as in the iPhone's waveform.
-    static let order = [4, 5, 3, 1, 0, 2]
-    /// The bar that's the bass.
-    static let beatBar = order.firstIndex(of: 0)!
-    /// Each band's middle, in hertz, which its tilt is reckoned from.
-    nonisolated static let middles: [Double] = bands.map { ($0.0 * $0.1).squareRoot() }
-    /// Music is loudest in the bass and quieter an octave up each time: each band is raised this many
-    /// decibels an octave above the bass's, so the bars show where the sound is, its pitch, rather
-    /// than always the bass. As Apple's waveform bins its FFT into bands and shows them side by side.
-    static let tilt: Float = 4.5
-    /// How many decibels below the loudest band a bar goes down to a dot.
-    static let span: Float = 30
-    /// How far each bar moves toward its level at each reading, rising and falling: softly, over a
-    /// tenth of a second or so, as the iPhone's bars move, rather than leaping to every hit.
-    private static let attack: [Float] = [0.4, 0.42, 0.45, 0.48, 0.5, 0.52]
-    private static let release: [Float] = [0.1, 0.12, 0.14, 0.16, 0.18, 0.2]
-    /// The loudness, in dB below full scale, at which the bars stay flat, and at which they can reach the top.
+    /// The bass, in hertz, which the beat is heard in.
+    static let bass: (Double, Double) = (45, 90)
+    /// The loudness, in dB below full scale, at which the music is too quiet to have a beat, and at
+    /// which it's loud enough for any.
     private static let quiet: Float = -50
     private static let loud: Float = -14
     /// The least rise in the bass, in dB from one reading to the next, that's a beat; the fewest
@@ -370,53 +380,29 @@ final class Analyzer {
 
     private let fft = vDSP.FFT(log2n: 10, radix: .radix2, ofType: DSPSplitComplex.self)!
     private let window = vDSP.window(ofType: Float.self, usingSequence: .hanningDenormalized, count: size, isHalfWindow: false)
-    private let bins: [Range<Int>]
-    /// Each band's level over the last second or so, which it's measured against.
-    private var averages: [Float]?
-    private var previous = [Float](repeating: -120, count: 6)
+    private let bins: Range<Int>
+    /// The bass's level over the last second or so, which a rise is measured against.
+    private var average: Float?
+    private var previous: Float = -120
     private var volume: Float = 0
-    private var smoothed = [Float](repeating: 0, count: 6)
-    /// The loudest band of late, which the bars are measured against.
-    private var reference: Float?
     /// The last beat, fading; and the beat as shown, following it in.
     private var kick: Float = 0
     private var beat: Float = 0
     private var sinceBeat = 0
     /// How sharply the bass has been rising lately, which a beat must clearly beat.
     private var rises: Float = 0
+    /// The beat as of the last reading.
+    var lastBeat: Float { beat }
+    /// How loud the sound is, 0 when too quiet for a beat to 1 when loud enough for any, eased.
+    var loudness: Float { volume }
 
     init(sampleRate: Double) {
         let hertzPerBin = sampleRate / Double(Self.size)
-        bins = Self.bands.map { low, high in
-            let first = max(1, Int(low / hertzPerBin))
-            return first..<max(first + 1, min(Self.size / 2, Int(high / hertzPerBin)))
-        }
+        let first = max(1, Int(Self.bass.0 / hertzPerBin))
+        bins = first..<max(first + 1, min(Self.size / 2, Int(Self.bass.1 / hertzPerBin)))
     }
 
-    /// The bars from each band's loudness: tilted so music's falling spectrum reads level, each
-    /// measured against the loudest band of late, down to a dot `span` below it, so how tall a bar is
-    /// against the others says where the sound is. The reference follows a louder band at once and a
-    /// quieter mix slowly. Then eased, each bar with its own temperament: bass swells and lets go
-    /// slowly, treble flickers.
-    static func shape(_ decibels: [Float], reference: inout Float?, volume: Float, smoothed: inout [Float]) -> [Float] {
-        let tilted = decibels.enumerated().map { band, level in
-            level + Self.tilt * Float(log2(Self.middles[band] / Self.middles[0]))
-        }
-        let loudest = tilted.max() ?? 0
-        var top = reference ?? loudest
-        top += (loudest - top) * (loudest > top ? 0.5 : 0.02)
-        reference = top
-        var bars = [Float](repeating: 0, count: tilted.count)
-        for band in tilted.indices {
-            let level = volume * min(max((tilted[band] - (top - Self.span)) / Self.span, 0), 1)
-            let rate = level > smoothed[band] ? Self.attack[band] : Self.release[band]
-            smoothed[band] += (level - smoothed[band]) * rate
-            bars[Self.order.firstIndex(of: band)!] = smoothed[band]
-        }
-        return bars
-    }
-
-    func reading(_ samples: [Float]) -> AudioReading {
+    func beat(_ samples: [Float]) -> Float {
         let windowed = vDSP.multiply(samples, window)
         var real = [Float](repeating: 0, count: Self.size / 2)
         var imaginary = [Float](repeating: 0, count: Self.size / 2)
@@ -433,48 +419,107 @@ final class Analyzer {
                 vDSP_zvmags(&split, 1, &power, 1, vDSP_Length(Self.size / 2))
             }
         }
-        // Digital silence reads as nothing at all.
+        // Digital silence has no beat.
         guard vDSP.sum(power) > 1e-9 else {
-            smoothed = [Float](repeating: 0, count: 6)
             volume = 0
             kick = 0
             beat = 0
-            reference = nil
-            return AudioReading(levels: smoothed, beat: 0)
+            return 0
         }
 
-        // How loud the music is, in dB below full scale, sets how tall the bars may grow.
+        // How loud the music is, in dB below full scale: a quiet song has no beat.
         let loudness = 20 * log10(vDSP.rootMeanSquare(samples) + 1e-9)
         let reach = min(max((loudness - Self.quiet) / (Self.loud - Self.quiet), 0), 1)
         volume += (reach - volume) * (reach > volume ? 0.4 : 0.08)
 
-        var decibels = [Float](repeating: 0, count: 6)
-        for band in 0..<6 {
-            let energy: Float = power[bins[band]].reduce(0, +) / Float(bins[band].count)
-            decibels[band] = 10 * log10(energy + 1e-12)
-        }
-        // The beat, from how sharply the bass rose since the last reading, and how far above its
-        // usual level, so the bass only wavering isn't one. The first reading has nothing to go by.
-        let rise = decibels[0] - previous[0]
-        let above = decibels[0] - (self.averages?[0] ?? decibels[0])
+        let bass = 10 * log10(power[bins].reduce(0, +) / Float(bins.count) + 1e-12)
+        // How sharply the bass rose since the last reading, and how far above its usual level, so the
+        // bass only wavering isn't a beat. The first reading has nothing to go by.
+        let rise = bass - previous
+        let above = bass - (average ?? bass)
         kick *= Self.beatFade
         sinceBeat += 1
-        if self.averages != nil, rise > max(Self.beatRise, rises * 2.5), above > Self.beatAbove, sinceBeat >= Self.beatGap,
-            volume > 0.05
-        {
+        if average != nil, rise > max(Self.beatRise, rises * 2.5), above > Self.beatAbove, sinceBeat >= Self.beatGap, volume > 0.05 {
             kick = max(kick, 0.55 + 0.45 * min((rise - Self.beatRise) / 9, 1))
             sinceBeat = 0
         }
         beat = kick > beat ? beat + (kick - beat) * Self.beatAttack : kick
         rises += (max(rise, 0) - rises) * 0.05
+        average = (average ?? bass) + (bass - (average ?? bass)) * 0.03
+        previous = bass
+        return beat
+    }
+}
 
-        var averages = self.averages ?? decibels
-        for band in 0..<6 {
-            averages[band] += (decibels[band] - averages[band]) * 0.03
-            previous[band] = decibels[band]
+/// The six bars, made exactly as Apple's own waveform makes them: `MediaCoreUI`'s
+/// `WaveformBinnedFFT`, read from macOS 27.3's code and its log. A window of 4096 samples, once
+/// each as it fills (about 12 times a second), Hann windowed, through an FFT; each bar the sum of
+/// the bins in its band, bass at the left, the bins counted from 20 Hz up; the sum raised to the
+/// power 0.4 after a 0.6 gain, each bar a twentieth lower than the one to its left, then shaped by
+/// Apple's own curve and kept between 0 and 1. Nothing is eased here: the bars animate each reading
+/// in (see `LiveBarsView`).
+final class BinnedFFT {
+    static let size = 4096
+    /// The bands' edges, in hertz, left to right.
+    static let edges: [Float] = [20, 81, 170, 527, 1_500, 4_500, 10_000]
+    /// Each bar this much lower than the one to its left, as a share.
+    static let tilt: Float = 0.05
+    static let gain: Float = 0.6
+    static let exponent: Float = 0.4
+    /// The curve each bar is shaped by: a bar of `v` stands `v` times this tall.
+    static let curve: [Float] = [3.84082293510437, -8.182433128356934, 7.772333145141602, -2.4307219982147217]
+
+    private let fft = vDSP.FFT(log2n: 12, radix: .radix2, ofType: DSPSplitComplex.self)!
+    private let window = vDSP.window(ofType: Float.self, usingSequence: .hanningDenormalized, count: size, isHalfWindow: false)
+    private let hertzPerBin: Float
+
+    init(sampleRate: Double) {
+        hertzPerBin = Float(sampleRate) / Float(Self.size)
+    }
+
+    /// The bars from the latest `size` samples.
+    func levels(_ samples: [Float]) -> [Float] {
+        let half = Self.size / 2
+        let windowed = vDSP.multiply(samples, window)
+        var real = [Float](repeating: 0, count: half)
+        var imaginary = [Float](repeating: 0, count: half)
+        var power = [Float](repeating: 0, count: half)
+        real.withUnsafeMutableBufferPointer { realPointer in
+            imaginary.withUnsafeMutableBufferPointer { imaginaryPointer in
+                var split = DSPSplitComplex(realp: realPointer.baseAddress!, imagp: imaginaryPointer.baseAddress!)
+                windowed.withUnsafeBufferPointer { input in
+                    input.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: half) {
+                        vDSP_ctoz($0, 2, &split, 1, vDSP_Length(half))
+                    }
+                }
+                fft.forward(input: split, output: &split)
+                vDSP_zvmags(&split, 1, &power, 1, vDSP_Length(half))
+            }
         }
-        self.averages = averages
-        let bars = Self.shape(decibels, reference: &reference, volume: volume, smoothed: &smoothed)
-        return AudioReading(levels: bars, beat: beat)
+        // Each bin's size, scaled as Apple scales it: by 2 over the bins counted.
+        let magnitudes = vDSP.multiply(2 / Float(half), vForce.sqrt(power))
+        return Self.bars(magnitudes, hertzPerBin: hertzPerBin)
+    }
+
+    /// The bars from each bin's size. The bins are counted off from the first edge up, one bin's width
+    /// each, so the first bar takes the lowest bins whatever they hold.
+    static func bars(_ magnitudes: [Float], hertzPerBin: Float) -> [Float] {
+        var hertz = edges[0]
+        var bin = 0
+        return (0..<edges.count - 1).map { band in
+            var sum: Float = 0
+            while bin < magnitudes.count, hertz < edges[band + 1] {
+                sum += magnitudes[bin]
+                hertz += hertzPerBin
+                bin += 1
+            }
+            return height(of: (1 - tilt * Float(band)) * powf(gain * sum, exponent))
+        }
+    }
+
+    /// A bar of `v`, shaped by the curve and kept between 0 and 1.
+    static func height(of v: Float) -> Float {
+        let shaped = v * (curve[0] + v * (curve[1] + v * (curve[2] + v * curve[3])))
+        return min(max(v * shaped, 0), 1)
     }
 }

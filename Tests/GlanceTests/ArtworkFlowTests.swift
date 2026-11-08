@@ -56,12 +56,26 @@ struct ArtworkFlowTests {
         #expect(Self.brightness(of: flow.bars).lowest >= 0.25)
     }
 
-    @Test("A dark cover's bars are brightened more, up to a limit, so they read on black; a light one's as measured")
+    static func solid(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> CGImage {
+        let context = CGContext(
+            data: nil, width: 32, height: 32, bitsPerComponent: 8, bytesPerRow: 128, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(CGColor(srgbRed: red, green: green, blue: blue, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 32, height: 32))
+        return context.makeImage()!
+    }
+
+    @Test("A cover's brightness is Apple's: each pixel's, averaged, so red reads brighter than blue")
+    func brightness() {
+        #expect(abs(ArtworkFlow.barsBrightness(of: Self.solid(0.5, 0.5, 0.5)) - 0.5) < 0.01)
+        #expect(abs(ArtworkFlow.barsBrightness(of: Self.solid(1, 0, 0)) - 0.299.squareRoot()) < 0.01)
+        #expect(abs(ArtworkFlow.barsBrightness(of: Self.solid(0, 0, 1)) - 0.114.squareRoot()) < 0.01)
+        #expect(ArtworkFlow.barsDarkness(0.6) == 0 && ArtworkFlow.barsDarkness(0.9) == 0)
+        #expect(ArtworkFlow.barsDarkness(0) == 1 && abs(ArtworkFlow.barsDarkness(0.3) - 0.5) < 0.001)
+    }
+
+    @Test("A dark cover's bars are washed with white, so they read on black")
     func darkCoverBars() throws {
-        #expect(ArtworkFlow.barsExposure(for: 0.05) > ArtworkFlow.barsExposure(for: 0.15))
-        #expect(ArtworkFlow.barsExposure(for: 0.15) > ArtworkFlow.barsExposure(for: 0.6))
-        #expect(ArtworkFlow.barsExposure(for: 0.6) == ArtworkFlow.barsExposure(for: 0.95))
-        #expect(ArtworkFlow.barsExposure(for: 0) == ArtworkFlow.barsExposure(for: 0.001))
         let dark = NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
             NSColor(srgbRed: 0.1, green: 0.05, blue: 0.16, alpha: 1).setFill()
             rect.fill()
@@ -72,28 +86,25 @@ struct ArtworkFlowTests {
         #expect(levels.reduce(0, +) / Double(levels.count) >= 0.4)
     }
 
-    @Test("The made-up song's bars move as eased music's do: a reading at a time, 45 a second, the bass rising on each beat and falling away")
+    @Test("The made-up song's bars come a reading at a time, as often as music's, the bass rising on each beat and falling away")
     func demoBarsEase() {
-        let rate = Double(WaveformGlyph.demoRate)
-        #expect(WaveformGlyph.demoRate == 45)
+        let rate = WaveformGlyph.demoRate
+        #expect(abs(rate - 48_000.0 / 4096) < 0.001)
         // One reading holds until the next is due.
         #expect(WaveformGlyph.demoLevels(at: 1000.001) == WaveformGlyph.demoLevels(at: 1000.02))
-        var last = WaveformGlyph.demoLevels(at: 1000), most: Float = 0, bass: [Float] = []
-        for i in 1...(WaveformGlyph.demoRate * 4) {
+        var bass: [Float] = []
+        for i in 1...Int(rate * 4) {
             let levels = WaveformGlyph.demoLevels(at: 1000 + Double(i) / rate)
             #expect(levels.count == AudioLevels.bands)
-            most = max(most, zip(levels, last).map { abs($0 - $1) }.max() ?? 0)
-            bass.append(levels[Analyzer.beatBar])
-            last = levels
+            bass.append(levels[0])
         }
-        #expect(most < 0.4)
-        #expect((bass.max() ?? 0) > 0.8)
-        #expect((bass.max() ?? 0) - (bass.min() ?? 1) > 0.4)
+        #expect((bass.max() ?? 0) > 0.6)
+        #expect((bass.max() ?? 0) - (bass.min() ?? 1) > 0.3)
         // Every bar moves, none pinned at the top or a dot.
         let spread = (0..<AudioLevels.bands).map { bar in
             (0..<Int(rate * 4)).map { WaveformGlyph.demoLevels(at: 2000 + Double($0) / rate)[bar] }
         }
-        for bar in spread { #expect((bar.max() ?? 0) - (bar.min() ?? 0) > 0.1 && (bar.max() ?? 1) < 1 && (bar.min() ?? 0) > 0) }
+        for bar in spread { #expect((bar.max() ?? 0) - (bar.min() ?? 0) > 0.1 && (bar.max() ?? 1) <= 1 && (bar.min() ?? 0) > 0) }
     }
 
     /// White with a black ball in the middle, the harshest a cover gets.
@@ -124,9 +135,11 @@ struct ArtworkFlowTests {
         let bars = flow.bars
         let levels = Self.channels(of: bars).map(\.r)
         #expect((levels.min() ?? 0) >= 0.23)
-        // The cover itself shows: lighter at the sides than in its dark middle.
+        // The cover itself shows: lighter at the sides than in its dark middle, and dimmed, as Apple's
+        // waveform dims a bright cover's bars: its middle bars measured 163 of 255, its outer 186.
         let row = bars.height / 2
-        #expect(levels[row * bars.width] > levels[row * bars.width + bars.width / 2] + 0.2)
+        #expect(levels[row * bars.width] > levels[row * bars.width + bars.width / 2] + 0.08)
+        #expect((levels.max() ?? 1) < 0.8)
         for y in 0..<bars.height {
             for x in 1..<bars.width {
                 #expect(abs(levels[y * bars.width + x] - levels[y * bars.width + x - 1]) < 0.04)

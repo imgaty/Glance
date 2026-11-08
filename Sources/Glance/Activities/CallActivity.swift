@@ -909,8 +909,8 @@ final class CallVoices: ObservableObject {
             pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
-                        let loud = Double(reading.levels.reduce(0, +)) / Double(max(reading.levels.count, 1))
-                        self?.theirs = min(CGFloat(loud) * 2.4, 1)
+                        // As loud as the waveform's bars, on average, once stood with this sound.
+                        self?.theirs = min(CGFloat(reading.loudness) * 1.1, 1)
                     }
                 }
             }
