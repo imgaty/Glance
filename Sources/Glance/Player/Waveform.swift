@@ -58,8 +58,8 @@ struct HeroWaveform: View {
 /// Six bars that follow the music from bass, at the left, to treble, drawn exactly as Apple's own
 /// waveform draws them (`MediaCoreUI`'s `WaveformLayer`, measured from its layers on macOS 27.3):
 /// each a dot at rest, as tall as the waveform at full, a little wider the taller it is, round at
-/// the ends, each new reading eased in over 80 ms. Paused, they settle over 0.9 s into a still arch,
-/// as Apple's do in the menu bar. They show the cover itself, as Apple's do, through the bars laid
+/// the ends, each new reading eased in over 80 ms. Paused, they settle over 0.9 s into six dots, as
+/// Apple's paused waveform does. They show the cover itself, as Apple's do, through the bars laid
 /// across all six at once (see `ArtworkFlow.bars`). Folded, it becomes Apple's lyrics symbol, the way
 /// Apple swaps one symbol for another: the bars draw together into a point and are gone, and the
 /// symbol springs out of it.
@@ -176,13 +176,15 @@ struct WaveformGlyph: View {
         return CGRect(x: middle - width / 2, y: (size.height - height) / 2, width: width, height: height)
     }
 
-    /// The bars while nothing plays: a still arch, as Apple's menu bar shows its waveform paused.
-    static let resting: [Float] = [0.25, 0.5, 0.75, 0.75, 0.5, 0.25]
-    /// How long each new reading takes to ease in, and how long the bars take to settle into the arch
-    /// or back out of it, both on Apple's ease-out.
+    /// The bars while nothing plays: six dots, as Apple's waveform paused (`WaveformState.paused`),
+    /// rather than the arch it shows playing with nothing to show.
+    static let resting: [Float] = Array(repeating: 0, count: AudioLevels.bands)
+    /// How long each new reading takes to ease in, on Apple's ease-out, and how long the bars take to
+    /// settle into dots or back out of them, on Apple's own curve for pausing.
     static let readingIn = 0.08
     static let settlingIn = 0.9
-    static let settling = Animation.timingCurve(0, 0, 0.58, 1, duration: settlingIn)
+    static let settling = Animation.timingCurve(0.33, 1, 0.67, 1, duration: settlingIn)
+    static let settlingCurve = CAMediaTimingFunction(controlPoints: 0.33, 1, 0.67, 1)
 
     /// A bar as a capsule drawn the same way whatever its height, a dot included, so that as one
     /// shape turns into another every point has a partner and nothing twists on the way.
@@ -300,7 +302,7 @@ final class LiveBarsView: NSView {
     var isPlaying = false {
         didSet {
             frames?.isPaused = !isPlaying
-            if isPlaying != oldValue { redraw(over: WaveformGlyph.settlingIn) }
+            if isPlaying != oldValue { redraw(over: WaveformGlyph.settlingIn, curve: WaveformGlyph.settlingCurve) }
         }
     }
 
@@ -386,7 +388,7 @@ final class LiveBarsView: NSView {
 
     /// The bars as they are now, eased in over `duration` from where they show, as Apple's are; at
     /// once with none.
-    private func redraw(over duration: Double = 0) {
+    private func redraw(over duration: Double = 0, curve: CAMediaTimingFunction = CAMediaTimingFunction(controlPoints: 0, 0, 0.58, 1)) {
         guard bounds.width > 0 else { return }
         let shown = isPlaying ? levels : WaveformGlyph.resting
         let path = CGMutablePath()
@@ -399,8 +401,8 @@ final class LiveBarsView: NSView {
             let change = CABasicAnimation(keyPath: "path")
             change.fromValue = from
             change.duration = duration
-            // Apple's ease-out, for a reading and for settling alike.
-            change.timingFunction = CAMediaTimingFunction(controlPoints: 0, 0, 0.58, 1)
+            // Apple's ease-out for a reading; its own curve for settling into dots and out.
+            change.timingFunction = curve
             shape.add(change, forKey: "path")
         }
         shape.path = path

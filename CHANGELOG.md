@@ -296,7 +296,7 @@
   about twelve times a second, each new reading easing in; round bars, a little
   wider the taller they are; the cover itself showing through them, blurred,
   more saturated and washed with white when it's dark, and dimmed when it's
-  bright. While the music is paused, the bars rest in a still arch.
+  bright. While the music is paused, the bars settle into six still dots.
 - Changed `Replace glass` to show all of the cover's colors, more strongly, just
   where the glass shows, so a white cover looks white and its red shows too. The
   times and side buttons turn lighter over a light cover.
