@@ -32721,210 +32721,210 @@
         }
       }
     },
-    "Hide macOS's Live Activities": {
+    "Hide native Live Activities": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "إخفاء الأنشطة المباشرة في macOS"
+            "value": "إخفاء الأنشطة المباشرة الأصلية"
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Amagar les activitats en directe del macOS"
+            "value": "Amagar les activitats en directe natives"
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skrýt živé aktivity macOS"
+            "value": "Skrýt nativní živé aktivity"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skjul macOS’ liveaktiviteter"
+            "value": "Skjul indbyggede liveaktiviteter"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Live-Aktivitäten von macOS ausblenden"
+            "value": "Systemeigene Live-Aktivitäten ausblenden"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Απόκρυψη των ζωντανών δραστηριοτήτων του macOS"
+            "value": "Απόκρυψη των εγγενών ζωντανών δραστηριοτήτων"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ocultar las actividades en directo de macOS"
+            "value": "Ocultar las actividades en directo nativas"
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Piilota macOS:n liveseuranta"
+            "value": "Piilota järjestelmän liveseuranta"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masquer les activités en direct de macOS"
+            "value": "Masquer les activités en direct natives"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "הסתרת הפעילויות בזמן אמת של macOS"
+            "value": "הסתרת הפעילויות בזמן אמת המובנות"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS की लाइव ऐक्टिविटी छिपाएँ"
+            "value": "सिस्टम की लाइव ऐक्टिविटी छिपाएँ"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sakrij aktivnosti uživo sustava macOS"
+            "value": "Sakrij izvorne aktivnosti uživo"
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A macOS élő tevékenységeinek elrejtése"
+            "value": "A rendszer élő tevékenységeinek elrejtése"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sembunyikan Aktivitas Langsung macOS"
+            "value": "Sembunyikan Aktivitas Langsung bawaan"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nascondi le attività in tempo reale di macOS"
+            "value": "Nascondi le attività in tempo reale native"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOSのライブアクティビティを隠す"
+            "value": "標準のライブアクティビティを隠す"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS 실시간 현황 가리기"
+            "value": "기본 실시간 현황 가리기"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sembunyikan Aktiviti Langsung macOS"
+            "value": "Sembunyikan Aktiviti Langsung asli"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skjul løpende oppdateringer fra macOS"
+            "value": "Skjul innebygde løpende oppdateringer"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Live activiteiten van macOS verbergen"
+            "value": "Ingebouwde live activiteiten verbergen"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ukryj wydarzenia na żywo systemu macOS"
+            "value": "Ukryj systemowe wydarzenia na żywo"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ocultar Atividades ao Vivo do macOS"
+            "value": "Ocultar Atividades ao Vivo nativas"
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ocultar as atividades em tempo real do macOS"
+            "value": "Ocultar as atividades em tempo real nativas"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ascunde activitățile live din macOS"
+            "value": "Ascunde activitățile live native"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Скрывать эфир активности macOS"
+            "value": "Скрывать эфир активности системы"
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skryť aktivity naživo systému macOS"
+            "value": "Skryť natívne aktivity naživo"
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skrij aktivnosti v živo sistema macOS"
+            "value": "Skrij izvorne aktivnosti v živo"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Göm macOS liveaktiviteter"
+            "value": "Göm inbyggda liveaktiviteter"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ซ่อนกิจกรรมสดของ macOS"
+            "value": "ซ่อนกิจกรรมสดของระบบ"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS’in Canlı Etkinliklerini gizle"
+            "value": "Yerleşik Canlı Etkinlikleri gizle"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ховати дії наживо macOS"
+            "value": "Ховати вбудовані дії наживо"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ẩn Hoạt động trực tiếp của macOS"
+            "value": "Ẩn Hoạt động trực tiếp gốc"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "隐藏 macOS 的实时活动"
+            "value": "隐藏系统自带的实时活动"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "隱藏 macOS 的即時動態"
+            "value": "隱藏系統內建的即時動態"
           }
         }
       }

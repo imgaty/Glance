@@ -51,7 +51,7 @@ struct ActivitiesPage: View {
             }
             Section {
                 Toggle(isOn: $hidesSystemActivities) {
-                    Text("Hide macOS's Live Activities")
+                    Text("Hide native Live Activities")
                     Text("Turns them off in Menu Bar settings as they show, so they show only in the notch.")
                 }
                 // Said only when it's in the way.
