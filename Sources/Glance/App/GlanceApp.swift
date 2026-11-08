@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let trayService = TrayService()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        quitOnSignals()
         ActivityBench.shared.isolate()
         NSApp.mainMenu = makeMainMenu()
         nowPlaying.start()
@@ -69,6 +70,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onboarding.show()
         }
     }
+
+    /// However Glance is quit (its menus, Command-Q, Activity Monitor's Quit, a script, logging out,
+    /// or Terminal), the notch closes away first, as it does when it's turned off, and Glance quits
+    /// once it has.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !closingAway else { return .terminateNow }
+        let time = notches.closeAway()
+        guard time > 0 else { return .terminateNow }
+        closingAway = true
+        // On the run loop, which goes on while Glance waits to quit, as the main queue may not.
+        let reply = Timer(timeInterval: time, repeats: false) { _ in
+            MainActor.assumeIsolated { NSApp.reply(toApplicationShouldTerminate: true) }
+        }
+        RunLoop.main.add(reply, forMode: .common)
+        RunLoop.main.add(reply, forMode: .modalPanel)
+        return .terminateLater
+    }
+    private var closingAway = false
+
+    /// Terminal's `kill`, `pkill` and `killall`, and Control-C, ask for an ordinary quit, so the
+    /// notch closes away first. Should Glance not have quit a few seconds later, it stops there and
+    /// then, as those would have stopped it. Force Quit and `kill -9` can't be answered at all.
+    private func quitOnSignals() {
+        signalSources = [SIGTERM, SIGINT, SIGHUP].map { number in
+            signal(number, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: number, queue: .global())
+            source.setEventHandler {
+                // Through the run loop: from the main queue, the main queue would be held up until
+                // Glance quit, and with it what closes the notch.
+                NSApplication.shared.performSelector(
+                    onMainThread: #selector(NSApplication.terminate(_:)), with: nil, waitUntilDone: false, modes: [RunLoop.Mode.common.rawValue])
+                DispatchQueue.global().asyncAfter(deadline: .now() + 3) { exit(0) }
+            }
+            source.resume()
+            return source
+        }
+    }
+    private var signalSources: [DispatchSourceSignal] = []
 
     /// Settings that rebuild the notches or reshape the player when they change.
     private func watchSettings() {
@@ -501,6 +540,14 @@ final class NotchManager {
         }
         updateFullScreen()
         pointerMoved()
+    }
+
+    /// Every notch closes away, for Glance quitting; how long that takes, none if there's no notch.
+    func closeAway() -> TimeInterval {
+        guard !controllers.isEmpty else { return 0 }
+        controllers.forEach { $0.tearDown(collapsing: true) }
+        controllers = []
+        return NotchController.closeAwayTime
     }
 
     /// Each display, where it is, and its notch's resting place and size.

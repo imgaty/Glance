@@ -328,6 +328,9 @@
   to its place now, inside the notch all the way.
 - Fixed the notch shrinking past the camera housing as it closed just after
   opening, its edge showing under the camera for a moment.
+- Changed quitting Glance to close the notch away first, as turning it off does,
+  however Glance is quit: its menus, Command-Q, Activity Monitor's `Quit`, a
+  script, or Terminal. `Force Quit` still stops it at once.
 
 ### Displays
 

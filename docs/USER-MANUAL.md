@@ -569,7 +569,7 @@ Glance's icon in the menu bar opens a menu:
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
-| `Quit Glance` | Quits Glance |
+| `Quit Glance` | Closes the notch away, then quits Glance, as any other way of quitting it does but `Force Quit` |
 
 The menu works from the keyboard too: the up and down arrows go from row to
 row, the switch among them, **Return** or **Space** chooses the one lit, a

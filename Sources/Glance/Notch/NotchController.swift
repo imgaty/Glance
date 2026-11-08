@@ -470,6 +470,10 @@ final class NotchController {
         collapsing ? collapse() : fadeOut()
     }
 
+    /// How long closing away takes, at most: closed, then, on a display without a camera, gone up
+    /// into the top edge.
+    static let closeAwayTime: TimeInterval = 0.56
+
     private func collapse() {
         // This controller is let go of as it's replaced; the model and the panel carry the motion.
         let model = model, panel = panel
