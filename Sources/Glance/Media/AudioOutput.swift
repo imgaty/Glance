@@ -269,25 +269,11 @@ final class AudioOutput: NSObject, ObservableObject {
 /// AppKit slider, as the Mac's own menu has: a SwiftUI one in a menu doesn't take the click, as a
 /// menu's window is never the key window.
 final class VolumeMenuSlider: NSView {
-    private let volume: AppVolume
-    let slider: NSSlider
-
     init(volume: AppVolume) {
-        self.volume = volume
-        slider = MenuSlider(value: volume.level, minValue: 0, maxValue: 1, target: nil, action: nil)
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
         // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
-        slider.target = self
-        slider.action = #selector(moved(_:))
-        slider.isContinuous = true
-        slider.controlSize = .regular
-        // Filled white, or with the Mac's accent color in a light menu, whether or not Glance is the
-        // app in front: a menu otherwise takes its app's look, and leaves it gray.
-        slider.trackFillColor = NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .controlAccentColor
-        }
-        slider.isEnabled = volume.canChange
+        let slider = Hosting(rootView: VolumeSlider(volume: volume))
         // As the Mac's Sound menu: the speakers at the edges of the menu's own column, in line
         // with its headings and its separators, the slider filling the room between them. Each is
         // centered on the slider's track by its symbol's own alignment box, as the Mac's menus
@@ -306,47 +292,50 @@ final class VolumeMenuSlider: NSView {
             quiet.centerYAnchor.constraint(equalTo: slider.centerYAnchor, constant: -0.5),
             loud.centerYAnchor.constraint(equalTo: slider.centerYAnchor),
         ])
-        // Music's and Spotify's own volume, read afresh as the menu opens.
-        Task { [weak self] in
-            await volume.refresh()
-            self?.slider.doubleValue = volume.level
-        }
-    }
-
-    @objc private func moved(_ sender: NSSlider) {
-        volume.set(sender.doubleValue)
     }
 
     required init?(coder: NSCoder) { nil }
 
-    /// Apple's slider, taking the first click into the menu: Glance is rarely the app in front.
-    final class MenuSlider: NSSlider {
-        override class var cellClass: AnyClass? {
-            get { MenuSliderCell.self }
-            set {}
-        }
-
+    /// Taking the first click into the menu: Glance is rarely the app in front.
+    final class Hosting: NSHostingView<VolumeSlider> {
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 
-    /// Its played part always filled, white in a dark menu and the accent color in a light one, as the
-    /// Mac's Sound menu has it: a menu opened while Glance isn't the app in front otherwise draws it in
-    /// the inactive gray, the same as the rest of the track.
-    final class MenuSliderCell: NSSliderCell {
-        override func drawBar(inside rect: NSRect, flipped: Bool) {
-            super.drawBar(inside: rect, flipped: flipped)
-            guard let slider = controlView as? NSSlider, slider.isEnabled else { return }
-            let span = maxValue - minValue
-            let fraction = span > 0 ? CGFloat((doubleValue - minValue) / span) : 0
-            let bar = barRect(flipped: flipped)
-            // Up to the knob's middle, which covers its end.
-            let knobMiddle = bar.minX + knobThickness / 2 + (bar.width - knobThickness) * fraction
-            let played = NSRect(x: bar.minX, y: bar.minY, width: max(knobMiddle - bar.minX, 0), height: bar.height)
-            NSGraphicsContext.saveGraphicsState()
-            NSBezierPath(roundedRect: bar, xRadius: bar.height / 2, yRadius: bar.height / 2).addClip()
-            (slider.trackFillColor ?? .controlAccentColor).setFill()
-            played.fill()
-            NSGraphicsContext.restoreGraphicsState()
+    /// SwiftUI's own slider, its played part white in a dark menu and the accent color in a light
+    /// one, as the Mac's Sound menu has it, and drawn as in the app in front, as a menu is opened
+    /// while Glance rarely is: otherwise it's drawn inactive, its played part as gray as the rest.
+    struct VolumeSlider: View {
+        let volume: AppVolume
+        @State private var level: Double
+
+        init(volume: AppVolume) {
+            self.volume = volume
+            _level = State(initialValue: volume.level)
+        }
+
+        static let fill = Color(
+            nsColor: NSColor(name: nil) { appearance in
+                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .controlAccentColor
+            })
+
+        var body: some View {
+            Slider(
+                value: Binding(
+                    get: { level },
+                    set: {
+                        level = $0
+                        volume.set($0)
+                    }), in: 0...1
+            )
+            .labelsHidden()
+            .tint(Self.fill)
+            .disabled(!volume.canChange)
+            .environment(\.controlActiveState, .key)
+            // Music's and Spotify's own volume, read afresh as the menu opens.
+            .task {
+                await volume.refresh()
+                level = volume.level
+            }
         }
     }
 
