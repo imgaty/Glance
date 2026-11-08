@@ -19,11 +19,9 @@ enum OnboardingPage {
 /// or a picture, a title that says it all, and the choices; along the bottom, Back at the left,
 /// Continue at the right, and the dots between them. The picture of the notch, playing the tour's
 /// song, stays put through the feature's steps, as the buttons do, while the pages slide under it;
-/// its controls in the Mac's accent color, as every app's are. Opened from Settings, it shows only
-/// the permissions.
+/// its controls in the Mac's accent color, as every app's are.
 struct OnboardingView: View {
     @ObservedObject var permissions: Permissions
-    let start: OnboardingStart
     let onDone: () -> Void
     @State private var place = 0
     /// Which way the pages slide: on through the tour, or back.
@@ -47,7 +45,6 @@ struct OnboardingView: View {
     }
 
     private var pages: [OnboardingPage] {
-        guard start == .welcome else { return [.permissions] }
         let steps = OnboardingFeature.all.flatMap { feature in feature.steps.map { OnboardingPage.step(feature, $0) } }
         return [.welcome] + steps + [.permissions]
     }
@@ -84,7 +81,7 @@ struct OnboardingView: View {
                             .buttonStyle(.glass)
                     }
                     Spacer()
-                    Button(start == .permissions ? String(localized: "Done") : last ? String(localized: "Get Started") : String(localized: "Continue")) {
+                    Button(last ? String(localized: "Get Started") : String(localized: "Continue")) {
                         last ? onDone() : go(to: place + 1)
                     }
                     .buttonStyle(.glassProminent)
@@ -160,6 +157,8 @@ private struct PageLayout<Hero: View, Content: View>: View {
     let title: String
     /// The icon's or picture's size.
     var hero = CGSize(width: OnboardingMetrics.iconSize, height: OnboardingMetrics.iconSize)
+    /// From the top to the icon or picture: clear of the window's buttons, or a sheet's margin.
+    var top = OnboardingMetrics.top
     @ViewBuilder let picture: Hero
     @ViewBuilder let content: Content
 
@@ -176,7 +175,7 @@ private struct PageLayout<Hero: View, Content: View>: View {
                 .frame(width: OnboardingMetrics.width)
                 .padding(.top, OnboardingMetrics.contentGap)
         }
-        .padding(.top, OnboardingMetrics.top)
+        .padding(.top, top)
     }
 }
 
@@ -357,20 +356,52 @@ private struct SettingChoice: View {
     }
 }
 
-/// The permissions, before macOS asks for them, each with why it's asked; then whether Glance opens at
-/// login.
+/// The permissions, from Settings' General page: the tour's page in a sheet over the window, as
+/// Customize Controls is, with Done to close it. Whether Glance opens at login is on the page
+/// itself, so the sheet leaves it out.
+struct PermissionsSheet: View {
+    @StateObject private var permissions = Permissions()
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            PermissionsPage(permissions: permissions, asksLogin: false, top: OnboardingMetrics.bottom)
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(OnboardingMetrics.bottom)
+        }
+        .frame(width: OnboardingView.size.width)
+        // As tall as its rows once their words have wrapped.
+        .fixedSize(horizontal: false, vertical: true)
+        .onAppear { permissions.refresh() }
+        // Coming back from System Settings, show what changed there.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            permissions.refresh()
+        }
+    }
+}
+
+/// The permissions, before macOS asks for them, each with why it's asked; then, in the tour,
+/// whether Glance opens at login.
 private struct PermissionsPage: View {
     @ObservedObject var permissions: Permissions
+    var asksLogin = true
+    var top = OnboardingMetrics.top
     @ObservedObject private var loginItem = LoginItem.shared
 
     var body: some View {
-        PageLayout(title: String(localized: "Allow Access")) {
+        PageLayout(title: String(localized: "Allow Access"), top: top) {
             PageSymbol(name: "hand.raised.fill")
         } content: {
             VStack(spacing: OnboardingMetrics.groupGap) {
                 permissionList
-                SwitchList {
-                    SwitchRow(title: String(localized: "Open at login"), isOn: Binding(get: { loginItem.status == .enabled }, set: loginItem.set))
+                if asksLogin {
+                    SwitchList {
+                        SwitchRow(title: String(localized: "Open at login"), isOn: Binding(get: { loginItem.status == .enabled }, set: loginItem.set))
+                    }
                 }
             }
         }

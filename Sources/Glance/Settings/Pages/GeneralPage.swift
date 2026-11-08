@@ -9,8 +9,8 @@ import AppKit
 import SwiftUI
 
 struct GeneralPage: View {
-    @Environment(\.showPermissions) private var showPermissions
     @ObservedObject private var updater = Updater.shared
+    @State private var reviewing = false
 
     var body: some View {
         Form {
@@ -20,7 +20,7 @@ struct GeneralPage: View {
                     Text("Permissions")
                     Text("Audio from apps, Music, Spotify and Accessibility, and what each is for.")
                 } trailing: {
-                    Button("Review…", action: showPermissions.action)
+                    Button("Review…") { reviewing = true }
                 }
             }
             Section {
@@ -50,5 +50,6 @@ struct GeneralPage: View {
                 }
             }
         }
+        .sheet(isPresented: $reviewing) { PermissionsSheet() }
     }
 }

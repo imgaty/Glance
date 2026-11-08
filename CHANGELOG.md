@@ -400,6 +400,9 @@
   it's used for.
 - Fixed toggles and the `Layout` choice lagging on the Settings pages with the
   notch's preview.
+- Changed **Settings > General > Permissions > Review…** to open over the
+  Settings window, as **Customize Controls** does, rather than in a window of
+  its own, and without `Open at login`, which is on the General page itself.
 - Fixed Settings, opened from the menu bar, sometimes coming up a second or more
   late, behind other apps, or drawn gray as if behind them while in use.
 

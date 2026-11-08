@@ -53,8 +53,9 @@ for more.
 
 The first time Glance opens, a short tour shows each feature, sets up the
 choices that matter, and asks for the permissions: **Request…** beside each one
-brings up macOS's own question. To see its permissions page again, use
-**Settings > General > Permissions > Review…**.
+brings up macOS's own question. To see the permissions again, use
+**Settings > General > Permissions > Review…**: they open over the Settings
+window, and **Done** closes them.
 
 <br>
 
@@ -588,7 +589,7 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 | Setting | Operation |
 | --- | --- |
 | `Open at login` | Starts Glance when you log in |
-| `Permissions` | Shows the permissions page of the welcome tour |
+| `Permissions` | Shows each permission, why it's asked and whether it's allowed, over the Settings window |
 | `Check for Updates…` | Looks for a new version now |
 | `Update automatically` | Looks for, downloads and installs new versions on its own |
 

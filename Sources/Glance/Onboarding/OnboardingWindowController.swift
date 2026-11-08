@@ -8,25 +8,20 @@
 import AppKit
 import SwiftUI
 
-/// Where the welcome tour starts: at its beginning, or, from Settings, at the permissions.
-enum OnboardingStart {
-    case welcome, permissions
-}
-
 /// The welcome tour's window: Glance's features one at a time, then the permissions. Shown on first
-/// launch, and from Settings.
+/// launch.
 @MainActor
 final class OnboardingWindowController {
     private var window: NSWindow?
     private let permissions = Permissions()
 
-    func show(startingAt start: OnboardingStart = .welcome) {
-        let view = OnboardingView(permissions: permissions, start: start) { [weak self] in self?.window?.performClose(nil) }
+    func show() {
+        let view = OnboardingView(permissions: permissions) { [weak self] in self?.window?.performClose(nil) }
         // Always the same size, whichever page shows.
         let controller = NSHostingController(rootView: view)
         controller.sizingOptions = []
         if let window {
-            // Asked again, perhaps for another start: the tour begins anew.
+            // Asked again: the tour begins anew.
             window.contentViewController = controller
             window.setContentSize(OnboardingView.size)
         } else {
@@ -47,7 +42,7 @@ final class OnboardingWindowController {
             window.center()
             NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
                 MainActor.assumeIsolated {
-                    // Seen and closed: later launches skip it; Settings can still show it.
+                    // Seen and closed: later launches skip it.
                     UserDefaults.standard.set(true, forKey: Preferences.onboardingDone)
                     AppWindows.didClose(window)
                     // A closed window is only hidden: its pictures and song would play on unseen.

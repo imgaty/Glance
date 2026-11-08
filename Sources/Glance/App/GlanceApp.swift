@@ -47,7 +47,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let statusBar = StatusBarController()
         statusBar.onOpenSettings = { [settings] in settings.show() }
         settings.nowPlaying = nowPlaying
-        settings.onShowPermissions = { [onboarding] in onboarding.show(startingAt: .permissions) }
         notches.contextMenu = statusBar.menu
         statusBar.putAway = (title: { [notches] in notches.putAwayTitle }, action: { [notches] in notches.putAway() })
         notches.start()

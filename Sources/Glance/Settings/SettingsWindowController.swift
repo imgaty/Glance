@@ -14,7 +14,6 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController {
     var nowPlaying: NowPlaying?
-    var onShowPermissions: (() -> Void)?
 
     private var window: NSWindow?
 
@@ -88,7 +87,7 @@ final class SettingsWindowController {
     private var lastFrame: NSRect?
 
     private func fill(_ window: NSWindow, nowPlaying: NowPlaying) {
-        let view = SettingsView(onShowPermissions: { [weak self] in self?.onShowPermissions?() }) { [weak window] pane in
+        let view = SettingsView { [weak window] pane in
             window?.title = pane.title
         }
         .environmentObject(nowPlaying)

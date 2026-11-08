@@ -10,7 +10,6 @@ import SwiftUI
 
 /// The sidebar of pages with its search field, and the page chosen, with back and forward.
 struct SettingsView: View {
-    var onShowPermissions: () -> Void
     /// The window's title follows the page shown.
     var onPage: (SettingsPane) -> Void = { _ in }
     @State private var pane: SettingsPane? = SettingsPane.last
@@ -75,7 +74,6 @@ struct SettingsView: View {
             .modifier(PictureSong())
             .environmentObject(preview)
             .environment(\.shownPage, shownPage)
-            .environment(\.showPermissions, ShowPermissions(action: onShowPermissions))
             .task {
                 built.insert(shown)
                 // After the preview has opened, so building them never catches its animation.
@@ -248,15 +246,6 @@ private struct PageTopFade: View {
             Color.black
         }
     }
-}
-
-/// Opening the permissions window from the General page.
-struct ShowPermissions {
-    var action: () -> Void = {}
-}
-
-extension EnvironmentValues {
-    @Entry var showPermissions = ShowPermissions()
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
