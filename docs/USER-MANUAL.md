@@ -171,10 +171,11 @@ browsers switch to the tab with `Accessibility` allowed, in the windows on the
 current desktop. Otherwise, it switches to the app.
 
 Behind the player, the cover's colors flow slowly through one another in long
-ribbons and pulse on the music's beat, as you hear it: on AirPods and other
-wireless headphones, which play a moment late, the pulse and the waveform wait
-for the sound. The beat needs the `Audio from apps` permission. With Reduce
-Motion on, the colors hold still.
+ribbons and pulse on the music's biggest hits, as you hear them. Only a beat
+that takes the waveform nearly to its full height shows, so with most songs they
+hardly ever pulse. On AirPods and other wireless headphones, which play a moment
+late, the pulse and the waveform wait for the sound. The beat needs the
+`Audio from apps` permission. With Reduce Motion on, the colors hold still.
 
 <img src="../assets/screenshots/player.png"
      width="450"

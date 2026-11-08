@@ -107,6 +107,27 @@ struct ArtworkFlowTests {
         for bar in spread { #expect((bar.max() ?? 0) - (bar.min() ?? 0) > 0.1 && (bar.max() ?? 1) <= 1 && (bar.min() ?? 0) > 0) }
     }
 
+    @Test("The made-up song hits hard once every eight beats, and only then do the colors pulse")
+    func demoBangs() {
+        let rate = WaveformGlyph.demoRate
+        let period = 8 / 1.8
+        // Sixteen beats from a hard kick: the waveform passes nine tenths only just after one.
+        let start = (3000 / period).rounded(.up) * period
+        var tall: [Double] = []
+        for i in 0..<Int(rate * 2 * period) {
+            let t = start + Double(i) / rate
+            if (WaveformGlyph.demoLevels(at: t).max() ?? 0) >= AudioLevels.bang { tall.append(t - start) }
+        }
+        #expect(!tall.isEmpty)
+        for since in tall { #expect(since.truncatingRemainder(dividingBy: period) < 0.2, "\(since)") }
+        // The pulse peaks just after the hard kick, is mostly gone by the next beat and all but gone
+        // by the one after, easing away as music's does (about a third of a second).
+        #expect(WaveformGlyph.demoPulse(at: start + 0.07) > 0.6)
+        #expect(WaveformGlyph.demoPulse(at: start + 1 / 1.8) < 0.2)
+        #expect(WaveformGlyph.demoPulse(at: start + 2 / 1.8) < 0.05)
+        #expect(WaveformGlyph.demoPulse(at: start + period - 0.01) < 0.001)
+    }
+
     /// White with a black ball in the middle, the harshest a cover gets.
     static func ball() -> NSImage {
         NSImage(size: NSSize(width: 128, height: 128), flipped: false) { rect in

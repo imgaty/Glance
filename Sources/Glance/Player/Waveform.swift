@@ -214,12 +214,16 @@ struct WaveformGlyph: View {
     /// How many times a second the made-up song is read: as often as music is.
     static let demoRate = 48_000 / Double(BinnedFFT.size)
 
-    /// The made-up song's beats a second: a little under two, as the colors behind the player pulse.
+    /// The made-up song's beats a second: a little under two.
     private static let demoTempo = 1.8
+    /// How often the made-up song hits hard: on the first of every eight beats, the only kick that
+    /// takes the waveform to its full height, and so the only one the colors behind the player pulse
+    /// on (see `AudioLevels.bang`).
+    private static let demoAccent = 8.0
 
-    /// How loud the made-up song is in each band, 0 to 1, left to right: a kick on every beat, a bass
-    /// line on every half beat, a voice wandering through the mids, a snare on every other beat and
-    /// hi-hats on every half beat, each a little harder or softer as played.
+    /// How loud the made-up song is in each band, 0 to 1, left to right: a kick on every beat, harder
+    /// every eight, a bass line on every half beat, a voice wandering through the mids, a snare on
+    /// every other beat and hi-hats on every half beat, each a little harder or softer as played.
     static func demoHeard(at t: Double) -> [Double] {
         let beats = t * demoTempo
         let beat = beats.rounded(.down)
@@ -228,7 +232,8 @@ struct WaveformGlyph: View {
         let half = halves.rounded(.down)
         let sinceHalf = (halves - half) / (demoTempo * 2)
         let played = 0.75 + 0.25 * demoVariation(half)
-        let kick = sinceBeat < 0.07 ? 1 : exp(-(sinceBeat - 0.07) / 0.14)
+        let hard = beat.truncatingRemainder(dividingBy: demoAccent) == 0 ? 1 : 0.8
+        let kick = hard * (sinceBeat < 0.07 ? 1 : exp(-(sinceBeat - 0.07) / 0.14))
         let snare = beat.truncatingRemainder(dividingBy: 2) == 1 ? exp(-sinceBeat / 0.12) : 0
         let hat = exp(-sinceHalf / 0.06) * played
         let note = exp(-sinceHalf / 0.25) * played
@@ -246,13 +251,13 @@ struct WaveformGlyph: View {
         return x - x.rounded(.down)
     }
 
-    /// The made-up song's kick, 0 to 1, a little under twice a second, which the colors behind the
-    /// player pulse on: up over its first 70 milliseconds and dying away, as a real kick does once
-    /// it's eased (see `Analyzer`).
-    static func demoKick(at t: Double) -> Double {
-        let period = 1 / demoTempo, rise = 0.07, fall = 0.15
+    /// The colors' pulse for the made-up song, 0 to 1, as `AudioLevels` shows music's: nothing but on
+    /// its hard kick, every eight beats, up over 70 milliseconds and easing away over about a third
+    /// of a second.
+    static func demoPulse(at t: Double) -> Double {
+        let period = demoAccent / demoTempo, rise = 0.07, fall = 0.36
         let since = t.truncatingRemainder(dividingBy: period)
-        return since < rise ? (1 - cos(.pi * since / rise)) / 2 : exp(-(since - rise) / fall)
+        return 0.7 * (since < rise ? (1 - cos(.pi * since / rise)) / 2 : exp(-(since - rise) / fall))
     }
 
     /// Where the bars draw together: a dot in the middle, where the symbol springs from.

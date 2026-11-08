@@ -261,8 +261,8 @@ struct ArtworkLight: View {
 
 /// The flowing colors (see `ArtworkFlow`), all of them spread across the room given, rather than
 /// the middle of them filling it: on a shape as wide as the notch, that would be a band, and a color
-/// off to one side of the cover would never show. On each beat of the music, as it's heard, they
-/// swell and brighten just a little and ease back.
+/// off to one side of the cover would never show. On the music's biggest hits, as they're heard,
+/// they swell and brighten just a little and ease back.
 struct ArtworkSwirl: View {
     let flow: ArtworkFlow
     let active: Bool
@@ -276,7 +276,7 @@ struct ArtworkSwirl: View {
         GeometryReader { proxy in
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
                 let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
-                let pulse = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoKick(at: t) * 0.5 : Double(AudioLevels.shared.pulse)) : 0
+                let pulse = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoPulse(at: t) : Double(AudioLevels.shared.pulse)) : 0
                 if let frame = flow.frame(at: t) {
                     Image(decorative: frame, scale: 1)
                         .resizable()

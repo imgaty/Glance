@@ -24,14 +24,25 @@ final class AudioLevels: ObservableObject {
     /// 0...1: 1 on a kick or a bass note's attack, easing off over a fraction of a second. Not
     /// published: the colors read it as they're drawn, frame by frame.
     private(set) var beat: Float = 0
-    /// The same beat as the colors behind the player show it: swelling in and easing away gently,
-    /// so it's felt more than seen. Read as they're drawn, as the beat is.
+    /// The same beat as the colors behind the player show it: only a huge bang shows at all, a beat
+    /// with the waveform near its full height, swelling in quickly and easing away. Read as they're
+    /// drawn, as the beat is.
     private(set) var pulse: Float = 0
 
-    /// A reading's step of the pulse toward the beat: slower to rise than the beat, slower still to
+    /// How tall the waveform's tallest bar must reach, of its full height, for a beat to show in the
+    /// colors: below it none does, so they hold still for all but the biggest hits.
+    nonisolated static let bang: Float = 0.9
+
+    /// How much of a beat the colors show: none while the tallest bar is under `bang`, rising to all
+    /// of it at the waveform's full height.
+    nonisolated static func shown(_ beat: Float, tallest: Float) -> Float {
+        beat * min(max((tallest - bang) / (1 - bang), 0), 1)
+    }
+
+    /// A reading's step of the pulse toward what's shown: quick to rise, so a bang lands, and slow to
     /// fall.
-    nonisolated static func eased(_ pulse: Float, toward beat: Float) -> Float {
-        pulse + (beat - pulse) * (beat > pulse ? 0.16 : 0.06)
+    nonisolated static func eased(_ pulse: Float, toward shown: Float) -> Float {
+        pulse + (shown - pulse) * (shown > pulse ? 0.5 : 0.06)
     }
 
     private var pipeline: TapPipeline?
@@ -84,7 +95,7 @@ final class AudioLevels: ObservableObject {
                     // Only a new reading moves the bars: each one is animated in.
                     if let levels = reading.levels, levels != self.levels { self.levels = levels }
                     self.beat = reading.beat
-                    self.pulse = Self.eased(self.pulse, toward: reading.beat)
+                    self.pulse = Self.eased(self.pulse, toward: Self.shown(reading.beat, tallest: self.levels.max() ?? 0))
                 }
             }
         }

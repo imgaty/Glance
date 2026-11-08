@@ -302,7 +302,9 @@
   times and side buttons turn lighter over a light cover.
 - Removed the `Fullscreen` background. If it was chosen, the notch goes back to
   `Replace glass`.
-- Added the cover's colors pulsing gently on the music's beat, as you hear it.
+- Added the cover's colors pulsing gently on the music's biggest hits, as you
+  hear them: only a beat that takes the waveform nearly to its full height
+  shows, so with most songs they hardly ever pulse.
 - Changed the lyrics to fade at their top as they do at their bottom, above the
   line being sung, so its first words are never dimmed.
 - Changed the cover, the colors behind the player and the lyrics to dim by the

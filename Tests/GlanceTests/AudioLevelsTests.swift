@@ -111,16 +111,29 @@ struct AudioLevelsTests {
         #expect(Self.bars(of: []) == [Float](repeating: 0, count: 6))
     }
 
-    @Test("The colors' pulse rises and falls more gently than the beat, and follows it")
+    @Test("The colors' pulse lands quickly on a bang and eases away slowly")
     func pulse() {
         var pulse: Float = 0
         let rise = AudioLevels.eased(pulse, toward: 1)
-        #expect(rise > 0 && rise < 0.2)
-        for _ in 0..<20 { pulse = AudioLevels.eased(pulse, toward: 1) }
-        #expect(pulse > 0.9)
+        #expect(rise >= 0.4 && rise < 1)
+        for _ in 0..<6 { pulse = AudioLevels.eased(pulse, toward: 1) }
+        #expect(pulse > 0.95)
         let top = pulse
         pulse = AudioLevels.eased(pulse, toward: 0)
         #expect(pulse < top && top - pulse < 0.1)
+    }
+
+    @Test("Only a beat with the waveform past nine tenths of its height shows in the colors")
+    func onlyBangs() {
+        #expect(AudioLevels.bang == 0.9)
+        // Measured from music on 8 November 2026: beats shown at 0.6 to 0.74, the tallest bar under
+        // 0.8. None of it reaches the colors.
+        #expect(AudioLevels.shown(0.74, tallest: 0.8) == 0)
+        #expect(AudioLevels.shown(1, tallest: 0.9) == 0)
+        #expect(abs(AudioLevels.shown(0.6, tallest: 0.95) - 0.3) < 0.001)
+        #expect(AudioLevels.shown(0.7, tallest: 1) == 0.7)
+        // No beat, nothing, however tall the bars.
+        #expect(AudioLevels.shown(0, tallest: 1) == 0)
     }
 
     @Test("A bass line with no kicks has no beat")
