@@ -408,6 +408,9 @@
   its own, and without `Open at login`, which is on the General page itself.
 - Fixed Settings, opened from the menu bar, sometimes coming up a second or more
   late, behind other apps, or drawn gray as if behind them while in use.
+- Fixed clicking the waveform in the picture of the notch in Settings doing
+  nothing: it shows the lyrics of the song playing, as the notch does, and the
+  picture draws back to make room for them.
 
 ### Tray
 

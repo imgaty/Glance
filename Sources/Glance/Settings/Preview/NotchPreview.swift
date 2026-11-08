@@ -46,7 +46,8 @@ struct NotchPreview: View {
     var body: some View {
         let hinting = interactive && hintsOpening && !paused && !hovering && !pressing
         GeometryReader { proxy in
-            let scale = Self.scale(for: scaleWidth ?? proxy.size.width, model: model)
+            // With the lyrics open beside the player, it draws back to make room for them.
+            let scale = Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: model.showsLyrics && model.state == .open)
             let geometry = SettingsPreview.Geometry(
                 rect: { state in
                     let m = model.metrics(for: state)
@@ -111,16 +112,21 @@ struct NotchPreview: View {
         .onChange(of: "\(nowPlaying.isPlaying) \(liveActivity) \(ObjectIdentifier(model).hashValue)", initial: true) {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { model.activity = nowPlaying.isPlaying && liveActivity }
         }
+        // As on screen: while a song plays, the waveform in the open player shows its lyrics.
+        .onChange(of: "\(nowPlaying.isSong) \(ObjectIdentifier(model).hashValue)", initial: true) {
+            model.songPlaying = nowPlaying.isSong
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Preview of the notch")
         .accessibilityHint(interactive ? String(localized: "Try opening the notch.") : "")
         .accessibilityAddTraits(.isImage)
     }
 
-    /// One scale for every layout, the one the widest needs to fit a picture this wide.
-    static func scale(for width: CGFloat, model: NotchModel) -> CGFloat {
+    /// One scale for every layout, the one the widest needs to fit a picture this wide; with the
+    /// lyrics, the one it needs with them beside it.
+    static func scale(for width: CGFloat, model: NotchModel, lyrics: Bool = false) -> CGFloat {
         let widest = PlayerLayout.allCases.map { $0.size(closed: model.closedSize).width }.max() ?? model.openSize.width
-        return min(1, width / (widest + PlayerLayout.cornerRadius * 2 + 24))
+        return min(1, width / (widest + (lyrics ? model.lyricsWidth : 0) + PlayerLayout.cornerRadius * 2 + 24))
     }
 
     /// Where the pointer showing how sets off and where it rests, up on the notch.
