@@ -362,12 +362,17 @@ final class LiveBarsView: NSView {
             frames = link
         } else {
             hearing = AudioLevels.shared.$levels.removeDuplicates().sink { [weak self] levels in
-                MainActor.assumeIsolated {
-                    self?.levels = levels
-                    self?.redraw(over: WaveformGlyph.readingIn)
-                }
+                MainActor.assumeIsolated { self?.heard(levels) }
             }
         }
+    }
+
+    /// A reading of the music. Paused, the bars stay as they're settling into dots: the music is
+    /// still heard for a moment after it pauses, and each reading had cut the settling short, the
+    /// bars snapping into dots a tenth of a second in.
+    func heard(_ levels: [Float]) {
+        self.levels = levels
+        if isPlaying { redraw(over: WaveformGlyph.readingIn) }
     }
 
     /// The made-up song as it is when this frame shows, by the same clock as the colors behind
@@ -404,7 +409,8 @@ final class LiveBarsView: NSView {
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        if duration > 0, let from = shape.presentation()?.path ?? shape.path {
+        // Only a change moves them, so nothing cuts short what's moving them already.
+        if duration > 0, shape.path.map({ $0 != path }) ?? true, let from = shape.presentation()?.path ?? shape.path {
             let change = CABasicAnimation(keyPath: "path")
             change.fromValue = from
             change.duration = duration

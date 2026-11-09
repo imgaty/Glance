@@ -256,6 +256,8 @@
   it down had once failed, until Glance was opened again.
 - Fixed the volume slider's knob in the sound output menu staying put as it was
   dragged: it now moves with the pointer.
+- Fixed the waveform snapping into dots a tenth of a second after the music
+  paused, rather than settling into them over almost a second.
 - Changed the `Spotlight` background to travel slowly round the cover, in the
   cover's own colors, turning, rather than staying in the bottom left corner.
   Passing the camera, it goes behind the cover, so the camera never cuts it off.

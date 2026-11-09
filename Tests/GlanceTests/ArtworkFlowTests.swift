@@ -239,3 +239,28 @@ struct ArtworkFlowTests {
         #expect(flow.frame(at: 130) !== first)
     }
 }
+
+/// The bars in the notch on screen, as they move.
+@Suite("Live bars")
+@MainActor
+struct LiveBarsTests {
+    @Test("Paused, the bars settle into dots over 0.9 s, and what's still heard doesn't cut it short")
+    func settling() throws {
+        let bars = LiveBarsView(frame: NSRect(x: 0, y: 0, width: 21, height: 22))
+        bars.isPlaying = true
+        bars.heard([0.9, 0.7, 0.6, 0.5, 0.4, 0.3])
+        bars.isPlaying = false
+        let settling = try #require(bars.layer?.sublayers?.first?.mask?.animation(forKey: "path") as? CABasicAnimation)
+        #expect(settling.duration == WaveformGlyph.settlingIn)
+        // The music still heard for a moment after it pauses.
+        bars.heard([0.5, 0.4, 0.3, 0.2, 0.1, 0.1])
+        bars.heard([0.1, 0.1, 0, 0, 0, 0])
+        let after = try #require(bars.layer?.sublayers?.first?.mask?.animation(forKey: "path") as? CABasicAnimation)
+        #expect(after.duration == WaveformGlyph.settlingIn)
+        // Playing again, each reading eases in.
+        bars.isPlaying = true
+        bars.heard([0.8, 0.6, 0.5, 0.4, 0.3, 0.2])
+        let reading = try #require(bars.layer?.sublayers?.first?.mask?.animation(forKey: "path") as? CABasicAnimation)
+        #expect(reading.duration == WaveformGlyph.readingIn)
+    }
+}
