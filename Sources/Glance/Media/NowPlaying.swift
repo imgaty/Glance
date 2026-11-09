@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import os
 
 /// Whatever the system is playing, from any app, read through NowPlayingHelper running inside perl.
 @MainActor
@@ -61,6 +62,10 @@ final class NowPlaying: ObservableObject {
     /// After a press of the star, what it asked for: Music takes seconds to save a song new to the
     /// library, and says it isn't a favorite until then.
     private var heldFavorite: (value: Bool, track: String, until: Date)?
+    /// When the star was last pressed, until Music agrees: how long Music takes goes in the log.
+    private var favoritePressedAt: Date?
+    /// What the star does, in the system log, so a slow save can be timed.
+    nonisolated static let favoriteLog = Logger(subsystem: "dev.vibe.Glance", category: "favorite")
 
     // The position as last reported, which the clock advances while playing.
     private var elapsed: Double = 0
@@ -214,6 +219,11 @@ final class NowPlaying: ObservableObject {
 
     /// What Music said, unless a press of the star still stands against it.
     private func favorite(reading read: Bool?) -> Bool? {
+        if let pressed = favoritePressedAt, let held = heldFavorite, read == held.value {
+            let seconds = Date.now.timeIntervalSince(pressed)
+            Self.favoriteLog.notice("Music reads the star back after \(String(format: "%.1f", seconds), privacy: .public) s")
+            favoritePressedAt = nil
+        }
         guard let held = heldFavorite else { return read }
         guard Self.holdsFavorite(held.value, against: read, sameTrack: held.track == track, until: held.until, at: .now) else {
             heldFavorite = nil
@@ -265,17 +275,23 @@ final class NowPlaying: ObservableObject {
         guard let favorite = options.favorite, let app = appBundleID else { return }
         options.favorite = !favorite
         heldFavorite = (!favorite, track, .now + Self.favoriteHold)
-        readBack(after: PlayerScripting.setFavorite(!favorite, app: app))
+        let pressed = Date.now
+        favoritePressedAt = pressed
+        Self.favoriteLog.notice("Star pressed, to \(favorite ? "not favorite" : "favorite", privacy: .public)")
+        readBack(after: PlayerScripting.setFavorite(!favorite, app: app)) { answered in
+            let milliseconds = Int(Date.now.timeIntervalSince(pressed) * 1000)
+            Self.favoriteLog.notice("Music answered the star in \(milliseconds, privacy: .public) ms\(answered ? "" : ", with an error", privacy: .public)")
+        }
     }
 
     /// Changes a setting, then reads it back so the buttons show what the app really did. Spotify
     /// reports the old value for a moment after a change, so the read waits for it to settle, and
     /// quick clicks (off, all, one) read back once, after the last of them.
-    private func readBack(after script: String? = nil) {
+    private func readBack(after script: String? = nil, answered: ((Bool) -> Void)? = nil) {
         changedAt = .now
         settle?.cancel()
         settle = Task {
-            if let script { _ = await PlayerScripting.run(script) }
+            if let script { answered?(await PlayerScripting.run(script) != nil) }
             try? await Task.sleep(for: .seconds(1.2))
             guard !Task.isCancelled else { return }
             refreshOptions()
