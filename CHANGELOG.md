@@ -254,6 +254,8 @@
   seconds, it now quits by itself.
 - Fixed the volume slider doing nothing for an app such as Safari once turning
   it down had once failed, until Glance was opened again.
+- Fixed the volume slider's knob in the sound output menu staying put as it was
+  dragged: it now moves with the pointer.
 - Changed the `Spotlight` background to travel slowly round the cover, in the
   cover's own colors, turning, rather than staying in the bottom left corner.
   Passing the camera, it goes behind the cover, so the camera never cuts it off.

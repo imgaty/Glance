@@ -265,15 +265,15 @@ final class AudioOutput: NSObject, ObservableObject {
 }
 
 /// The playing app's volume in the sound output menu, laid out as the Mac's Sound menu: Apple's own
-/// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right. An
-/// AppKit slider, as the Mac's own menu has: a SwiftUI one in a menu doesn't take the click, as a
-/// menu's window is never the key window.
+/// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right.
+/// SwiftUI's slider, which keeps that knob in a menu, where the Mac's own slider loses it; but it
+/// only shows the press there, and the drag is followed for it (see `Hosting`).
 final class VolumeMenuSlider: NSView {
     init(volume: AppVolume) {
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
         // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
-        let slider = Hosting(rootView: VolumeSlider(volume: volume))
+        let slider = Hosting(rootView: VolumeSlider(volume: volume, level: VolumeSlider.Level(volume.level)))
         // As the Mac's Sound menu: the speakers at the edges of the menu's own column, in line
         // with its headings and its separators, the slider filling the room between them. Each is
         // centered on the slider's track by its symbol's own alignment box, as the Mac's menus
@@ -296,9 +296,43 @@ final class VolumeMenuSlider: NSView {
 
     required init?(coder: NSCoder) { nil }
 
-    /// Taking the first click into the menu: Glance is rarely the app in front.
+    /// Taking the first click into the menu: Glance is rarely the app in front. A menu keeps the
+    /// drag to itself, so SwiftUI's slider in one shows it's pressed and never moves (seen in the
+    /// user's recording of 8 November 2026): the drag is followed here, as the Mac's own slider
+    /// follows its own, the knob moving with the pointer from where it was taken.
     final class Hosting: NSHostingView<VolumeSlider> {
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            // The press, as SwiftUI shows it, and a click on the track taking the knob there.
+            super.mouseDown(with: event)
+            let slider = rootView
+            guard let window, slider.volume.canChange else { return }
+            let travel = max(bounds.width - VolumeSlider.knob, 1)
+            let start = convert(event.locationInWindow, from: nil).x
+            let from = slider.level.value
+            // Never waiting on a release the menu keeps: once the button's up, it's over.
+            while NSEvent.pressedMouseButtons & 1 != 0 {
+                guard
+                    let next = window.nextEvent(
+                        matching: [.leftMouseDragged, .leftMouseUp], until: Date(timeIntervalSinceNow: 0.1), inMode: .eventTracking,
+                        dequeue: true)
+                else { continue }
+                guard next.type == .leftMouseDragged else { break }
+                slider.set(VolumeSlider.dragged(from: from, by: convert(next.locationInWindow, from: nil).x - start, over: travel))
+            }
+            endPress(at: event)
+        }
+
+        /// The press ends where it was made, so it ends without a move of the slider's own.
+        private func endPress(at down: NSEvent) {
+            guard
+                let up = NSEvent.mouseEvent(
+                    with: .leftMouseUp, location: down.locationInWindow, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                    windowNumber: down.windowNumber, context: nil, eventNumber: down.eventNumber, clickCount: down.clickCount, pressure: 0)
+            else { return }
+            super.mouseUp(with: up)
+        }
     }
 
     /// SwiftUI's own slider, its played part white in a dark menu and the accent color in a light
@@ -306,11 +340,27 @@ final class VolumeMenuSlider: NSView {
     /// while Glance rarely is: otherwise it's drawn inactive, its played part as gray as the rest.
     struct VolumeSlider: View {
         let volume: AppVolume
-        @State private var level: Double
+        @ObservedObject var level: Level
 
-        init(volume: AppVolume) {
-            self.volume = volume
-            _level = State(initialValue: volume.level)
+        /// Where the knob is, shared with the drag that moves it.
+        final class Level: ObservableObject {
+            @Published var value: Double
+            init(_ value: Double) { self.value = value }
+        }
+
+        /// The knob's width, measured from Apple's slider on macOS 27.3: it travels the slider's
+        /// width less this.
+        static let knob: CGFloat = 20
+
+        /// Where a drag that set off at `from` has taken the knob, `by` points along a slider whose
+        /// knob travels `over` points.
+        static func dragged(from: Double, by distance: CGFloat, over travel: CGFloat) -> Double {
+            min(max(from + Double(distance / max(travel, 1)), 0), 1)
+        }
+
+        func set(_ value: Double) {
+            level.value = value
+            volume.set(value)
         }
 
         static let fill = Color(
@@ -319,23 +369,16 @@ final class VolumeMenuSlider: NSView {
             })
 
         var body: some View {
-            Slider(
-                value: Binding(
-                    get: { level },
-                    set: {
-                        level = $0
-                        volume.set($0)
-                    }), in: 0...1
-            )
-            .labelsHidden()
-            .tint(Self.fill)
-            .disabled(!volume.canChange)
-            .environment(\.controlActiveState, .key)
-            // Music's and Spotify's own volume, read afresh as the menu opens.
-            .task {
-                await volume.refresh()
-                level = volume.level
-            }
+            Slider(value: Binding(get: { level.value }, set: set), in: 0...1)
+                .labelsHidden()
+                .tint(Self.fill)
+                .disabled(!volume.canChange)
+                .environment(\.controlActiveState, .key)
+                // Music's and Spotify's own volume, read afresh as the menu opens.
+                .task {
+                    await volume.refresh()
+                    level.value = volume.level
+                }
         }
     }
 

@@ -2016,3 +2016,23 @@ struct InterfaceWalkTests {
         #expect(wide.count == SystemNotices.most)
     }
 }
+
+/// The volume slider in the sound output menu, whose drag is followed for it.
+@Suite("Volume slider drag")
+struct VolumeSliderDragTests {
+    typealias Slider = VolumeMenuSlider.VolumeSlider
+
+    @Test("The knob moves with the pointer from where it was taken, and stops at the ends")
+    func follows() {
+        // A 200-point slider: the knob travels 180.
+        let travel = 200 - Slider.knob
+        #expect(Slider.knob == 20)
+        #expect(Slider.dragged(from: 1, by: 0, over: travel) == 1)
+        #expect(abs(Slider.dragged(from: 1, by: -90, over: travel) - 0.5) < 0.0001)
+        #expect(abs(Slider.dragged(from: 0.25, by: 45, over: travel) - 0.5) < 0.0001)
+        #expect(Slider.dragged(from: 0.5, by: -400, over: travel) == 0)
+        #expect(Slider.dragged(from: 0.5, by: 400, over: travel) == 1)
+        // A slider with no room still answers.
+        #expect(Slider.dragged(from: 0.5, by: 1, over: 0) == 1)
+    }
+}
