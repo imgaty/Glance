@@ -535,15 +535,11 @@ final class ClockActivity: ObservableObject {
     }
 
     private static func find(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> AXUIElement? {
-        if match(element) { return element }
-        for child in value(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
-            if let found = find(in: child, where: match) { return found }
-        }
-        return nil
+        findAll(in: element, where: match).first
     }
 
     private static func findAll(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> [AXUIElement] {
-        (match(element) ? [element] : []) + (value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).flatMap { findAll(in: $0, where: match) }
+        SystemNotices.findAll(in: element, where: match)
     }
 
     /// Takes the menu bar's own timer out, as its menu's Remove from Menu Bar does: the notch shows

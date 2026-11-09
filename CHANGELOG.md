@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 8 November 2026`
+`Created: 11 October 2026` | `Last updated: 9 November 2026`
 
 <br>
 
@@ -13,6 +13,8 @@
 - Changed a timer that's done to go from the notch by itself after ten seconds,
   its ringing with it, as **✕** would, rather than ringing for up to five
   minutes. It stays while the pointer is on it.
+- Fixed Glance quitting now and then as it looked for one of macOS's
+  notifications to take away.
 - Added `Hide macOS's Live Activities` to **Settings > Live Activities**, on at
   first: macOS 27.3's own Live Activities in the menu bar, such as Now Playing,
   are turned off in **System Settings > Menu Bar** as they first show, so they

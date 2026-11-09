@@ -158,7 +158,34 @@ enum SystemNotices {
         return AXUIElementGetPid(element, &pid) == .success && pid == getpid()
     }
 
+    /// Every element under this one that matches, in the order VoiceOver reads them.
     nonisolated static func findAll(in element: AXUIElement, where match: (AXUIElement) -> Bool) -> [AXUIElement] {
-        (match(element) ? [element] : []) + (value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).flatMap { findAll(in: $0, where: match) }
+        walk(from: element, children: { value($0, kAXChildrenAttribute) as? [AXUIElement] ?? [] }, where: match)
+    }
+
+    /// How deep a walk goes, and how many elements it looks at in all: as far as a browser's page
+    /// needs (see `CallActivity.findLink`). An app's tree can lead back into itself: walked without
+    /// end, Notification Center's ran Glance out of stack on 9 November 2026.
+    nonisolated static let deepest = 80
+    nonisolated static let most = 20_000
+
+    /// Everything under `root` that matches, root first, each one's children in order, each element
+    /// once however many ways it's reached, no deeper than `deepest`, and no more than `most` looked at.
+    nonisolated static func walk<Element: Hashable>(
+        from root: Element, children: (Element) -> [Element], where match: (Element) -> Bool
+    ) -> [Element] {
+        var found: [Element] = []
+        var seen: Set<Element> = [root]
+        var waiting: [(element: Element, depth: Int)] = [(root, 0)]
+        var looked = 0
+        while let (element, depth) = waiting.popLast(), looked < most {
+            looked += 1
+            if match(element) { found.append(element) }
+            guard depth < deepest else { continue }
+            for child in children(element).reversed() where seen.insert(child).inserted {
+                waiting.append((child, depth + 1))
+            }
+        }
+        return found
     }
 }

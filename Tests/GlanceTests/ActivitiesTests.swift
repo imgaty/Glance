@@ -1991,3 +1991,28 @@ struct DevicesAnnouncedTests {
         #expect(!device(vendor: nil, product: nil).announced)
     }
 }
+
+/// Walking another app's interface, which can lead back into itself.
+@Suite("Walking an app's interface")
+struct InterfaceWalkTests {
+    @Test("A tree is walked root first, each one's children in order")
+    func order() {
+        let tree = [0: [1, 4], 1: [2, 3], 4: [5]]
+        #expect(SystemNotices.walk(from: 0, children: { tree[$0] ?? [] }, where: { _ in true }) == [0, 1, 2, 3, 4, 5])
+        #expect(SystemNotices.walk(from: 0, children: { tree[$0] ?? [] }, where: { $0 % 2 == 1 }) == [1, 3, 5])
+    }
+
+    @Test("A tree that leads back into itself ends, each element once")
+    func loop() {
+        let tree = [0: [1], 1: [2, 0], 2: [1, 2]]
+        #expect(SystemNotices.walk(from: 0, children: { tree[$0] ?? [] }, where: { _ in true }) == [0, 1, 2])
+    }
+
+    @Test("A chain without end stops at the deepest, and a vast tree at the most")
+    func endless() {
+        let chain = SystemNotices.walk(from: 0, children: { [$0 + 1] }, where: { _ in true })
+        #expect(chain.count == SystemNotices.deepest + 1)
+        let wide = SystemNotices.walk(from: "", children: { path in (0..<10).map { path + String($0) } }, where: { _ in true })
+        #expect(wide.count == SystemNotices.most)
+    }
+}
