@@ -51,54 +51,37 @@ struct NowPlayingView: View {
         let clearance = closedNotch.height + PlayerLayout.cameraGap - PlayerLayout.padding
         // Where the title starts: centered on the artwork, unless that puts it under the camera.
         let headerTop = layout == .top ? max((layout.artwork - PlayerLayout.headerHeight) / 2, clearance) : clearance
+        let content = layout.size(closed: closedNotch)
+        let width = content.width - PlayerLayout.padding * 2
+        let beside = layout.artwork + PlayerLayout.besideArtwork
+        let column = width - beside
+        let topRow = max(layout.artwork, headerTop + PlayerLayout.headerHeight)
+        let sideHeight = max(layout.artwork - clearance, Self.sideColumnHeight)
+        let timelineTop = layout == .top ? topRow + 12 : clearance + sideHeight - Self.hitbox - 4 - PlayerLayout.timelineHeight
+        let controlsTop = timelineTop + PlayerLayout.timelineHeight + (layout == .top ? 8 : 4)
+        let rowLeading = layout == .top ? 0 : beside
+        let rowWidth = layout == .top ? width : column
         ZStack(alignment: .topLeading) {
-            // The artwork's and the waveform's places are the same views in every layout, so when
-            // the layout changes they just move and resize, and the notch's artwork and waveform
-            // glide along with them.
             artwork
             waveformPlace(top: headerTop)
-            // The rest steps out and comes back in its new places once the notch has reshaped,
-            // rather than sliding or stretching across.
-            Group {
-                switch layout {
-                case .top:
-                    // The title and artist are shorter than the artwork, and stay below the camera.
-                    VStack(spacing: 0) {
-                        HStack(alignment: .top, spacing: PlayerLayout.besideArtwork) {
-                            Color.clear.frame(width: layout.artwork, height: layout.artwork)
-                            header
-                                .padding(.top, headerTop)
-                        }
-                        .allowsHitTesting(places == nil)
-                        timeline
-                            .allowsHitTesting(places == nil)
-                            .padding(.top, 12)
-                        controls
-                            .padding(.top, 8)
-                    }
-                    .transition(Self.relayout)
-                case .side:
-                    HStack(alignment: .top, spacing: PlayerLayout.besideArtwork) {
-                        Color.clear.frame(width: layout.artwork, height: layout.artwork)
-                        // The title starts just below the camera; the space between it and the
-                        // timeline gives way, so the controls end level with the artwork's bottom edge.
-                        VStack(spacing: 0) {
-                            header
-                                .frame(height: PlayerLayout.headerHeight, alignment: .top)
-                                .allowsHitTesting(places == nil)
-                            Spacer(minLength: 4)
-                            timeline
-                                .allowsHitTesting(places == nil)
-                            controls
-                                .padding(.top, 4)
-                        }
-                        .frame(height: max(layout.artwork - clearance, Self.sideColumnHeight))
-                        .padding(.top, clearance)
-                    }
-                    .transition(Self.relayout)
-                }
-            }
+            // These remain the same views in both layouts. Their frames and positions follow the
+            // notch's spring, preserving the scrubber, scrolling titles and control focus mid-move.
+            header
+                .frame(width: column, height: PlayerLayout.headerHeight, alignment: .topLeading)
+                .padding(.leading, beside)
+                .padding(.top, headerTop)
+                .allowsHitTesting(places == nil)
+            timeline
+                .frame(width: rowWidth, height: PlayerLayout.timelineHeight)
+                .padding(.leading, rowLeading)
+                .padding(.top, timelineTop)
+                .allowsHitTesting(places == nil)
+            controls
+                .frame(width: rowWidth, height: Self.hitbox)
+                .padding(.leading, rowLeading)
+                .padding(.top, controlsTop)
         }
+        .frame(width: width, height: content.height - PlayerLayout.padding * 2, alignment: .topLeading)
         .padding([.horizontal, .top], PlayerLayout.padding)
         .animation(.easeInOut(duration: 0.4), value: accentSource)
         .animation(.easeInOut(duration: 0.4), value: accentTimeline)
@@ -126,10 +109,6 @@ struct NowPlayingView: View {
             }
         }
     }
-
-    private static let relayout = AnyTransition.asymmetric(
-        insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.3)),
-        removal: .opacity.animation(.easeOut(duration: 0.1)))
 
     /// The title and the artist, with room for the waveform at the end of the title's line, as on
     /// the iPhone. Both scroll when they don't fit.

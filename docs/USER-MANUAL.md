@@ -173,6 +173,10 @@ Spotify plays it from, or the song in the playlist Music plays it from. Other
 browsers switch to the tab with `Accessibility` allowed, in the windows on the
 current desktop. Otherwise, it switches to the app.
 
+Changing the background reshapes the same field of color into the spotlight.
+Changing the layout moves the title, timeline and controls with the cover and
+the notch, keeping them visible throughout.
+
 Behind the player, the cover's colors flow slowly through one another in long
 ribbons and pulse on the music's biggest hits, as you hear them. Only a beat
 that takes the waveform nearly to its full height shows, so with most songs they
@@ -652,9 +656,11 @@ cover, and long titles end in an ellipsis instead of scrolling.
 | `Show new apps` | Whether apps that start playing are added turned on |
 
 The background's colors turn and bend while music plays, and resume from where
-they stopped after a pause. Changing `Background` fades between the choices.
-`Spotlight` circles the cover, shrinking gently before it reaches the camera and growing
-again as it passes. Pausing freezes the glow where it is.
+they stopped after a pause. Changing `Background` reshapes the same field of
+color between the full background and the spotlight. Choosing `None` fades
+the light away.
+`Spotlight` circles the cover, shrinking gently before it reaches the camera
+and growing again as it passes. Pausing freezes the glow where it is.
 
 ### Tray
 

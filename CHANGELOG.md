@@ -19,8 +19,7 @@
   without an abrupt stop at full size or as it disappears behind the cover.
   Its colors flow within the glow, without a second rotation.
 - Rebuilt the flowing artwork background with three turning planes and a soft
-  warp, and kept it in place while paused. Changing the background now fades
-  between the choices without moving a blur boundary across the player.
+  warp, and kept it in place while paused.
 
 - Fixed pressing the volume slider in the sound output menu taking the playing
   app to full volume, and dragging it leaving the knob at the end. Taking the
@@ -264,6 +263,8 @@
 
 ### Player
 
+- Restored the background reshaping into the spotlight, and the title, timeline
+  and controls moving into place as the layout changes, without fading away.
 - Fixed background player reads reopening Music or Spotify after it was quit.
 - Changed the sound controls to a popover with the system's default slider,
   including its glass handle and native dragging.
