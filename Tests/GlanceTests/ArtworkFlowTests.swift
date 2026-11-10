@@ -74,6 +74,32 @@ struct ArtworkFlowTests {
         #expect(ArtworkFlow.barsDarkness(0) == 1 && abs(ArtworkFlow.barsDarkness(0.3) - 0.5) < 0.001)
     }
 
+    @Test("Fine detail in a large cover counts toward brightness, whichever pixels come first")
+    func largeCoverBrightness() async throws {
+        try await Task.detached {
+            let side = 2048
+            for phase in 0...1 {
+                var pixels = [UInt8](repeating: 255, count: side * side * 4)
+                for y in 0..<side {
+                    for x in 0..<side {
+                        let value: UInt8 = (x + y + phase).isMultiple(of: 2) ? 0 : 255
+                        let offset = (y * side + x) * 4
+                        pixels[offset] = value
+                        pixels[offset + 1] = value
+                        pixels[offset + 2] = value
+                    }
+                }
+                let provider = try #require(CGDataProvider(data: Data(pixels) as CFData))
+                let image = try #require(
+                    CGImage(
+                        width: side, height: side, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: side * 4,
+                        space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                        provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+                #expect(abs(ArtworkFlow.barsBrightness(of: image) - 0.5) < 0.001)
+            }
+        }.value
+    }
+
     @Test("A dark cover's bars are washed with white, so they read on black")
     func darkCoverBars() throws {
         let dark = NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in

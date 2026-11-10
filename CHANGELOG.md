@@ -252,6 +252,8 @@
 
 ### Player
 
+- Fixed the waveform appearing too bright or too dim with large, detailed
+  covers.
 - Changed lyrics to keep sung lines above the line playing, softly blurred as
   they scroll away, with staggered motion and spacing that follows the type.
 - Fixed Glance freezing, and the whole Mac with it, as the volume slider in the

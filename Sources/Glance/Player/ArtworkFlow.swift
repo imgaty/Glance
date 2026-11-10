@@ -5,6 +5,7 @@
 //  Created by Gaty on 30/10/2026.
 //
 
+import Accelerate
 import AppKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
@@ -106,8 +107,8 @@ final class ArtworkFlow {
     /// How bright a cover looks, as Apple's waveform reckons it: each pixel's sqrt(0.299 r² + 0.587 g²
     /// + 0.114 b²), averaged, every pixel counted as it is rather than shrunk first.
     nonisolated static func barsBrightness(of image: CGImage) -> Double {
-        let scale = min(1, 1024 / CGFloat(max(image.width, image.height, 1)))
-        let width = max(Int(CGFloat(image.width) * scale), 1), height = max(Int(CGFloat(image.height) * scale), 1)
+        // Keep the source grid: shrinking first can skip one color of fine alternating detail.
+        let width = image.width, height = image.height
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = pixels.withUnsafeMutableBytes { bytes -> Bool in
             guard
@@ -120,10 +121,42 @@ final class ArtworkFlow {
             return true
         }
         guard drawn else { return 1 }
-        var total = 0.0
-        for i in stride(from: 0, to: pixels.count, by: 4) {
-            let r = Double(pixels[i]) / 255, g = Double(pixels[i + 1]) / 255, b = Double(pixels[i + 2]) / 255
-            total += (0.299 * r * r + 0.587 * g * g + 0.114 * b * b).squareRoot()
+        // Batch the arithmetic in small vectors. The scratch space stays the same size however
+        // large the cover is.
+        let chunk = 16_384
+        var red = [Float](repeating: 0, count: chunk)
+        var green = red, blue = red
+        var redWeight: Float = 0.299 / (255 * 255)
+        var greenWeight: Float = 0.587 / (255 * 255)
+        var blueWeight: Float = 0.114 / (255 * 255)
+        let total = pixels.withUnsafeBufferPointer { source in
+            red.withUnsafeMutableBufferPointer { r in
+                green.withUnsafeMutableBufferPointer { g in
+                    blue.withUnsafeMutableBufferPointer { b in
+                        var total = 0.0
+                        for offset in stride(from: 0, to: width * height, by: chunk) {
+                            let count = min(chunk, width * height - offset)
+                            let n = vDSP_Length(count)
+                            let pixel = source.baseAddress! + offset * 4
+                            vDSP_vfltu8(pixel, 4, r.baseAddress!, 1, n)
+                            vDSP_vfltu8(pixel + 1, 4, g.baseAddress!, 1, n)
+                            vDSP_vfltu8(pixel + 2, 4, b.baseAddress!, 1, n)
+                            vDSP_vsq(r.baseAddress!, 1, r.baseAddress!, 1, n)
+                            vDSP_vsq(g.baseAddress!, 1, g.baseAddress!, 1, n)
+                            vDSP_vsq(b.baseAddress!, 1, b.baseAddress!, 1, n)
+                            vDSP_vsmul(r.baseAddress!, 1, &redWeight, r.baseAddress!, 1, n)
+                            vDSP_vsma(g.baseAddress!, 1, &greenWeight, r.baseAddress!, 1, r.baseAddress!, 1, n)
+                            vDSP_vsma(b.baseAddress!, 1, &blueWeight, r.baseAddress!, 1, r.baseAddress!, 1, n)
+                            var length = Int32(count)
+                            vvsqrtf(r.baseAddress!, r.baseAddress!, &length)
+                            var sum: Float = 0
+                            vDSP_sve(r.baseAddress!, 1, &sum, n)
+                            total += Double(sum)
+                        }
+                        return total
+                    }
+                }
+            }
         }
         return total / Double(width * height)
     }

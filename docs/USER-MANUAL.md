@@ -330,8 +330,10 @@ with two fingers, or scroll a mouse's wheel, to see the rest.
 While something plays, the closed notch shows the cover on its left and a
 waveform on its right, made and drawn as macOS draws its own in the menu bar:
 six bars, bass at the left and treble at the right, each as tall as its part of
-the sound, with the cover itself, blurred, showing through them. While the music
-is paused, the bars settle into six still dots. When something new starts
+the sound, with the cover itself, blurred, showing through them. Dark covers
+are lightened and very bright covers are dimmed to keep the waveform clear
+against the black notch. While the music is paused, the bars settle into six
+still dots. When something new starts
 playing, its name and artist appear beside the notch for a moment. Everything
 here comes and goes as on the iPhone's Dynamic Island: the notch widens and
 folds, and what it shows rides in and out with its ends, fading in out of a blur
