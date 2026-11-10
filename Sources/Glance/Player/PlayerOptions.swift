@@ -116,6 +116,8 @@ extension EnvironmentValues {
     /// Settings' small pictures of the notch, drawn whole at their own size: the glass as it looks,
     /// and the cover still.
     @Entry var notchThumbnail = false
+    /// The Settings header can be retargeted before a page has finished appearing.
+    @Entry var previewPageMotion = false
     /// A light cover's colors are behind the player, so its grays have to be lighter.
     @Entry var playerOnLight = false
     @Entry var lyricsControl = LyricsControl()

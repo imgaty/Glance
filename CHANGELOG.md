@@ -451,6 +451,8 @@
 - Fixed the permissions showing **Request…** for a moment as they were opened,
   before showing which are allowed: Glance reads them as it starts, and again
   whenever it comes forward.
+- Changed the Settings preview to turn between the player and tray without a
+  bounce or a delayed fade, including when pages are chosen in quick succession.
 - Fixed the picture of the notch in Settings freezing for up to half a second
   as the lyrics opened or closed, and as it turned between the player and the
   tray with the lyrics open.

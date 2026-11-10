@@ -1385,9 +1385,14 @@ private struct LightClock<Content: View>: View {
 
 struct PageFade: ViewModifier {
     let hidden: Bool
+    @Environment(\.previewPageMotion) private var preview
 
     func body(content: Content) -> some View {
-        content.animation(NotchView.fade(in: !hidden)) { $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0) }
+        // A new sidebar choice can arrive during the previous fade. No delayed entrance
+        // here: it follows its current opacity and position straight toward the latest page.
+        content.animation(preview ? .smooth(duration: 0.25) : NotchView.fade(in: !hidden)) {
+            $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0)
+        }
     }
 }
 

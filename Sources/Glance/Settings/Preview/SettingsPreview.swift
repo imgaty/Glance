@@ -371,6 +371,7 @@ struct PreviewHeader: View {
                 pointerOver: $pointerOver
             )
             .environment(\.notchPaused, !pane.showsPreview)
+            .environment(\.previewPageMotion, true)
             // The made-up tray the welcome tour shows: what's really in yours stays out of the picture.
             .environment(\.tray, .demo)
             .id(identity)
@@ -422,7 +423,7 @@ struct PreviewHeader: View {
     private func settle(animated: Bool) {
         preview.setInteractive(pane.restsClosed, animated: animated)
         let page: NotchPage = onTray ? .tray : .player
-        withAnimation(animated ? NotchMotion.expand : nil) { preview.model.page = page }
+        withAnimation(animated ? .smooth(duration: 0.35) : nil) { preview.model.page = page }
     }
 
     /// What the preview shows: another display, the shared look, or the display's notch made anew.
