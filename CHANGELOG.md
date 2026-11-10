@@ -252,6 +252,8 @@
 
 ### Player
 
+- Changed the sound controls to a popover with the system's default slider,
+  including its glass handle and native dragging.
 - Changed the sound menu's slider to keep its native pressed appearance while
   the volume follows the pointer.
 - Fixed the waveform appearing too bright or too dim with large, detailed

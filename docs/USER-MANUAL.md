@@ -223,9 +223,10 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a menu laid out like the Mac's Sound menu. At
-its top, a slider sets the playing app's volume without touching any other
-app's. The slider uses the system's glass handle, including its pressed look.
+The `Sound Output` button opens a popover with the playing app's volume and
+the Mac's sound outputs. At its top, the system's default slider sets the
+playing app's volume without touching any other app's. The slider uses the
+system's glass handle, including its pressed look.
 Drag the knob to change the level, or click the track to move it there.
 For `Music` and `Spotify` it reads their own volume as the menu opens; other
 apps need the `Audio from apps` permission. Below it, under **Output**, each

@@ -416,6 +416,11 @@ final class NotchController {
             NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification).sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.menuClosed() }
             },
+            AudioOutput.shared.$popoverShown.dropFirst().sink { [weak self] shown in
+                MainActor.assumeIsolated {
+                    if shown { self?.menuOpened() } else { self?.menuClosed() }
+                }
+            },
         ]
         if takesTouch {
             // The touch target follows the closed notch as its wings and bubbles come and go, once

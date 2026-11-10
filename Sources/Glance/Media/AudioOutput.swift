@@ -16,6 +16,8 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// An SF Symbol for the current device, such as AirPods Pro or the built-in speakers.
     @Published private(set) var symbol = "speaker.wave.2.fill"
+    @Published private(set) var popoverShown = false
+    private var soundPopover: NSPopover?
 
     private override init() {
         super.init()
@@ -33,7 +35,38 @@ final class AudioOutput: NSObject, ObservableObject {
     /// call.
     /// `outputsOnly`, as a call's own: the outputs alone, with no words or settings around them.
     func showMenu(at point: CGPoint? = nil, withVolume: Bool = true, outputsOnly: Bool = false) {
+        if withVolume, !outputsOnly { return showPopover(at: point ?? NSEvent.mouseLocation) }
         menu(withVolume: withVolume, outputsOnly: outputsOnly).popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
+    }
+
+    private func showPopover(at point: CGPoint) {
+        soundPopover?.performClose(nil)
+        let windows = NSApp.windows.filter { $0.isVisible && $0.contentView != nil }
+        guard
+            let window = windows.filter({ $0.frame.contains(point) }).max(by: { $0.level.rawValue < $1.level.rawValue })
+                ?? windows.first(where: { $0 is NotchPanel }), let anchor = window.contentView
+        else { return }
+        let devices = Self.outputs().sorted { ($0.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) < ($1.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) }
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.delegate = self
+        let content = SoundOutputView(
+            devices: devices, current: Self.defaultOutput, volume: AppVolume.shared,
+            choose: { [weak popover] device in
+                Self.use(device.id)
+                popover?.performClose(nil)
+            },
+            settings: { [weak self, weak popover] in
+                popover?.performClose(nil)
+                self?.openSoundSettings()
+            })
+        let width = max(Self.menuWidth, devices.map { OutputRow(device: $0, playing: false).fittingWidth }.max() ?? 0)
+        popover.contentViewController = NSHostingController(rootView: content.frame(width: width))
+        let local = anchor.convert(window.convertPoint(fromScreen: point), from: nil)
+        let position = anchor.bounds.contains(local) ? local : CGPoint(x: anchor.bounds.midX, y: anchor.bounds.midY)
+        soundPopover = popover
+        popoverShown = true
+        popover.show(relativeTo: CGRect(origin: position, size: CGSize(width: 1, height: 1)), of: anchor, preferredEdge: .minY)
     }
 
     func menu(withVolume: Bool = true, outputsOnly: Bool = false) -> NSMenu {
@@ -107,7 +140,7 @@ final class AudioOutput: NSObject, ObservableObject {
     /// Each Bluetooth device as last read, by its name in lowercase.
     fileprivate static var bluetooth: [String: DeviceWatch.BluetoothInfo] = [:]
 
-    private static func readBluetooth() async {
+    fileprivate static func readBluetooth() async {
         bluetooth.merge(await DeviceWatch.bluetoothReport(), uniquingKeysWith: kept)
     }
 
@@ -264,243 +297,39 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 }
 
-/// The playing app's volume in the sound output menu, laid out as the Mac's Sound menu: Apple's own
-/// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right.
-/// SwiftUI draws and animates its own knob, including its pressed glass. AppKit follows the
-/// physical pointer; the menu's incorrect SwiftUI positions are ignored while it is held.
+extension AudioOutput: NSPopoverDelegate {
+    func popoverDidClose(_ notification: Notification) {
+        soundPopover = nil
+        popoverShown = false
+    }
+}
+
+/// The system's SwiftUI slider, hosted without pointer handling or style overrides.
 final class VolumeMenuSlider: NSView {
     init(volume: AppVolume) {
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
-        // As wide as the menu, which widens it to fit, so the slider sits in its middle.
         autoresizingMask = [.width]
-        let slider = Hosting(
-            rootView: VolumeSlider(volume: volume, level: VolumeSlider.Level(volume.level) { [weak volume] in volume?.set($0) }))
-        Hosting.trace("volume row created: can change \(volume.canChange), value \(volume.level)")
-        // As the Mac's Sound menu: the speakers at the edges of the menu's own column, in line
-        // with its headings and its separators, the slider filling the room between them. Each is
-        // centered on the slider's track by its symbol's own alignment box, as the Mac's menus
-        // line symbols up with controls.
-        let quiet = Self.speaker("speaker.fill"), loud = Self.speaker("speaker.wave.3.fill")
-        for view in [quiet, slider, loud] {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(view)
-        }
+        let level = VolumeSlider.Level(volume.level) { [weak volume] in volume?.set($0) }
+        let host = NSHostingView(rootView: VolumeSlider(volume: volume, level: level))
+        host.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(host)
         NSLayoutConstraint.activate([
-            quiet.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.column.leading),
-            slider.leadingAnchor.constraint(equalTo: quiet.trailingAnchor, constant: 4.5),
-            loud.leadingAnchor.constraint(equalTo: slider.trailingAnchor, constant: 4.5),
-            loud.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.column.trailing),
-            slider.centerYAnchor.constraint(equalTo: centerYAnchor),
-            quiet.centerYAnchor.constraint(equalTo: slider.centerYAnchor, constant: -0.5),
-            loud.centerYAnchor.constraint(equalTo: slider.centerYAnchor),
+            host.leadingAnchor.constraint(equalTo: leadingAnchor, constant: SoundMenu.inset),
+            host.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -SoundMenu.inset),
+            host.topAnchor.constraint(equalTo: topAnchor), host.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
     }
 
     required init?(coder: NSCoder) { nil }
 
-    /// Takes the first click while another app is in front. SwiftUI draws the slider in a child;
-    /// hit testing keeps the pointer on this plain AppKit view, outside that child's recognizers.
-    /// Taken by the knob, it moves from where it was taken; pressed elsewhere, it goes there first.
-    final class Hosting: NSView {
-        private let content: NSHostingView<VolumeSlider>
-        private var forwarding = false
-        var rootView: VolumeSlider { content.rootView }
-
-        init(rootView: VolumeSlider) {
-            content = NSHostingView(rootView: rootView)
-            super.init(frame: .zero)
-            content.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(content)
-            NSLayoutConstraint.activate([
-                content.leadingAnchor.constraint(equalTo: leadingAnchor),
-                content.trailingAnchor.constraint(equalTo: trailingAnchor),
-                content.topAnchor.constraint(equalTo: topAnchor),
-                content.bottomAnchor.constraint(equalTo: bottomAnchor),
-            ])
-        }
-
-        required init?(coder: NSCoder) { nil }
-
-        override var intrinsicContentSize: NSSize { content.intrinsicContentSize }
-
-        // AppKit owns the pointer's position. Original events are also forwarded to the hosted
-        // slider for its native interaction state, with its position binding guarded.
-        override func hitTest(_ point: NSPoint) -> NSView? {
-            super.hitTest(point) == nil ? nil : self
-        }
-
-        /// An optional file copy for diagnosing a drag when the unified log cannot be read.
-        nonisolated private static let traceFile: String? = {
-            let arguments = ProcessInfo.processInfo.arguments
-            guard let index = arguments.firstIndex(of: "--volume-log"), arguments.indices.contains(index + 1) else { return nil }
-            return arguments[index + 1]
-        }()
-
-        nonisolated static func trace(_ message: String) {
-            AppVolume.log.notice("\(message, privacy: .public)")
-            guard let path = traceFile else { return }
-            if !FileManager.default.fileExists(atPath: path) {
-                FileManager.default.createFile(atPath: path, contents: nil)
-            }
-            guard let file = FileHandle(forWritingAtPath: path) else { return }
-            defer { try? file.close() }
-            _ = try? file.seekToEnd()
-            try? file.write(contentsOf: Data("\(Date.now.timeIntervalSince1970) \(ProcessInfo.processInfo.processName) pid=\(getpid()) \(message)\n".utf8))
-        }
-
-        /// Where the pointer is across the slider, from its left end, and whether the button is
-        /// still down: asked of the Mac itself, as a menu gives its events in terms of their own.
-        var pointer: (Hosting) -> CGFloat? = { view in
-            guard let window = view.window else { return nil }
-            return view.convert(window.convertPoint(fromScreen: NSEvent.mouseLocation), from: nil).x - view.bounds.minX
-        }
-        var held: () -> Bool = { NSEvent.pressedMouseButtons & 1 != 0 }
-
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-        override func mouseDown(with event: NSEvent) {
-            guard !forwarding else { return }
-            Self.trace(
-                "press: event=\(event.type.rawValue) window=\(event.windowNumber) location=\(event.locationInWindow) local=\(convert(event.locationInWindow, from: nil)) bounds=\(bounds) buttons=\(NSEvent.pressedMouseButtons)"
-            )
-            guard let pressed = pointer(self) else { return }
-            guard rootView.canChange else { return }
-            // Let the real control see the real press, so it owns its pressed appearance. Its
-            // binding is already guarded before it can misread the menu's event coordinates.
-            rootView.level.held = true
-            defer { rootView.level.letGo() }
-            forward(event)
-            followPointer(from: pressed, input: forward)
-        }
-
-        override func mouseUp(with event: NSEvent) { forward(event) }
-
-        /// Only original physical events reach the hosted control. If an unhandled one comes
-        /// back through the responder chain, stop there rather than forwarding it in a circle.
-        private func forward(_ event: NSEvent) {
-            guard !forwarding else { return }
-            forwarding = true
-            let level = rootView.level
-            let wasHeld = level.held
-            level.held = true
-            defer {
-                level.held = wasHeld
-                forwarding = false
-            }
-            switch event.type {
-            case .leftMouseDown: content.mouseDown(with: event)
-            case .leftMouseDragged: content.mouseDragged(with: event)
-            case .leftMouseUp: content.mouseUp(with: event)
-            default: break
-            }
-        }
-
-        /// Tracks only the physical pointer. Kept apart from mouseDown so a hidden test can
-        /// supply positions without creating or posting mouse events, or changing app volume.
-        func followPointer(from pressed: CGFloat, input: ((NSEvent) -> Void)? = nil) {
-            let level = rootView.level
-            let log = AppVolume.log
-            guard rootView.canChange, let window else {
-                Self.trace("Press not followed: can change \(rootView.canChange), window \(self.window != nil)")
-                return
-            }
-            let before = level.value
-            level.held = true
-            defer { level.letGo() }
-            let mirrored = userInterfaceLayoutDirection == .rightToLeft
-            let grip = Grip(value: before, pressedAt: pressed, width: bounds.width, mirrored: mirrored)
-            level.move(to: grip.value(at: pressed))
-            log.notice(
-                "Press at \(pressed, format: .fixed(precision: 1), privacy: .public) of \(self.bounds.width, format: .fixed(precision: 1), privacy: .public), from \(before, format: .fixed(precision: 3), privacy: .public) to \(level.value, format: .fixed(precision: 3), privacy: .public), by the knob \(grip.offset != 0, privacy: .public), buttons \(NSEvent.pressedMouseButtons, privacy: .public)"
-            )
-            var drags = 0
-            var passes = 0
-            // Never waiting on a release the menu keeps: once the button's up, it's over. Nor on a
-            // drag it keeps: the pointer is read every frame, whether an event came or not.
-            while held(), self.window === window, window.isVisible {
-                let next = window.nextEvent(
-                    matching: [.leftMouseDragged, .leftMouseUp], until: Date(timeIntervalSinceNow: 1.0 / 120), inMode: .eventTracking, dequeue: true)
-                passes += 1
-                if let next {
-                    input?(next)
-                    Self.trace(
-                        "tracking: event=\(next.type.rawValue) location=\(next.locationInWindow) local=\(convert(next.locationInWindow, from: nil)) bounds=\(bounds) value=\(level.value) buttons=\(NSEvent.pressedMouseButtons)"
-                    )
-                }
-                if next?.type == .leftMouseDragged { drags += 1 }
-                if let x = pointer(self) {
-                    let was = level.value
-                    level.move(to: grip.value(at: x))
-                    if level.value != was || next != nil, passes <= 400 {
-                        let said = next.map { convert($0.locationInWindow, from: nil).x - bounds.minX }
-                        log.notice(
-                            "Drag \(passes, privacy: .public): pointer \(x, format: .fixed(precision: 1), privacy: .public), event \(next.map { "\($0.type.rawValue)" } ?? "none", privacy: .public) said \(said.map { String(format: "%.1f", $0) } ?? "nothing", privacy: .public), to \(level.value, format: .fixed(precision: 3), privacy: .public)"
-                        )
-                    }
-                }
-                if next?.type == .leftMouseUp { break }
-            }
-            Self.trace("released: value=\(level.value) passes=\(passes) drags=\(drags) buttons=\(NSEvent.pressedMouseButtons)")
-            log.notice(
-                "Let go at \(level.value, format: .fixed(precision: 3), privacy: .public) after \(passes, privacy: .public) passes, \(drags, privacy: .public) drag events, SwiftUI last asked for \(level.unheard.map { String(format: "%.3f", $0) } ?? "nothing", privacy: .public)"
-            )
-        }
-
-    }
-
-    /// The knob in the pointer's hold: how far from its middle it was taken, kept through the drag.
-    /// Measured on macOS 27.3's slider: the knob is 20 points wide, its middle half of that in from
-    /// the slider's left end at nothing and from its right end at full.
-    struct Grip: Equatable {
-        static let knob: CGFloat = 20
-
-        /// From the knob's middle to the pointer; nothing when the press landed off the knob, which
-        /// then comes to the pointer.
-        let offset: CGFloat
-        let width: CGFloat
-        /// Right to left: full at the left end.
-        let mirrored: Bool
-
-        init(value: Double, pressedAt x: CGFloat, width: CGFloat, mirrored: Bool = false) {
-            self.width = width
-            self.mirrored = mirrored
-            let distance = x - Self.middle(of: value, width: width, mirrored: mirrored)
-            offset = abs(distance) <= Self.knob / 2 ? distance : 0
-        }
-
-        /// Where the knob's middle is, from the slider's left end.
-        static func middle(of value: Double, width: CGFloat, mirrored: Bool = false) -> CGFloat {
-            let along = Self.knob / 2 + CGFloat(min(max(value, 0), 1)) * max(width - Self.knob, 0)
-            return mirrored ? width - along : along
-        }
-
-        /// The volume with the pointer at `x`, from the slider's left end.
-        func value(at x: CGFloat) -> Double {
-            let middle = x - offset
-            let along = mirrored ? width - middle : middle
-            return min(max(Double((along - Self.knob / 2) / max(width - Self.knob, 1)), 0), 1)
-        }
-    }
-
-    /// SwiftUI's own slider, its played part white in a dark menu and the accent color in a light
-    /// one, as the Mac's Sound menu has it, and drawn as in the app in front, as a menu is opened
-    /// while Glance rarely is: otherwise it's drawn inactive, its played part as gray as the rest.
     struct VolumeSlider: View {
-        /// The playing app's volume; none in a test, which never changes a real one.
         let volume: AppVolume?
         @ObservedObject var level: Level
 
-        var canChange: Bool { volume?.canChange ?? true }
-
-        /// Where the knob is, and what moving it does.
+        /// The binding's value and a revision, so a read begun before an edit cannot undo it.
         final class Level: ObservableObject {
             @Published private(set) var value: Double
             private let moved: (Double) -> Void
-            /// The knob is in the pointer's hold: only the pointer moves it.
-            var held = false
-            /// What SwiftUI's slider last asked for while it wasn't heard.
-            private(set) var unheard: Double?
-            /// A refresh begun before a drag must not put its old reading over the new position.
             private(set) var revision = 0
 
             init(_ value: Double, moved: @escaping (Double) -> Void) {
@@ -508,7 +337,6 @@ final class VolumeMenuSlider: NSView {
                 self.moved = moved
             }
 
-            /// The knob moved: the volume follows.
             func move(to value: Double) {
                 guard value != self.value else { return }
                 self.value = value
@@ -516,40 +344,22 @@ final class VolumeMenuSlider: NSView {
                 moved(value)
             }
 
-            /// The volume as the app has it, shown without setting it; left be while the knob's held.
-            func show(_ value: Double, since revision: Int? = nil) {
-                guard !held, revision == nil || revision == self.revision else { return }
-                if value != self.value { self.value = value }
-            }
-
-            /// What SwiftUI's slider asks for by itself: heard from the keyboard and from
-            /// VoiceOver, never while the pointer holds the knob.
-            func asked(_ value: Double) {
-                Hosting.trace("SwiftUI asked: value=\(value), before=\(self.value), held=\(held)")
-                guard !held else { return unheard = value }
-                move(to: value)
-            }
-
-            func letGo() {
-                held = false
-                unheard = nil
+            func show(_ value: Double, since revision: Int) {
+                guard revision == self.revision else { return }
+                self.value = value
             }
         }
 
-        static let fill = Color(
-            nsColor: NSColor(name: nil) { appearance in
-                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .controlAccentColor
-            })
-
         var body: some View {
-            Slider(value: Binding(get: { level.value }, set: level.asked), in: 0...1) { editing in
-                Hosting.trace("Native slider editing: \(editing), held=\(level.held), value=\(level.value)")
+            Slider(value: Binding(get: { level.value }, set: level.move), in: 0...1) {
+                Text("Sound")
+            } minimumValueLabel: {
+                Image(systemName: "speaker.fill")
+            } maximumValueLabel: {
+                Image(systemName: "speaker.wave.3.fill")
             }
             .labelsHidden()
-            .tint(Self.fill)
-            .disabled(!canChange)
-            .environment(\.controlActiveState, .key)
-            // Music's and Spotify's own volume, read afresh as the menu opens.
+            .disabled(volume?.canChange == false)
             .task {
                 guard let volume else { return }
                 let revision = level.revision
@@ -558,22 +368,76 @@ final class VolumeMenuSlider: NSView {
             }
         }
     }
+}
 
-    /// Where the menu starts and ends its headings, rows and separators, in from its sides.
-    private static let column = (leading: SoundMenu.inset, trailing: SoundMenu.inset)
+/// A standard popover, outside NSMenu's tracking loop, so the system slider receives its events
+/// in its own window. The surrounding rows keep the sound outputs' pictures and batteries.
+private struct SoundOutputView: View {
+    let devices: [AudioOutput.Device]
+    let current: AudioDeviceID
+    let volume: AppVolume?
+    let choose: (AudioOutput.Device) -> Void
+    let settings: () -> Void
+    @StateObject private var level: VolumeMenuSlider.VolumeSlider.Level
+    @State private var refreshed = false
+    @State private var hovered: AudioDeviceID?
 
-    /// The quiet and loud speakers at the slider's ends, as large and as light as the Mac's.
-    private static func speaker(_ symbol: String) -> NSImageView {
-        let image = NSImageView(
-            image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
-                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)) ?? NSImage())
-        image.contentTintColor = SoundMenu.speakerGray
-        image.imageScaling = .scaleProportionallyDown
-        image.setContentHuggingPriority(.required, for: .horizontal)
-        image.setContentCompressionResistancePriority(.required, for: .horizontal)
-        return image
+    init(devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?, choose: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void) {
+        self.devices = devices
+        self.current = current
+        self.volume = volume
+        self.choose = choose
+        self.settings = settings
+        _level = StateObject(wrappedValue: .init(volume?.level ?? 1) { [weak volume] in volume?.set($0) })
     }
 
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Sound").font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, SoundMenu.inset).padding(.vertical, 8)
+            if volume?.app != nil {
+                VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
+                    .padding(.horizontal, SoundMenu.inset).frame(height: 30)
+            }
+            Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 5)
+            Text("Output").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+                .padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
+            ForEach(devices, id: \.id) { device in
+                Button {
+                    choose(device)
+                } label: {
+                    SoundOutputRow(device: device, playing: device.id == current, refreshed: refreshed)
+                        .frame(height: SoundMenu.rowHeight).allowsHitTesting(false)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background {
+                    RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
+                        .fill(.quaternary.opacity(hovered == device.id ? 1 : 0))
+                        .padding(.horizontal, SoundMenu.highlightInset)
+                }
+                .onHover { hovered = $0 ? device.id : nil }
+                .accessibilityLabel(device.name)
+            }
+            Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
+            Button("Sound Settings…", action: settings).buttonStyle(.plain)
+                .padding(.horizontal, SoundMenu.inset).padding(.vertical, 5)
+        }
+        .padding(.vertical, 5)
+        .task {
+            await AudioOutput.readBluetooth()
+            refreshed = true
+        }
+    }
+}
+
+private struct SoundOutputRow: NSViewRepresentable {
+    let device: AudioOutput.Device
+    let playing: Bool
+    let refreshed: Bool
+
+    func makeNSView(context: Context) -> OutputRow { OutputRow(device: device, playing: playing) }
+    func updateNSView(_ view: OutputRow, context: Context) { view.reload() }
 }
 
 /// The sound output menu's measures, as the Mac's Sound menu has them: no check marks, its
