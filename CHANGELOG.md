@@ -8,6 +8,11 @@
 
 `Released: not yet`
 
+### Battery
+
+- Fixed the Low Power Mode button opening Settings without changing the mode.
+  It now changes the source in use and keeps the other power source's choice.
+
 ### Live Activities
 
 - Fixed pressing the volume slider in the sound output menu taking the playing

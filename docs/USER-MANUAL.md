@@ -406,7 +406,10 @@ which Glance asks for during that call and uses only during calls, and the
 other half needs `Audio from apps`. Turn all this off with `Calls` in
 **Settings > Live Activities**.
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
-If macOS doesn't change Low Power Mode from the notch,
+With `Accessibility` allowed, the Low Power Mode button changes the power
+source currently in use, keeping the other source's choice. The button waits
+for macOS to confirm the change before accepting another press.
+If its system control cannot be reached,
 **System Settings > Battery** opens, where you can. macOS's own banner at the
 top of the screen for a device connecting or running low is hidden while the
 notch says the same. With `Accessibility` allowed, so is its banner under the
@@ -703,7 +706,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; changing Low Power Mode with the notch's button; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
 | `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |
 | `Microphone` | Your half of the waveform on calls in other apps, during those calls, and the waveform of a voice memo while Voice Memos records it |
 | `Contacts` | The caller's photo during a FaceTime or phone call, asked for during your first one. Glance looks up only the name or number macOS's popup shows; if two of your contacts have that name, it tells them apart by the picture in the popup. Without it, the caller shows their initial |

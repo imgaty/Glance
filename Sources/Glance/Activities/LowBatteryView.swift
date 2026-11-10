@@ -8,14 +8,14 @@
 import AppKit
 import SwiftUI
 
-/// Low Power Mode, which Low Battery's button turns on and off: through macOS's own switch, the one
-/// Control Center and Battery settings use, which has no public way in, and read back from macOS.
-/// Should macOS not change it, Battery settings open, where it can be.
+/// Low Power Mode, changed through the Mac's own policy control in a hidden Settings instance,
+/// then read back from macOS. If the control cannot be reached, Battery settings open.
 @MainActor
 final class LowPowerMode: ObservableObject {
     static let shared = LowPowerMode()
 
     @Published private(set) var isOn = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @Published private(set) var isChanging = false
     private var watch: NSObjectProtocol?
 
     private init() {
@@ -32,30 +32,20 @@ final class LowPowerMode: ObservableObject {
 
     func toggle() {
         guard !ActivityBench.fakesPower else { return bench(!isOn) }
+        guard !isChanging else { return }
         let on = !ProcessInfo.processInfo.isLowPowerModeEnabled
-        Self.setPowerMode(on ? 1 : 0)
+        isChanging = true
         Task {
-            try? await Task.sleep(for: .seconds(2))
-            guard ProcessInfo.processInfo.isLowPowerModeEnabled != on else { return }
-            NSWorkspace.shared.open(Self.settings)
+            defer { isChanging = false }
+            let changed = await PowerModeSettings.set(on)
+            isOn = ProcessInfo.processInfo.isLowPowerModeEnabled
+            if !changed, isOn != on { NSWorkspace.shared.open(Self.settings) }
         }
     }
 
     /// Battery settings, where Low Power Mode is chosen.
     static let settings = URL(string: "x-apple.systempreferences:com.apple.Battery-Settings.extension")!
 
-    /// macOS's own switch, in its Low Power Mode framework: 1 on, 0 off.
-    private static func setPowerMode(_ mode: Int) {
-        let selector = NSSelectorFromString("setPowerMode:fromSource:withCompletion:")
-        guard dlopen("/System/Library/PrivateFrameworks/LowPowerMode.framework/LowPowerMode", RTLD_LAZY) != nil,
-            let type = NSClassFromString("_PMLowPowerMode") as? NSObject.Type,
-            let shared = type.perform(NSSelectorFromString("sharedInstance"))?.takeUnretainedValue(),
-            shared.responds(to: selector), let method = class_getInstanceMethod(type, selector)
-        else { return }
-        typealias Set = @convention(c) (AnyObject, Selector, Int, NSString, @escaping @convention(block) (Bool, NSError?) -> Void) -> Void
-        let set = unsafeBitCast(method_getImplementation(method), to: Set.self)
-        set(shared, selector, mode, "Glance", { _, _ in })
-    }
 }
 
 /// Low Battery as the iPhone's Dynamic Island shows it, measured from it, by the island's height,
@@ -213,6 +203,7 @@ struct LowBatteryView: View {
             }
             .reportsFrame(.lowPower)
             .spokenButton(on ? String(localized: "Turn off Low Power Mode") : String(localized: "Turn on Low Power Mode")) { LowPowerMode.shared.toggle() }
+            .disabled(lowPower.isChanging)
             .padding(.trailing, PlayerLayout.padding)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
