@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 9 November 2026`
+`Created: 11 October 2026` | `Last updated: 10 November 2026`
 
 <br>
 
@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed pressing the volume slider in the sound output menu taking the playing
+  app to full volume, and dragging it leaving the knob at the end. Taking the
+  knob keeps it where it is, and clicking the track takes it to that position.
 - Changed a timer that's done to go from the notch by itself after ten seconds,
   its ringing with it, as **✕** would, rather than ringing for up to five
   minutes. It stays while the pointer is on it.

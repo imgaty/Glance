@@ -2017,22 +2017,95 @@ struct InterfaceWalkTests {
     }
 }
 
-/// The volume slider in the sound output menu, whose drag is followed for it.
+/// The volume slider in the sound output menu, whose press and drag are worked out for it.
 @Suite("Volume slider drag")
 struct VolumeSliderDragTests {
-    typealias Slider = VolumeMenuSlider.VolumeSlider
+    typealias Grip = VolumeMenuSlider.Grip
+    typealias Level = VolumeMenuSlider.VolumeSlider.Level
 
-    @Test("The knob moves with the pointer from where it was taken, and stops at the ends")
-    func follows() {
-        // A 200-point slider: the knob travels 180.
-        let travel = 200 - Slider.knob
-        #expect(Slider.knob == 20)
-        #expect(Slider.dragged(from: 1, by: 0, over: travel) == 1)
-        #expect(abs(Slider.dragged(from: 1, by: -90, over: travel) - 0.5) < 0.0001)
-        #expect(abs(Slider.dragged(from: 0.25, by: 45, over: travel) - 0.5) < 0.0001)
-        #expect(Slider.dragged(from: 0.5, by: -400, over: travel) == 0)
-        #expect(Slider.dragged(from: 0.5, by: 400, over: travel) == 1)
+    @Test("Taken by the knob, it stays put, then moves with the pointer and stops at the ends")
+    func byTheKnob() {
+        // A 200-point slider: the knob's middle goes from 10 to 190.
+        #expect(Grip.knob == 20)
+        #expect(Grip.middle(of: 0, width: 200) == 10)
+        #expect(Grip.middle(of: 0.5, width: 200) == 100)
+        #expect(Grip.middle(of: 1, width: 200) == 190)
+        // At full, taken 6 points right of its middle: a press alone changes nothing.
+        let grip = Grip(value: 1, pressedAt: 196, width: 200)
+        #expect(grip.offset == 6)
+        #expect(grip.value(at: 196) == 1)
+        #expect(abs(grip.value(at: 106) - 0.5) < 0.0001)
+        #expect(grip.value(at: -300) == 0)
+        #expect(grip.value(at: 900) == 1)
+    }
+
+    @Test("Pressed off the knob, the knob goes to the pointer")
+    func onTheTrack() {
+        let grip = Grip(value: 1, pressedAt: 55, width: 200)
+        #expect(grip.offset == 0)
+        #expect(abs(grip.value(at: 55) - 0.25) < 0.0001)
+        #expect(abs(grip.value(at: 100) - 0.5) < 0.0001)
+        // The slider's very ends are nothing and full.
+        #expect(Grip(value: 0.5, pressedAt: 3, width: 200).value(at: 3) == 0)
+        #expect(Grip(value: 0.5, pressedAt: 199, width: 200).value(at: 199) == 1)
         // A slider with no room still answers.
-        #expect(Slider.dragged(from: 0.5, by: 1, over: 0) == 1)
+        #expect(Grip(value: 0.5, pressedAt: 5, width: 20).value(at: 30) == 1)
+    }
+
+    @Test("Right to left, full is at the left end")
+    func mirrored() {
+        #expect(Grip.middle(of: 0, width: 200, mirrored: true) == 190)
+        #expect(Grip.middle(of: 1, width: 200, mirrored: true) == 10)
+        let grip = Grip(value: 0, pressedAt: 55, width: 200, mirrored: true)
+        #expect(abs(grip.value(at: 55) - 0.75) < 0.0001)
+        #expect(grip.value(at: 0) == 1)
+        #expect(grip.value(at: 200) == 0)
+    }
+
+    @Test("The pointer owns its drag, and keyboard and VoiceOver work as soon as it lets go")
+    func unheard() {
+        var sent: [Double] = []
+        let level = Level(0.3) { sent.append($0) }
+        // By itself, as from the keyboard or VoiceOver, it's heard.
+        level.asked(0.4)
+        #expect(level.value == 0.4)
+        #expect(sent == [0.4])
+        // Held, the press read as full volume is left unheard, and only the pointer moves it.
+        level.held = true
+        level.asked(1)
+        #expect(level.value == 0.4)
+        #expect(level.unheard == 1)
+        level.move(to: 0.6)
+        level.move(to: 0.6)
+        #expect(sent == [0.4, 0.6])
+        // The app's own volume read meanwhile doesn't pull the knob from the pointer.
+        level.show(0.1)
+        #expect(level.value == 0.6)
+        // The wrapper never forwards a press or release to SwiftUI. Keyboard and VoiceOver are
+        // available immediately after the pointer lets go, without a half-second quiet period.
+        level.letGo()
+        level.asked(0.7)
+        #expect(level.value == 0.7)
+        #expect(sent == [0.4, 0.6, 0.7])
+        // The app's volume is shown again, without being set.
+        level.show(0.2)
+        #expect(level.value == 0.2)
+        #expect(sent == [0.4, 0.6, 0.7])
+    }
+
+    @Test("A refresh begun before the drag cannot restore its old volume after release")
+    func staleRefresh() {
+        var sent: [Double] = []
+        let level = Level(0.2) { sent.append($0) }
+        let started = level.revision
+        level.held = true
+        level.move(to: 0.65)
+        level.letGo()
+        level.show(0.2, since: started)
+        #expect(level.value == 0.65)
+        #expect(sent == [0.65])
+        level.show(0.5, since: level.revision)
+        #expect(level.value == 0.5)
+        #expect(sent == [0.65])
     }
 }
