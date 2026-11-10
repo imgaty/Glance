@@ -610,6 +610,8 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 The preview above the pages carries on as you switch between them. The player
 and tray slide into place from their current positions, even when you switch
 again before the previous change has finished.
+Changing the layout or opening lyrics reshapes the notch while its background
+keeps moving.
 
 ### Appearance
 

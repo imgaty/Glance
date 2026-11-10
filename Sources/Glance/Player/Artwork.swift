@@ -281,6 +281,9 @@ struct ArtworkSwirl: View {
                     Image(decorative: frame, scale: 1)
                         .resizable()
                         .interpolation(.high)
+                        // Pixels arrive at the renderer's cadence. A layout spring must not
+                        // blend and retain a trail of old frames while the preview reshapes.
+                        .transaction { $0.animation = nil }
                         .frame(width: spread.width, height: spread.height)
                         .scaleEffect(1 + 0.015 * pulse)
                         .brightness(0.03 * pulse)
