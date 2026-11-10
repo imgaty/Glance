@@ -784,42 +784,9 @@ struct NotchView: View {
 
         ZStack(alignment: .top) {
             shade
-            // The artwork's light: in place of the glass, it fills the bottom and fades out under the
-            // black at the top, just where the glass shows; as a spotlight, it's a soft circle that
-            // comes out of the cover and travels round it, its colors turning. Choosing between them
-            // morphs one into another.
-            let travels = background == .spotlight && !reduceMotion
-            LightClock(running: travels && lit && isOpen && !paused && nowPlaying.isPlaying, shown: lit) { travelled in
-                let spot = spotlight(m, travelled: travels ? travelled : 0)
-                ArtworkLight(
-                    dim: accessibility.increasesContrast ? Self.contrastDim : background == .spotlight ? 0 : Self.colorsDim,
-                    active: isOpen && !paused, spread: lightSpread
-                )
-                .frame(width: lightSize.width, height: lightSize.height)
-                // The spotlight shows the middle of the cover's colors wherever it is, rather than
-                // the part of them laid out under it: up by the cover, that's its edge, often dark.
-                .offset(
-                    background == .spotlight
-                        ? CGSize(width: spot.center.x - lightSize.width / 2, height: spot.center.y - lightSize.height / 2) : .zero
-                )
-                .rotationEffect(
-                    .radians(travels ? travelled * Self.spotlightTurn : 0),
-                    anchor: UnitPoint(x: spot.center.x / lightSize.width, y: spot.center.y / lightSize.height)
-                )
-                .mask {
-                    // It comes in as it's turned on or the notch opens: the background washing out of
-                    // the notch until it fills it, the spotlight popping out of the cover.
-                    lightShape(m, grown: lit, fills: background != .spotlight, spot: spot)
-                        .animation(lightGrowth(lit, fills: background != .spotlight), value: lit)
-                }
-                .mask { insideTheEdges(m, spotlight: background == .spotlight) }
-                .mask { belowTheBlack(lifted: background != .replaceGlass) }
-                .mask { awayFromCamera }
-            }
-            .animation(lit ? .easeOut(duration: 0.5).delay(0.1) : .easeOut(duration: 0.2)) {
-                $0.opacity(lit ? lightOpacity : 0)
-            }
-            .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
+            // Each background keeps its own geometry. A choice changes their opacities,
+            // so no circle, blur boundary or camera mask sweeps across the player.
+            artworkBackground(m, shown: playerShown && nowPlaying.artwork != nil)
             // As wide as the notch is at each step, so what the wings show rides in and out with their
             // ends, as the Dynamic Island's activities do.
             LiveActivityView(restingHeight: closed.height, wing: model.wing, pop: model.pop, swell: swell)
@@ -1002,7 +969,6 @@ struct NotchView: View {
         .onPreferenceChange(AirDropFrame.self) { model.airDropFrame = $0 }
         .onPreferenceChange(AlertButtonFrames.self) { model.alertButtons = $0 }
         // A change in Settings eases in rather than snapping.
-        .animation(.easeInOut(duration: 0.6), value: background)
         .animation(.easeInOut(duration: 0.45), value: darkness)
         .animation(.easeInOut(duration: 0.45), value: followsSystem)
         .animation(.easeInOut(duration: 0.45), value: blur)
@@ -1170,25 +1136,66 @@ struct NotchView: View {
         CGSize(width: model.openSize.width + (model.showsLyrics ? model.lyricsWidth : 0) + 60, height: model.openSize.height + 40)
     }
 
-    /// In place of the glass, as Apple Music dims its own, measured from it: evenly, whatever the
-    /// color, so white is a soft gray, and a red a deep one. With the colors' own dimming, a little
-    /// over half of their brightness is left.
-    static let colorsDim = 0.38
+    /// The rendered colors are dimmed again for the player's controls. A white cover
+    /// reaches about 139 gray, with a little over half its original brightness left.
+    static let colorsDim = 0.25
     /// The colors' brightest, a white cover's, before they're dimmed.
-    static let colorsBrightest = 0.88
+    static let colorsBrightest = 0.727
     /// With Increase Contrast on, dimmed further, so the artist's gray reads 4.5 to 1 even on a white
     /// cover's colors, the title far more.
     static let contrastDim = 0.77
 
-    /// Dimmed while paused (see `PausedLook`).
-    private var lightOpacity: Double {
-        let full: Double =
-            switch background {
-            case .replaceGlass: 1
-            case .spotlight: 0.9
-            case .none: 0
+    @ViewBuilder
+    private func artworkBackground(_ m: NotchMetrics, shown: Bool) -> some View {
+        let fills = shown && background == .replaceGlass
+        let spots = shown && background == .spotlight
+        let opacity = nowPlaying.isPlaying ? 1.0 : PausedLook.kept
+        ZStack {
+            if background == .replaceGlass {
+                ArtworkLight(
+                    dim: accessibility.increasesContrast ? Self.contrastDim : Self.colorsDim,
+                    active: fills && !paused, spread: lightSpread
+                )
+                .frame(width: lightSize.width, height: lightSize.height)
+                .mask {
+                    lightShape(m, grown: shown, fills: true, spot: Spotlight.Spot(center: .zero, diameter: 0))
+                        .animation(lightGrowth(shown, fills: true), value: shown)
+                }
+                .mask { belowTheBlack(lifted: false) }
+                .mask { awayFromCamera }
+                .opacity(fills ? opacity : 0)
+                .animation(.smooth(duration: 0.35), value: fills)
+                .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
+                .transition(.opacity)
+            } else if background == .spotlight {
+                let travels = !reduceMotion
+                LightClock(running: travels && spots && !paused && nowPlaying.isPlaying, shown: spots) { travelled in
+                    let spot = spotlight(m, travelled: travels ? travelled : 0)
+                    ArtworkLight(
+                        dim: accessibility.increasesContrast ? Self.contrastDim : 0,
+                        active: spots && !paused, spread: lightSpread
+                    )
+                    .frame(width: lightSize.width, height: lightSize.height)
+                    .offset(x: spot.center.x - lightSize.width / 2, y: spot.center.y - lightSize.height / 2)
+                    .rotationEffect(
+                        .radians(travels ? travelled * Self.spotlightTurn : 0),
+                        anchor: UnitPoint(x: spot.center.x / lightSize.width, y: spot.center.y / lightSize.height)
+                    )
+                    .mask {
+                        lightShape(m, grown: shown, fills: false, spot: spot)
+                            .animation(lightGrowth(shown, fills: false), value: shown)
+                    }
+                    .mask { insideTheEdges(m, spotlight: true) }
+                    .mask { awayFromCamera }
+                }
+                .opacity(spots ? 0.9 * opacity : 0)
+                .animation(.smooth(duration: 0.35), value: spots)
+                .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
+                .transition(.opacity)
             }
-        return full * (nowPlaying.isPlaying ? 1 : PausedLook.kept)
+        }
+        .frame(width: lightSize.width, height: lightSize.height)
+        .animation(.smooth(duration: 0.35), value: background)
     }
 
     /// The background spreads out from the middle slowly enough to be seen, once the notch has
@@ -1200,7 +1207,7 @@ struct NotchView: View {
 
     /// One circle: for the background, centered on the notch at the top, from the notch's own
     /// width to large enough to fill everything; for the spotlight, a soft glow at `spot`, from
-    /// nothing. It grows and shrinks between them, so one morphs into the other.
+    /// nothing. Each mode keeps this geometry while the two layers crossfade.
     private func lightShape(_ m: NotchMetrics, grown: Bool, fills: Bool, spot: Spotlight.Spot) -> some View {
         let size = lightSize
         // The background grows out of the middle of the open notch, evenly to both sides, to just

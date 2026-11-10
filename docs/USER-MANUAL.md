@@ -642,6 +642,9 @@ cover, and long titles end in an ellipsis instead of scrolling.
 | `Show audio from` | Which apps' audio Glance shows; **Add App…** adds an app, and right-clicking one offers **Remove from List** |
 | `Show new apps` | Whether apps that start playing are added turned on |
 
+The background's colors turn and bend while music plays, and resume from where
+they stopped after a pause. Changing `Background` fades between the choices.
+
 ### Tray
 
 | Setting | Operation |

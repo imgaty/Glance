@@ -47,11 +47,21 @@ struct ArtworkFlowTests {
         #expect(try #require(ArtworkFlow.of(image)) === ArtworkFlow.of(image))
     }
 
-    @Test("The first frame is ready at once, a gradient and not a flat color, and the bars read on black")
-    func firstFrame() throws {
+    static func rendered(_ flow: ArtworkFlow) async throws -> CGImage {
+        for _ in 0..<150 {
+            if let frame = flow.frame(at: 100), frame !== flow.bars { return frame }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        throw NSError(domain: "Backdrop render", code: 1)
+    }
+
+    @Test("A soft first frame is immediate and the rendered background arrives asynchronously")
+    func firstFrame() async throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
         let frame = try #require(flow.frame(at: 100))
-        #expect(frame.width > flow.bars.width)
+        #expect(frame === flow.bars)
+        let rendered = try await Self.rendered(flow)
+        #expect(rendered.width == ArtworkBackdrop.side)
         #expect(Self.brightness(of: frame).colors.count > 100)
         #expect(Self.brightness(of: flow.bars).lowest >= 0.25)
     }
@@ -195,7 +205,7 @@ struct ArtworkFlowTests {
     }
 
     @Test("Behind the player every color is dimmed evenly, so white stays white and a red stays red")
-    func backgroundEven() throws {
+    func backgroundEven() async throws {
         func solid(_ color: NSColor) -> NSImage {
             NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
                 color.setFill()
@@ -203,10 +213,11 @@ struct ArtworkFlowTests {
                 return true
             }
         }
-        let white = Self.channels(of: try #require(ArtworkFlow.of(solid(.white))?.frame(at: 100)))
-        let red = Self.channels(of: try #require(ArtworkFlow.of(solid(NSColor(srgbRed: 0.8, green: 0.1, blue: 0.15, alpha: 1)))?.frame(at: 100)))
-        // Apple Music's white, measured, once the notch's dim is on it.
-        #expect((white.map(\.g).min() ?? 0) * 0.62 > 0.5)
+        let white = Self.channels(of: try await Self.rendered(#require(ArtworkFlow.of(solid(.white)))))
+        let red = Self.channels(of: try await Self.rendered(#require(ArtworkFlow.of(solid(NSColor(srgbRed: 0.8, green: 0.1, blue: 0.15, alpha: 1))))))
+        // The native shader's white, then the notch's dimming for its controls.
+        #expect(abs(white[white.count / 2 + 100].g - 0.726) < 0.01)
+        #expect(abs(white[white.count / 2 + 100].g * (1 - NotchView.colorsDim) * 255 - 139) < 2)
         #expect((red.map(\.r).max() ?? 0) > 0.6)
         #expect((red.map(\.g).max() ?? 1) < 0.25)
     }
@@ -257,12 +268,12 @@ struct ArtworkFlowTests {
     func moves() async throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
         let first = try #require(flow.frame(at: 100))
-        _ = flow.frame(at: 130)
-        #expect(flow.frame(at: 130) === first)
-        for _ in 0..<100 where flow.frame(at: 130) === first {
+        _ = flow.frame(at: 100.1)
+        #expect(flow.frame(at: 100.1) === first)
+        for _ in 0..<100 where flow.frame(at: 100.1) === first {
             try await Task.sleep(for: .milliseconds(20))
         }
-        #expect(flow.frame(at: 130) !== first)
+        #expect(flow.frame(at: 100.1) !== first)
     }
 }
 

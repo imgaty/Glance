@@ -10,13 +10,8 @@ import AppKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
-/// The colors that flow behind the player, made as Apple Music makes them, and never just the cover
-/// blurred: four copies of the cover, turning, the smaller two circling as well, each twisted around
-/// a point off to one side, which draws its shapes out into long ribbons, laid over one another and
-/// blurred together. The cover's palette (see `ArtworkPalette`) runs through them. The waveform shows
-/// the cover itself, blurred (see `bars`), as the iPhone's does. One picture of the flow is drawn at
-/// a time, away from the main thread and only while something asks: nothing does while the notch is
-/// closed.
+/// The background's three artwork planes and subdivided warp are rendered on the artwork queue.
+/// The waveform keeps its own cover treatment; it never takes its colors from the background.
 @MainActor
 final class ArtworkFlow {
     /// One for each picture, kept only as long as the picture is.
@@ -30,19 +25,9 @@ final class ArtworkFlow {
     /// is old enough: a little sooner than the 30 times a second the background asks, so none of
     /// its asks is missed. At half that, they'd be seen to step.
     private static let interval = 1.0 / 40
-    private nonisolated static let side: CGFloat = 200
     /// The cover, small: the copies are blurred away, so nothing of its detail would show.
     private static let coverSide: CGFloat = 128
 
-    /// How much of what's under them the three smaller copies leave showing, as a share of each.
-    private nonisolated static let opacity: CGFloat = 0.75
-    /// How far off a copy's middle it's twisted, and how far the twist reaches, as shares of the
-    /// copy; and how far the middle of the twist is turned, in radians.
-    private nonisolated static let twistOffset = 0.45
-    private nonisolated static let twistReach: CGFloat = 1.2
-    private nonisolated static let twistAngle: Float = 7
-    /// The blur over them all, as a share of the picture.
-    private nonisolated static let blur = 0.055
     /// The waveform's colors, as Apple's own waveform takes them from the artwork (`MediaCoreUI`'s
     /// `WaveformTheme.artwork`, read from its layers on macOS 27.3): the cover stretched across the
     /// bars, more saturated and washed with white the darker it is, dimmed with black the brighter it
@@ -62,10 +47,6 @@ final class ArtworkFlow {
     private nonisolated static let barsContext = CIContext(options: [
         .workingColorSpace: CGColorSpace(name: CGColorSpace.displayP3) as Any, .cacheIntermediates: false,
     ])
-    /// How strongly the palette shows through the colors, as light: all the way in the dark, none
-    /// in white, so a dark cover takes on its colors and a white one stays white.
-    private nonisolated static let paletteTint: CGFloat = 0.4
-
     static func of(_ image: NSImage) -> ArtworkFlow? {
         if let flow = flows.object(forKey: image) { return flow }
         guard let flow = ArtworkFlow(image) else { return nil }
@@ -78,12 +59,16 @@ final class ArtworkFlow {
     /// The cover itself, blurred, which the waveform shows through its bars laid across the whole of
     /// it, as Apple's own waveform does (see `bars(of:)`): a red cover's sides red, a blue middle blue.
     let bars: CGImage
-    private let cover: CIImage
-    /// The palette's picture, which turns slowly.
-    private let wash: CIImage
-    private var latest: CGImage?
-    private var drawing = false
-    private var drawnAt = 0.0
+    private let cover: CGImage
+    private final class Frame {
+        var renderer: ArtworkBackdrop?
+        var latest: CGImage?
+        var drawing = false
+        var drawnAt = 0.0
+    }
+    private var frames: [Int: Frame] = [:]
+    private let variant = Int.random(in: 0..<5)
+    private var clock = ArtworkFlowClock()
 
     private init?(_ image: NSImage) {
         guard let source = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
@@ -91,14 +76,11 @@ final class ArtworkFlow {
         let side = Self.coverSide
         let scaled = input.transformed(by: CGAffineTransform(scaleX: side / max(input.extent.width, 1), y: side / max(input.extent.height, 1)))
         let bounds = CGRect(x: 0, y: 0, width: side, height: side)
-        guard let small = Self.context.createCGImage(scaled, from: bounds),
-            let wash = AccentWash.image(for: ArtworkPalette.colors(of: image))?.cgImage(forProposedRect: nil, context: nil, hints: nil)
-        else { return nil }
-        cover = CIImage(cgImage: small)
-        self.wash = CIImage(cgImage: wash)
+        guard let small = Self.context.createCGImage(scaled, from: bounds) else { return nil }
+        cover = small
         guard let bars = Self.bars(of: source) else { return nil }
         self.bars = bars
-        isLight = Self.brightness(of: cover) > 0.55
+        isLight = Self.brightness(of: CIImage(cgImage: cover)) > 0.55
     }
 
     /// How dark a cover is, for its bars: 0 from `barsBright` up, 1 at black.
@@ -204,119 +186,51 @@ final class ArtworkFlow {
         return (0.2126 * Double(pixel[0]) + 0.7152 * Double(pixel[1]) + 0.0722 * Double(pixel[2])) / 255
     }
 
-    /// The latest picture there is for `time`, in seconds. The first is drawn on the spot; after
-    /// that, a new one is on its way whenever the last is old enough, and it shows when it's ready.
-    func frame(at time: Double) -> CGImage? {
-        guard latest != nil else {
-            drawnAt = time
-            latest = Self.draw(cover, wash, at: time)
-            return latest
+    /// A soft cover is ready immediately. Shader compilation, textures and every rendered frame,
+    /// including the first, are prepared on the artwork queue.
+    func frame(at time: Double, aspect: Double = 1) -> CGImage? {
+        let key = Int((min(max(aspect, 0.25), 8) * 20).rounded())
+        let frame: Frame
+        if let cached = frames[key] {
+            frame = cached
+        } else {
+            frame = Frame()
+            if frames.count >= 6, let old = frames.keys.first { frames.removeValue(forKey: old) }
+            frames[key] = frame
         }
-        if !drawing, abs(time - drawnAt) >= Self.interval {
-            drawing = true
-            drawnAt = time
-            let cover = cover, wash = wash
-            Self.queue.async { [weak self] in
-                let frame = Self.draw(cover, wash, at: time)
-                DispatchQueue.main.async {
-                    MainActor.assumeIsolated {
-                        self?.drawing = false
-                        if let frame { self?.latest = frame }
-                    }
+        let elapsed = clock.read(at: time)
+        guard !frame.drawing, frame.latest == nil || abs(time - frame.drawnAt) >= Self.interval else { return frame.latest ?? bars }
+        frame.drawing = true
+        frame.drawnAt = time
+        let cover = cover, previous = frame.renderer, variant = variant
+        Self.queue.async {
+            let renderer = previous ?? ArtworkBackdrop(cover, variant: variant, aspect: Double(key) / 20)
+            let image = renderer?.frame(at: elapsed)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    frame.renderer = renderer
+                    frame.drawing = false
+                    if let image { frame.latest = image }
                 }
             }
         }
-        return latest
+        return frame.latest ?? bars
     }
+}
 
-    private nonisolated static func draw(_ cover: CIImage, _ wash: CIImage, at time: Double) -> CGImage? {
-        let side = Self.side
-        let canvas = CGRect(x: 0, y: 0, width: side, height: side)
-        var layers = CIImage(color: .black).cropped(to: canvas)
-        for (index, copy) in copies(at: time).enumerated() {
-            layers = layer(of: cover, copy, opaque: index == 0).composited(over: layers)
+/// Time advances only while a view is asking for frames. A return from a hidden or paused view
+/// resumes the previous phase, without feeding a large wall-clock value into Metal's floats.
+struct ArtworkFlowClock {
+    private var previous: Double?
+    private(set) var elapsed = 0.0
+
+    mutating func read(at time: Double) -> Double {
+        if let previous {
+            let step = time - previous
+            if step > 0, step < 0.25 { elapsed += step }
         }
-        let colors = layers.cropped(to: canvas).clampedToExtent()
-            .applyingGaussianBlur(sigma: Self.blur * side)
-            .cropped(to: canvas)
-            .applyingFilter(
-                "CIColorControls", parameters: [kCIInputSaturationKey: 1.05, kCIInputContrastKey: 1.05])
-        // The palette, as light through the colors, turning the other way.
-        let tint = spun(wash, turn: -time / 30, across: side * 1.5, into: canvas)
-            .applyingFilter(
-                "CIColorMatrix",
-                parameters: [
-                    "inputRVector": CIVector(x: paletteTint, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: paletteTint, z: 0, w: 0),
-                    "inputBVector": CIVector(x: 0, y: 0, z: paletteTint, w: 0),
-                ])
-        let dimmed = tint.applyingFilter("CIScreenBlendMode", parameters: [kCIInputBackgroundImageKey: colors])
-            .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: -0.15])
-        return context.createCGImage(dimmed, from: canvas, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
-    }
-
-    /// The picture turned a share of the way around its middle, this wide, in the middle of a place.
-    private nonisolated static func spun(_ image: CIImage, turn: Double, across: CGFloat, into place: CGRect) -> CIImage {
-        let side = image.extent.width, scale = across / side
-        return image.clampedToExtent()
-            .transformed(
-                by: CGAffineTransform(translationX: -side / 2, y: -side / 2)
-                    .concatenating(CGAffineTransform(scaleX: scale, y: scale))
-                    .concatenating(CGAffineTransform(rotationAngle: turn * 2 * .pi))
-                    .concatenating(CGAffineTransform(translationX: place.midX, y: place.midY))
-            )
-            .cropped(to: place)
-    }
-
-    /// One copy of the cover, where it is at a moment, in shares of the picture.
-    private struct Copy {
-        let size: CGFloat
-        /// In turns.
-        let turn: Double
-        let middle: CGVector
-        let twistAt: CGVector
-        let clockwise: Bool
-    }
-
-    /// As large as the picture and more; most of it; and half and a quarter of it, circling. A turn
-    /// takes the best part of a minute, so the colors drift calmly.
-    private nonisolated static func copies(at t: Double) -> [Copy] {
-        func circling(_ turns: Double, _ radius: Double) -> CGVector {
-            CGVector(dx: cos(turns * 2 * .pi) * radius, dy: sin(turns * 2 * .pi) * radius)
-        }
-        func copy(_ size: Double, turn: Double, middle: CGVector, twist: Double, index: Int, clockwise: Bool) -> Copy {
-            let around = circling(twist + Double(index) * 0.37, size * twistOffset)
-            return Copy(
-                size: size, turn: turn, middle: middle,
-                twistAt: CGVector(dx: middle.dx + around.dx, dy: middle.dy + around.dy), clockwise: clockwise)
-        }
-        return [
-            copy(1.25, turn: t / 48, middle: .zero, twist: t / 37, index: 0, clockwise: false),
-            copy(0.8, turn: -t / 24, middle: CGVector(dx: -0.1, dy: -0.1), twist: -t / 48, index: 1, clockwise: true),
-            copy(0.5, turn: t / 48, middle: circling(t / 64, 0.25), twist: t / 59, index: 2, clockwise: false),
-            copy(0.25, turn: -t / 36, middle: circling(-t / 40 + 0.4, 0.125), twist: -t / 70, index: 3, clockwise: true),
-        ]
-    }
-
-    /// The largest is `opaque`, and its edges run on, so there's color everywhere.
-    private nonisolated static func layer(of cover: CIImage, _ copy: Copy, opaque: Bool) -> CIImage {
-        let side = Self.side, width = cover.extent.width
-        let scale = copy.size * side / width
-        let placed = (opaque ? cover.clampedToExtent() : cover).transformed(
-            by: CGAffineTransform(translationX: -width / 2, y: -width / 2)
-                .concatenating(CGAffineTransform(scaleX: scale, y: scale))
-                .concatenating(CGAffineTransform(rotationAngle: copy.turn * 2 * .pi))
-                .concatenating(CGAffineTransform(translationX: side * (0.5 + copy.middle.dx), y: side * (0.5 + copy.middle.dy))))
-        let twist = CIFilter.twirlDistortion()
-        twist.inputImage = placed
-        twist.center = CGPoint(x: side * (0.5 + copy.twistAt.dx), y: side * (0.5 + copy.twistAt.dy))
-        twist.radius = Float(twistReach * copy.size * side)
-        twist.angle = copy.clockwise ? -twistAngle : twistAngle
-        guard let twisted = twist.outputImage else { return placed }
-        if opaque { return twisted }
-        let faded = CIFilter.colorMatrix()
-        faded.inputImage = twisted
-        faded.aVector = CIVector(x: 0, y: 0, z: 0, w: opacity)
-        return faded.outputImage ?? twisted
+        previous = time
+        return elapsed
     }
 }
 

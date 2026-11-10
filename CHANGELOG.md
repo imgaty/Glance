@@ -15,6 +15,10 @@
 
 ### Live Activities
 
+- Rebuilt the flowing artwork background with three turning planes and a soft
+  warp, and kept it in place while paused. Changing the background now fades
+  between the choices without moving a blur boundary across the player.
+
 - Fixed pressing the volume slider in the sound output menu taking the playing
   app to full volume, and dragging it leaving the knob at the end. Taking the
   knob keeps it where it is, and clicking the track takes it to that position.
