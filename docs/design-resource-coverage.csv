@@ -1,0 +1,35 @@
+Path,Review method,SHA-256
+Package.swift,"Native platform, icon compilation and packaging configuration reviewed",26429264b120aacf1dac6ae656766c24e621fd55278292cad54f3ca00a78a75d
+Resources/AppIcon.icon/Assets/screen.svg,Layered icon geometry and appearance configuration reviewed,a01a85c38971c206062faaa0e2267b7540e13763dcde0bcdb822f57a83bd03cf
+Resources/AppIcon.icon/Assets/top.svg,Layered icon geometry and appearance configuration reviewed,7e9da0a63aed3e2f662a9ce689459d41d72522aee3befeb62464f366e98eba06
+Resources/AppIcon.icon/icon.json,Layered icon geometry and appearance configuration reviewed,acf0fce7f4838b2e661603ec1767852bddb69f9da3344b289ae524ef18ef53b8
+Resources/GlanceShare-Info.plist,Bundle declaration and platform/permission copy reviewed,0b8af3cc6558f78d50e7b71d3b3d58780bfdd43ddae5fd1c9a31542cbeb1f546
+Resources/GlanceShare.entitlements,Bundle declaration and platform/permission copy reviewed,b82b7fb6b35dd754ecc1a826e8e275afc9b7921bcd870ba6954453076c9b56a7
+Resources/Headphones/airpods-3-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 64x50, 60 fps, 4 seconds",d5f9c60722119637127e8ed97286bdb1ae10f165df8e2227579a7715411e4ecb
+Resources/Headphones/airpods-3.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 76x50, 60 fps, 4 seconds",7f6a72521826887c7b1a8d9ce10328aa7a344a560ab5165485f320c006c48f12
+Resources/Headphones/airpods-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 64x50, 60 fps, 4 seconds",7d1b6361f8e790ca494e7fb9fab36d52e6bd8653f0b08bd150faa65e3759a225
+Resources/Headphones/airpods-max.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 50x50, 60 fps, 4 seconds",9152f58cd8632e2e6abc0cb7014660c6febde00dbfe2529819f2b72461841c6d
+Resources/Headphones/airpods-pro-2-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 72x50, 60 fps, 4 seconds",8545a582d63e8d4075bc23d62776c718520baf285a467894aa8584e094d035fa
+Resources/Headphones/airpods-pro-2.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 88x50, 60 fps, 4 seconds",fa869995464453ea79c1d67bab428bf52ad89d62b14b1f49fc49491c4136e305
+Resources/Headphones/airpods-pro-3-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 72x50, 60 fps, 4 seconds",1c731fa0f511df290b4be5567af4f769efcf6c7bc5f1f85e6c4481243344856e
+Resources/Headphones/airpods-pro-3.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 122x50, 60 fps, 4 seconds",22cf685a2a1add4256da640ce5d8ddeb8b99bf1309e4c6550fa5b1d87cea96a3
+Resources/Headphones/airpods-pro-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 72x50, 60 fps, 4 seconds",56dd5d7bdb4cd822c875a8cdb47afd8d39db680dad3fa73454024efcf4d7f374
+Resources/Headphones/airpods-pro.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 90x50, 60 fps, 4 seconds",ea99d41b9efcfedbbaf446b8e911cbc6141bcbb6212029dec64c6eb97a0cc94e
+Resources/Headphones/airpods.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 88x50, 60 fps, 4 seconds",9f050b1c48127d4b2ae866fb4a01c25d65533812453f800ec1c50fca18cae639
+Resources/Headphones/beats-360.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 50x50, 60 fps, 4 seconds",0739feb4fe67028ec04bb197907243e2b308ee9f30095b49c8280e2b2bd650f3
+Resources/Headphones/beats-flex.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 76x50, 60 fps, 4 seconds",58a24b850d8fa1eee7b9cde11935c0b68caca6711a9f9f3edfcf42a36ff0e980
+Resources/Headphones/beats-pill.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 166x50, 60 fps, 4 seconds",1e35011b66d4e06fd152b0d03067c59dfbb224e632b34de6ecec6792bfae05b8
+Resources/Headphones/beats-solo-4.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 50x50, 60 fps, 4 seconds",0d6490175b5d5099dfe7bfb9d926be8f2d4d1b6b8200bbb3ddc5429b2d2038ce
+Resources/Headphones/beats-solo-buds-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 102x50, 60 fps, 4 seconds",7e1a6f25c536b62fb20fe36ce987f3c58e4666caa39f954db0046b4b84ac6250
+Resources/Headphones/beats-solo-buds.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 124x50, 60 fps, 4 seconds",c69ab79b03d262e3e96f9bd4e5af6c7d047c5ddedfb0520a64011f8e4d9899a4
+Resources/Headphones/beats-studio-buds-plus-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 78x50, 60 fps, 4 seconds",db385381bfd2a471f55728cda0fb5350d9347b619fb0601279399fb83e90ce3c
+Resources/Headphones/beats-studio-buds-plus.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 134x50, 60 fps, 4 seconds",3b6ca46b6c745494cc0ed2ebe01a88371e0ce3b89f80b24a0f9a6be15ef50022
+Resources/Headphones/beats-studio-pro.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 52x50, 60 fps, 4 seconds",d7a4a1264b07610c22e5a66ac9dc1310b4815bec46d63ff387a39f55620fbb39
+Resources/Headphones/powerbeats-fit-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 138x50, 60 fps, 4 seconds",a983d0f2a510e0d70b743691ef8b624fcee9f5e3a8ff663cb72a7bee54d6a195
+Resources/Headphones/powerbeats-fit.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 130x50, 60 fps, 4 seconds",54b0ae0e570f63bcae8d9ad7e7ff097bc7cb056d0a5f8523a4696fc4d8f9bea7
+Resources/Headphones/powerbeats-pro-2-case.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 138x50, 60 fps, 4 seconds",7124434fa16d6d65eb378bdeacdbcd9785c55780be37190ce87d08ef9a45e280
+Resources/Headphones/powerbeats-pro-2.mov,"AVFoundation decoded; quarter-turn frame visually inspected; 116x50, 60 fps, 4 seconds",159e97bd8faac1c7978ccba06a726372e383f5b385cbe8fea8e1122ae897bdcc
+Resources/Info.plist,Bundle declaration and platform/permission copy reviewed,03cd528a640b39625a77a189ac523064b94624ff103662ce3965604114e03ccc
+Resources/InfoPlist.xcstrings,Catalog coverage and representative strings checked; selected native localized screens captured,09e8adca5318a192df1a6e716dbcbe0aae417faee115ab37021df72887f7547e
+Resources/Localizable.xcstrings,Catalog coverage and representative strings checked; selected native localized screens captured,c94ded73f1cc462ea4a001f9e9bfa009539d1927b8e5c1e9090a68775f51e78c
+build.sh,"Native platform, icon compilation and packaging configuration reviewed",d8062afdd4941a824d30e80f2ad542c835ab73a145d20189f0cb0abc0d236e2b

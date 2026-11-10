@@ -408,6 +408,9 @@
 
 ### Settings
 
+- Added a [design review](docs/DESIGN-REVIEW.md) covering every app area and the
+  remaining accessibility, readability and wording issues. Corrected the
+  manual's description of which private copies the tray can skip.
 - Reduced the work done when opening Settings pages, keeping visited pages
   ready without laying out every hidden page on each switch. Small choice
   pictures no longer poll the playing app or look up animated covers.

@@ -308,11 +308,12 @@ they move. If a file is deleted, it leaves the tray too.
 ### What you copy
 
 Text, links, pictures and files you copy show up in the tray, and stay for
-30 minutes, 8 hours or 7 days, as set in **Settings > Tray**. Passwords, and
-anything an app marks as private, are never kept, and neither is what you copy
-on another device. Copying something that's already there moves it to the
-front. What you copy while the pointer is on the tray waits until it leaves, so
-nothing moves under the pointer.
+30 minutes, 8 hours or 7 days, as set in **Settings > Tray**. Copies marked
+private, copies from known password managers, and copies from another device
+are skipped. Glance cannot recognize every password or other private text.
+Copying something that's already there moves it to the front. What you copy
+while the pointer is on the tray waits until it leaves, so nothing moves under
+the pointer.
 
 To keep a copy until you remove it, right-click it and choose Keep; a pin shows
 before its name. Choose Don't Keep to let it go again, after the usual time from
