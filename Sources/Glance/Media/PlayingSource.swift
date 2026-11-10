@@ -31,16 +31,16 @@ enum PlayingSource {
                     reveal current track
                     activate
                 end tell
-                """) != nil
+                """, for: app) != nil
         case PlayerScripting.spotify:
-            guard let track = await PlayerScripting.run(#"tell application "Spotify" to return spotify url of current track"#),
+            guard let track = await PlayerScripting.run(#"tell application "Spotify" to return spotify url of current track"#, for: app),
                 let address = spotifyContext(of: track.trimmingCharacters(in: .whitespacesAndNewlines)) ?? URL(string: track),
                 address.scheme == "spotify"
             else { return false }
             return NSWorkspace.shared.open(address)
         default:
             guard !title.isEmpty else { return false }
-            if let script = tabScript(app: app, title: title), await PlayerScripting.run(script) == "found" { return true }
+            if let script = tabScript(app: app, title: title), await PlayerScripting.run(script, for: app) == "found" { return true }
             return tab(app: app, title: title)
         }
     }

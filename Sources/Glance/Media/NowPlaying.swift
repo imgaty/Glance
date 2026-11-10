@@ -86,6 +86,13 @@ final class NowPlaying: ObservableObject {
     private var commands: FileHandle?
     private var buffer = Data()
 
+    /// Presentation fixtures can apply reports without polling real players or following their audio.
+    private let followsPlayers: Bool
+
+    init(followsPlayers: Bool = true) {
+        self.followsPlayers = followsPlayers
+    }
+
     var hasMedia: Bool { !title.isEmpty }
 
     /// Spotify's DJ is talking: what it says plays as a song of no length on an album called DJ.
@@ -162,7 +169,7 @@ final class NowPlaying: ObservableObject {
     private func command(_ remote: String, script: String) {
         guard !isDemo else { return }
         guard let app = directApp else { return send(remote) }
-        Task { _ = await PlayerScripting.run(PlayerScripting.tell(app, script)) }
+        Task { _ = await PlayerScripting.run(PlayerScripting.tell(app, script), for: app) }
     }
 
     // MARK: Shuffle, repeat and favorite
@@ -175,7 +182,7 @@ final class NowPlaying: ObservableObject {
             return
         }
         Task {
-            let reply = await PlayerScripting.run(script)
+            let reply = await PlayerScripting.run(script, for: app)
             guard app == appBundleID else { return }
             // Spotify's own bar says whether the DJ chooses the music, where Spotify shows it; where it
             // doesn't (a Spotify started without its accessibility switch), what Spotify was last
@@ -212,7 +219,7 @@ final class NowPlaying: ObservableObject {
             let script = PlayerScripting.readScript(for: app)
         else { return }
         let track = track
-        guard let reply = await PlayerScripting.run(script), app == appBundleID, track == self.track else { return }
+        guard let reply = await PlayerScripting.run(script, for: app), app == appBundleID, track == self.track else { return }
         let favorite = favorite(reading: PlayerScripting.options(from: reply, app: app).favorite)
         if favorite != options.favorite { options.favorite = favorite }
     }
@@ -288,10 +295,11 @@ final class NowPlaying: ObservableObject {
     /// reports the old value for a moment after a change, so the read waits for it to settle, and
     /// quick clicks (off, all, one) read back once, after the last of them.
     private func readBack(after script: String? = nil, answered: ((Bool) -> Void)? = nil) {
+        guard let app = appBundleID, !isDemo else { return }
         changedAt = .now
         settle?.cancel()
         settle = Task {
-            if let script { answered?(await PlayerScripting.run(script) != nil) }
+            if let script { answered?(await PlayerScripting.run(script, for: app) != nil) }
             try? await Task.sleep(for: .seconds(1.2))
             guard !Task.isCancelled else { return }
             refreshOptions()
@@ -304,7 +312,7 @@ final class NowPlaying: ObservableObject {
         guard !isDemo else { return }
         guard let app = appBundleID, let script = PlayerScripting.positionScript(for: app) else { return }
         let track = title, asked = Date.now
-        guard let reply = await PlayerScripting.run(script),
+        guard let reply = await PlayerScripting.run(script, for: app),
             let milliseconds = Double(reply.trimmingCharacters(in: .whitespaces)),
             app == appBundleID, track == title
         else { return }
@@ -335,7 +343,7 @@ final class NowPlaying: ObservableObject {
     /// tour's song, whose cover and words come from Apple Music and LRCLIB as any song's do. If
     /// either can't be had, offline say, it becomes the made-up song.
     static func demo(_ song: FeaturedSong) -> NowPlaying {
-        let player = NowPlaying()
+        let player = NowPlaying(followsPlayers: false)
         player.isDemo = true
         player.isSong = true
         player.isPlaying = true
@@ -551,6 +559,7 @@ final class NowPlaying: ObservableObject {
         isSong = !title.isEmpty && !artist.isEmpty && !other && looksLikeMusic && duration <= 20 * 60 && !djTalking
         // The waveforms listen to the process making the sound while it plays, and the volume
         // slider turns it up and down.
+        guard followsPlayers else { return }
         let pid = (report["pid"] as? NSNumber)?.int32Value ?? 0
         AudioLevels.shared.follow(pid: pid, playing: isPlaying)
         AppVolume.shared.follow(app: app, pid: pid)
@@ -586,7 +595,7 @@ final class NowPlaying: ObservableObject {
         spotifyArtworkAsked = track
         Task {
             let script = #"tell application "Spotify" to return artwork url of current track"#
-            guard let reply = await PlayerScripting.run(script),
+            guard let reply = await PlayerScripting.run(script, for: PlayerScripting.spotify),
                 let data = await PlayerScripting.artwork(of: PlayerScripting.spotify, url: reply.trimmingCharacters(in: .whitespacesAndNewlines)),
                 let image = NSImage(data: data),
                 self.track == track, artwork == nil
@@ -630,7 +639,7 @@ final class NowPlaying: ObservableObject {
         }
         var chosen: (app: String, parts: [String])?
         for app in candidates {
-            guard let reply = await PlayerScripting.run(PlayerScripting.statusScript(for: app)) else { continue }
+            guard let reply = await PlayerScripting.run(PlayerScripting.statusScript(for: app), for: app) else { continue }
             let parts = reply.components(separatedBy: PlayerScripting.separator)
             guard parts.count >= 6 else { continue }
             if parts[0] == "playing" {

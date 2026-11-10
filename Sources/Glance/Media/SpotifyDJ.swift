@@ -214,7 +214,7 @@ enum SpotifyDJ {
         // Once it answers, on with the DJ, which goes on with its session.
         for _ in 0..<40 {
             try? await Task.sleep(for: .milliseconds(250))
-            if await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "play track \"\(PlayerScripting.djAddress)\"")) != nil { break }
+            if await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "play track \"\(PlayerScripting.djAddress)\""), for: PlayerScripting.spotify) != nil { break }
         }
         // Its button shows once the DJ plays.
         for _ in 0..<20 {
@@ -227,8 +227,8 @@ enum SpotifyDJ {
     /// Spotify shows its button only while the DJ plays: paused, it's played, and the button pressed
     /// once it shows. Whether it was.
     static func playAndPress() async -> Bool {
-        guard await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "return player state as text")) != "playing" else { return false }
-        guard await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "play")) != nil else { return false }
+        guard await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "return player state as text"), for: PlayerScripting.spotify) != "playing" else { return false }
+        guard await PlayerScripting.run(PlayerScripting.tell(PlayerScripting.spotify, "play"), for: PlayerScripting.spotify) != nil else { return false }
         for _ in 0..<12 {
             try? await Task.sleep(for: .milliseconds(250))
             if await press() { return true }

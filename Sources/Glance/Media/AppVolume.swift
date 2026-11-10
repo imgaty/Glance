@@ -80,7 +80,7 @@ final class AppVolume: ObservableObject {
     /// Music's and Spotify's volume can change in the app itself, so it's read as the menu opens.
     func refresh() async {
         guard let app, Self.scriptable(app),
-            let reply = await PlayerScripting.run(PlayerScripting.tell(app, "return sound volume")),
+            let reply = await PlayerScripting.run(PlayerScripting.tell(app, "return sound volume"), for: app),
             let volume = Double(reply.trimmingCharacters(in: .whitespacesAndNewlines)), app == self.app
         else { return }
         level = min(max(volume / 100, 0), 1)
@@ -135,7 +135,7 @@ final class AppVolume: ObservableObject {
         Task {
             while let volume = wanted {
                 wanted = nil
-                if await PlayerScripting.run(PlayerScripting.tell(app, "set sound volume to \(volume)")) == nil {
+                if await PlayerScripting.run(PlayerScripting.tell(app, "set sound volume to \(volume)"), for: app) == nil {
                     Self.log.error("\(app, privacy: .public) didn't take its volume")
                 }
             }

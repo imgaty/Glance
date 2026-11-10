@@ -280,7 +280,7 @@ enum PlayerScripting {
     /// Whether the song playing in Spotify is explicit. Its scripting doesn't say, but Spotify's
     /// public page for the song, the one it embeds in other sites, does.
     static func spotifyExplicit() async -> Bool? {
-        guard let uri = await run(#"tell application "Spotify" to return id of current track"#),
+        guard let uri = await run(#"tell application "Spotify" to return id of current track"#, for: spotify),
             let id = spotifyTrackID(uri.trimmingCharacters(in: .whitespacesAndNewlines)),
             let url = URL(string: "https://open.spotify.com/embed/track/" + id)
         else { return nil }
@@ -310,23 +310,37 @@ enum PlayerScripting {
         }
         return await withCheckedContinuation { continuation in
             queue.async {
+                guard isRunning(music) else { return continuation.resume(returning: nil) }
                 var error: NSDictionary?
-                let reply = NSAppleScript(source: #"tell application "Music" to get raw data of artwork 1 of current track"#)?
+                let reply = compiled(whileRunning(#"tell application "Music" to get raw data of artwork 1 of current track"#, app: music))?
                     .executeAndReturnError(&error)
                 continuation.resume(returning: error == nil ? reply?.data : nil)
             }
         }
     }
 
-    /// Runs off the main thread: the first script to an app waits on the permission prompt.
-    static func run(_ source: String) async -> String? {
+    /// Runs off the main thread, only while the target is already running. Checking on the queue
+    /// matters: the player may quit while another script waits for its permission prompt.
+    static func run(_ source: String, for app: String) async -> String? {
         await withCheckedContinuation { continuation in
             queue.async {
+                guard isRunning(app) else { return continuation.resume(returning: nil) }
                 var error: NSDictionary?
-                let reply = compiled(source)?.executeAndReturnError(&error)
+                let reply = compiled(whileRunning(source, app: app))?.executeAndReturnError(&error)
                 continuation.resume(returning: error == nil ? reply?.stringValue ?? "" : nil)
             }
         }
+    }
+
+    private static func isRunning(_ app: String) -> Bool {
+        NSRunningApplication.runningApplications(withBundleIdentifier: app).contains { !$0.isTerminated }
+    }
+
+    /// AppleScript normally launches the app named by `tell`. Its `running` property doesn't:
+    /// check again inside the script, before any command that could reopen a closed player.
+    private static func whileRunning(_ source: String, app: String) -> String {
+        let identifier = app.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        return "if application id \"\(identifier)\" is not running then error number -600\n" + source
     }
 
     /// Scripts compiled once and kept, only ever touched on the queue: compiling is most of what a

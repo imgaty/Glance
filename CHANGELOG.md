@@ -264,6 +264,7 @@
 
 ### Player
 
+- Fixed background player reads reopening Music or Spotify after it was quit.
 - Changed the sound controls to a popover with the system's default slider,
   including its glass handle and native dragging.
 - Changed the sound menu's slider to keep its native pressed appearance while

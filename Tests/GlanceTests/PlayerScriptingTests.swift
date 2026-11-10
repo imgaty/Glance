@@ -24,6 +24,14 @@ struct PlayerScriptingTests {
         #expect(spotify == "com.spotify.client")
     }
 
+    @Test("A queued read for a closed app never executes its script")
+    func closedPlayer() async {
+        // Even a script that needs no app must not run when its named target is absent.
+        let absent = "dev.vibe.Glance.tests.absent." + UUID().uuidString
+        let reply = await PlayerScripting.run("return \"executed\"", for: absent)
+        #expect(reply == nil)
+    }
+
     // MARK: - Repeat
 
     @Test("Repeat steps through off, all and one, then back to off")
@@ -385,7 +393,7 @@ struct PlayerScriptingTests {
     @Test("While the DJ talks the cover is its own and it's no song, and the song's cover comes back after")
     @MainActor
     func djCover() throws {
-        let player = NowPlaying()
+        let player = NowPlaying(followsPlayers: false)
         let talking: [String: Any] = [
             "direct": true, "app": PlayerScripting.spotify, "playing": true, "title": "Up next", "artist": "DJ X", "album": "DJ", "duration": 0.0,
             "elapsed": 0.0, "mediaType": "music", "artwork": "",

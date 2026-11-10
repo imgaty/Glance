@@ -157,6 +157,9 @@ fingers on the display are macOS's, as they are on the trackpad.
 
 ## The player
 
+Glance reads Music and Spotify only while they are already running; background
+updates do not reopen a player you quit.
+
 The open notch shows the cover, the song's name and artist, a progress bar, and
 the controls. Drag the progress bar to move through the song. With
 **Show app icon on cover** on, the playing app's icon sits on the cover's
