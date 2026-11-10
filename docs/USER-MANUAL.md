@@ -225,7 +225,8 @@ Customize Controls.
 
 The `Sound Output` button opens a menu laid out like the Mac's Sound menu. At
 its top, a slider sets the playing app's volume without touching any other
-app's. Drag the knob to change the level, or click the track to move it there.
+app's. The slider uses the system's glass handle, including its pressed look.
+Drag the knob to change the level, or click the track to move it there.
 For `Music` and `Spotify` it reads their own volume as the menu opens; other
 apps need the `Audio from apps` permission. Below it, under **Output**, each
 speaker and pair of headphones is in a circle, the one playing filled in your

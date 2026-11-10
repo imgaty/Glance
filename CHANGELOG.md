@@ -252,6 +252,8 @@
 
 ### Player
 
+- Changed the sound menu's slider to keep its native pressed appearance while
+  the volume follows the pointer.
 - Fixed the waveform appearing too bright or too dim with large, detailed
   covers.
 - Changed lyrics to keep sung lines above the line playing, softly blurred as

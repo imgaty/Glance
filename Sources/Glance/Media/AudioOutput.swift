@@ -266,8 +266,8 @@ final class AudioOutput: NSObject, ObservableObject {
 
 /// The playing app's volume in the sound output menu, laid out as the Mac's Sound menu: Apple's own
 /// slider, with its Liquid Glass knob, a quiet speaker at the left end, a loud one at the right.
-/// SwiftUI draws the knob, and an AppKit view owns the press and drag. The menu's press never
-/// reaches SwiftUI's slider, which otherwise reads it as full volume (see `Hosting`).
+/// SwiftUI draws and animates its own knob, including its pressed glass. AppKit follows the
+/// physical pointer; the menu's incorrect SwiftUI positions are ignored while it is held.
 final class VolumeMenuSlider: NSView {
     init(volume: AppVolume) {
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
@@ -303,6 +303,7 @@ final class VolumeMenuSlider: NSView {
     /// Taken by the knob, it moves from where it was taken; pressed elsewhere, it goes there first.
     final class Hosting: NSView {
         private let content: NSHostingView<VolumeSlider>
+        private var forwarding = false
         var rootView: VolumeSlider { content.rootView }
 
         init(rootView: VolumeSlider) {
@@ -322,8 +323,8 @@ final class VolumeMenuSlider: NSView {
 
         override var intrinsicContentSize: NSSize { content.intrinsicContentSize }
 
-        // The press belongs to AppKit, before SwiftUI's hosting view or its gesture recognizers
-        // can take it. The hosted slider still draws and exposes its Accessibility actions.
+        // AppKit owns the pointer's position. Original events are also forwarded to the hosted
+        // slider for its native interaction state, with its position binding guarded.
         override func hitTest(_ point: NSPoint) -> NSView? {
             super.hitTest(point) == nil ? nil : self
         }
@@ -358,16 +359,45 @@ final class VolumeMenuSlider: NSView {
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
         override func mouseDown(with event: NSEvent) {
+            guard !forwarding else { return }
             Self.trace(
                 "press: event=\(event.type.rawValue) window=\(event.windowNumber) location=\(event.locationInWindow) local=\(convert(event.locationInWindow, from: nil)) bounds=\(bounds) buttons=\(NSEvent.pressedMouseButtons)"
             )
             guard let pressed = pointer(self) else { return }
-            followPointer(from: pressed)
+            guard rootView.canChange else { return }
+            // Let the real control see the real press, so it owns its pressed appearance. Its
+            // binding is already guarded before it can misread the menu's event coordinates.
+            rootView.level.held = true
+            defer { rootView.level.letGo() }
+            forward(event)
+            followPointer(from: pressed, input: forward)
+        }
+
+        override func mouseUp(with event: NSEvent) { forward(event) }
+
+        /// Only original physical events reach the hosted control. If an unhandled one comes
+        /// back through the responder chain, stop there rather than forwarding it in a circle.
+        private func forward(_ event: NSEvent) {
+            guard !forwarding else { return }
+            forwarding = true
+            let level = rootView.level
+            let wasHeld = level.held
+            level.held = true
+            defer {
+                level.held = wasHeld
+                forwarding = false
+            }
+            switch event.type {
+            case .leftMouseDown: content.mouseDown(with: event)
+            case .leftMouseDragged: content.mouseDragged(with: event)
+            case .leftMouseUp: content.mouseUp(with: event)
+            default: break
+            }
         }
 
         /// Tracks only the physical pointer. Kept apart from mouseDown so a hidden test can
         /// supply positions without creating or posting mouse events, or changing app volume.
-        func followPointer(from pressed: CGFloat) {
+        func followPointer(from pressed: CGFloat, input: ((NSEvent) -> Void)? = nil) {
             let level = rootView.level
             let log = AppVolume.log
             guard rootView.canChange, let window else {
@@ -392,6 +422,7 @@ final class VolumeMenuSlider: NSView {
                     matching: [.leftMouseDragged, .leftMouseUp], until: Date(timeIntervalSinceNow: 1.0 / 120), inMode: .eventTracking, dequeue: true)
                 passes += 1
                 if let next {
+                    input?(next)
                     Self.trace(
                         "tracking: event=\(next.type.rawValue) location=\(next.locationInWindow) local=\(convert(next.locationInWindow, from: nil)) bounds=\(bounds) value=\(level.value) buttons=\(NSEvent.pressedMouseButtons)"
                     )
@@ -511,18 +542,20 @@ final class VolumeMenuSlider: NSView {
             })
 
         var body: some View {
-            Slider(value: Binding(get: { level.value }, set: level.asked), in: 0...1)
-                .labelsHidden()
-                .tint(Self.fill)
-                .disabled(!canChange)
-                .environment(\.controlActiveState, .key)
-                // Music's and Spotify's own volume, read afresh as the menu opens.
-                .task {
-                    guard let volume else { return }
-                    let revision = level.revision
-                    await volume.refresh()
-                    level.show(volume.level, since: revision)
-                }
+            Slider(value: Binding(get: { level.value }, set: level.asked), in: 0...1) { editing in
+                Hosting.trace("Native slider editing: \(editing), held=\(level.held), value=\(level.value)")
+            }
+            .labelsHidden()
+            .tint(Self.fill)
+            .disabled(!canChange)
+            .environment(\.controlActiveState, .key)
+            // Music's and Spotify's own volume, read afresh as the menu opens.
+            .task {
+                guard let volume else { return }
+                let revision = level.revision
+                await volume.refresh()
+                level.show(volume.level, since: revision)
+            }
         }
     }
 
