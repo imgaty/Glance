@@ -46,75 +46,77 @@ struct NotchPreview: View {
     var body: some View {
         let hinting = interactive && hintsOpening && !paused && !hovering && !pressing
         GeometryReader { proxy in
-            // With the lyrics open beside the player, it draws back to make room for them.
-            let full = Self.scale(for: scaleWidth ?? proxy.size.width, model: model)
-            let least = Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: true)
-            let scale = model.showsLyrics && model.state == .open ? least : full
-            let geometry = SettingsPreview.Geometry(
-                rect: { state in
-                    let m = model.metrics(for: state)
-                    return CGRect(
-                        x: proxy.size.width / 2 - m.totalWidth * scale / 2, y: top.edge * scale,
-                        width: m.totalWidth * scale, height: m.height * scale)
-                }, scale: scale)
-            ZStack(alignment: .top) {
-                // Laid out once, as large as it's ever seen, drawn back with the lyrics, so drawing
-                // back only scales it: laid out afresh at each scale, the page, menu bar and window
-                // behind the notch all moved with the animation, and held it still for a third of a
-                // second. The page is drawn for the larger scale, so it's never drawn smaller than
-                // it's seen.
-                ScreenPicture(top: top, size: CGSize(width: proxy.size.width / least, height: proxy.size.height / least)) {
-                    ApplePage(scrolls: !still, scale: full)
-                } notch: {
-                    // Its sizes change as a whole: drawn smaller, the glass otherwise loses its place
-                    // as the notch changes size, and stays there.
-                    NotchView(model: model, display: display)
-                        .geometryGroup()
-                }
-                .scaleEffect(scale, anchor: .top)
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-                .clipped()
-                if interactive, hintsOpening {
-                    let path = hintPath(proxy.size, geometry)
-                    TryItPointer(from: path.from, to: path.to, active: hinting, start: hintStart, trigger: trigger)
-                }
-                if let demo {
-                    NotchDemoScene(demo: demo, model: model, size: proxy.size, geometry: geometry)
-                }
-            }
-            // The notch answers the pointer showing how, as it answers the real one.
-            .task(id: "\(hinting) \(trigger) \(proxy.size.width) \(proxy.size.height)") {
-                guard hinting else { return }
-                await demonstrate(along: hintPath(proxy.size, geometry), geometry)
-            }
-            // Followed over the whole picture, the notch included, so what's in the notch still
-            // gets the pointer and the clicks.
-            .contentShape(Rectangle())
-            .onContinuousHover { phase in
-                if case .active = phase { pointerOver?.wrappedValue = true } else { pointerOver?.wrappedValue = false }
-                guard demo == nil else { return }
-                switch phase {
-                case .active(let p):
-                    hovering = true
-                    preview.pointer(at: p, geometry)
-                case .ended:
-                    hovering = false
-                    preview.pointer(at: nil, geometry)
-                }
-            }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { drag in
-                        if demo == nil, !pressing {
-                            pressing = true
-                            preview.press(at: drag.startLocation, geometry)
-                        }
+            if proxy.size.width > 0, proxy.size.height > 0 {
+                // With the lyrics open beside the player, it draws back to make room for them.
+                let full = Self.scale(for: scaleWidth ?? proxy.size.width, model: model)
+                let least = Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: true)
+                let scale = model.showsLyrics && model.state == .open ? least : full
+                let geometry = SettingsPreview.Geometry(
+                    rect: { state in
+                        let m = model.metrics(for: state)
+                        return CGRect(
+                            x: proxy.size.width / 2 - m.totalWidth * scale / 2, y: top.edge * scale,
+                            width: m.totalWidth * scale, height: m.height * scale)
+                    }, scale: scale)
+                ZStack(alignment: .top) {
+                    // Laid out once, as large as it's ever seen, drawn back with the lyrics, so drawing
+                    // back only scales it: laid out afresh at each scale, the page, menu bar and window
+                    // behind the notch all moved with the animation, and held it still for a third of a
+                    // second. The page is drawn for the larger scale, so it's never drawn smaller than
+                    // it's seen.
+                    ScreenPicture(top: top, size: CGSize(width: proxy.size.width / least, height: proxy.size.height / least)) {
+                        ApplePage(scrolls: !still, scale: full)
+                    } notch: {
+                        // Its sizes change as a whole: drawn smaller, the glass otherwise loses its place
+                        // as the notch changes size, and stays there.
+                        NotchView(model: model, display: display)
+                            .geometryGroup()
                     }
-                    .onEnded { drag in
-                        guard pressing else { return }
-                        pressing = false
-                        preview.release(at: drag.location, geometry)
-                    })
+                    .scaleEffect(scale, anchor: .top)
+                    .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                    .clipped()
+                    if interactive, hintsOpening {
+                        let path = hintPath(proxy.size, geometry)
+                        TryItPointer(from: path.from, to: path.to, active: hinting, start: hintStart, trigger: trigger)
+                    }
+                    if let demo {
+                        NotchDemoScene(demo: demo, model: model, size: proxy.size, geometry: geometry)
+                    }
+                }
+                // The notch answers the pointer showing how, as it answers the real one.
+                .task(id: "\(hinting) \(trigger) \(proxy.size.width) \(proxy.size.height)") {
+                    guard hinting else { return }
+                    await demonstrate(along: hintPath(proxy.size, geometry), geometry)
+                }
+                // Followed over the whole picture, the notch included, so what's in the notch still
+                // gets the pointer and the clicks.
+                .contentShape(Rectangle())
+                .onContinuousHover { phase in
+                    if case .active = phase { pointerOver?.wrappedValue = true } else { pointerOver?.wrappedValue = false }
+                    guard demo == nil else { return }
+                    switch phase {
+                    case .active(let p):
+                        hovering = true
+                        preview.pointer(at: p, geometry)
+                    case .ended:
+                        hovering = false
+                        preview.pointer(at: nil, geometry)
+                    }
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { drag in
+                            if demo == nil, !pressing {
+                                pressing = true
+                                preview.press(at: drag.startLocation, geometry)
+                            }
+                        }
+                        .onEnded { drag in
+                            guard pressing else { return }
+                            pressing = false
+                            preview.release(at: drag.location, geometry)
+                        })
+            }
         }
         // As on screen: closed, the notch shows what's playing only while something plays.
         .onChange(of: "\(nowPlaying.isPlaying) \(liveActivity) \(ObjectIdentifier(model).hashValue)", initial: true) {
@@ -303,28 +305,30 @@ struct NotchThumbnail: View {
         // Still where asked, or on a page not shown.
         let still = paused || hidden
         GeometryReader { proxy in
-            let size = model.openSize
-            let scale = proxy.size.width / (size.width + PlayerLayout.cornerRadius * 2 + 20)
-            let screen = CGSize(width: proxy.size.width / scale, height: proxy.size.height / scale)
-            ZStack(alignment: .top) {
-                // What's under the notch never changes; the notch does, all the time.
-                StillScreen(top: top, size: screen, scale: scale, edge: false) {
-                    ApplePage.Still()
+            if proxy.size.width > 0, proxy.size.height > 0 {
+                let size = model.openSize
+                let scale = proxy.size.width / (size.width + PlayerLayout.cornerRadius * 2 + 20)
+                let screen = CGSize(width: proxy.size.width / scale, height: proxy.size.height / scale)
+                ZStack(alignment: .top) {
+                    // What's under the notch never changes; the notch does, all the time.
+                    StillScreen(top: top, size: screen, scale: scale, edge: false) {
+                        ApplePage.Still()
+                    }
+                    ScreenPicture(top: top, size: screen, edge: false, still: false) {
+                        EmptyView()
+                    } notch: {
+                        NotchView(model: model, display: display, background: background)
+                            .allowsHitTesting(false)
+                            .environment(\.notchPaused, still)
+                            .environment(\.notchThumbnail, true)
+                    }
+                    .scaleEffect(scale, anchor: .top)
+                    .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 }
-                ScreenPicture(top: top, size: screen, edge: false, still: false) {
-                    EmptyView()
-                } notch: {
-                    NotchView(model: model, display: display, background: background)
-                        .allowsHitTesting(false)
-                        .environment(\.notchPaused, still)
-                        .environment(\.notchThumbnail, true)
-                }
-                .scaleEffect(scale, anchor: .top)
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                // Drawn at the picture's own size, rather than drawn large and shrunk, which leaves
+                // the text and edges jagged.
+                .drawingGroup()
             }
-            // Drawn at the picture's own size, rather than drawn large and shrunk, which leaves
-            // the text and edges jagged.
-            .drawingGroup()
         }
         .allowsHitTesting(false)
         // A new layout reshapes the same notch, rather than building the picture again, which took a

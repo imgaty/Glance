@@ -407,6 +407,9 @@
 
 ### Settings
 
+- Reduced the work done when opening Settings pages, keeping visited pages
+  ready without laying out every hidden page on each switch. Small choice
+  pictures no longer poll the playing app or look up animated covers.
 - Changed Settings to open on the page you last used.
 - Added a **View** menu while Settings is open, with **Back**, **Forward**,
   **Search** and every page, and a **Help** menu with the user manual.

@@ -597,6 +597,10 @@ letter goes to the next row starting with it, and **Escape** closes it.
 
 ## Settings
 
+Visited pages keep their scroll position and control state while the window is
+open. Hidden pages pause their pictures and stay out of the selected page's
+layout.
+
 Settings opens on the page you last used. While it's open, the **View** menu has
 **Back** (⌘[), **Forward** (⌘]), **Search** (⌘F) and every page, and
 **Help > Glance Help** opens this manual.

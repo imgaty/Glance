@@ -19,12 +19,6 @@ struct SettingsView: View {
     @State private var place = 0
     @State private var travelling = false
     @StateObject private var preview = SettingsPreview()
-    /// Pages are built once and kept, so going back to one is instant: building a page of settings
-    /// takes SwiftUI a moment, enough to be felt on every click. The rest are built just after the
-    /// window opens.
-    @State private var built: Set<SettingsPane> = []
-    /// Read only by the notches pictured on pages, which hold still on pages not shown; nothing else
-    /// has to change when the page does.
     @State private var shownPage = ShownPage(page: SettingsPane.last)
     @FocusState private var searching: Bool
 
@@ -58,14 +52,13 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 // Kept on the pages without it, folded away, so it's never built again on the way
                 // back, and carries on where it was.
-                PreviewHeader(pane: shown)
-                    .frame(height: shown.showsPreview ? nil : 0, alignment: .top)
+                PreviewPanel(pane: shown)
+                    .frame(height: shown.showsPreview ? 220 : 0, alignment: .top)
                     .clipped()
                     .opacity(shown.showsPreview ? 1 : 0)
                     .allowsHitTesting(shown.showsPreview)
                     .accessibilityHidden(!shown.showsPreview)
-                Pages(built: built.union([shown]))
-                    .equatable()
+                Pages(page: shown)
                     // What scrolls fades away on its way under the preview, in the margin above the
                     // first group, rather than being cut off at its edge.
                     .mask { PageTopFade(fades: shown.showsPreview) }
@@ -74,15 +67,6 @@ struct SettingsView: View {
             .modifier(PictureSong())
             .environmentObject(preview)
             .environment(\.shownPage, shownPage)
-            .task {
-                built.insert(shown)
-                // After the preview has opened, so building them never catches its animation.
-                try? await Task.sleep(for: .seconds(1.2))
-                for page in SettingsPane.allCases where !built.contains(page) {
-                    built.insert(page)
-                    try? await Task.sleep(for: .seconds(0.35))
-                }
-            }
             .toolbar {
                 // The system's own back and forward, as System Settings has them: one capsule with a
                 // line between the arrows, and its hover and press.
@@ -172,31 +156,112 @@ final class SettingsCommands {
     }
 }
 
-/// Every page built so far, one above another, only the one shown visible. Nothing here depends on
-/// which page that is except each page's own slot, so changing pages only shows one and hides another.
-private struct Pages: View, Equatable {
-    let built: Set<SettingsPane>
+/// The live preview has its own graph, so its animation transactions never flush the sidebar or
+/// the selected form's controls.
+private struct PreviewPanel: NSViewRepresentable {
+    let pane: SettingsPane
+    @EnvironmentObject private var preview: SettingsPreview
+    @EnvironmentObject private var nowPlaying: NowPlaying
+
+    func makeNSView(context: Context) -> NSHostingView<PreviewRoot> {
+        let host = NSHostingView(rootView: root)
+        host.sizingOptions = []
+        return host
+    }
+
+    func updateNSView(_ host: NSHostingView<PreviewRoot>, context: Context) {
+        let previous = host.rootView
+        if previous.pane != pane || previous.preview !== preview || previous.nowPlaying !== nowPlaying {
+            host.rootView = root
+        }
+    }
+
+    private var root: PreviewRoot { PreviewRoot(pane: pane, preview: preview, nowPlaying: nowPlaying) }
+}
+
+private struct PreviewRoot: View {
+    let pane: SettingsPane
+    let preview: SettingsPreview
+    let nowPlaying: NowPlaying
 
     var body: some View {
-        ZStack {
-            ForEach(SettingsPane.allCases) { page in
-                if built.contains(page) { PageSlot(page: page) }
-            }
-        }
+        PreviewHeader(pane: pane)
+            .environmentObject(preview)
+            .environmentObject(nowPlaying)
     }
 }
 
-private struct PageSlot: View {
+/// Previously visited forms stay alive in separate hosts; only the selected one is laid out.
+private struct Pages: NSViewRepresentable {
     let page: SettingsPane
+    @EnvironmentObject private var preview: SettingsPreview
+    @EnvironmentObject private var nowPlaying: NowPlaying
     @Environment(\.shownPage) private var shownPage
 
+    func makeNSView(context: Context) -> PageContainer { PageContainer() }
+
+    func updateNSView(_ container: PageContainer, context: Context) {
+        container.show(page, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage ?? ShownPage(page: page))
+    }
+}
+
+/// Each form owns a hosting graph. Hidden forms keep their scroll and control state, but don't
+/// participate in the visible form's layout or the preview's animation transactions.
+private final class PageContainer: NSView {
+    private var pages: [SettingsPane: NSHostingView<PageRoot>] = [:]
+    private var selected: SettingsPane?
+    private weak var lastSong: NowPlaying?
+
+    func show(_ page: SettingsPane, preview: SettingsPreview, nowPlaying: NowPlaying, shownPage: ShownPage) {
+        if lastSong !== nowPlaying {
+            for (pane, host) in pages {
+                host.rootView = PageRoot(page: pane, paused: pane != selected, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
+            }
+            lastSong = nowPlaying
+        }
+        guard page != selected else { return }
+        if let selected, let previous = pages[selected] {
+            previous.isHidden = true
+            previous.removeFromSuperview()
+            previous.rootView = PageRoot(page: selected, paused: true, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
+        }
+        let host: NSHostingView<PageRoot>
+        if let cached = pages[page] {
+            host = cached
+            host.rootView = PageRoot(page: page, paused: false, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
+        } else {
+            host = NSHostingView(rootView: PageRoot(page: page, paused: false, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage))
+            host.sizingOptions = []
+            host.frame = NSRect(x: 0, y: 0, width: max(bounds.width, 508), height: max(bounds.height, 400))
+            pages[page] = host
+        }
+        selected = page
+        if bounds.width > 0, bounds.height > 0 { host.frame = bounds }
+        if host.superview == nil { addSubview(host) }
+        host.isHidden = false
+    }
+
+    override func layout() {
+        super.layout()
+        if let selected, bounds.width > 0, bounds.height > 0 { pages[selected]?.frame = bounds }
+    }
+}
+
+private struct PageRoot: View {
+    let page: SettingsPane
+    let paused: Bool
+    let preview: SettingsPreview
+    let nowPlaying: NowPlaying
+    let shownPage: ShownPage
+
     var body: some View {
-        let shown = shownPage?.page == page
         PageContent(page: page)
-            .opacity(shown ? 1 : 0)
-            .allowsHitTesting(shown)
-            .accessibilityHidden(!shown)
+            .formStyle(.grouped)
+            .environmentObject(preview)
+            .environmentObject(nowPlaying)
             .environment(\.settingsPage, page)
+            .environment(\.shownPage, shownPage)
+            .environment(\.notchPaused, paused)
     }
 }
 

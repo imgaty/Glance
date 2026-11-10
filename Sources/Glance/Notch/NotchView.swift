@@ -853,7 +853,7 @@ struct NotchView: View {
             // The player and the tray side by side, as pages are: going to the tray, the player
             // slides off to the left as the tray comes in from the right, and back. The tray stays
             // here turned off, to slide away: not showing, it costs nothing (see `TrayView`).
-            NowPlayingView(isVisible: playerShown && !paused, hero: hero)
+            NowPlayingView(isVisible: playerShown && !paused && !thumbnail, hero: hero)
                 .environment(
                     \.playerOnLight,
                     lit && background == .replaceGlass && !accessibility.increasesContrast && nowPlaying.flow(from: accentSource)?.isLight == true

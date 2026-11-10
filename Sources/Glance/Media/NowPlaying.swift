@@ -91,6 +91,7 @@ final class NowPlaying: ObservableObject {
 
     init(followsPlayers: Bool = true) {
         self.followsPlayers = followsPlayers
+        isDemo = !followsPlayers
     }
 
     var hasMedia: Bool { !title.isEmpty }
@@ -344,7 +345,6 @@ final class NowPlaying: ObservableObject {
     /// either can't be had, offline say, it becomes the made-up song.
     static func demo(_ song: FeaturedSong) -> NowPlaying {
         let player = NowPlaying(followsPlayers: false)
-        player.isDemo = true
         player.isSong = true
         player.isPlaying = true
         // At the bench nothing can be saved, so the star says so.

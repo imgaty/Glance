@@ -104,7 +104,7 @@ struct HeroArtwork: View {
                 of: isOpen && animated ? [nowPlaying.artist, nowPlaying.album, nowPlaying.artwork == nil ? "" : "cover"] : [],
                 initial: true
             ) {
-                if isOpen, animated, !nowPlaying.isDemo, !reduceMotion {
+                if isOpen, animated, !thumbnail, !nowPlaying.isDemo, !reduceMotion {
                     motion.load(
                         title: nowPlaying.title, artist: nowPlaying.artist, album: nowPlaying.album,
                         albumID: nowPlaying.albumID, artwork: nowPlaying.artwork)
