@@ -15,6 +15,9 @@
 
 ### Live Activities
 
+- Changed `Spotlight` to shrink and grow gently as it passes the camera,
+  without an abrupt stop at full size or as it disappears behind the cover.
+  Its colors flow within the glow, without a second rotation.
 - Rebuilt the flowing artwork background with three turning planes and a soft
   warp, and kept it in place while paused. Changing the background now fades
   between the choices without moving a blur boundary across the player.

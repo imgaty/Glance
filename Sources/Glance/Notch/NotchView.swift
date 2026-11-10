@@ -1177,10 +1177,6 @@ struct NotchView: View {
                     )
                     .frame(width: lightSize.width, height: lightSize.height)
                     .offset(x: spot.center.x - lightSize.width / 2, y: spot.center.y - lightSize.height / 2)
-                    .rotationEffect(
-                        .radians(travels ? travelled * Self.spotlightTurn : 0),
-                        anchor: UnitPoint(x: spot.center.x / lightSize.width, y: spot.center.y / lightSize.height)
-                    )
                     .mask {
                         lightShape(m, grown: shown, fills: false, spot: spot)
                             .animation(lightGrowth(shown, fills: false), value: shown)
@@ -1221,10 +1217,6 @@ struct NotchView: View {
             .position(fills ? middle : spot.center)
             .frame(width: size.width, height: size.height)
     }
-
-    /// How fast the spotlight's colors turn, in radians a second: slow enough to read as light
-    /// drifting, not as something to watch.
-    static let spotlightTurn = 2 * Double.pi / 14
 
     /// The spotlight, `travelled` seconds into its journey round the cover (see `Spotlight`).
     private func spotlight(_ m: NotchMetrics, travelled: TimeInterval) -> Spotlight.Spot {
@@ -1342,6 +1334,15 @@ enum Spotlight {
     /// How far the soft edge shows past the glow's circle: twice its blur, beyond which it's gone.
     static func fringe(artwork: CGFloat) -> CGFloat { blur(artwork: artwork) * 2 }
 
+    /// A smooth taper at both ends, beginning just before the full glow would touch the
+    /// clearance. For x in 0...1, smoothstep(x) <= 9/8*x, so the radius never exceeds room.
+    static func diameter(artwork: CGFloat, room: CGFloat) -> CGFloat {
+        let full = max(artwork * width, 0)
+        guard full > 0 else { return 0 }
+        let x = min(max(room / (full / 2 * 1.125), 0), 1)
+        return full * x * x * (3 - 2 * x)
+    }
+
     /// The glow `travelled` seconds round the cover whose middle is `cover`, with the camera housing
     /// at `camera`, if there is one.
     static func spot(cover: CGPoint, artwork: CGFloat, camera: CGRect?, travelled: TimeInterval) -> Spot {
@@ -1351,7 +1352,7 @@ enum Spotlight {
         if let camera {
             let nearest = CGPoint(x: min(max(center.x, camera.minX), camera.maxX), y: min(max(center.y, camera.minY), camera.maxY))
             let room = hypot(center.x - nearest.x, center.y - nearest.y) - fringe(artwork: artwork) - clearance
-            diameter = min(diameter, max(room, 0) * 2)
+            diameter = Self.diameter(artwork: artwork, room: room)
         }
         return Spot(center: center, diameter: diameter)
     }
@@ -1371,7 +1372,7 @@ private struct LightClock<Content: View>: View {
     @State private var since: Date?
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !running)) { context in
+        TimelineView(.animation(paused: !running)) { context in
             content(banked + (since.map { max(context.date.timeIntervalSince($0), 0) } ?? 0))
         }
         .onChange(of: running, initial: true) { _, running in

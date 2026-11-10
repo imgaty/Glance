@@ -275,6 +275,23 @@ struct PlayerOptionsTests {
         }
     }
 
+    @Test("The glow tapers with a flat velocity at zero and full width, inside the camera clearance")
+    func spotlightTaper() {
+        let artwork: CGFloat = 120
+        let end = artwork * Spotlight.width / 2 * 1.125
+        let h: CGFloat = 0.001
+        #expect(Spotlight.diameter(artwork: artwork, room: -h) == 0)
+        #expect(Spotlight.diameter(artwork: artwork, room: h) / h < 0.001)
+        let full = artwork * Spotlight.width
+        #expect((full - Spotlight.diameter(artwork: artwork, room: end - h)) / h < 0.001)
+        for step in 0...1000 {
+            let room = CGFloat(step) / 1000 * end
+            let diameter = Spotlight.diameter(artwork: artwork, room: room)
+            #expect(diameter >= 0 && diameter <= full)
+            #expect(diameter / 2 <= room + 0.000001)
+        }
+    }
+
     @Test("Accent colors are named as System Settings names them")
     func accentTitles() {
         #expect(

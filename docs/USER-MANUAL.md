@@ -644,6 +644,8 @@ cover, and long titles end in an ellipsis instead of scrolling.
 
 The background's colors turn and bend while music plays, and resume from where
 they stopped after a pause. Changing `Background` fades between the choices.
+`Spotlight` circles the cover, shrinking gently before it reaches the camera and growing
+again as it passes. Pausing freezes the glow where it is.
 
 ### Tray
 
