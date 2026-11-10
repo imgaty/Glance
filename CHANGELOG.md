@@ -252,6 +252,8 @@
 
 ### Player
 
+- Changed lyrics to keep sung lines above the line playing, softly blurred as
+  they scroll away, with staggered motion and spacing that follows the type.
 - Fixed Glance freezing, and the whole Mac with it, as the volume slider in the
   sound output menu was dragged. Should Glance ever stop answering for ten
   seconds, it now quits by itself.

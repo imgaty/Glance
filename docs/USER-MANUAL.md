@@ -242,9 +242,11 @@ at most. The call's app follows only if its own output is set to its default.
 ### Lyrics
 
 Click the waveform to show the song's words beside the player, and click it
-again to hide them. The line being sung is large and bright; the next one fades
-in below it. While the song is paused they dim, as the cover and the colors
-behind the player do. Lyrics come from [LRCLIB](https://lrclib.net), found as
+again to hide them. The line being sung is large and bright. The surrounding
+lines stay dim and softly blurred as they glide up one after another; sung
+lines leave through the top edge. While the song is paused they dim, as the
+cover and the colors behind the player do. Lyrics come from
+[LRCLIB](https://lrclib.net), found as
 each song starts so they're ready when you ask for them, and show only when a
 record matches the song's title, artist and length.
 With Reduce Motion on, each line fades in where it rests rather than gliding

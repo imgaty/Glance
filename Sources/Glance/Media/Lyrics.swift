@@ -472,10 +472,25 @@ private enum LyricsStyle {
     static let lead = 0.0
     static let size = NotchType.lyricSize
     static let font = NotchType.lyric
-    /// Apple Music leaves a lot of air between lines.
-    static let spacing: CGFloat = 16
+    /// A 100-pixel gap between entries at the recording's 72-pixel cap height. The renderer fits
+    /// its font to the column, so use the visible ink rather than its nominal point size.
+    static let spacing: CGFloat = capHeight * 100 / 72
     /// How bright lines are that aren't being sung.
-    static let dim = 0.36
+    static let dim = 0.4
+
+    /// The same recorded line sharp and softened: the next three lines fit Gaussian radii of
+    /// 3.4, 5.4 and 7.4 pixels at a 72-pixel cap height; the previous line fits 5.4 pixels.
+    /// Scale the radii by the type's ink, so the smaller lyrics keep that softness.
+    private static let capHeight = NSFont.systemFont(ofSize: size, weight: .bold).capHeight
+
+    static func blur(distance: Int) -> CGFloat {
+        guard distance != 0 else { return 0 }
+        let step = distance > 0 ? distance : 1 - distance
+        return (1.4 + 2 * CGFloat(step)) * capHeight / 72
+    }
+
+    /// The line-layer animator's blur curve, separate from the spring moving the lines.
+    static let softening = Animation.timingCurve(0.33, 0, 0.2, 0.1, duration: 0.12)
     /// Lines fade in and out softly at the top and bottom edges: at the top through the gap above
     /// them, so a long line being sung, which reaches right up to that edge, stays whole, and at the
     /// bottom over a quarter of the height. It stays open past the sides, so a blurred letter's soft
@@ -501,7 +516,7 @@ private enum LyricsStyle {
 
     /// The lines move with a soft spring, each a moment after the one above it.
     static func glide(delay: Double) -> Animation {
-        .spring(response: 0.62, dampingFraction: 0.86).delay(delay)
+        .interpolatingSpring(mass: 1, stiffness: 100, damping: 18).delay(delay)
     }
 }
 
@@ -546,7 +561,7 @@ private struct TimedLyricsView: View {
                         .blur(radius: edgeBlur(atY: y + size(index, current: current) / 2))
                         .offset(y: y)
                         .animation(
-                            reduceMotion ? nil : LyricsStyle.glide(delay: min(Double(max(index - focus + 1, 0)) * 0.045, 0.35)),
+                            reduceMotion ? nil : LyricsStyle.glide(delay: Double(max(index - focus, 0)) * 0.05),
                             value: current)
                 }
             }
@@ -616,9 +631,8 @@ private struct TimedLyricsView: View {
         entries.lastIndex { $0.start <= time } ?? -1
     }
 
-    /// Apple Music's lyrics: the line being sung bright white; the ones to come soft white, a little
-    /// blurred. Nothing sung stays on screen: as the next line starts, the last one blurs and fades
-    /// away.
+    /// The line being sung bright white, the lines around it dimmed and softened. Sung lines stay
+    /// above the current one until scrolling carries them through the top edge.
     @ViewBuilder private func entry(_ index: Int, current: Int, time: Double) -> some View {
         let entry = entries[index]
         switch entry.item {
@@ -651,19 +665,16 @@ private struct TimedLyricsView: View {
         }
     }
 
-    /// Bright while it's sung, dim and a little blurred before; sung, it blurs and fades away as it
-    /// moves up.
+    /// Bright and sharp while sung; the surrounding lines keep their ink as they soften and move.
     private func line(_ text: String, index: Int, current: Int) -> some View {
         Text(text)
             .font(LyricsStyle.font)
             .foregroundStyle(.white.opacity(index == current ? 1 : LyricsStyle.dim))
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .blur(radius: index == current ? 0 : index < current ? 8 : min(0.6 + 0.2 * Double(abs(index - current) - 1), 1))
-            // Lit at once as it's reached, while it glides into place; the fading of sung lines
-            // follows the glide.
             .animation(.easeOut(duration: 0.18), value: current)
-            .opacity(index < current ? 0 : 1)
+            .blur(radius: LyricsStyle.blur(distance: index - current))
+            .animation(reduceMotion ? nil : LyricsStyle.softening, value: current)
     }
 
     /// Lines soften as they near the top and bottom edges: no blur until well away from the middle,
