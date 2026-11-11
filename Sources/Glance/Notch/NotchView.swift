@@ -180,7 +180,9 @@ final class NotchModel: ObservableObject {
     /// beside it, and opens from there as usual.
     @Published var collapsed = false
     /// Nothing shows beside the camera for now.
-    var folded: Bool { switching || collapsed }
+    var folded: Bool { switching || collapsed || entering }
+    /// Holds every activity while an external display's housing slides into place.
+    @Published var entering = false
     /// Clock's timer counting down beside the camera, and its stopwatch counting up (see
     /// `ClockActivity`); and each wing's width for the one in the notch.
     @Published var timer: NotchTimer.State? {
@@ -290,7 +292,7 @@ final class NotchModel: ObservableObject {
 
     /// What can show at once: a call, the screen being recorded, a voice memo being recorded, music, a
     /// file coming in over AirDrop, Clock's timer, its stopwatch, AirPlay.
-    enum Activity: String, Hashable {
+    enum Activity: String, Hashable, CaseIterable {
         case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay
     }
 
@@ -478,8 +480,7 @@ final class NotchModel: ObservableObject {
     var openBubble: () -> Void = {}
     var openNotch: () -> Void = {}
 
-    /// Turning the notch off and on, 0 to 1: a notch on a display without one folds up into the top
-    /// edge.
+    /// Turning the notch off and on, 0 to 1: translation above the display edge.
     @Published var vanish: CGFloat = 0
 
     init(closedSize: CGSize, layout: PlayerLayout, hasCamera: Bool) {
@@ -542,6 +543,9 @@ final class NotchModel: ObservableObject {
 
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, short: Bool = false) -> NotchMetrics {
+        if entering {
+            return NotchMetrics(bodyWidth: closedSize.width, height: closedSize.height, flare: corners.radii(forHeight: closedSize.height).flare)
+        }
         let pull = max(stretch, 0)
         let across = abs(lean)
         let resting = short ? closedSize.height : restingHeight
@@ -670,6 +674,7 @@ extension NotchModel {
 
     /// With the Dynamic Island's spring, as its activities expand (see `NotchMotion`).
     func open() {
+        guard !entering else { return }
         reachTask?.cancel()
         withAnimation(NotchMotion.expand) {
             state = .open
@@ -855,7 +860,7 @@ struct NotchView: View {
                 .islandFade(liveShown)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
-                restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.collapsed ? nil : model.alert,
+                restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.collapsed || model.entering ? nil : model.alert,
                 clock: model.musicShown || model.folded ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
@@ -1021,8 +1026,8 @@ struct NotchView: View {
         }
         // Pushed up, the open notch shrinks a little as a whole, so nothing in it is cut off.
         .scaleEffect(1 + min(model.stretch, 0) * 0.005, anchor: .top)
-        // Turned off: a notch on a display without one folds up into the top edge.
-        .scaleEffect(x: 1, y: max(1 - model.vanish, 0.001), anchor: .top)
+        // The housing travels through the display edge without changing its shape.
+        .offset(y: -model.vanish * (model.closedSize.height + 2))
         // Reaching out to the bubble, it's that much wider on its trailing side alone.
         .offset(x: model.bubbleReach / 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

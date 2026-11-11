@@ -763,6 +763,10 @@ apply to that display. Each external display has one switch to show its notch;
 there is no separate master switch. A new external display starts with
 `Hide in full screen` on; an explicit choice for it is kept.
 
+When enabled, the empty housing slides down from the display edge before its
+Live Activities appear. Reduce Motion skips the slide. Disabling the notch
+cancels any entry still in progress.
+
 Changing the shared appearance updates existing notches in place. Choosing a
 different display reshapes the same Settings preview, keeping its current page.
 

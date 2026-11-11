@@ -93,6 +93,7 @@ final class NotchController {
     private var musicDismissed = false
     private var playingWatch: AnyCancellable?
     private var activityTask: Task<Void, Never>?
+    private var entryTask: Task<Void, Never>?
     private var titleWatch: AnyCancellable?
     private var settingsWatch: AnyCancellable?
     private var songWatch: AnyCancellable?
@@ -469,6 +470,8 @@ final class NotchController {
     /// Taken off screen: softly, or, as the notch is turned off, into the camera housing on a display
     /// that has one, or up into the top edge on one that doesn't.
     func tearDown(collapsing: Bool = false) {
+        entryTask?.cancel()
+        entryTask = nil
         giveBackKeys()
         Tray.shared.hold(false, for: self)
         dropDwell?.cancel()
@@ -506,7 +509,7 @@ final class NotchController {
         let model = model, panel = panel
         model.collapseAway()
         Task { @MainActor in
-            if !model.hasCamera {
+            if !model.hasCamera && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
                 try? await Task.sleep(for: .seconds(0.3))
                 withAnimation(.easeIn(duration: 0.24)) { model.vanish = 1 }
                 try? await Task.sleep(for: .seconds(0.26))
@@ -518,24 +521,25 @@ final class NotchController {
         }
     }
 
-    /// The way it went, backwards: a notch on a display without one unfolds down from the top edge,
-    /// and then, as when music starts, the wings come out.
+    /// The bare housing slides down first; every active presentation then enters normally.
     private func expand() {
-        // Drawn first as it was left: no wings.
-        activityTask?.cancel()
-        model.activity = false
-        if !model.hasCamera { model.vanish = 1 }
+        entryTask?.cancel()
+        let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        model.entering = true
+        model.vanish = model.hasCamera || reduced ? 0 : 1
         panel.alphaValue = 1
         panel.orderFrontRegardless()
-        let model = model
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(60))
-            if !model.hasCamera {
-                withAnimation(.easeOut(duration: 0.26)) { model.vanish = 0 }
-                try? await Task.sleep(for: .seconds(0.28))
-            }
+        entryTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            self.showActivity(self.nowPlaying.isPlaying, immediately: true)
+            if !reduced && !self.model.hasCamera {
+                try? await Task.sleep(for: .milliseconds(60))
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.26)) { self.model.vanish = 0 }
+                try? await Task.sleep(for: .milliseconds(280))
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(reduced ? nil : IslandMotion.open) { self.model.entering = false }
+            self.placeTouchTarget()
         }
     }
 

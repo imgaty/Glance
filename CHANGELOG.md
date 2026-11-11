@@ -33,6 +33,9 @@
 
 ### Settings
 
+- Changed external-display entry to slide the empty housing down first, then
+  reveal every active Live Activity. Turning it off cancels pending entry.
+
 - Fixed lyrics shrinking the preview too far. Both layouts keep a larger
   player, and pointer targets follow the picture while it scales.
 
