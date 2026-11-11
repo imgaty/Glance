@@ -373,20 +373,20 @@ struct SoundOutputView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Sound")
                 .font(.system(size: 13, weight: .semibold))
-                .padding(.horizontal, SoundMenu.inset)
-                .padding(.top, SoundMenu.inset)
+                .padding(.horizontal, SoundPopoverLayout.contentInset)
+                .padding(.top, SoundPopoverLayout.contentInset)
                 .padding(.bottom, 10)
             if volume == nil || volume?.app != nil {
                 VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
-                    .padding(.horizontal, SoundMenu.inset)
+                    .padding(.horizontal, SoundPopoverLayout.contentInset)
                     .padding(.bottom, 10)
             }
-            Divider().padding(.horizontal, SoundMenu.inset)
+            Divider()
             Text("Output")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color(nsColor: SoundMenu.headingGray))
                 .frame(height: 27, alignment: .center)
-                .padding(.horizontal, SoundMenu.inset)
+                .padding(.horizontal, SoundPopoverLayout.contentInset)
             ForEach(ordered, id: \.id) { device in
                 Button {
                     current = device.id
@@ -400,7 +400,7 @@ struct SoundOutputView: View {
                 .accessibilityLabel(device.name)
                 .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
-            Divider().padding(.horizontal, SoundMenu.highlightInset).padding(.vertical, 6)
+            Divider().padding(.vertical, 6)
             Button {
                 dismiss()
                 settings()
@@ -408,13 +408,13 @@ struct SoundOutputView: View {
                 Text("Sound Settings…")
                     .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, SoundMenu.inset)
-                    .frame(height: 22)
+                    .padding(.horizontal, SoundPopoverLayout.contentInset)
+                    .padding(.vertical, SoundPopoverLayout.contentInset)
                     .contentShape(Rectangle())
             }
             .buttonStyle(SoundRowStyle())
-            .padding(.bottom, SoundMenu.highlightInset)
         }
+        .padding(SoundPopoverLayout.inset)
         .foregroundStyle(.primary)
         .frame(width: 308)
         .defaultFocus($focusedOutput, current)
@@ -462,6 +462,14 @@ private struct SoundPopoverFocus: NSViewRepresentable {
     static func dismantleNSView(_ view: FocusView, coordinator: ()) { view.releaseFocus() }
 }
 
+/// One outer inset contains every row and separator. Text keeps the same inner gutter.
+private enum SoundPopoverLayout {
+    static let inset: CGFloat = 8
+    static let contentInset = SoundMenu.inset - inset
+    /// The native popover's 20-point curve, inset by the same margin on every edge.
+    static let highlightRadius: CGFloat = 20 - inset
+}
+
 private struct SoundRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         SoundRowHighlight(pressed: configuration.isPressed) { configuration.label }
@@ -476,9 +484,8 @@ private struct SoundRowHighlight<Content: View>: View {
     var body: some View {
         content()
             .background {
-                RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
+                RoundedRectangle(cornerRadius: SoundPopoverLayout.highlightRadius)
                     .fill(Color(nsColor: SoundMenu.highlightColor))
-                    .padding(.horizontal, SoundMenu.highlightInset)
                     .opacity(hovered || pressed ? 1 : 0)
             }
             .onHover { hovered = $0 }
@@ -508,7 +515,7 @@ private struct SoundOutputLabel: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, SoundMenu.inset)
+        .padding(.horizontal, SoundPopoverLayout.contentInset)
         .frame(height: SoundMenu.rowHeight)
         .contentShape(Rectangle())
     }

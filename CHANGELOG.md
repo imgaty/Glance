@@ -114,8 +114,9 @@
 - Replaced the sound panel with a native popover, inline output rows and a
   white volume slider. Output icons, battery details and the full-width
   Settings action align and adapt to the appearance.
-- Fixed the oversized gap below Sound Settings and tightened the space below
-  the volume slider. The lower separator follows the highlighted row edges.
+- Fixed uneven Sound margins, separators of different widths and rounded
+  highlights that did not follow the outer corners. Rows and separators now
+  share one content frame, with equal space around it.
 - Removed the headphone listening modes and their extra Settings shortcut.
 - Fixed clicks and pointer movement inside Sound closing the notch underneath
   it. The popover takes focus as it opens.

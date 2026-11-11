@@ -258,9 +258,9 @@ pointer and opens **System Settings > Sound**. Headphone listening modes and
 other headphone options are managed in macOS.
 
 The popover takes focus when opened and keeps its notch open while you use it.
-Its headings, output labels and Settings action share the same text inset.
-The lower separator follows the row highlights, with matching space at the
-sides and below the last highlighted row.
+Sound uses one outer margin on all four sides. Both separators and the row
+highlights have the same width, and highlight corners follow the outer curve.
+Headings, output icons and the Settings label share the same text inset.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic
