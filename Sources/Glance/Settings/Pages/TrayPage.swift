@@ -34,7 +34,7 @@ struct TrayPage: View {
             Section {
                 Toggle(isOn: $keepsCopies) {
                     Text("Keep what you copy")
-                    Text("Passwords and other private items are never kept.")
+                    Text("Skips copies marked private and copies from known password managers.")
                 }
                 Toggle("Keep screenshots and screen recordings", isOn: $keepsScreenshots)
                 Picker("Keep them for", selection: $keep) {

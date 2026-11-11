@@ -26,6 +26,7 @@ wallpaper, on 11 November. Screenshots are kept outside the repository.
 - C4: Exposed selected sound-output state in both output-menu paths
 - C5: Kept lyrics status messages at full opacity in both playback states
 - H1: Changed empty-Tray instructions to white on clear glass
+- H2: Narrowed the clipboard privacy explanation in all 34 translated entries
 
 Native accessibility inspection confirmed adjustable Appearance controls,
 selection-only background buttons, no hidden player actions on the Tray,
@@ -40,6 +41,11 @@ were not changed. Nearby sRGB background samples give white text at least
 samples do not certify every possible desktop backdrop. Captures:
 `lyrics-unavailable-paused-black.png`, `lyrics-error-playing-white.png`,
 `lyrics-error-paused-contrast.png`, `tray-empty-clear.png`.
+
+The clipboard explanation was checked in the native Tray form
+(`clipboard-privacy-light.png`). All 34 translated entries carry the narrower
+claim; the two English regional fallbacks retain their existing behavior.
+Translation coverage is structural, without a native-speaker fluency review.
 
 <br>
 

@@ -13,6 +13,11 @@
 - Fixed the Low Power Mode button opening Settings without changing the mode.
   It now changes the source in use and keeps the other power source's choice.
 
+### Tray
+
+- Corrected the clipboard privacy explanation to describe copies marked private
+  and copies from known password managers.
+
 ### Accessibility
 
 - Fixed lyrics availability and connection messages becoming too dim while

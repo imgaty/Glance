@@ -45427,214 +45427,6 @@
         }
       }
     },
-    "Passwords and other private items are never kept.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا يتم أبدًا الاحتفاظ بكلمات السر والعناصر الخاصة الأخرى."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les contrasenyes i altres ítems privats no es conserven mai."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hesla a další soukromé položky se nikdy neponechávají."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adgangskoder og andre private emner beholdes aldrig."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passwörter und andere private Objekte werden nie behalten."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Οι συνθηματικοί κωδικοί και άλλα ιδιωτικά στοιχεία δεν διατηρούνται ποτέ."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las contraseñas y otros ítems privados nunca se conservan."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salasanoja ja muita yksityisiä kohteita ei koskaan säilytetä."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les mots de passe et autres éléments privés ne sont jamais gardés."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "סיסמאות ופריטים פרטיים אחרים לעולם לא נשמרים."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "पासवर्ड और अन्य निजी आइटम कभी नहीं रखे जाते।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lozinke i druge privatne stavke nikad se ne zadržavaju."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A jelszavak és más privát elemek sosem maradnak meg."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kata sandi dan item pribadi lainnya tidak pernah disimpan."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password e altri elementi privati non vengono mai conservati."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワードなどのプライベートな項目は保持されません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "암호 및 기타 개인 항목은 보관되지 않습니다."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kata laluan dan item peribadi lain tidak pernah disimpan."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passord og andre private objekter beholdes aldri."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wachtwoorden en andere privéonderdelen worden nooit bewaard."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hasła i inne prywatne rzeczy nigdy nie są zachowywane."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senhas e outros itens privados nunca são mantidos."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As palavras-passe e outros itens privados nunca são mantidos."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parolele și alte articole private nu sunt păstrate niciodată."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароли и другие личные данные никогда не хранятся."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heslá a ďalšie súkromné položky sa nikdy neponechávajú."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gesla in drugi zasebni elementi se nikoli ne obdržijo."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lösenord och andra privata objekt behålls aldrig."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "รหัสผ่านและรายการส่วนตัวอื่นๆ จะไม่ถูกเก็บไว้"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parolalar ve diğer özel öğeler asla tutulmaz."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Паролі та інші приватні елементи ніколи не зберігаються."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mật khẩu và các mục riêng tư khác không bao giờ được giữ."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码和其他私密项目绝不会被保留。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密碼和其他私密項目絕不會被保留。"
-          }
-        }
-      }
-    },
     "Paste": {
       "localizations": {
         "ar": {
@@ -61847,6 +61639,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "隨機播放"
+          }
+        }
+      }
+    },
+    "Skips copies marked private and copies from known password managers.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتخطى النسخ المعلّمة بأنها خاصة والنسخ من تطبيقات إدارة كلمات السر المعروفة."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omet les còpies marcades com a privades i les de gestors de contrasenyes coneguts."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vynechává kopie označené jako soukromé a kopie ze známých správců hesel."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Springer kopier markeret som private og kopier fra kendte adgangskodeadministratorer over."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringt als privat markierte Kopien und Kopien aus bekannten Passwortmanagern."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Παραλείπει αντίγραφα που έχουν επισημανθεί ως ιδιωτικά και αντίγραφα από γνωστές εφαρμογές διαχείρισης συνθηματικών."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omite las copias marcadas como privadas y las de gestores de contraseñas conocidos."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohittaa yksityisiksi merkityt kopiot ja tunnettujen salasananhallintasovellusten kopiot."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore les copies marquées comme privées et celles provenant de gestionnaires de mots de passe connus."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מדלג על עותקים המסומנים כפרטיים ועל עותקים ממנהלי סיסמאות מוכרים."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "निजी के रूप में चिह्नित कॉपी और ज्ञात पासवर्ड प्रबंधकों से की गई कॉपी छोड़ देता है।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preskače kopije označene kao privatne i kopije iz poznatih upravitelja lozinki."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kihagyja a privátként megjelölt másolatokat és az ismert jelszókezelőkből származó másolatokat."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melewati salinan yang ditandai pribadi dan salinan dari pengelola kata sandi yang dikenal."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora le copie contrassegnate come private e quelle provenienti da gestori di password noti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非公開とマークされたコピーと、既知のパスワード管理アプリからのコピーをスキップします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비공개로 표시된 복사본과 알려진 암호 관리자에서 복사한 항목을 건너뜁니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melangkau salinan yang ditandakan peribadi dan salinan daripada pengurus kata laluan yang diketahui."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hopper over kopier merket som private og kopier fra kjente passordbehandlere."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slaat kopieën over die als privé zijn gemarkeerd en kopieën uit bekende wachtwoordbeheerders."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomija kopie oznaczone jako prywatne i kopie ze znanych menedżerów haseł."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora cópias marcadas como privadas e cópias de gerenciadores de senhas conhecidos."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora cópias marcadas como privadas e cópias de gestores de palavras-passe conhecidos."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omite copiile marcate ca private și copiile din aplicații cunoscute de gestionare a parolelor."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пропускает копии, помеченные как частные, и копии из известных менеджеров паролей."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vynecháva kópie označené ako súkromné a kópie zo známych správcov hesiel."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preskoči kopije, označene kot zasebne, in kopije iz znanih upraviteljev gesel."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoppar över kopior markerade som privata och kopior från kända lösenordshanterare."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ข้ามสำเนาที่ทำเครื่องหมายว่าเป็นส่วนตัวและสำเนาจากแอปจัดการรหัสผ่านที่รู้จัก"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Özel olarak işaretlenmiş kopyaları ve bilinen parola yöneticilerinden alınan kopyaları atlar."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пропускає копії, позначені як приватні, і копії з відомих менеджерів паролів."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bỏ qua các bản sao được đánh dấu là riêng tư và các bản sao từ trình quản lý mật khẩu đã biết."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过标记为私密的拷贝和来自已知密码管理器的拷贝。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "略過標示為私密的拷貝及來自已知密碼管理程式的拷貝。"
           }
         }
       }

@@ -316,6 +316,7 @@ Text, links, pictures and files you copy show up in the tray, and stay for
 30 minutes, 8 hours or 7 days, as set in **Settings > Tray**. Copies marked
 private, copies from known password managers, and copies from another device
 are skipped. Glance cannot recognize every password or other private text.
+A password copied as ordinary text can still appear.
 Copying something that's already there moves it to the front. What you copy
 while the pointer is on the tray waits until it leaves, so nothing moves under
 the pointer.
