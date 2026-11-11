@@ -27,7 +27,7 @@ struct DisplaysPage: View {
                 DisplaySettings(screen: screen)
                     .id(screen.notchID)
             }
-            // The app rebuilds its notches when this changes.
+            // A master switch; each display keeps its own Show the notch choice.
             Section {
                 Toggle("Show on external displays", isOn: $showOnExternalDisplays)
             }
@@ -66,8 +66,7 @@ struct DisplaysPage: View {
 }
 
 /// What each display has its own of. The Mac's own display always has the notch; another can go
-/// without. The app rebuilds its notches when that changes, and hides or shows them with full
-/// screen as it next looks.
+/// without. Only that display's window comes or goes; other notches keep their state.
 private struct DisplaySettings: View {
     let screen: NSScreen
     @AppStorage private var hidesInFullScreen: Bool
@@ -77,7 +76,7 @@ private struct DisplaySettings: View {
     init(screen: NSScreen) {
         self.screen = screen
         _hidesInFullScreen = AppStorage(
-            wrappedValue: Preferences.hidesInFullScreen(screen.notchID), Preferences.key(Preferences.hideInFullScreen, for: screen.notchID))
+            wrappedValue: Preferences.hidesInFullScreen(screen.notchID, builtIn: screen.isBuiltIn), Preferences.key(Preferences.hideInFullScreen, for: screen.notchID))
     }
 
     var body: some View {
@@ -87,6 +86,8 @@ private struct DisplaySettings: View {
                     .disabled(!showOnExternalDisplays)
             }
             Toggle("Hide in full screen", isOn: $hidesInFullScreen)
+        } header: {
+            Text(screen.localizedName)
         }
     }
 

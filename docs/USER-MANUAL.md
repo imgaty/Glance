@@ -735,7 +735,14 @@ on, it stays on what's playing.
 | `Show on external displays` | Draws a notch on external displays too |
 
 With more than one display, choose one at the top of the page. `Show the notch`
-and `Hide in full screen` apply to that display.
+and `Hide in full screen` apply to that display. The display name above the
+switches identifies their scope. `Show on external displays` is the master
+switch: turning it off hides all external notches without forgetting each
+display's `Show the notch` choice. A new external display starts with
+`Hide in full screen` on; an explicit choice for it is kept.
+
+Changing the shared appearance updates existing notches in place. Choosing a
+different display reshapes the same Settings preview, keeping its current page.
 
 <br>
 

@@ -99,14 +99,14 @@ struct NotchMetrics {
 
 @MainActor
 final class NotchModel: ObservableObject {
-    let closedSize: CGSize
+    @Published private(set) var closedSize: CGSize
     /// The display has a camera housing at the top, which nothing should be drawn under.
-    let hasCamera: Bool
+    @Published private(set) var hasCamera: Bool
     /// The player's layout and its open size. They change together, animated, when the layout
     /// changes in Settings.
     @Published var layout: PlayerLayout
     @Published var openSize: CGSize
-    let corners: NotchCorners
+    var corners: NotchCorners { NotchCorners(restingHeight: closedSize.height, radius: TimerLayout.tallHeight(closedSize.height) / 2) }
     /// Added to the open notch's width while the lyrics show beside the player.
     let lyricsWidth: CGFloat = 250
     /// The widest a wing gets while a new song is announced; longer titles scroll.
@@ -488,7 +488,13 @@ final class NotchModel: ObservableObject {
         self.layout = layout
         let openSize = layout.size(closed: closedSize)
         self.openSize = openSize
-        corners = NotchCorners(restingHeight: closedSize.height, radius: TimerLayout.tallHeight(closedSize.height) / 2)
+    }
+
+    /// A different display reshapes this same preview, preserving its pages and activities.
+    func useDisplay(size: CGSize, camera: Bool) {
+        closedSize = size
+        hasCamera = camera
+        openSize = layout.size(closed: size)
     }
 
     /// Switches to another layout in place.
@@ -716,15 +722,40 @@ enum Hero: Hashable {
     case liveArtwork, openArtwork, liveWaveform, openWaveform
 }
 
+/// Both preference scopes stay subscribed while the view keeps its animation state.
+private struct DisplayLook: DynamicProperty {
+    @AppStorage(Preferences.sameLook) private var shared = false
+    @AppStorage(Preferences.glassFollowsSystem) private var sharedSystem = false
+    @AppStorage(Preferences.glassDarkness) private var sharedDarkness = 0.0
+    @AppStorage(Preferences.glassBlur) private var sharedBlur = 0.0
+    @AppStorage(Preferences.musicBackground) private var sharedBackground = MusicBackground.none
+    @AppStorage private var ownSystem: Bool
+    @AppStorage private var ownDarkness: Double
+    @AppStorage private var ownBlur: Double
+    @AppStorage private var ownBackground: MusicBackground
+
+    init(display: String) {
+        _ownSystem = AppStorage(wrappedValue: false, Preferences.key(Preferences.glassFollowsSystem, for: display))
+        _ownDarkness = AppStorage(wrappedValue: 0, Preferences.key(Preferences.glassDarkness, for: display))
+        _ownBlur = AppStorage(wrappedValue: 0, Preferences.key(Preferences.glassBlur, for: display))
+        _ownBackground = AppStorage(wrappedValue: .none, Preferences.key(Preferences.musicBackground, for: display))
+    }
+
+    var followsSystem: Bool { shared ? sharedSystem : ownSystem }
+    var darkness: Double { shared ? sharedDarkness : ownDarkness }
+    var blur: Double { shared ? sharedBlur : ownBlur }
+    var background: MusicBackground { shared ? sharedBackground : ownBackground }
+}
+
 struct NotchView: View {
     @ObservedObject var model: NotchModel
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var accessibility = SystemAccessibility.shared
     // Each display's own look.
-    @AppStorage private var followsSystem: Bool
-    @AppStorage private var chosenDarkness: Double
-    @AppStorage private var blur: Double
-    @AppStorage private var chosenBackground: MusicBackground
+    private var look: DisplayLook
+    private var followsSystem: Bool { look.followsSystem }
+    private var chosenDarkness: Double { look.darkness }
+    private var blur: Double { look.blur }
     /// Shown instead of the display's own background, for Settings' pictures of each one.
     private let backgroundShown: MusicBackground?
     /// In Settings' picture of the player, nothing in it responds.
@@ -744,15 +775,11 @@ struct NotchView: View {
 
     init(model: NotchModel, display: String, background: MusicBackground? = nil) {
         self.model = model
-        func key(_ name: String) -> String { Preferences.lookKey(name, display: display) }
-        _followsSystem = AppStorage(wrappedValue: false, key(Preferences.glassFollowsSystem))
-        _chosenDarkness = AppStorage(wrappedValue: 0, key(Preferences.glassDarkness))
-        _blur = AppStorage(wrappedValue: 0, key(Preferences.glassBlur))
-        _chosenBackground = AppStorage(wrappedValue: .none, key(Preferences.musicBackground))
+        look = DisplayLook(display: display)
         self.backgroundShown = background
     }
 
-    private var background: MusicBackground { backgroundShown ?? chosenBackground }
+    private var background: MusicBackground { backgroundShown ?? look.background }
 
     /// With Reduce Transparency or Increase Contrast on, the notch is opaque whatever its setting.
     /// With the system's Liquid Glass, the glass itself is as dark as macOS makes it.

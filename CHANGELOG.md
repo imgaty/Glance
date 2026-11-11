@@ -20,6 +20,11 @@
 
 ### Settings
 
+- Fixed changing the shared appearance or selected display replacing the notch
+  preview. Existing display notches now keep their window and activity state.
+- Changed new external displays to hide the notch in full screen by default,
+  while keeping each display's explicit choice.
+
 - Reduced work during fast page switching by keeping visited controls ready,
   holding the choice pictures still, and saving the last page once navigation
   settles.

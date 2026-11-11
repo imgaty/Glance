@@ -56,6 +56,12 @@ final class NotchController {
     var contextMenu: (() -> NSMenu?)?
 
     private let screen: NSScreen
+    let displayConfiguration: String
+
+    static func configuration(on screen: NSScreen) -> String {
+        let resting = resting(on: screen)
+        return "\(screen.notchID) \(screen.frame) \(resting.size) \(resting.centerX) \(resting.camera)"
+    }
     private let model: NotchModel
     private let nowPlaying: NowPlaying
     private let panel: NotchPanel
@@ -196,7 +202,7 @@ final class NotchController {
 
     var screenFrame: CGRect { screen.frame }
     var screenID: String { screen.notchID }
-    var hidesInFullScreen: Bool { Preferences.hidesInFullScreen(screen.notchID) }
+    var hidesInFullScreen: Bool { Preferences.hidesInFullScreen(screen.notchID, builtIn: screen.isBuiltIn) }
 
     /// The notch at rest on a display: the camera housing's own size where there is one; otherwise a
     /// notch as tall as the menu bar.
@@ -228,6 +234,7 @@ final class NotchController {
         let closedSize = resting.size
         centerX = resting.centerX
         self.screen = screen
+        displayConfiguration = Self.configuration(on: screen)
         self.nowPlaying = nowPlaying
         topY = frame.maxY
         // Open, the player fills the notch; its artwork sits up beside the camera.

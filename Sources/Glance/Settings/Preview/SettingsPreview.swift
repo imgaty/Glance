@@ -14,9 +14,8 @@ import SwiftUI
 /// Opening and Live Activities pages it rests closed and works as the real one does.
 @MainActor
 final class SettingsPreview: ObservableObject {
-    /// The display's own notch, as it is at rest there: made again when the display shown changes,
-    /// or the display changes between a notch and a Dynamic Island.
-    @Published private(set) var model: NotchModel
+    /// One model for the life of the window, including when the selected display changes.
+    let model: NotchModel
     let scrollClock = ScrollClock()
     @Published var display: String {
         didSet { followDisplay() }
@@ -41,7 +40,7 @@ final class SettingsPreview: ObservableObject {
     private func followDisplay() {
         let top = self.top
         guard model.closedSize != top.notch || model.hasCamera != top.camera else { return }
-        model = .picture(of: top, state: model.state)
+        withAnimation(NotchMotion.expand) { model.useDisplay(size: top.notch, camera: top.camera) }
     }
 
     /// The top of the display shown, as the pictures of it draw it.
@@ -362,8 +361,7 @@ struct PreviewHeader: View {
 
     var body: some View {
         ZStack {
-            // A new display's look, or the shared one, is drawn afresh: the old one fades out, and
-            // the new one in once it has settled.
+            // Keep the same scene when its display or appearance scope changes.
             NotchPreview(
                 model: preview.model, display: preview.display, top: preview.top,
                 interactive: pane.restsClosed, hintsOpening: pane == .opening, still: !pane.showsPreview,
@@ -374,13 +372,7 @@ struct PreviewHeader: View {
             .environment(\.previewPageMotion, true)
             // The made-up tray the welcome tour shows: what's really in yours stays out of the picture.
             .environment(\.tray, .demo)
-            .id(identity)
-            .transition(
-                .asymmetric(
-                    insertion: .opacity.animation(.easeInOut(duration: 0.3).delay(0.15)),
-                    removal: .opacity.animation(.easeInOut(duration: 0.3))))
         }
-        .animation(.easeInOut(duration: 0.3), value: identity)
         .frame(height: 200)
         // As the page's groups are rounded.
         .clipShape(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous))

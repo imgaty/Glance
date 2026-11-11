@@ -136,8 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWatch = [
             watch(\.showOnDisplaysWithoutNotch) { notches.reload() },
             watch(\.notchHiddenDisplays) { notches.reload() },
-            watch(\.hideInFullScreen) { notches.reload() },
-            watch(\.sameLookEverywhere) { notches.reload() },
+            watch(\.hideInFullScreen) { notches.refreshFullScreen() },
             // Turned off and on from the menu bar: the notches close away and come back.
             watch(\.notchEnabled) { notches.reload(switching: true) },
             watch(\.musicLayout) { notches.relayout() },
@@ -369,11 +368,11 @@ enum Preferences {
     /// unseen by the notch.
     static func key(_ key: String, for display: String) -> String { key + ":" + display }
 
-    /// Whether the notch hides in full screen on a display: its own choice, or until it makes one,
-    /// the choice from when there was one for every display.
-    static func hidesInFullScreen(_ display: String) -> Bool {
-        let defaults = UserDefaults.standard
-        return defaults.object(forKey: key(hideInFullScreen, for: display)) as? Bool ?? defaults.bool(forKey: hideInFullScreen)
+    /// Each external display starts hidden in full screen. An explicit choice for that
+    /// display wins; only the built-in display inherits the earlier shared choice.
+    static func hidesInFullScreen(_ display: String, builtIn: Bool = false, defaults: UserDefaults = .standard) -> Bool {
+        if let chosen = defaults.object(forKey: key(hideInFullScreen, for: display)) as? Bool { return chosen }
+        return builtIn ? defaults.object(forKey: hideInFullScreen) as? Bool ?? true : true
     }
 
     /// Every display shares one look instead of keeping its own.
@@ -564,32 +563,37 @@ final class NotchManager {
         controllers.forEach { $0.relayout() }
     }
 
-    /// Recreates every notch from the current displays and preferences; none while the notch is off.
-    /// Switching it off or on, they close away or come back rather than fade.
+    /// Retains the windows and their state when a display's settings change. Only a
+    /// newly enabled, resized, or reconnected display needs a new controller.
     func reload(switching: Bool = false) {
-        let onExternal = UserDefaults.standard.bool(forKey: Preferences.showOnExternalDisplays)
-        controllers.forEach { $0.tearDown(collapsing: switching) }
-        guard UserDefaults.standard.bool(forKey: Preferences.notchEnabled) else {
+        let defaults = UserDefaults.standard
+        let previous = controllers
+        guard defaults.bool(forKey: Preferences.notchEnabled) else {
+            previous.forEach { $0.tearDown(collapsing: switching) }
             controllers = []
             return
         }
-        NSScreen.screens.forEach { Preferences.seed($0.notchID) }
-        madeFor = Self.displays
-        let hidden = (UserDefaults.standard.string(forKey: Preferences.notchHiddenDisplays) ?? "").split(separator: ",")
-        controllers = NSScreen.screens.compactMap { screen in
-            NotchController(screen: screen, onExternal: onExternal && !hidden.contains(Substring(screen.notchID)), nowPlaying: nowPlaying)
-        }
-        // Never leave the user with no notch at all.
-        if controllers.isEmpty, let main = NSScreen.main, let fallback = NotchController(screen: main, onExternal: true, nowPlaying: nowPlaying) {
-            controllers = [fallback]
-        }
-        for controller in controllers {
+        let external = defaults.bool(forKey: Preferences.showOnExternalDisplays)
+        let hidden = Set((defaults.string(forKey: Preferences.notchHiddenDisplays) ?? "").split(separator: ",").map(String.init))
+        let screens = NSScreen.screens
+        var wanted = screens.filter { $0.isBuiltIn || (external && !hidden.contains($0.notchID)) }
+        if wanted.isEmpty, let main = NSScreen.main { wanted = [main] }
+        controllers = wanted.compactMap { screen in
+            Preferences.seed(screen.notchID)
+            let configuration = NotchController.configuration(on: screen)
+            if let retained = previous.first(where: { $0.displayConfiguration == configuration }) { return retained }
+            guard let controller = NotchController(screen: screen, onExternal: true, nowPlaying: nowPlaying) else { return nil }
             controller.contextMenu = { [weak self] in self?.contextMenu }
             controller.show(expanding: switching)
+            return controller
         }
+        for old in previous where !controllers.contains(where: { $0 === old }) { old.tearDown(collapsing: switching) }
+        madeFor = Self.displays
         updateFullScreen()
         pointerMoved()
     }
+
+    func refreshFullScreen() { updateFullScreen() }
 
     /// Every notch closes away, for Glance quitting; how long that takes, none if there's no notch.
     func closeAway() -> TimeInterval {

@@ -146,10 +146,10 @@ struct PreferencesTests {
             let defaults = UserDefaults.standard
             defaults.removeObject(forKey: own)
             defaults.set(false, forKey: Preferences.hideInFullScreen)
-            #expect(!Preferences.hidesInFullScreen("display"))
+            #expect(!Preferences.hidesInFullScreen("display", builtIn: true))
             defaults.set(true, forKey: own)
-            #expect(Preferences.hidesInFullScreen("display"))
-            #expect(!Preferences.hidesInFullScreen("another"))
+            #expect(Preferences.hidesInFullScreen("display", builtIn: true))
+            #expect(!Preferences.hidesInFullScreen("another", builtIn: true))
         }
     }
 
@@ -452,5 +452,20 @@ struct MusicAppsTests {
         #expect(listed.contains(PlayerScripting.spotify))
         #expect(listed.filter { $0 == PlayerScripting.spotify }.count == 1)
         #expect(listed.last == first)
+    }
+}
+
+extension PreferencesTests {
+    @Test("External displays start hidden in full screen, preserving their explicit choices")
+    func externalFullScreen() {
+        let name = "ExternalFullScreen-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(false, forKey: Preferences.hideInFullScreen)
+        #expect(Preferences.hidesInFullScreen("external", defaults: defaults))
+        #expect(!Preferences.hidesInFullScreen("built-in", builtIn: true, defaults: defaults))
+        defaults.set(false, forKey: Preferences.key(Preferences.hideInFullScreen, for: "external"))
+        #expect(!Preferences.hidesInFullScreen("external", defaults: defaults))
+        #expect(Preferences.hidesInFullScreen("new-external", defaults: defaults))
     }
 }

@@ -41,7 +41,7 @@ struct AppearancePage: View {
     }
 
     /// Going to one look, the display being edited sets it; going back to one each, every display
-    /// starts from that shared look. The app rebuilds its notches when this changes.
+    /// starts from that shared look. Existing notches adopt it in place.
     private func setSameLook(_ on: Bool) {
         let defaults = UserDefaults.standard
         for key in Preferences.perDisplay {
