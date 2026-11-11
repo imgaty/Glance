@@ -7,13 +7,18 @@
 
 import Accelerate
 import AppKit
+import Combine
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
 /// The background's three artwork planes and subdivided warp are rendered on the artwork queue.
 /// The waveform keeps its own cover treatment; it never takes its colors from the background.
 @MainActor
-final class ArtworkFlow {
+final class ArtworkFlow: ObservableObject {
+    /// A paused picture still receives the first completed artwork frame. Later frames are
+    /// requested by its own timeline, without publishing at the renderer's cadence.
+    let objectWillChange = ObservableObjectPublisher()
+
     /// One for each picture, kept only as long as the picture is.
     private static let flows = NSMapTable<NSImage, ArtworkFlow>.weakToStrongObjects()
     private static let queue = DispatchQueue(label: "Glance.ArtworkFlow", qos: .userInitiated)
@@ -206,11 +211,14 @@ final class ArtworkFlow {
         Self.queue.async {
             let renderer = previous ?? ArtworkBackdrop(cover, variant: variant, aspect: Double(key) / 20)
             let image = renderer?.frame(at: elapsed)
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
                 MainActor.assumeIsolated {
                     frame.renderer = renderer
                     frame.drawing = false
-                    if let image { frame.latest = image }
+                    if let image {
+                        if frame.latest == nil { self?.objectWillChange.send() }
+                        frame.latest = image
+                    }
                 }
             }
         }

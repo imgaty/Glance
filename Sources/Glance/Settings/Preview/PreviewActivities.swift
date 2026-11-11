@@ -74,6 +74,10 @@ extension SettingsPreview {
     /// Back to what's playing, as the picture rests.
     func clearActivities() {
         let model = model
+        guard
+            model.alert != nil || model.switching || model.pop || model.airdrop != nil
+                || model.timer != nil || model.stopwatch != nil || model.screenRecording != nil || model.voiceMemo != nil
+        else { return }
         withAnimation(IslandMotion.fold) {
             model.alert = nil
             model.switching = false

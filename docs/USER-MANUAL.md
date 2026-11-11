@@ -263,7 +263,8 @@ cover and the colors behind the player do. Lyrics come from
 each song starts so they're ready when you ask for them, and show only when a
 record matches the song's title, artist and length.
 Messages about unavailable lyrics or a connection problem stay bright while
-paused. Only the lyrics themselves dim with the song.
+paused. Only the lyrics themselves dim with the song. Closed lyrics stay out of
+VoiceOver and pointer navigation.
 With Reduce Motion on, each line fades in where it rests rather than gliding
 up, and the dots in a pause in the singing hold still.
 
@@ -614,8 +615,9 @@ Unavailable actions are disabled for VoiceOver as well as the pointer.
 ## Settings
 
 Visited pages keep their scroll position and control state while the window is
-open. Hidden pages pause their pictures and stay out of the selected page's
-layout.
+open. Choice pictures hold still; the large shared preview carries the
+animation. Hidden pages stay out of the selected page's layout. The last page
+is saved once navigation settles, and again when the window closes.
 
 Settings opens on the page you last used. While it's open, the **View** menu has
 **Back** (⌘[), **Forward** (⌘]), **Search** (⌘F) and every page, and

@@ -18,6 +18,14 @@
 - Corrected the clipboard privacy explanation to describe copies marked private
   and copies from known password managers.
 
+### Settings
+
+- Reduced work during fast page switching by keeping visited controls ready,
+  holding the choice pictures still, and saving the last page once navigation
+  settles.
+- Fixed paused artwork staying on its first soft frame, and hidden lyrics
+  keeping their actions exposed after being closed.
+
 ### Welcome tour
 
 - Fixed long navigation labels crowding the page dots and choice captions

@@ -96,17 +96,25 @@ struct SettingsView: View {
         // Next time the window opens, the notch opens with it again, and the desktop pictures are
         // read again.
         .onDisappear {
+            SettingsPane.last = pane ?? .general
             preview.revealed = false
             Wallpapers.shared.forget()
         }
         .onChange(of: pane, initial: true) {
             let shown = pane ?? .general
             shownPage.page = shown
-            SettingsPane.last = shown
             onPage(shown)
             guard !travelling else { return travelling = false }
             history = Array(history.prefix(place + 1)) + (history.last == shown && place == history.count - 1 ? [] : [shown])
             place = history.count - 1
+        }
+        // Saving the last page broadcasts a defaults change to every appearance binding.
+        // Let the page and preview settle first; rapid navigation saves only its final choice.
+        .task(id: pane) {
+            let selected = pane ?? .general
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            if SettingsPane.last != selected { SettingsPane.last = selected }
         }
         .onChange(of: query) { if let first = panes.first, !panes.contains(pane ?? .general) { pane = first } }
         // What the View menu asks for goes through here, and what it can do follows the pages visited.
@@ -215,22 +223,19 @@ private final class PageContainer: NSView {
     func show(_ page: SettingsPane, preview: SettingsPreview, nowPlaying: NowPlaying, shownPage: ShownPage) {
         if lastSong !== nowPlaying {
             for (pane, host) in pages {
-                host.rootView = PageRoot(page: pane, paused: pane != selected, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
+                host.rootView = PageRoot(page: pane, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
             }
             lastSong = nowPlaying
         }
         guard page != selected else { return }
         if let selected, let previous = pages[selected] {
             previous.isHidden = true
-            previous.removeFromSuperview()
-            previous.rootView = PageRoot(page: selected, paused: true, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
         }
         let host: NSHostingView<PageRoot>
         if let cached = pages[page] {
             host = cached
-            host.rootView = PageRoot(page: page, paused: false, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage)
         } else {
-            host = NSHostingView(rootView: PageRoot(page: page, paused: false, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage))
+            host = NSHostingView(rootView: PageRoot(page: page, preview: preview, nowPlaying: nowPlaying, shownPage: shownPage))
             host.sizingOptions = []
             host.frame = NSRect(x: 0, y: 0, width: max(bounds.width, 508), height: max(bounds.height, 400))
             pages[page] = host
@@ -249,7 +254,6 @@ private final class PageContainer: NSView {
 
 private struct PageRoot: View {
     let page: SettingsPane
-    let paused: Bool
     let preview: SettingsPreview
     let nowPlaying: NowPlaying
     let shownPage: ShownPage
@@ -261,7 +265,6 @@ private struct PageRoot: View {
             .environmentObject(nowPlaying)
             .environment(\.settingsPage, page)
             .environment(\.shownPage, shownPage)
-            .environment(\.notchPaused, paused)
     }
 }
 

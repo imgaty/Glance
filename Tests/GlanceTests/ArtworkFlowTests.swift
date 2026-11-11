@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import Testing
 
 @testable import Glance
@@ -58,9 +59,19 @@ struct ArtworkFlowTests {
     @Test("A soft first frame is immediate and the rendered background arrives asynchronously")
     func firstFrame() async throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
+        var ready = false
+        let subscription = flow.objectWillChange.sink { ready = true }
+        defer { subscription.cancel() }
         let frame = try #require(flow.frame(at: 100))
         #expect(frame === flow.bars)
-        let rendered = try await Self.rendered(flow)
+        // A paused view makes one request, then waits for notification rather than polling.
+        for _ in 0..<150 {
+            if ready { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(ready)
+        let rendered = try #require(flow.frame(at: 100))
+        #expect(rendered !== flow.bars)
         #expect(rendered.width == ArtworkBackdrop.side)
         #expect(Self.brightness(of: frame).colors.count > 100)
         #expect(Self.brightness(of: flow.bars).lowest >= 0.25)

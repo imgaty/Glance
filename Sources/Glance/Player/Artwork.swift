@@ -264,7 +264,7 @@ struct ArtworkLight: View {
 /// off to one side of the cover would never show. On the music's biggest hits, as they're heard,
 /// they swell and brighten just a little and ease back.
 struct ArtworkSwirl: View {
-    let flow: ArtworkFlow
+    @ObservedObject var flow: ArtworkFlow
     let active: Bool
     let spread: CGSize
     /// The welcome tour's made-up song, whose beat is made up too.

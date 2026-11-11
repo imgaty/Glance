@@ -61,6 +61,35 @@ Captures include `onboarding-welcome-fr.png`, `onboarding-layout-fr.png`,
 
 <br>
 
+## Motion and Settings follow-up
+
+Two release-build runs used the actual 740 by 700 pt Settings window behind the
+wallpaper, a fake playing song, all seven pages, and a display-link callback
+trace. First and warm visits held each page for 400 ms; rapid passes made 28
+changes at 100 ms intervals. No screenshots were taken during timing.
+
+Before the follow-up, rapid-switch 95th-percentile callback gaps were 29.1 and
+29.7 ms. After retaining native pages without resetting their roots, keeping
+choice pictures still, deferring last-page persistence, and avoiding unchanged
+preview assignments, they were 20.0 and 17.7 ms. Maximum rapid gaps were still
+59.7 and 62.8 ms; first-visit maximum gaps were 124.5 and 114.1 ms. This is an
+improvement, not a claim of stutter-free first visits. Cold-start ranges overlap
+across runs, and callback times do not measure every compositor presentation.
+
+Normal-speed runs of 24 background changes and 24 layout changes, 120 ms apart,
+gave 95th-percentile gaps of 14.3 and 10.2 ms, with maxima of 20.8 and 16.7 ms.
+Slowed native still frames were inspected separately. They exposed a hard
+background edge during the mask morph, which needs a geometry correction;
+frame timing alone did not reveal it. The reference-motion comparison remains
+open.
+
+Lyrics rows now wait until first opened and remain available for a quick return.
+Hidden lyrics are excluded from accessibility and pointer navigation. A paused
+artwork view receives notification when its first completed background frame
+arrives, without needing to poll or animate.
+
+<br>
+
 ## Scope and method
 
 The inventory covers 130 tracked app files: 96 Swift sources and 34 resource and

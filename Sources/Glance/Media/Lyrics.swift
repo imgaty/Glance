@@ -390,6 +390,9 @@ final class LyricsStore: ObservableObject {
 struct LyricsView: View {
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject var store: LyricsStore
+    /// Never build lyric rows in hidden players or decorative choice pictures. Once opened,
+    /// retain them so closing and quickly reopening keeps their measured heights and motion.
+    @State private var built = false
 
     /// Kept below the camera and above the notch's bottom edge. The lines fade away through the one
     /// at the top, rather than over the line being sung.
@@ -407,32 +410,34 @@ struct LyricsView: View {
         let kept = nowPlaying.hasMedia && !nowPlaying.isPlaying ? PausedLook.kept : 1
         GeometryReader { proxy in
             Group {
-                switch store.content {
-                case .timed(let lyrics):
-                    TimedLyricsView(
-                        lyrics: lyrics, credits: store.credits, isVisible: isVisible, width: proxy.size.width,
-                        height: proxy.size.height, anchor: middle, notes: notes
-                    )
-                    // Each song's own: the heights it keeps of its lines aren't the next song's.
-                    .id(lyrics)
-                    .opacity(kept)
-                case .plain(let lines):
-                    PlainLyricsView(lines: lines, credits: store.credits, isVisible: isVisible)
+                if isVisible || built {
+                    switch store.content {
+                    case .timed(let lyrics):
+                        TimedLyricsView(
+                            lyrics: lyrics, credits: store.credits, isVisible: isVisible, width: proxy.size.width,
+                            height: proxy.size.height, anchor: middle, notes: notes
+                        )
+                        // Each song's own: the heights it keeps of its lines aren't the next song's.
+                        .id(lyrics)
                         .opacity(kept)
-                case .loading where notes:
-                    LoadingNote(breathing: isVisible)
-                        .position(x: proxy.size.width / 2, y: middle)
-                case .loading:
-                    InterludeDots(progress: 0, isCurrent: true, breathing: isVisible)
-                        .position(x: proxy.size.width / 2, y: middle)
-                case .instrumental, .unavailable:
-                    message(String(localized: "No lyrics available for this song"))
-                        .position(x: proxy.size.width / 2, y: middle)
-                case .unreachable:
-                    message(String(localized: "Lyrics can't be reached right now"))
-                        .position(x: proxy.size.width / 2, y: middle)
-                case .none:
-                    Color.clear
+                    case .plain(let lines):
+                        PlainLyricsView(lines: lines, credits: store.credits, isVisible: isVisible)
+                            .opacity(kept)
+                    case .loading where notes:
+                        LoadingNote(breathing: isVisible)
+                            .position(x: proxy.size.width / 2, y: middle)
+                    case .loading:
+                        InterludeDots(progress: 0, isCurrent: true, breathing: isVisible)
+                            .position(x: proxy.size.width / 2, y: middle)
+                    case .instrumental, .unavailable:
+                        message(String(localized: "No lyrics available for this song"))
+                            .position(x: proxy.size.width / 2, y: middle)
+                    case .unreachable:
+                        message(String(localized: "Lyrics can't be reached right now"))
+                            .position(x: proxy.size.width / 2, y: middle)
+                    case .none:
+                        Color.clear
+                    }
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
@@ -442,8 +447,13 @@ struct LyricsView: View {
         .padding(.leading, 12)
         .padding(.trailing, PlayerLayout.padding)
         .onChange(of: request, initial: true) {
-            if isVisible { nowPlaying.loadLyrics() }
+            if isVisible {
+                built = true
+                nowPlaying.loadLyrics()
+            }
         }
+        .allowsHitTesting(isVisible)
+        .accessibilityHidden(!isVisible)
     }
 
     /// Centered where the line being sung would be.

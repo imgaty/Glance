@@ -289,7 +289,6 @@ struct NotchThumbnail: View {
     @StateObject private var model: NotchModel
     @Environment(\.shownPage) private var shownPage
     @Environment(\.settingsPage) private var page
-    @Environment(\.notchPaused) private var paused
 
     init(layout: PlayerLayout, display: String, background: MusicBackground? = nil) {
         let top = ScreenTop(NSScreen.with(id: display) ?? NSScreen.main)
@@ -302,8 +301,6 @@ struct NotchThumbnail: View {
 
     var body: some View {
         let hidden = page != nil && shownPage.map { $0.page != page } == true
-        // Still where asked, or on a page not shown.
-        let still = paused || hidden
         GeometryReader { proxy in
             if proxy.size.width > 0, proxy.size.height > 0 {
                 let size = model.openSize
@@ -319,7 +316,7 @@ struct NotchThumbnail: View {
                     } notch: {
                         NotchView(model: model, display: display, background: background)
                             .allowsHitTesting(false)
-                            .environment(\.notchPaused, still)
+                            .environment(\.notchPaused, true)
                             .environment(\.notchThumbnail, true)
                     }
                     .scaleEffect(scale, anchor: .top)
