@@ -90,7 +90,8 @@
 
 - Fixed shared covers, rings, call times and recording waveforms restarting or
   fading early while opening and closing. Reopening during a close keeps the
-  same motion, including activities opened from the detached bubble.
+  same motion when the element stays on the same side. Elements that switch
+  sides, including most detached-bubble symbols, fade in place instead.
 - Changed expanded-only recording details and controls to fade before the notch
   closes. With Reduce Motion on, shared elements change with a fade.
 

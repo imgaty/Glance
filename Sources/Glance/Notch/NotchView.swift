@@ -764,20 +764,6 @@ enum Hero: Hashable {
     case liveArtwork, openArtwork, liveWaveform, openWaveform
 }
 
-/// The bubble's cover hands back only after it has returned to its compact position.
-private struct BubbleArtworkFade: ViewModifier {
-    let shown: Bool
-    let fromBubble: Bool
-
-    func body(content: Content) -> some View {
-        if fromBubble {
-            content.modifier(GrownFade(shown: shown, grows: true))
-        } else {
-            content.islandFade(shown)
-        }
-    }
-}
-
 /// Both preference scopes stay subscribed while the view keeps its animation state.
 private struct DisplayLook: DynamicProperty {
     @AppStorage(Preferences.sameLook) private var shared = false
@@ -965,11 +951,11 @@ struct NotchView: View {
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
             HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset * 2) * swell)
-                .matchedGeometryEffect(id: heroOpen ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
+                .matchedGeometryEffect(id: heroOpen || model.second == .music ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays, coming and going as the
                 // Dynamic Island's activities do, as everything in the notch does.
-                .modifier(BubbleArtworkFade(shown: heroOpen || artworkShown && !expandedShown, fromBubble: model.second == .music))
+                .islandFade(heroOpen || artworkShown && !expandedShown)
                 .modifier(PageFade(hidden: heroOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 .allowsHitTesting(places == nil && !trayShown)
@@ -1114,14 +1100,7 @@ struct NotchView: View {
     }
 
     private func sharesBubble(_ activity: NotchModel.Activity) -> Bool {
-        switch activity {
-        case .music, .airplay, .airdrop, .voiceMemo: return true
-        case .screenRecording:
-            guard let screen = model.screenRecording else { return false }
-            return screen.isRecording || screen.isSaved
-        case .call: return model.call?.throughApple == true && model.call?.isConnected == true
-        case .timer, .stopwatch: return false
-        }
+        activity.sharesBubbleSide
     }
 
     private var grownSwell: CGFloat { model.state == .open ? model.grownSwell : model.swell(in: model.state) }
@@ -1222,8 +1201,7 @@ struct NotchView: View {
                 .frame(width: side, height: side)
                 .matchedGeometryEffect(id: Hero.liveArtwork, in: hero)
                 .position(
-                    x: model.second == .music ? m.totalWidth / 2 + (bubbleOrigin(.music) ?? 0) : m.flare + edge + side / 2,
-                    y: model.second == .music ? h / 2 : m.height / 2)
+                    x: m.flare + edge + side / 2, y: m.height / 2)
             Color.clear
                 .frame(width: side, height: side)
                 .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
@@ -1849,4 +1827,9 @@ final class GlassBlurView: NSView {
         let scale: CGFloat = radius < 8 ? 1 : 0.5
         if (backdrop.value(forKey: "scale") as? CGFloat) != scale { backdrop.setValue(scale, forKey: "scale") }
     }
+}
+
+/// A detached bubble is on the right. Only an element expanded on that same side travels from it.
+extension NotchModel.Activity {
+    var sharesBubbleSide: Bool { self == .airdrop }
 }
