@@ -94,7 +94,8 @@
   closes. With Reduce Motion on, shared elements change with a fade.
 
 - Changed Allow Access and permission review to native grouped forms, with a
-  checkmark beside allowed access and one action per row.
+  green checkmark beside allowed access, centered action buttons and colors
+  that follow the appearance.
 
 - Fixed `Hide native Live Activities` failing to restore the switches in
   Menu Bar settings. Failed changes now stay queued for another attempt.

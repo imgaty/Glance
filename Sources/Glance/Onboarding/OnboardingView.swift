@@ -705,29 +705,27 @@ private struct PermissionRow: View {
     let openSettings: () -> Void
     var remove: (() -> Void)? = nil
 
+    private var iconColor: Color {
+        switch symbol {
+        case "music.note": .pink
+        case "music.quarternote.3": .green
+        case "battery.100percent": .orange
+        default: .blue
+        }
+    }
+
     var body: some View {
-        LabeledContent {
-            switch state {
-            case .granted:
-                if let remove {
-                    Button("Remove", action: remove)
-                } else {
-                    Button("Open Settings…", action: openSettings)
-                }
-            case .denied:
-                Button("Open Settings…", action: openSettings)
-            case .notDetermined:
-                Button("Request…", action: allow)
-            case .notInstalled:
-                Text("Not installed").foregroundStyle(.secondary)
-            }
-        } label: {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Label(title, systemImage: symbol)
+                    Label {
+                        Text(title)
+                    } icon: {
+                        Image(systemName: symbol).foregroundStyle(iconColor)
+                    }
                     if state == .granted {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(nsColor: .systemGreen))
                             .accessibilityLabel("Allowed")
                     }
                 }
@@ -737,8 +735,27 @@ private struct PermissionRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            action.frame(width: 118)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
+    }
+
+    @ViewBuilder private var action: some View {
+        switch state {
+        case .granted:
+            if let remove {
+                Button("Remove", action: remove)
+            } else {
+                Button("Open Settings…", action: openSettings)
+            }
+        case .denied:
+            Button("Open Settings…", action: openSettings)
+        case .notDetermined:
+            Button("Request…", action: allow)
+        case .notInstalled:
+            Text("Not installed").foregroundStyle(.secondary)
+        }
     }
 }
