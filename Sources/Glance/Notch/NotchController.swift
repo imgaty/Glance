@@ -1416,6 +1416,7 @@ final class NotchController {
                         }
                     return
                 }
+                if self.holds.contains(.menu) { return }
                 self.giveBackKeys()
                 // Share's picker took it: the notch stays under it.
                 if self.model.state == .open, !Tray.shared.sharing { self.close(holdUntilExit: false) }
@@ -1633,7 +1634,7 @@ final class NotchController {
 
     /// A menu opened while the pointer is in the open notch was opened from it.
     private func menuOpened() {
-        guard model.state == .open, openZone.contains(NSEvent.mouseLocation) else { return }
+        guard model.state == .open, hasKeys || openZone.contains(NSEvent.mouseLocation) else { return }
         holds.insert(.menu)
         closeTask?.cancel()
         closeTask = nil

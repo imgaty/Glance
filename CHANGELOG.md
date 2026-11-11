@@ -48,6 +48,10 @@
 
 ### Live Activities
 
+- Restored the compact sound panel without a popover arrow, anchored under its
+  button, while keeping the system's default volume slider.
+- Fixed opening Sound Output from the keyboard closing the notch underneath it.
+
 - Fixed a straight edge appearing while the background morphed into the
   Spotlight. The colors now stay in place as the soft mask moves and shrinks.
 - Corrected camera clearance in the preview so the Spotlight passes the camera

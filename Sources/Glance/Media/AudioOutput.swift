@@ -17,7 +17,7 @@ final class AudioOutput: NSObject, ObservableObject {
     /// An SF Symbol for the current device, such as AirPods Pro or the built-in speakers.
     @Published private(set) var symbol = "speaker.wave.2.fill"
     @Published private(set) var popoverShown = false
-    private var soundPopover: NSPopover?
+    private let soundPanel = StatusPanel()
 
     private override init() {
         super.init()
@@ -40,33 +40,23 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 
     private func showPopover(at point: CGPoint) {
-        soundPopover?.performClose(nil)
-        let windows = NSApp.windows.filter { $0.isVisible && $0.contentView != nil }
-        guard
-            let window = windows.filter({ $0.frame.contains(point) }).max(by: { $0.level.rawValue < $1.level.rawValue })
-                ?? windows.first(where: { $0 is NotchPanel }), let anchor = window.contentView
-        else { return }
         let devices = Self.outputs().sorted { ($0.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) < ($1.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) }
-        let popover = NSPopover()
-        popover.behavior = .transient
-        popover.delegate = self
         let content = SoundOutputView(
             devices: devices, current: Self.defaultOutput, volume: AppVolume.shared,
-            choose: { [weak popover] device in
+            choose: { [weak self] device in
                 Self.use(device.id)
-                popover?.performClose(nil)
+                self?.soundPanel.close()
             },
-            settings: { [weak self, weak popover] in
-                popover?.performClose(nil)
+            settings: { [weak self] in
+                self?.soundPanel.close()
                 self?.openSoundSettings()
             })
         let width = max(Self.menuWidth, devices.map { OutputRow(device: $0, playing: false).fittingWidth }.max() ?? 0)
-        popover.contentViewController = NSHostingController(rootView: content.frame(width: width))
-        let local = anchor.convert(window.convertPoint(fromScreen: point), from: nil)
-        let position = anchor.bounds.contains(local) ? local : CGPoint(x: anchor.bounds.midX, y: anchor.bounds.midY)
-        soundPopover = popover
+        soundPanel.onClose = { [weak self] _ in self?.popoverShown = false }
+        soundPanel.close()
         popoverShown = true
-        popover.show(relativeTo: CGRect(origin: position, size: CGSize(width: 1, height: 1)), of: anchor, preferredEdge: .minY)
+        soundPanel.show(at: point, content: content.frame(width: width).modifier(SoundMenuSurface()))
+        popoverShown = soundPanel.isShown
     }
 
     func menu(withVolume: Bool = true, outputsOnly: Bool = false) -> NSMenu {
@@ -298,10 +288,12 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 }
 
-extension AudioOutput: NSPopoverDelegate {
-    func popoverDidClose(_ notification: Notification) {
-        soundPopover = nil
-        popoverShown = false
+/// A single glass surface, sized like the sound menu, outside menu event tracking.
+private struct SoundMenuSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: SoundMenu.radius, style: .continuous))
+            .shadow(color: .black.opacity(0.16), radius: 12, y: 5)
     }
 }
 
@@ -371,8 +363,8 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// A standard popover, outside NSMenu's tracking loop, so the system slider receives its events
-/// in its own window. The surrounding rows keep the sound outputs' pictures and batteries.
+/// An arrowless native panel, outside NSMenu's tracking loop, so the system slider receives
+/// ordinary events in its own key window. The surrounding rows keep the sound outputs' pictures and batteries.
 private struct SoundOutputView: View {
     let devices: [AudioOutput.Device]
     let current: AudioDeviceID

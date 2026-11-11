@@ -667,6 +667,25 @@ final class StatusPanel {
     var window: NSWindow? { panel }
 
     func show(below button: NSStatusBarButton, content: some View, onKey: @escaping (NSEvent) -> Bool) {
+        guard let window = button.window, let screen = window.screen else { return }
+        let icon = window.convertToScreen(button.convert(button.bounds, to: nil))
+        show(anchor: icon, screen: screen, keepingClicksIn: window, content: content, onKey: onKey)
+    }
+
+    /// The same native glass panel from a control in the notch, with no popover arrow.
+    func show(at point: CGPoint, content: some View) {
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main else { return }
+        show(anchor: CGRect(origin: point, size: .zero), screen: screen, keepingClicksIn: nil, content: content, onKey: { _ in false })
+    }
+
+    static func origin(for menu: CGSize, anchor: CGRect, visible: CGRect) -> CGPoint {
+        let preferredX = anchor.minX + menu.width <= visible.maxX ? anchor.minX : anchor.maxX - menu.width
+        return CGPoint(
+            x: min(max(preferredX, visible.minX), max(visible.minX, visible.maxX - menu.width)),
+            y: max(visible.minY, min(anchor.minY - 6 - menu.height, visible.maxY - menu.height)))
+    }
+
+    private func show(anchor: CGRect, screen: NSScreen, keepingClicksIn anchorWindow: NSWindow?, content: some View, onKey: @escaping (NSEvent) -> Bool) {
         close()
         letLingeringGo()
         previousKey = NSApp.keyWindow
@@ -689,11 +708,8 @@ final class StatusPanel {
         panel.onKey = onKey
         // Under the icon, as menus open from the menu bar: its left edge under the icon's left edge,
         // or, if it wouldn't fit on the screen that way, its right edge under the icon's right edge.
-        if let window = button.window, let screen = window.screen {
-            let icon = window.convertToScreen(button.convert(button.bounds, to: nil))
-            let x = icon.minX + menu.width <= screen.visibleFrame.maxX ? icon.minX : icon.maxX - menu.width
-            panel.setFrameOrigin(NSPoint(x: x - room, y: icon.minY - 6 - menu.height - room))
-        }
+        let origin = Self.origin(for: menu, anchor: anchor, visible: screen.visibleFrame)
+        panel.setFrameOrigin(NSPoint(x: origin.x - room, y: origin.y - room))
         panel.makeKeyAndOrderFront(nil)
         self.panel = panel
         let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
@@ -704,7 +720,7 @@ final class StatusPanel {
             NSEvent.addLocalMonitorForEvents(matching: clicks) { [weak self] event in
                 MainActor.assumeIsolated {
                     // A click in the menu is the menu's; on the icon, the icon closes it.
-                    guard let self, event.window !== self.panel, event.window !== button.window else { return }
+                    guard let self, event.window !== self.panel, event.window !== anchorWindow else { return }
                     self.close()
                 }
                 return event
