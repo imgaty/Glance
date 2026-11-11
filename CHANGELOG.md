@@ -20,7 +20,7 @@
 
 ### Player
 
-- Changed paused artwork to half its playing width and height.
+- Changed paused artwork to one-quarter of its playing width and height.
 - Fixed choosing `None` removing the artwork background abruptly. Its existing
   shape now shrinks and fades away.
 - Matched player and Tray switches, including Settings previews and turning the
