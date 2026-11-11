@@ -20,12 +20,16 @@
 
 ### Player
 
-- Changed the Sound popup to a native menu anchored below its button, keeping
-  the white volume slider, inline outputs and battery details.
+- Fixed the cover opening a stale source in Spotify. With `Accessibility`
+  allowed, it now uses the app's own current-song navigation.
+- Fixed the Sound menu opening at a fixed position after a pointer click. It
+  now opens at the click, while keyboard access stays anchored to the button.
+- Fixed the Sound Settings highlight using the larger bottom curve from the
+  previous popup. Its top corners and gray styling stay the same.
+- Changed the Sound popup to a native menu, keeping the white volume slider,
+  inline outputs and battery details.
 - Changed player buttons to use the same native symbol transition when their
   state or assigned control changes.
-- Rounded the Sound Settings row's bottom corners more, keeping its top
-  corners as they were.
 - Changed paused artwork to 85% of its playing width and height.
 - Fixed choosing `None` removing the artwork background abruptly. Its existing
   shape now shrinks and fades away.

@@ -185,7 +185,10 @@ Click the cover, or the app's icon, to go where the music plays from: the tab
 playing it in Safari, Chrome, Brave, Edge or Vivaldi, the playlist or album
 Spotify plays it from, or the song in the playlist Music plays it from. Other
 browsers switch to the tab with `Accessibility` allowed, in the windows on the
-current desktop. Otherwise, it switches to the app.
+current desktop. With `Accessibility` allowed, Spotify uses its own current-song
+navigation, including the current position in a playlist. Without it, Glance
+opens the last source Spotify recorded, or the song when no source is known.
+If no source can be found, Glance brings the playing app forward.
 
 Changing the background reshapes the same field of color into the spotlight.
 The colors stay pinned to the notch while the soft mask moves and shrinks,
@@ -247,8 +250,10 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a native menu below the button. The
-notch stays open while it is in use. Escape or a click outside closes it.
+The `Sound Output` button opens a native menu at the pointer's click position.
+Opened from the keyboard, it appears below the button. macOS keeps the menu
+within the display. The notch stays open while it is in use. Escape or a click
+outside closes it.
 The native slider sets the playing app's volume, with a white track and the
 system's glass handle. Drag the knob or click the track to change it.
 For `Music` and `Spotify`, it reads their volume as the menu opens; other
@@ -265,9 +270,9 @@ other headphone options are managed in macOS.
 The menu is ready for interaction when opened and keeps its notch open.
 Headings, output icons and the Settings label share the same leading edge. Both
 dividers use the same inset. The compact Settings row sits below the output
-list, with a highlight whose bottom corners are more rounded than its top
-corners. Output glyphs sit inside matching circles, and long output names wrap
-above their battery details. When the laptop speakers are selected, the button
+list, with a gray highlight inset from the menu's bottom corners. Output glyphs
+sit inside matching circles, and long output names wrap above their battery
+details. When the laptop speakers are selected, the button
 shows muted, low, medium or high volume as the app or speaker volume changes.
 The speaker stays in place as its waves follow the volume.
 
@@ -815,10 +820,10 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | --- | --- |
 | `Screen & System Audio Recording` (audio only) | The waveform, the colors behind the player pulsing on the beat, and the volume slider for apps other than `Music` and `Spotify`. Nothing is recorded or leaves your Mac |
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
-| `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
+| `Automation` for `Spotify` | The shuffle, repeat and volume controls, and reading the song link as a fallback when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
 | `Power control` | Optional, one-time administrator approval for the signed helper that turns Low Power Mode on and off with the battery button. It does not change other power settings |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
+| `Accessibility` | Opening the current song in its source in `Spotify`; repeating one song there, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
 | `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |
 | `Microphone` | Your half of the waveform on calls in other apps, during those calls, and the waveform of a voice memo while Voice Memos records it |
 | `Contacts` | The caller's photo during a FaceTime or phone call, asked for during your first one. Glance looks up only the name or number macOS's popup shows; if two of your contacts have that name, it tells them apart by the picture in the popup. Without it, the caller shows their initial |

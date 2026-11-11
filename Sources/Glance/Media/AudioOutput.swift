@@ -606,7 +606,7 @@ private final class SoundMenuContentRow: NSView {
     private var content: AnyView
     var highlighted = false { didSet { needsDisplay = true } }
 
-    init<Content: View>(bottomRadius: CGFloat = SoundOutputLayout.highlightRadius, @ViewBuilder content: () -> Content) {
+    init<Content: View>(bottomRadius: CGFloat = SoundMenu.highlightRadius, @ViewBuilder content: () -> Content) {
         self.bottomRadius = bottomRadius
         self.content = AnyView(content())
         host = NSHostingView(rootView: Self.root(self.content, width: 308))
@@ -646,8 +646,8 @@ private final class SoundMenuContentRow: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard highlighted else { return }
         let shape = UnevenRoundedRectangle(
-            topLeadingRadius: SoundOutputLayout.highlightRadius, bottomLeadingRadius: bottomRadius,
-            bottomTrailingRadius: bottomRadius, topTrailingRadius: SoundOutputLayout.highlightRadius, style: .continuous
+            topLeadingRadius: SoundMenu.highlightRadius, bottomLeadingRadius: bottomRadius,
+            bottomTrailingRadius: bottomRadius, topTrailingRadius: SoundMenu.highlightRadius, style: .continuous
         )
         SoundMenu.highlightColor.setFill()
         NSBezierPath(cgPath: shape.path(in: bounds.insetBy(dx: SoundMenu.highlightInset, dy: 0)).cgPath).fill()
@@ -662,13 +662,13 @@ private final class SoundMenuContentRow: NSView {
     }
 }
 
-/// Both separators share the content gutter; text actions keep the compact menu row height.
+/// Output content shares the menu's text inset.
 private enum SoundOutputLayout {
     static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
     static let settingsVerticalInset: CGFloat = 3
-    static let highlightRadius: CGFloat = 11
-    static let settingsBottomRadius: CGFloat = 15
-    static let settingsHeight = highlightRadius + settingsBottomRadius
+    /// Inset from the native menu's observed 14-point bottom curve.
+    static let settingsBottomRadius: CGFloat = 14 - SoundMenu.highlightInset
+    static let settingsHeight: CGFloat = 26
     static let outputGlyphSize: CGFloat = 13.5
 }
 

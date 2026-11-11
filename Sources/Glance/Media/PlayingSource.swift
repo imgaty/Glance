@@ -7,6 +7,7 @@
 
 import AppKit
 import ApplicationServices
+import Carbon.HIToolbox
 
 /// Where what's playing comes from, opened as a click on the cover opens it: the browser tab it
 /// plays in, the playlist or album Spotify plays it from, the song in the playlist Music plays it
@@ -33,11 +34,11 @@ enum PlayingSource {
                 end tell
                 """, for: app) != nil
         case PlayerScripting.spotify:
-            guard let track = await PlayerScripting.run(#"tell application "Spotify" to return spotify url of current track"#, for: app),
-                let address = spotifyContext(of: track.trimmingCharacters(in: .whitespacesAndNewlines)) ?? URL(string: track),
-                address.scheme == "spotify"
-            else { return false }
-            return NSWorkspace.shared.open(address)
+            return await revealSpotify(
+                navigate: spotifyNowPlaying,
+                track: { await PlayerScripting.run(#"tell application "Spotify" to return spotify url of current track"#, for: app) },
+                context: spotifyContext, open: { NSWorkspace.shared.open($0) }
+            )
         default:
             guard !title.isEmpty else { return false }
             if let script = tabScript(app: app, title: title), await PlayerScripting.run(script, for: app) == "found" { return true }
@@ -46,6 +47,44 @@ enum PlayingSource {
     }
 
     // MARK: Spotify
+
+    /// Spotify knows the current context even when its on-disk history is behind or contains only a song.
+    static func revealSpotify(
+        navigate: () async -> Bool, track: () async -> String?,
+        context: (String) -> URL?, open: (URL) -> Bool
+    ) async -> Bool {
+        if await navigate() { return true }
+        guard let reply = await track() else { return false }
+        let track = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let address = context(track) ?? URL(string: track), address.scheme == "spotify" else { return false }
+        return open(address)
+    }
+
+    /// Spotify's Go to Now Playing shortcut, sent only to Spotify after it becomes active.
+    /// Without the existing Accessibility permission, the song/context link remains available.
+    private static func spotifyNowPlaying() async -> Bool {
+        guard AXIsProcessTrusted(),
+            let spotify = NSRunningApplication.runningApplications(withBundleIdentifier: PlayerScripting.spotify).first,
+            !spotify.isTerminated
+        else { return false }
+        spotify.activate()
+        for _ in 0..<30 {
+            guard !Task.isCancelled, !spotify.isTerminated else { return false }
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == spotify.processIdentifier {
+                guard let source = CGEventSource(stateID: .privateState),
+                    let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_J), keyDown: true),
+                    let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_J), keyDown: false)
+                else { return false }
+                down.flags = [.maskAlternate, .maskShift]
+                up.flags = down.flags
+                down.postToPid(spotify.processIdentifier)
+                up.postToPid(spotify.processIdentifier)
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return false
+    }
 
     /// The playlist, album, artist or show Spotify plays the song from. Its scripting doesn't say,
     /// but Spotify keeps what was last asked to play, and every song it has played beside where it
