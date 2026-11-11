@@ -374,17 +374,18 @@ struct SoundOutputView: View {
             Text("Sound")
                 .font(.system(size: 13, weight: .semibold))
                 .padding(.horizontal, SoundPopoverLayout.contentInset)
-                .padding(.top, SoundPopoverLayout.contentInset)
-                .padding(.bottom, 10)
+                .padding(.top, SoundMenu.inset)
+                .padding(.bottom, 8.5)
             if volume == nil || volume?.app != nil {
                 VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
                     .padding(.horizontal, SoundPopoverLayout.contentInset)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 8.5)
             }
-            Divider()
+            Divider().padding(.horizontal, SoundPopoverLayout.contentInset)
             Text("Output")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color(nsColor: SoundMenu.headingGray))
+                .padding(.top, 6)
                 .frame(height: 27, alignment: .center)
                 .padding(.horizontal, SoundPopoverLayout.contentInset)
             ForEach(ordered, id: \.id) { device in
@@ -400,7 +401,7 @@ struct SoundOutputView: View {
                 .accessibilityLabel(device.name)
                 .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
-            Divider().padding(.vertical, 6)
+            Divider().padding(.vertical, 5)
             Button {
                 dismiss()
                 settings()
@@ -409,12 +410,13 @@ struct SoundOutputView: View {
                     .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, SoundPopoverLayout.contentInset)
-                    .padding(.vertical, SoundPopoverLayout.contentInset)
+                    .frame(height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(SoundRowStyle())
         }
-        .padding(SoundPopoverLayout.inset)
+        .padding(.horizontal, SoundMenu.highlightInset)
+        .padding(.bottom, SoundMenu.highlightInset)
         .foregroundStyle(.primary)
         .frame(width: 308)
         .defaultFocus($focusedOutput, current)
@@ -462,12 +464,9 @@ private struct SoundPopoverFocus: NSViewRepresentable {
     static func dismantleNSView(_ view: FocusView, coordinator: ()) { view.releaseFocus() }
 }
 
-/// One outer inset contains every row and separator. Text keeps the same inner gutter.
+/// Text and the volume separator share a gutter; row highlights and the footer separator extend farther.
 private enum SoundPopoverLayout {
-    static let inset: CGFloat = 8
-    static let contentInset = SoundMenu.inset - inset
-    /// The native popover's 20-point curve, inset by the same margin on every edge.
-    static let highlightRadius: CGFloat = 20 - inset
+    static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
 }
 
 private struct SoundRowStyle: ButtonStyle {
@@ -484,7 +483,7 @@ private struct SoundRowHighlight<Content: View>: View {
     var body: some View {
         content()
             .background {
-                RoundedRectangle(cornerRadius: SoundPopoverLayout.highlightRadius)
+                RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
                     .fill(Color(nsColor: SoundMenu.highlightColor))
                     .opacity(hovered || pressed ? 1 : 0)
             }
