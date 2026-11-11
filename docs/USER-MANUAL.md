@@ -176,7 +176,7 @@ the controls. Drag the progress bar to move through the song. With
 corner.
 
 The cover lifts gently under the pointer, with a soft shadow, squashes as it's
-pressed, and springs back as it's let go. Paused, it settles to one-quarter of
+pressed, and springs back as it's let go. Paused, it settles to three-quarters of
 its playing width and height.
 Click the cover, or the app's icon, to go where the music plays from: the tab
 playing it in Safari, Chrome, Brave, Edge or Vivaldi, the playlist or album
