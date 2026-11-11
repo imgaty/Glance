@@ -679,6 +679,28 @@ extension NotchModel {
         }
     }
 
+    /// Ends a display or test scene with the same fold, regardless of the activity showing.
+    func collapseAway() {
+        reachTask?.cancel()
+        withAnimation(IslandMotion.fold) {
+            collapsed = true
+            state = .closed
+            activity = false
+            pop = false
+            proximity = 0
+            pressed = false
+            stretch = 0
+            lean = 0
+            pageStretch = 0
+            alertExtended = false
+            openedFromBubble = false
+            bubbleHovered = false
+            bubblePressed = false
+            bubbleMerged = false
+            bubbleReach = 0
+        }
+    }
+
     func close() {
         // What's open is the bubble's, and it goes back out into the bubble as the notch closes.
         let intoBubble = openedFromBubble && second != nil && alert == nil && !folded
@@ -1095,11 +1117,17 @@ struct NotchView: View {
 
     /// Opened to AirPlay: its own view, laid out at its open size, so the growing shape reveals it.
     @ViewBuilder private func expandedAirPlay(shown: Bool) -> some View {
-        if model.expanded == .airplay, let route = model.airplay {
+        if let route = model.airplay {
             let h = model.closedSize.height
             let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
-            ExpandedAirPlayView(route: route, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom, closedDrop: grownDrop)
-                .allowsHitTesting(places == nil && shown)
+            let visible = shown && model.expanded == .airplay
+            let swell = model.state == .open ? model.grownSwell : model.swell(in: model.state)
+            let origin = !model.openedFromBubble && model.activities.first == .airplay ? model.restingWidth + 2 * swell : nil
+            // Keep the closed pose mounted while the route exists. Opening then animates its
+            // symbols on the notch's transaction, with no second spring starting in onAppear.
+            ExpandedAirPlayView(route: route, restingHeight: h, width: width, revealed: visible, closedWidth: origin, closedDrop: swell / 2)
+                .allowsHitTesting(places == nil && visible)
+                .accessibilityHidden(!visible)
         }
     }
 

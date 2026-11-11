@@ -61,8 +61,10 @@ enum LowBatteryLayout {
     static func capsule(_ h: CGFloat) -> CGSize {
         CGSize(width: TimerLayout.content(h) * 1.506, height: TimerLayout.content(h))
     }
-    /// The battery in the capsule, a little right of its middle, as the iPhone sets it.
-    static let bodyLeft: CGFloat = 0.54
+    /// Centers the complete battery, including the separated cap, inside its capsule.
+    static func bodyLeft(_ h: CGFloat) -> CGFloat {
+        (capsule(h).width - h * (body.width + capGap + cap.width)) / 2
+    }
     static let body = CGSize(width: 1.2, height: 0.645)
     /// The level inside the body, the same gap on three sides.
     static let levelInset: CGFloat = 0.1075
@@ -248,7 +250,7 @@ struct LowBatteryView: View {
                     .fill(shade.body)
                     .frame(width: h * layout.cap.width, height: h * layout.cap.height)
             }
-            .padding(.leading, h * layout.bodyLeft)
+            .padding(.leading, layout.bodyLeft(h))
             .frame(width: layout.capsule(h).width, height: layout.capsule(h).height, alignment: .leading)
             .background(Capsule(style: .continuous).fill(hovered ? shade.capsule.mix(with: .white, by: 0.08) : shade.capsule))
         }

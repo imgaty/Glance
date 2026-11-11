@@ -511,6 +511,8 @@ struct MemoWaveform: View {
     let open: Bool
     /// Still recording: it moves on.
     var live = true
+    /// Future places belong only to the expanded presentation.
+    var futureShown = true
     @Environment(\.notchOnScreen) private var onScreen
 
     var body: some View {
@@ -531,6 +533,13 @@ struct MemoWaveform: View {
             }
         }
         .frame(width: spec.width, height: height)
+        .mask(alignment: .leading) {
+            HStack(spacing: 0) {
+                Color.white.frame(width: spec.recordedWidth)
+                Color.white.islandFade(futureShown)
+            }
+            .frame(width: spec.width, height: height)
+        }
         .accessibilityHidden(true)
     }
 }
@@ -549,6 +558,7 @@ enum MemoBars {
         /// Quiet, a bar is a dot: as tall as it's wide opened, a little taller beside the camera.
         var least: CGFloat { open ? barWidth : scale * RecordingLook.barLeast }
         var width: CGFloat { pitch * CGFloat(slots - 1) + barWidth }
+        var recordedWidth: CGFloat { min(width, pitch * CGFloat(recorded)) }
 
         /// The recorded places from the newest levels, oldest first, the newest last; the rest
         /// dots. From a place before the first, for one that's on its way out.
@@ -702,7 +712,7 @@ struct ExpandedRecordingView: View {
         let text = LiveActivityView.textSize(for: h)
         let size = NotchType.size * RecordingLook.memoTime
         let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.memoTimeEdge(h), height: rise)
-        MemoWaveform(slots: open.slots, recorded: open.recorded, height: open.height, scale: tall, open: true, live: memo.isRecording)
+        MemoWaveform(slots: open.slots, recorded: open.recorded, height: open.height, scale: tall, open: true, live: memo.isRecording, futureShown: revealed)
             .modifier(GrowsOut(out: grows, scale: closed.pitch / open.pitch, anchor: .leading, from: waveFrom))
             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
             .padding(.leading, edge)

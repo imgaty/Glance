@@ -553,7 +553,8 @@ long as the sound plays there. After another activity, it goes in a bubble of
 its own, showing AirPlay's symbol.
 
 Hover over or click the notch while AirPlay has it, or click its bubble, and it
-opens to AirPlay, with the speaker's name. Click **Stop AirPlay** to send the
+opens to AirPlay, with the speaker's name. Both symbols move with the opening
+notch from their closed positions. Click **Stop AirPlay** to send the
 sound back to where it played before, or to the Mac's own speakers. Turn it off
 with `Devices` in **Settings > Live Activities**.
 
@@ -593,7 +594,8 @@ and it opens to the waveform, the time, and a button: click it to stop the
 recording and keep it, as Voice Memos' **Done** does. After the bars recorded
 so far, gray dots stand for what's still to come: they move along with the
 waveform, and each turns red and rises to the sound as it reaches the recorded
-bars. It opens wide enough for the recorded bars to end beside the camera, as
+bars. Closing, the gray future dots blur and fade away; only the recorded bars
+move back beside the camera. It opens wide enough for the recorded bars to end beside the camera, as
 the iPhone's do, and only the dots pass beneath it. Turn it off, with screen
 recordings, with `Recordings` in **Settings > Live Activities**.
 

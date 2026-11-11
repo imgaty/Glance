@@ -477,6 +477,20 @@ final class NotchController {
         popTask?.cancel()
         openTask?.cancel()
         closeTask?.cancel()
+        switchTask?.cancel()
+        recordingRefit?.cancel()
+        timerWingTask?.cancel()
+        relayoutTask?.cancel()
+        glideCheck?.cancel()
+        revealTask?.cancel()
+        mergeTask?.cancel()
+        presentTask?.cancel()
+        returns.values.forEach { $0.cancel() }
+        [
+            playingWatch, titleWatch, settingsWatch, songWatch, alertWatch, timerWatch,
+            clockNameWatch, airPlayWatch, callWatch, callMinutes, recordingWatch,
+            airDropWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
+        ].forEach { $0?.cancel() }
         stopPolling()
         touchWatch = nil
         touchTarget?.orderOut(nil)
@@ -490,15 +504,7 @@ final class NotchController {
     private func collapse() {
         // This controller is let go of as it's replaced; the model and the panel carry the motion.
         let model = model, panel = panel
-        withAnimation(.spring(response: 0.35, dampingFraction: 1)) {
-            model.state = .closed
-            model.activity = false
-            model.pop = false
-            model.proximity = 0
-            model.pressed = false
-            model.stretch = 0
-            model.lean = 0
-        }
+        model.collapseAway()
         Task { @MainActor in
             if !model.hasCamera {
                 try? await Task.sleep(for: .seconds(0.3))

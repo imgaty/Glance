@@ -61,6 +61,13 @@
 
 ### Live Activities
 
+- Fixed future gray dots shrinking into the closed voice-memo waveform. They now
+  blur and fade away while the recorded bars return to the notch.
+- Fixed AirPlay symbols starting a second motion as the notch opened.
+- Centered the Low Power Mode battery, including its cap, inside the button.
+- Fixed test scenes disappearing at different heights. Every activity now folds
+  before its window leaves, including tall alerts and expanded recordings.
+
 - Restored the compact sound panel without a popover arrow, anchored under its
   button, while keeping the system's default volume slider.
 - Fixed opening Sound Output from the keyboard closing the notch underneath it.

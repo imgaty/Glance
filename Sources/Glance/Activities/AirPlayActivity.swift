@@ -195,13 +195,12 @@ struct ExpandedAirPlayView: View {
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
     @State private var hovering = false
-    @State private var arrived = false
     @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
         let h = restingHeight
         let layout = AirPlayLayout.self
-        let out = revealed && arrived || closedWidth == nil
+        let out = revealed || closedWidth == nil
         let rise = h / 2 + closedDrop - (h + LiveActivityView.cameraGap + h * layout.header / 2)
         let spread = ((closedWidth ?? width) - width) / 2
         // From each frame's edge here to its edge beside the camera, the room the large symbols have
@@ -253,7 +252,6 @@ struct ExpandedAirPlayView: View {
             .padding(.horizontal, PlayerLayout.padding)
             .modifier(IslandReveal(hidden: !revealed))
         }
-        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
         .padding(.top, h + LiveActivityView.cameraGap)
         .padding(.bottom, PlayerLayout.padding)
         .frame(width: width, height: AirPlayLayout.height(h), alignment: .top)
