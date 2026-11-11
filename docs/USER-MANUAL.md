@@ -767,6 +767,10 @@ different display reshapes the same Settings preview, keeping its current page.
 
 ## Permissions
 
+The welcome tour and permission review use a grouped form. A checkmark beside
+the permission name means access is allowed. Each row explains why access is
+used and provides its available action. The form scrolls when needed.
+
 Once control of Music or Spotify has been confirmed, **Allow Access** keeps the
 last answer while that player is closed. It checks again when the player runs
 or Glance comes forward. A player is never opened just to read its permission;

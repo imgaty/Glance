@@ -383,6 +383,7 @@ struct PermissionsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             PermissionsPage(permissions: permissions, asksLogin: false, top: OnboardingMetrics.bottom)
+            Divider()
             HStack {
                 Spacer()
                 Button("Done") { dismiss() }
@@ -390,9 +391,7 @@ struct PermissionsSheet: View {
             }
             .padding(OnboardingMetrics.bottom)
         }
-        .frame(width: OnboardingView.size.width)
-        // As tall as its rows once their words have wrapped.
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 560, height: 570)
         // Already read, as Glance started: read again in case, keeping what shows meanwhile.
         .onAppear { permissions.refresh() }
     }
@@ -407,54 +406,53 @@ private struct PermissionsPage: View {
     @ObservedObject private var loginItem = LoginItem.shared
 
     var body: some View {
-        PageLayout(title: String(localized: "Allow Access"), top: top) {
-            PageSymbol(name: "hand.raised.fill")
-        } content: {
-            VStack(spacing: OnboardingMetrics.groupGap) {
-                permissionList
+        VStack(alignment: .leading, spacing: 0) {
+            Label("Allow Access", systemImage: "hand.raised")
+                .font(.title2.weight(.semibold))
+                .padding(.horizontal, 24)
+                .padding(.top, top)
+                .padding(.bottom, 8)
+            Form {
+                Section { permissionList }
                 if asksLogin {
-                    SwitchList {
-                        SwitchRow(title: String(localized: "Open at login"), isOn: Binding(get: { loginItem.status == .enabled }, set: loginItem.set))
+                    Section {
+                        Toggle("Open at login", isOn: Binding(get: { loginItem.status == .enabled }, set: loginItem.set))
                     }
                 }
             }
+            .formStyle(.grouped)
         }
     }
 
     private var permissionList: some View {
-        VStack(spacing: 0) {
+        Group {
             PermissionRow(
                 symbol: "waveform", title: String(localized: "Audio from apps"),
                 detail: String(localized: "For the waveform and the volume slider. Nothing is recorded or leaves your Mac."),
                 state: permissions.audio, allow: permissions.requestAudio,
                 openSettings: { permissions.openSettings(for: \.audio) })
-            Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
                 symbol: "music.note", title: String(localized: "Control Music"),
                 detail: String(localized: "For the shuffle, repeat, favorite and volume controls."),
                 state: permissions.musicControl, allow: { permissions.requestControl(of: PlayerScripting.music) },
                 openSettings: { permissions.openSettings(for: \.musicControl) })
-            Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
                 symbol: "music.quarternote.3", title: String(localized: "Control Spotify"),
                 detail: String(localized: "For the shuffle, repeat and volume controls. Repeating one song also takes Accessibility."),
                 state: permissions.spotify, allow: permissions.requestSpotify,
                 openSettings: { permissions.openSettings(for: permissions.spotifyControl == .granted && permissions.accessibility != .granted ? \.accessibility : \.spotifyControl) })
-            Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
                 symbol: "accessibility", title: String(localized: "Accessibility"),
                 detail:
                     String(localized: "To paste from the tray, swipe to it, press Clock's and AirDrop's buttons, find the tab a song plays in, and hide macOS's own banners and timer."),
                 state: permissions.accessibility, allow: permissions.requestAccessibility,
                 openSettings: { permissions.openSettings(for: \.accessibility) })
-            Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
                 symbol: "battery.100percent", title: String(localized: "Power control"),
                 detail: String(localized: "One-time approval for the battery button. Changes only Low Power Mode."),
                 state: permissions.powerControl, allow: PowerModeSettings.requestAuthorization,
                 openSettings: PowerModeSettings.requestAuthorization, remove: PowerModeSettings.removeAuthorization)
         }
-        .background(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous).fill(.quinary))
     }
 }
 
@@ -708,49 +706,39 @@ private struct PermissionRow: View {
     var remove: (() -> Void)? = nil
 
     var body: some View {
-        HStack(alignment: .center, spacing: Self.spacing) {
-            Image(systemName: symbol)
-                .font(.system(size: 15))
-                .foregroundStyle(.tint)
-                .frame(width: Self.icon)
-            // As Settings writes a line under a setting's name.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13))
-                Text(detail)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 8)
+        LabeledContent {
             switch state {
             case .granted:
-                VStack(alignment: .trailing, spacing: 6) {
-                    Label("Allowed", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.system(size: 11))
-                    if let remove {
-                        Button("Remove", action: remove)
-                    } else {
-                        Button("Open Settings…", action: openSettings)
-                    }
+                if let remove {
+                    Button("Remove", action: remove)
+                } else {
+                    Button("Open Settings…", action: openSettings)
                 }
-                .fixedSize()
             case .denied:
                 Button("Open Settings…", action: openSettings)
             case .notDetermined:
-                // Not "Allow": that's the answer in macOS's own question, which this only brings up.
                 Button("Request…", action: allow)
             case .notInstalled:
-                Text("Not installed")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
+                Text("Not installed").foregroundStyle(.secondary)
             }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Label(title, systemImage: symbol)
+                    if state == .granted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Allowed")
+                    }
+                }
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 4)
         }
-        .controlSize(.small)
-        .padding(.horizontal, GroupMetrics.inset)
-        .padding(.vertical, 8)
-        .frame(minHeight: GroupMetrics.rowHeight)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
     }
 }

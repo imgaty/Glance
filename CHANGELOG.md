@@ -81,6 +81,9 @@
 
 ### Live Activities
 
+- Changed Allow Access and permission review to native grouped forms, with a
+  checkmark beside allowed access and one action per row.
+
 - Fixed `Hide native Live Activities` failing to restore the switches in
   Menu Bar settings. Failed changes now stay queued for another attempt.
 - Changed connecting earbuds to show their case's low-battery warning instead
