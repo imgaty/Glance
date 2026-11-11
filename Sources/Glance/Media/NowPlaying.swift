@@ -89,7 +89,8 @@ final class NowPlaying: ObservableObject {
     /// Presentation fixtures can apply reports without polling real players or following their audio.
     private let followsPlayers: Bool
 
-    init(followsPlayers: Bool = true) {
+    init(followsPlayers: Bool = true, lyrics: LyricsStore? = nil) {
+        if let lyrics { lyricsStore = lyrics }
         self.followsPlayers = followsPlayers
         isDemo = !followsPlayers
     }

@@ -34,6 +34,8 @@ final class SettingsPreview: ObservableObject {
         let display = Self.defaultDisplay
         self.display = display
         model = .picture(of: ScreenTop(NSScreen.with(id: display) ?? NSScreen.main), state: .closed)
+        // A readable lyrics column inside the smaller Settings scene.
+        model.lyricsWidth = 170
         model.openBubble = { [weak self] in self?.open(fromBubble: true) }
         model.openNotch = { [weak self] in self?.open(fromBubble: false) }
     }

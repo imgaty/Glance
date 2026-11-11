@@ -50,7 +50,7 @@ struct NotchPreview: View {
             if proxy.size.width > 0, proxy.size.height > 0 {
                 // With the lyrics open beside the player, it draws back to make room for them.
                 let full = Self.scale(for: scaleWidth ?? proxy.size.width, model: model)
-                let least = Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: true)
+                let least = min(full, Self.scale(for: scaleWidth ?? proxy.size.width, model: model, lyrics: true))
                 let scale = model.showsLyrics && model.state == .open ? least : full
                 let geometry = SettingsPreview.Geometry(
                     rect: { state in
@@ -67,6 +67,22 @@ struct NotchPreview: View {
                         let x = proxy.size.width / 2 + (layoutDirection == .rightToLeft ? -out - h : out) * scale
                         return CGRect(x: x - 4 * scale, y: (top.edge - 2) * scale, width: (h + 8) * scale, height: (h + 6) * scale)
                     })
+                // Pointer coordinates pass through the same transform as the picture, including
+                // intermediate animation frames, rather than using the destination scale early.
+                let sceneWidth = proxy.size.width / least
+                let sceneGeometry = SettingsPreview.Geometry(
+                    rect: { state in
+                        let m = model.metrics(for: state)
+                        return CGRect(x: sceneWidth / 2 - m.totalWidth / 2, y: top.edge, width: m.totalWidth, height: m.height)
+                    }, scale: 1,
+                    bubble: {
+                        guard model.detached != nil else { return nil }
+                        let h = model.closedSize.height
+                        let m = model.metrics(for: .closed)
+                        let out = m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
+                        let x = sceneWidth / 2 + (layoutDirection == .rightToLeft ? -out - h : out)
+                        return CGRect(x: x - 4, y: top.edge - 2, width: h + 8, height: h + 6)
+                    })
                 ZStack(alignment: .top) {
                     // Laid out once, as large as it's ever seen, drawn back with the lyrics, so drawing
                     // back only scales it: laid out afresh at each scale, the page, menu bar and window
@@ -82,6 +98,35 @@ struct NotchPreview: View {
                             .environment(\.activityPreview, true)
                             .geometryGroup()
                     }
+                    // Followed over the whole picture, the notch included, so what's in the notch still
+                    // gets the pointer and the clicks.
+                    .contentShape(Rectangle())
+                    .onContinuousHover { phase in
+                        if case .active = phase { pointerOver?.wrappedValue = true } else { pointerOver?.wrappedValue = false }
+                        guard demo == nil else { return }
+                        switch phase {
+                        case .active(let p):
+                            hovering = true
+                            preview.pointer(at: p, sceneGeometry)
+                        case .ended:
+                            hovering = false
+                            preview.pointer(at: nil, sceneGeometry)
+                        }
+                    }
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { drag in
+                                if demo == nil, !pressing {
+                                    pressing = true
+                                    preview.press(at: drag.startLocation, sceneGeometry)
+                                }
+                            }
+                            .onEnded { drag in
+                                guard pressing else { return }
+                                pressing = false
+                                preview.release(at: drag.location, sceneGeometry)
+                            }
+                    )
                     .scaleEffect(scale, anchor: .top)
                     .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                     .clipped()
@@ -98,34 +143,7 @@ struct NotchPreview: View {
                     guard hinting else { return }
                     await demonstrate(along: hintPath(proxy.size, geometry), geometry)
                 }
-                // Followed over the whole picture, the notch included, so what's in the notch still
-                // gets the pointer and the clicks.
-                .contentShape(Rectangle())
-                .onContinuousHover { phase in
-                    if case .active = phase { pointerOver?.wrappedValue = true } else { pointerOver?.wrappedValue = false }
-                    guard demo == nil else { return }
-                    switch phase {
-                    case .active(let p):
-                        hovering = true
-                        preview.pointer(at: p, geometry)
-                    case .ended:
-                        hovering = false
-                        preview.pointer(at: nil, geometry)
-                    }
-                }
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { drag in
-                            if demo == nil, !pressing {
-                                pressing = true
-                                preview.press(at: drag.startLocation, geometry)
-                            }
-                        }
-                        .onEnded { drag in
-                            guard pressing else { return }
-                            pressing = false
-                            preview.release(at: drag.location, geometry)
-                        })
+
             }
         }
         // As on screen: closed, the notch shows what's playing only while something plays.
@@ -146,7 +164,8 @@ struct NotchPreview: View {
     /// lyrics, the one it needs with them beside it.
     static func scale(for width: CGFloat, model: NotchModel, lyrics: Bool = false) -> CGFloat {
         let widest = PlayerLayout.allCases.map { $0.size(closed: model.closedSize).width }.max() ?? model.openSize.width
-        return min(1, width / (widest + (lyrics ? model.lyricsWidth : 0) + PlayerLayout.cornerRadius * 2 + 24))
+        let contentWidth = lyrics ? model.openSize.width + model.lyricsWidth : widest
+        return min(1, width / (contentWidth + PlayerLayout.cornerRadius * 2 + 24))
     }
 
     /// Where the pointer showing how sets off and where it rests, up on the notch.

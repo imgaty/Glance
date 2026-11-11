@@ -108,7 +108,7 @@ final class NotchModel: ObservableObject {
     @Published var openSize: CGSize
     var corners: NotchCorners { NotchCorners(restingHeight: closedSize.height, radius: TimerLayout.tallHeight(closedSize.height) / 2) }
     /// Added to the open notch's width while the lyrics show beside the player.
-    let lyricsWidth: CGFloat = 250
+    var lyricsWidth: CGFloat = 250
     /// The widest a wing gets while a new song is announced; longer titles scroll.
     static let maxPopWing: CGFloat = 150
 

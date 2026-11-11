@@ -649,6 +649,9 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 | `Check for Updates…` | Looks for a new version now |
 | `Update automatically` | Looks for, downloads and installs new versions on its own |
 
+Opening lyrics in the preview makes room for a narrower lyrics column while
+keeping the player readable. Closing lyrics restores the normal preview size.
+
 The preview above the pages carries on as you switch between them. The player
 and tray slide into place from their current positions, even when you switch
 again before the previous change has finished.

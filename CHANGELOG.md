@@ -33,6 +33,9 @@
 
 ### Settings
 
+- Fixed lyrics shrinking the preview too far. Both layouts keep a larger
+  player, and pointer targets follow the picture while it scales.
+
 - Replaced permission dropdowns with visible action buttons and a separate
   status. Privacy permissions open their System Settings page; power control
   can be removed directly without changing Low Power Mode.
