@@ -431,12 +431,17 @@ which Glance asks for during that call and uses only during calls, and the
 other half needs `Audio from apps`. Turn all this off with `Calls` in
 **Settings > Live Activities**.
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
-With `Accessibility` allowed, the Low Power Mode button changes the power
-source currently in use, keeping the other source's choice. The button waits
-for macOS to confirm the change before accepting another press. If macOS
-requires authorization, its own sheet appears; finish it to apply the change,
-or cancel to keep the current mode. A canceled request does not open a second
-Settings window. If the control cannot be reached, the mode stays unchanged.
+Enable `Power control` in **Settings > General > Permissions** to use the Low
+Power Mode button. Choose **Request…**, then **Continue**, and approve Glance's
+helper in **System Settings > General > Login Items & Extensions**. This setup
+is optional and needs an administrator's approval. The helper can change only
+Low Power Mode, and only for a signed copy of Glance from the same developer.
+After setup, the battery button turns the mode on and off directly, without
+opening Battery settings or its policy menu. It changes the source currently
+in use and keeps the other source's choice. The button waits for macOS to
+confirm the change and stays available while the pointer is on the notch, so
+you can use the same button again. Without power control, clicking the button
+offers setup without changing the mode.
 macOS's own banner at the top of the screen for a device connecting or running
 low is hidden while the notch says the same. With `Accessibility` allowed, so
 is its banner under the menu bar for AirPods connecting or running low, and
@@ -774,7 +779,8 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls, and opening the playlist it plays from when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
-| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; changing Low Power Mode with the notch's button; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
+| `Power control` | Optional, one-time administrator approval for the signed helper that turns Low Power Mode on and off with the battery button. It does not change other power settings |
+| `Accessibility` | Repeating one song in `Spotify`, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
 | `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |
 | `Microphone` | Your half of the waveform on calls in other apps, during those calls, and the waveform of a voice memo while Voice Memos records it |
 | `Contacts` | The caller's photo during a FaceTime or phone call, asked for during your first one. Glance looks up only the name or number macOS's popup shows; if two of your contacts have that name, it tells them apart by the picture in the popup. Without it, the caller shows their initial |
@@ -849,8 +855,11 @@ their signature matches the one built into Glance.
 
 ## Uninstalling
 
-If Glance opens at login, turn that off first in **Settings > General**. Then
-quit Glance from its menu bar menu, and drag it from Applications to the Trash.
+If Glance opens at login, turn that off first in **Settings > General**. If you
+approved power control, turn off Glance under
+**System Settings > General > Login Items & Extensions** to revoke the
+helper's permission. Then quit Glance from its menu bar menu, and drag it from
+Applications to the Trash.
 
 Its settings and the tray stay behind in case you reinstall it. To remove
 them, and its permissions, run:

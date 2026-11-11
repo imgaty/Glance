@@ -25,6 +25,8 @@ final class Permissions: ObservableObject {
     @Published private(set) var spotifyControl = State.notDetermined
     @Published private(set) var accessibility: State = SpotifyMenu.allowed ? .granted : .notDetermined
 
+    @Published private(set) var powerControl: State = PowerModeSettings.isReady ? .granted : .notDetermined
+
     private var watching = false
     private let defaults: UserDefaults
     private var automationReads: [String: Int] = [:]
@@ -90,6 +92,7 @@ final class Permissions: ObservableObject {
     }
 
     func refresh() {
+        powerControl = PowerModeSettings.isReady ? .granted : .notDetermined
         Task {
             let fresh = await Self.recheck()
             audio = fresh.audio

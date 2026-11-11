@@ -10,11 +10,13 @@
 
 ### Battery
 
-- Fixed Low Power Mode authorization closing before it could complete. The
-  native authorization sheet now stays open until you finish or cancel.
-
-- Fixed the Low Power Mode button opening Settings without changing the mode.
-  It now changes the source in use and keeps the other power source's choice.
+- Changed the Low Power Mode button to use power control approved once in
+  **Settings > General > Permissions**. Turning it on or off no longer opens
+  Battery settings or its policy menu.
+- Fixed the battery button disappearing after a press while the pointer was
+  still on it. The same button stays available to turn the mode back off.
+- Kept the other power source's Low Power Mode preference when changing the
+  source currently in use.
 
 ### Player
 

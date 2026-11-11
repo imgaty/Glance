@@ -9181,6 +9181,220 @@
         }
       }
     },
+    "Approve Glance's helper in Login Items. It can only change Low Power Mode.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "وافق على مساعد Glance في عناصر الدخول. يمكنه تغيير نمط الطاقة المنخفضة فقط."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autoritza l’assistent del Glance als ítems d’inici de sessió. Només pot canviar el mode de baix consum."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Schvalte pomocníka Glance v položkách přihlášení. Může měnit pouze režim nízké spotřeby."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Godkend Glances hjælpeprogram i Loginemner. Det kan kun ændre Energibesparende funktion."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Erlaube das Hilfsprogramm von Glance unter Anmeldeobjekte. Es kann nur den Stromsparmodus ändern."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Εγκρίνετε τον βοηθό του Glance στα Στοιχεία σύνδεσης. Μπορεί να αλλάζει μόνο τη Λειτουργία χαμηλής ισχύος."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approve Glance's helper in Login Items. It can only change Low Power Mode."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autoriza el asistente de Glance en Ítems de inicio. Solo puede cambiar el modo de bajo consumo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Hyväksy Glancen apuohjelma kirjautumiskohteissa. Se voi muuttaa vain alhaisen virran tilaa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorisez l’assistant de Glance dans Ouverture. Il peut uniquement modifier le mode économie d’énergie."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "יש לאשר את כלי העזר של Glance בפריטי התחברות. הוא יכול לשנות רק את מצב סוללה חלשה."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "लॉगिन आइटम में Glance के सहायक को अनुमति दें। यह केवल कम पावर मोड बदल सकता है।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Odobrite pomoćni program Glancea u stavkama prijave. Može mijenjati samo način rada sa smanjenom potrošnjom."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Engedélyezze a Glance segédprogramját a Bejelentkezési elemek között. Csak az Alacsony töltöttségű módot módosíthatja."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Izinkan pembantu Glance di Item Masuk. Pembantu hanya dapat mengubah Mode Daya Rendah."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorizza l’assistente di Glance in Elementi login. Può modificare solo la modalità Risparmio energetico."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ログイン項目でGlanceのヘルパーを承認してください。変更できるのは低電力モードのみです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "로그인 항목에서 Glance 도우미를 승인하십시오. 저전력 모드만 변경할 수 있습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Luluskan pembantu Glance dalam Item Log Masuk. Ia hanya boleh menukar Mod Kuasa Rendah."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Godkjenn Glances hjelpeprogram i Påloggingsobjekter. Det kan bare endre Spareblussmodus."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Geef de Glance-helper toestemming bij Inlogonderdelen. Deze kan alleen de energiebesparingsmodus wijzigen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Zatwierdź pomocnika Glance w rzeczach otwieranych podczas logowania. Może zmieniać tylko tryb niskiego zużycia energii."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorize o auxiliar do Glance em Itens de Início. Ele só pode alterar o Modo de Pouca Energia."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorize o auxiliar do Glance nos elementos de início de sessão. Só pode alterar o modo de baixo consumo."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aprobați asistentul Glance în Articole de login. Acesta poate modifica doar modul Consum redus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Разрешите работу помощника Glance в объектах входа. Он может изменять только режим энергосбережения."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Schváľte pomocníka Glance v položkách prihlasovania. Môže meniť iba režim nízkej spotreby."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Odobrite pomočnika Glance med elementi za prijavo. Spreminja lahko samo način nizke porabe."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Godkänn Glances hjälpprogram i Startobjekt. Det kan bara ändra strömsparläget."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "อนุมัติตัวช่วยของ Glance ในรายการเข้าสู่ระบบ ตัวช่วยสามารถเปลี่ยนได้เฉพาะโหมดพลังงานต่ำเท่านั้น"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Glance yardımcısını Giriş Öğeleri’nde onaylayın. Yalnızca Düşük Güç Modu’nu değiştirebilir."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Схваліть помічника Glance в об’єктах входу. Він може змінювати лише режим економії заряду."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Phê duyệt trình trợ giúp Glance trong Mục đăng nhập. Trình trợ giúp chỉ có thể thay đổi Chế độ nguồn điện thấp."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在“登录项”中批准 Glance 的辅助程序。它只能更改低电量模式。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在「登入項目」中核准 Glance 的輔助程式。它只能更改低耗電模式。"
+          }
+        }
+      }
+    },
     "Apps": {
       "localizations": {
         "ar": {
@@ -41677,6 +41891,220 @@
         }
       }
     },
+    "One-time approval for the battery button. Changes only Low Power Mode.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "موافقة لمرة واحدة لزر البطارية. يغيّر نمط الطاقة المنخفضة فقط."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorització única per al botó de la bateria. Només canvia el mode de baix consum."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Jednorázové schválení tlačítka baterie. Mění pouze režim nízké spotřeby."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Engangsgodkendelse til batteriknappen. Ændrer kun Energibesparende funktion."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Einmalige Erlaubnis für die Batterietaste. Ändert nur den Stromsparmodus."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Εφάπαξ έγκριση για το κουμπί μπαταρίας. Αλλάζει μόνο τη Λειτουργία χαμηλής ισχύος."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One-time approval for the battery button. Changes only Low Power Mode."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorización única para el botón de la batería. Solo cambia el modo de bajo consumo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Kertaluonteinen hyväksyntä akkupainikkeelle. Muuttaa vain alhaisen virran tilaa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorisation unique pour le bouton de batterie. Modifie uniquement le mode économie d’énergie."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "אישור חד־פעמי לכפתור הסוללה. משנה רק את מצב סוללה חלשה."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "बैटरी बटन के लिए एक बार अनुमति दें। यह केवल कम पावर मोड बदलता है।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Jednokratno odobrenje za tipku baterije. Mijenja samo način rada sa smanjenom potrošnjom."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Egyszeri engedély az akkumulátorgombhoz. Csak az Alacsony töltöttségű módot módosítja."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Persetujuan sekali untuk tombol baterai. Hanya mengubah Mode Daya Rendah."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorizzazione una tantum per il pulsante della batteria. Modifica solo la modalità Risparmio energetico."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "バッテリーボタンの使用には初回のみ承認が必要です。変更するのは低電力モードのみです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "배터리 버튼에 대한 일회성 승인입니다. 저전력 모드만 변경합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Kelulusan sekali untuk butang bateri. Hanya menukar Mod Kuasa Rendah."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Engangsgodkjenning for batteriknappen. Endrer bare Spareblussmodus."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eenmalige toestemming voor de batterijknop. Wijzigt alleen de energiebesparingsmodus."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Jednorazowa zgoda dla przycisku baterii. Zmienia tylko tryb niskiego zużycia energii."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorização única para o botão da bateria. Altera apenas o Modo de Pouca Energia."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autorização única para o botão da bateria. Altera apenas o modo de baixo consumo."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aprobare unică pentru butonul bateriei. Modifică doar modul Consum redus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Однократное разрешение для кнопки аккумулятора. Изменяет только режим энергосбережения."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Jednorazové schválenie tlačidla batérie. Mení iba režim nízkej spotreby."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Enkratna odobritev gumba baterije. Spreminja samo način nizke porabe."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Engångsgodkännande för batteriknappen. Ändrar bara strömsparläget."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "อนุมัติปุ่มแบตเตอรี่เพียงครั้งเดียว เปลี่ยนเฉพาะโหมดพลังงานต่ำเท่านั้น"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pil düğmesi için tek seferlik onay. Yalnızca Düşük Güç Modu’nu değiştirir."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Одноразовий дозвіл для кнопки акумулятора. Змінює лише режим економії заряду."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Phê duyệt một lần cho nút pin. Chỉ thay đổi Chế độ nguồn điện thấp."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "电池按钮只需批准一次。仅更改低电量模式。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "電池按鈕只需核准一次。僅更改低耗電模式。"
+          }
+        }
+      }
+    },
     "Open": {
       "localizations": {
         "ar": {
@@ -47707,6 +48135,220 @@
           "stringUnit": {
             "state": "translated",
             "value": "已接上電源"
+          }
+        }
+      }
+    },
+    "Power control": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "التحكم في الطاقة"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Control d’energia"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ovládání napájení"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Strømstyring"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Energiesteuerung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Έλεγχος ενέργειας"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power control"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Control de energía"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Virranhallinta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Contrôle de l’alimentation"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "בקרת צריכת חשמל"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "पावर नियंत्रण"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Upravljanje napajanjem"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Energiagazdálkodás"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Kontrol daya"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Controllo energetico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "電力制御"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "전원 제어"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Kawalan kuasa"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Strømstyring"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Energiebeheer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sterowanie zasilaniem"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Controle de energia"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Controlo de energia"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Controlul energiei"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Управление питанием"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ovládanie napájania"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Upravljanje napajanja"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Strömstyrning"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "การควบคุมพลังงาน"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Güç denetimi"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Керування живленням"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Điều khiển nguồn điện"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "电源控制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "電源控制"
           }
         }
       }
@@ -54355,6 +54997,220 @@
           "stringUnit": {
             "state": "translated",
             "value": "繼續計時器"
+          }
+        }
+      }
+    },
+    "Review access for Glance's features.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "راجع أذونات الوصول لميزات Glance."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Revisa l’accés de les funcions del Glance."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Zkontrolujte přístup pro funkce Glance."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gennemgå adgang til Glances funktioner."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Überprüfe den Zugriff für die Funktionen von Glance."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ελέγξτε την πρόσβαση για τις λειτουργίες του Glance."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review access for Glance's features."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Revisa el acceso de las funciones de Glance."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tarkista Glancen toimintojen käyttöoikeudet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vérifiez les accès des fonctionnalités de Glance."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "בדיקת הרשאות הגישה של תכונות Glance."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Glance की सुविधाओं की ऐक्सेस अनुमतियाँ देखें।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pregledajte pristup za značajke Glancea."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tekintse át a Glance funkcióinak hozzáférését."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tinjau akses untuk fitur Glance."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rivedi l’accesso per le funzionalità di Glance."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Glanceの機能のアクセス権を確認します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Glance 기능의 접근 권한을 검토합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Semak akses untuk ciri Glance."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Se gjennom tilgangen til Glances funksjoner."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Controleer de toegang voor de functies van Glance."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sprawdź uprawnienia dostępu funkcji Glance."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Revise o acesso dos recursos do Glance."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reveja o acesso das funcionalidades do Glance."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Verificați accesul pentru funcționalitățile Glance."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Проверьте права доступа функций Glance."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Skontrolujte prístup pre funkcie Glance."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Preglejte dostop za funkcije Glance."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Granska åtkomsten för Glances funktioner."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ตรวจสอบการเข้าถึงสำหรับคุณสมบัติของ Glance"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Glance özelliklerinin erişim izinlerini gözden geçirin."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Перегляньте дозволи доступу функцій Glance."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Xem lại quyền truy cập cho các tính năng của Glance."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "查看 Glance 各项功能的访问权限。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "檢視 Glance 各項功能的取用權限。"
           }
         }
       }

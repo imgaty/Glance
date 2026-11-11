@@ -1126,8 +1126,6 @@ final class NotchController {
         case .decline: CallWatch.shared.decline()
         case .lowPower:
             LowPowerMode.shared.toggle()
-            // Long enough to see it change, and then it's done with: it goes, reached or not.
-            Activities.shared.keep(.lowBattery, for: 2.5, holds: false)
         }
         model.hoveredButton = nil
     }

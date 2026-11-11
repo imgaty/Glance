@@ -23,6 +23,10 @@ SHARE="$APP/Contents/PlugIns/GlanceShare.appex"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$FRAMEWORKS" "$SHARE/Contents/MacOS"
 cp .build/release/Glance "$APP/Contents/MacOS/Glance"
+# Optional power control, registered only after the user chooses to enable it.
+mkdir -p "$APP/Contents/Library/HelperTools" "$APP/Contents/Library/LaunchDaemons"
+cp .build/release/GlancePowerHelper "$APP/Contents/Library/HelperTools/"
+cp Resources/dev.vibe.Glance.PowerControl.plist "$APP/Contents/Library/LaunchDaemons/"
 # The Now Playing helper, which the app loads into /usr/bin/perl.
 cp .build/release/libGlanceNowPlaying.dylib "$FRAMEWORKS/"
 # Sparkle, for Check for Updates…. Glance isn't sandboxed, so it needs none of Sparkle's XPC services.
@@ -65,6 +69,7 @@ sign "$SPARKLE/Updater.app"
 sign "$FRAMEWORKS/Sparkle.framework"
 sign "$FRAMEWORKS/libGlanceNowPlaying.dylib"
 sign --entitlements Resources/GlanceShare.entitlements "$SHARE"
+sign --identifier dev.vibe.Glance.PowerControl "$APP/Contents/Library/HelperTools/GlancePowerHelper"
 sign "$APP"
 echo "Built $APP"
 

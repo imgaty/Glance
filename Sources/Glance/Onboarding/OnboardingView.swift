@@ -447,6 +447,12 @@ private struct PermissionsPage: View {
                     String(localized: "To paste from the tray, swipe to it, press Clock's and AirDrop's buttons, find the tab a song plays in, and hide macOS's own banners and timer."),
                 state: permissions.accessibility, allow: permissions.requestAccessibility,
                 openSettings: { permissions.openSettings(for: \.accessibility) })
+            Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
+            PermissionRow(
+                symbol: "battery.100percent", title: String(localized: "Power control"),
+                detail: String(localized: "One-time approval for the battery button. Changes only Low Power Mode."),
+                state: permissions.powerControl, allow: PowerModeSettings.requestAuthorization,
+                openSettings: PowerModeSettings.requestAuthorization)
         }
         .background(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous).fill(.quinary))
     }

@@ -18,7 +18,7 @@ struct GeneralPage: View {
                 LaunchAtLoginToggle()
                 CenteredRow {
                     Text("Permissions")
-                    Text("Audio from apps, Music, Spotify and Accessibility, and what each is for.")
+                    Text("Review access for Glance's features.")
                 } trailing: {
                     Button("Review…") { reviewing = true }
                 }

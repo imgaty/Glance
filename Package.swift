@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS("26.0")],
     products: [
         .executable(name: "Glance", targets: ["Glance"]),
+        .executable(name: "GlancePowerHelper", targets: ["GlancePowerHelper"]),
         // Loaded by /usr/bin/perl, not the app; see NowPlayingHelper.swift.
         .library(name: "GlanceNowPlaying", type: .dynamic, targets: ["NowPlayingHelper"]),
         // Glance Tray in the Share menu, an app extension inside the app; see ShareViewController.swift.
@@ -17,7 +18,9 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "Glance", dependencies: [.product(name: "Sparkle", package: "Sparkle")], path: "Sources/Glance"),
+            name: "Glance", dependencies: ["PowerControlInterface", .product(name: "Sparkle", package: "Sparkle")], path: "Sources/Glance"),
+        .target(name: "PowerControlInterface", path: "Sources/PowerControlInterface"),
+        .executableTarget(name: "GlancePowerHelper", dependencies: ["PowerControlInterface"], path: "Sources/GlancePowerHelper"),
         .target(name: "NowPlayingHelper", path: "Sources/NowPlayingHelper"),
         // An app extension starts in NSExtensionMain, and may use only what extensions are allowed to.
         .executableTarget(
