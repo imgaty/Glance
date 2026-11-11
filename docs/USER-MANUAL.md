@@ -433,13 +433,14 @@ other half needs `Audio from apps`. Turn all this off with `Calls` in
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 With `Accessibility` allowed, the Low Power Mode button changes the power
 source currently in use, keeping the other source's choice. The button waits
-for macOS to confirm the change before accepting another press.
-If its system control cannot be reached,
-**System Settings > Battery** opens, where you can. macOS's own banner at the
-top of the screen for a device connecting or running low is hidden while the
-notch says the same. With `Accessibility` allowed, so is its banner under the
-menu bar for AirPods connecting or running low, and AirPods' own notification
-that they need charging is taken away.
+for macOS to confirm the change before accepting another press. If macOS
+requires authorization, its own sheet appears; finish it to apply the change,
+or cancel to keep the current mode. A canceled request does not open a second
+Settings window. If the control cannot be reached, the mode stays unchanged.
+macOS's own banner at the top of the screen for a device connecting or running
+low is hidden while the notch says the same. With `Accessibility` allowed, so
+is its banner under the menu bar for AirPods connecting or running low, and
+AirPods' own notification that they need charging is taken away.
 With `Accessibility` allowed, macOS's own Low Battery notification and banner
 are taken away as it shows, since the notch says so. Low Battery stays while the
 pointer is on it, and with VoiceOver or Switch Control on, it stays until you

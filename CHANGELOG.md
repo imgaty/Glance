@@ -10,6 +10,9 @@
 
 ### Battery
 
+- Fixed Low Power Mode authorization closing before it could complete. The
+  native authorization sheet now stays open until you finish or cancel.
+
 - Fixed the Low Power Mode button opening Settings without changing the mode.
   It now changes the source in use and keeps the other power source's choice.
 

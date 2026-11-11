@@ -35,9 +35,10 @@ enum PowerModeSettings {
         }
     }
 
-    /// System Settings performs the entitled change, in a separate hidden instance. Its own
-    /// window and menus stay hidden, and the user's Settings instance is left as it was.
+    /// System Settings performs the entitled change in a separate instance. It stays hidden
+    /// unless macOS requires authentication, when its own sheet must be shown to the user.
     static func set(_ on: Bool) async -> Bool {
+        if ProcessInfo.processInfo.isLowPowerModeEnabled == on { return true }
         guard AXIsProcessTrusted(), let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") else { return false }
         let config = NSWorkspace.OpenConfiguration()
         config.activates = false
@@ -81,20 +82,83 @@ enum PowerModeSettings {
                 }
                 try? await Task.sleep(for: .milliseconds(50))
             }
-            return (false, "Policy readback failed")
+            return (true, "Policy requested; awaiting macOS authorization and power-state readback")
         }.value
         log.notice("Low Power Mode: \(result.1, privacy: .public)")
         guard result.0 else { return false }
-        // Keep the instance alive until macOS itself has changed, rather than trusting only
-        // Settings' selected item or ending its write by quitting too soon.
-        for _ in 0..<30 {
-            if ProcessInfo.processInfo.isLowPowerModeEnabled == on {
-                try? await Task.sleep(for: .milliseconds(200))
+        var popupPID: pid_t = 0
+        AXUIElementGetPid(popup, &popupPID)
+        let panes = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Battery-Settings.extension").map(\.processIdentifier)
+        let processes = Array(Set(([pid, popupPID] + panes).filter { $0 > 0 }))
+        var wait = ChangeWait(start: ProcessInfo.processInfo.systemUptime)
+        while !Task.isCancelled, !instance.isTerminated {
+            let authorization = await Task.detached { authorizationPresent(in: processes) }.value
+            switch wait.advance(
+                applied: ProcessInfo.processInfo.isLowPowerModeEnabled == on,
+                authorization: authorization, now: ProcessInfo.processInfo.systemUptime)
+            {
+            case .applied:
+                try? await Task.sleep(for: .milliseconds(250))
                 return true
+            case .reveal:
+                log.notice("Low Power Mode is waiting for macOS; revealing its pending authorization")
+                instance.unhide()
+                instance.activate(options: [.activateAllWindows])
+            case .failed:
+                log.notice("Low Power Mode request ended without applying the policy")
+                return false
+            case .waiting: break
             }
-            try? await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(for: .milliseconds(150))
         }
-        log.notice("Low Power Mode did not change after the policy was selected")
+        return false
+    }
+
+    /// A policy readback can precede an authentication sheet. Give that sheet time to finish,
+    /// and keep a short grace after it closes for the system's power-state notification. Hidden
+    /// extension sheets can be absent from Accessibility; reveal the same instance after two
+    /// seconds without a power-state change so that the native authorization can be completed.
+    struct ChangeWait {
+        enum Step: Equatable { case waiting, reveal, applied, failed }
+        private var deadline: TimeInterval
+        private var revealed = false
+        private var authorizationWasVisible = false
+
+        init(start: TimeInterval) { deadline = start + 2 }
+
+        mutating func advance(applied: Bool, authorization: Bool, now: TimeInterval) -> Step {
+            if applied { return .applied }
+            if !revealed, authorization || now >= deadline {
+                revealed = true
+                authorizationWasVisible = authorization
+                deadline = now + 300
+                return .reveal
+            }
+            if authorizationWasVisible, !authorization { deadline = min(deadline, now + 4) }
+            authorizationWasVisible = authorization
+            return now >= deadline ? .failed : .waiting
+        }
+    }
+
+    /// The authorization sheet can belong to the embedded Battery pane rather than its host.
+    /// Read both trees, without relying on translated password or Touch ID text.
+    nonisolated private static func authorizationPresent(in processes: [pid_t]) -> Bool {
+        let deadline = Date.now.addingTimeInterval(1)
+        for pid in processes {
+            let app = AXUIElementCreateApplication(pid)
+            AXUIElementSetMessagingTimeout(app, 0.15)
+            var todo = SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
+            var index = 0
+            while index < todo.count, index < 1500, Date.now < deadline {
+                let item = todo[index]
+                index += 1
+                let role = SystemNotices.value(item, kAXRoleAttribute) as? String
+                let subrole = SystemNotices.value(item, kAXSubroleAttribute) as? String
+                if role == kAXSheetRole || (subrole == kAXDialogSubrole && SystemNotices.value(item, kAXModalAttribute) as? Bool == true) { return true }
+                todo += SystemNotices.value(item, "AXSheets") as? [AXUIElement] ?? []
+                todo += SystemNotices.value(item, kAXChildrenAttribute) as? [AXUIElement] ?? []
+            }
+        }
         return false
     }
 

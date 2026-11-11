@@ -9,7 +9,7 @@ import AppKit
 import SwiftUI
 
 /// Low Power Mode, changed through the Mac's own policy control in a hidden Settings instance,
-/// then read back from macOS. If the control cannot be reached, Battery settings open.
+/// then read back from macOS. Its native authorization sheet is revealed when required.
 @MainActor
 final class LowPowerMode: ObservableObject {
     static let shared = LowPowerMode()
@@ -37,9 +37,8 @@ final class LowPowerMode: ObservableObject {
         isChanging = true
         Task {
             defer { isChanging = false }
-            let changed = await PowerModeSettings.set(on)
+            _ = await PowerModeSettings.set(on)
             isOn = ProcessInfo.processInfo.isLowPowerModeEnabled
-            if !changed, isOn != on { NSWorkspace.shared.open(Self.settings) }
         }
     }
 
