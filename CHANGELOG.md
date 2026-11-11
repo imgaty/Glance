@@ -97,6 +97,9 @@
   colors. It opens aligned with its button and stays within the display.
   The native volume slider now has a white track, and the whole
   `Sound Settings…` row highlights under the pointer.
+- Added a disclosure beside supported headphones for their listening modes,
+  with the current choice checked and changes confirmed by the headphones.
+  Their Settings button opens the connected device's page.
 - Fixed opening Sound Output from the keyboard closing the notch underneath it.
 
 - Fixed a straight edge appearing while the background morphed into the

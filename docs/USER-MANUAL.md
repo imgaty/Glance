@@ -260,6 +260,16 @@ one battery. Click one to play there. The full **Sound Settings…** row
 highlights under the pointer and opens
 **System Settings > Sound**.
 
+Headphones that report listening modes have a disclosure beside their name.
+Open it to choose `Transparency`, `Adaptive` or `Noise Cancellation`, according
+to what the headphones support. The checkmark follows the headphones' reported
+mode. If a change cannot be confirmed, the menu keeps the reported choice and
+shows a message. The menu grows from the same anchor as it opens.
+
+The connected headphones' **Settings…** button opens their page in System
+Settings using Accessibility. Without that access, it opens Bluetooth settings.
+Spatial Audio and Conversation Awareness remain in the system controls.
+
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic
 switching does while a call plays on them, Glance puts your choice back, twice

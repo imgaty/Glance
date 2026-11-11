@@ -43,9 +43,14 @@ final class AudioOutput: NSObject, ObservableObject {
         let devices = Self.outputs().sorted { ($0.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) < ($1.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) }
         let content = SoundOutputView(
             devices: devices, current: Self.defaultOutput, volume: AppVolume.shared,
+            resize: { [weak self] height in self?.soundPanel.resize(contentHeight: height) },
             choose: { [weak self] device in
                 Self.use(device.id)
                 self?.soundPanel.close()
+            },
+            headphoneSettings: { [weak self] device in
+                self?.soundPanel.close()
+                HeadphoneSettings.open(named: device.name)
             },
             settings: { [weak self] in
                 self?.soundPanel.close()
@@ -220,7 +225,7 @@ final class AudioOutput: NSObject, ObservableObject {
     // MARK: Core Audio
 
     /// A place the sound can go, with its symbol, and how it's connected.
-    struct Device {
+    struct Device: Equatable {
         let id: AudioDeviceID
         let name: String
         let symbol: String
@@ -367,22 +372,34 @@ final class VolumeMenuSlider: NSView {
 /// An arrowless native panel, outside NSMenu's tracking loop, so the system slider receives
 /// ordinary events in its own key window. The surrounding rows keep the sound outputs' pictures and batteries.
 private struct SoundOutputView: View {
-    let devices: [AudioOutput.Device]
-    let current: AudioDeviceID
+    @State private var devices: [AudioOutput.Device]
+    @State private var current: AudioDeviceID
     let volume: AppVolume?
     let choose: (AudioOutput.Device) -> Void
     let settings: () -> Void
+    let headphoneSettings: (AudioOutput.Device) -> Void
+    let resize: (CGFloat) -> Void
+    @State private var expanded: AudioDeviceID?
+    @State private var modes: [AudioDeviceID: ListeningMode.Snapshot] = [:]
+    @State private var changing = false
+    @State private var failed = false
     @StateObject private var level: VolumeMenuSlider.VolumeSlider.Level
     @State private var refreshed = false
     @State private var hovered: AudioDeviceID?
     @State private var settingsHovered = false
 
-    init(devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?, choose: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void) {
-        self.devices = devices
-        self.current = current
+    init(
+        devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?, resize: @escaping (CGFloat) -> Void, choose: @escaping (AudioOutput.Device) -> Void,
+        headphoneSettings: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void
+    ) {
+        _devices = State(initialValue: devices)
+        _current = State(initialValue: current)
+        _modes = State(initialValue: Self.listeningModes(for: devices))
+        self.resize = resize
         self.volume = volume
         self.choose = choose
         self.settings = settings
+        self.headphoneSettings = headphoneSettings
         _level = StateObject(wrappedValue: .init(volume?.level ?? 1) { [weak volume] in volume?.set($0) })
     }
 
@@ -398,24 +415,54 @@ private struct SoundOutputView: View {
             Text("Output").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
                 .padding(.horizontal, SoundMenu.inset).padding(.top, 6).padding(.bottom, 4)
             ForEach(devices, id: \.id) { device in
-                Button {
-                    choose(device)
-                } label: {
-                    SoundOutputRow(device: device, playing: device.id == current, refreshed: refreshed)
-                        .frame(height: SoundMenu.rowHeight).allowsHitTesting(false)
-                        .contentShape(Rectangle())
+                HStack(spacing: 0) {
+                    Button {
+                        choose(device)
+                    } label: {
+                        SoundOutputRow(device: device, playing: device.id == current, refreshed: refreshed)
+                            .id(device.name + (device.id == current ? "selected" : ""))
+                            .frame(height: SoundMenu.rowHeight).allowsHitTesting(false)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(device.name)
+                    .accessibilityAddTraits(device.id == current ? .isSelected : [])
+                    if modes[device.id] != nil {
+                        Button {
+                            expanded = expanded == device.id ? nil : device.id
+                            failed = false
+                        } label: {
+                            Image(systemName: expanded == device.id ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                                .frame(width: 30, height: SoundMenu.rowHeight).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(device.name + ", " + SoundSystemResources.text("Listening Mode", table: "ListeningMode"))
+                        .accessibilityValue(expanded == device.id ? String(localized: "Expanded") : String(localized: "Collapsed"))
+                        .padding(.trailing, 5)
+                    }
                 }
-                .buttonStyle(.plain)
                 .background {
                     RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
                         .fill(.quaternary.opacity(hovered == device.id ? 1 : 0))
                         .padding(.horizontal, SoundMenu.highlightInset)
                 }
                 .onHover { hovered = $0 ? device.id : nil }
-                .accessibilityLabel(device.name)
-                .accessibilityAddTraits(device.id == current ? .isSelected : [])
+                if expanded == device.id, let snapshot = modes[device.id] {
+                    listeningControls(device: device, snapshot: snapshot)
+                }
             }
             Divider().padding(.horizontal, SoundMenu.highlightInset).padding(.top, 6).padding(.bottom, 1)
+            if modes[current] != nil, let device = devices.first(where: { $0.id == current }) {
+                Button {
+                    headphoneSettings(device)
+                } label: {
+                    Text(String(format: SoundSystemResources.text("%@ Settings…"), device.name))
+                        .font(.system(size: 13)).frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, SoundMenu.inset).padding(.vertical, 5).contentShape(Rectangle())
+                }
+                .buttonStyle(SoundChoiceStyle())
+            }
             Button(action: settings) {
                 Text("Sound Settings…").font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -431,9 +478,94 @@ private struct SoundOutputView: View {
             .onHover { settingsHovered = $0 }
         }
         .padding(.vertical, 5)
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            resize($0)
+        }
         .task {
             await AudioOutput.readBluetooth()
             refreshed = true
+            while !Task.isCancelled {
+                let devices = AudioOutput.outputs().sorted { ($0.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) < ($1.transport == kAudioDeviceTransportTypeBuiltIn ? 0 : 1) }
+                if self.devices != devices { self.devices = devices }
+                current = AudioOutput.defaultOutput
+                let latest = Self.listeningModes(for: devices)
+                if latest != modes { modes = latest }
+                if let expanded, latest[expanded] == nil { self.expanded = nil }
+                try? await Task.sleep(for: .seconds(1))
+                if !AudioOutput.shared.popoverShown { return }
+            }
+        }
+    }
+
+    private static func listeningModes(for devices: [AudioOutput.Device]) -> [AudioDeviceID: ListeningMode.Snapshot] {
+        var states: [AudioDeviceID: ListeningMode.Snapshot] = [:]
+        for device in devices where DeviceWatch.isBluetooth(device.transport) {
+            if let state = ListeningMode.read(device.id) { states[device.id] = state }
+        }
+        return states
+    }
+
+    private func listeningControls(device: AudioOutput.Device, snapshot: ListeningMode.Snapshot) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(SoundSystemResources.text("Listening Mode", table: "ListeningMode"))
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+                .padding(.horizontal, SoundMenu.inset).padding(.top, 12).padding(.bottom, 4)
+            ForEach(snapshot.available, id: \.rawValue) { mode in
+                Button {
+                    changing = true
+                    failed = false
+                    Task {
+                        let success = await ListeningMode.change(device.id, to: mode)
+                        if let state = ListeningMode.read(device.id) { modes[device.id] = state }
+                        changing = false
+                        failed = !success
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark").font(.system(size: 12, weight: .medium))
+                            .opacity(snapshot.current == mode ? 1 : 0).frame(width: 26)
+                        Image(nsImage: SoundSystemResources.image(mode.symbol))
+                            .resizable().scaledToFit().frame(width: 16, height: 16)
+                        Text(mode.title).font(.system(size: 13))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, SoundMenu.inset).frame(height: 24).contentShape(Rectangle())
+                }
+                .buttonStyle(SoundChoiceStyle())
+                .disabled(changing || !snapshot.writable)
+                .accessibilityAddTraits(snapshot.current == mode ? .isSelected : [])
+            }
+            if failed {
+                Text(String(localized: "Couldn’t change listening mode. Try again."))
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .padding(.horizontal, SoundMenu.inset).padding(.top, 6)
+            }
+        }
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.5))
+    }
+
+}
+
+private struct SoundChoiceStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        SoundChoiceLabel(configuration: configuration)
+    }
+
+    private struct SoundChoiceLabel: View {
+        let configuration: ButtonStyleConfiguration
+        @State private var hovered = false
+        var body: some View {
+            configuration.label
+                .background {
+                    RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
+                        .fill(.quaternary.opacity(hovered || configuration.isPressed ? 1 : 0))
+                        .padding(.horizontal, SoundMenu.highlightInset)
+                }
+                .onHover { hovered = $0 }
         }
     }
 }

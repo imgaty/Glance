@@ -656,6 +656,7 @@ final class StatusPanel {
     /// With the window it was, now fading.
     var onClose: ((NSWindow) -> Void)?
     private var panel: MenuPanel?
+    private var placement: (anchor: CGRect, visible: CGRect)?
     private var monitors: [Any] = []
     /// Glance's window that had the keys before the menu took them (Settings, say), given them back.
     private weak var previousKey: NSWindow?
@@ -712,6 +713,7 @@ final class StatusPanel {
         panel.setFrameOrigin(NSPoint(x: origin.x - room, y: origin.y - room))
         panel.makeKeyAndOrderFront(nil)
         self.panel = panel
+        placement = (anchor, screen.visibleFrame)
         let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         monitors = [
             NSEvent.addGlobalMonitorForEvents(matching: clicks) { [weak self] _ in
@@ -726,6 +728,18 @@ final class StatusPanel {
                 return event
             },
         ].compactMap { $0 }
+    }
+
+    /// A disclosure in Sound changes the menu's height while keeping its anchor fixed.
+    func resize(contentHeight: CGFloat) {
+        guard let panel, let placement, contentHeight.isFinite, contentHeight > 0 else { return }
+        let room = StatusMenu.shadowRoom
+        let size = CGSize(width: panel.frame.width, height: contentHeight + room * 2)
+        guard abs(size.height - panel.frame.height) > 0.5 else { return }
+        let content = CGSize(width: size.width - room * 2, height: contentHeight)
+        let origin = Self.origin(for: content, anchor: placement.anchor, visible: placement.visible)
+        panel.setFrame(CGRect(x: origin.x - room, y: origin.y - room, width: size.width, height: size.height), display: true)
+        panel.contentView?.setFrameSize(size)
     }
 
     func close() {
