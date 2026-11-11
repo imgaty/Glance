@@ -539,11 +539,16 @@ struct TurningDevice: View {
 }
 
 /// Beside the camera, gone at once as it grows into the notch, and back once it has shrunk here.
-private struct GrownAway: ViewModifier {
+struct GrownAway: ViewModifier {
     let grown: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        content.animation((grown ? Animation.linear(duration: 0.01) : .linear(duration: 0.01).delay(GrownFade.handBack)).paced) { $0.opacity(grown ? 0 : 1) }
+        if reduceMotion {
+            content.islandFade(!grown)
+        } else {
+            content.animation((grown ? Animation.linear(duration: 0.01) : .linear(duration: 0.01).delay(GrownFade.handBack)).paced) { $0.opacity(grown ? 0 : 1) }
+        }
     }
 }
 

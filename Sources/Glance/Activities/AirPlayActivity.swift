@@ -194,26 +194,29 @@ struct ExpandedAirPlayView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
+    @Environment(\.activityBubbleCenter) private var bubbleCenter
     @State private var hovering = false
     @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
         let h = restingHeight
         let layout = AirPlayLayout.self
-        let out = revealed || closedWidth == nil
+        let out = revealed || closedWidth == nil && bubbleCenter == nil
         let rise = h / 2 + closedDrop - (h + LiveActivityView.cameraGap + h * layout.header / 2)
         let spread = ((closedWidth ?? width) - width) / 2
         // From each frame's edge here to its edge beside the camera, the room the large symbols have
         // beside their ink included, so they start exactly where they were.
-        let symbolFrom = CGSize(width: h * layout.symbolEdge - (PlayerLayout.padding - h * layout.bigSymbolMargin) - spread, height: rise)
+        let symbolFrom = CGSize(
+            width: bubbleCenter.map { $0 + width / 2 - (PlayerLayout.padding - h * layout.bigSymbolMargin) - h * 0.5 / 2 }
+                ?? (h * layout.symbolEdge - (PlayerLayout.padding - h * layout.bigSymbolMargin) - spread), height: rise)
         let deviceFrom = CGSize(width: spread - h * layout.deviceEdge + (PlayerLayout.padding - h * layout.bigDeviceMargin), height: rise)
         VStack(spacing: h * AirPlayLayout.buttonGap) {
             HStack(spacing: 0) {
                 Image(systemName: "airplay.audio")
                     .font(.system(size: h * AirPlayLayout.bigSymbol, weight: .regular))
                     .foregroundStyle(AirPlayLayout.tint)
-                    .modifier(GrowsOut(out: out, scale: layout.symbol / layout.bigSymbol, anchor: .leading, from: symbolFrom))
-                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                    .modifier(GrowsOut(out: out, scale: (bubbleCenter == nil ? layout.symbol : 0.5) / layout.bigSymbol, anchor: .leading, from: symbolFrom))
+                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
                     .padding(.leading, PlayerLayout.padding - h * AirPlayLayout.bigSymbolMargin)
                     .padding(.trailing, h * AirPlayLayout.symbolGap)
                 VStack(alignment: .leading, spacing: 0) {

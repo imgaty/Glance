@@ -46,6 +46,8 @@ struct IslandBubble: View {
     /// The notch opened from its own end, which the bubble goes on running into as it opens, riding
     /// with it: it's hidden only once it's all the way in.
     var runsIn = false
+    /// Its glyph is carried by the expanded presentation until it returns here.
+    var sharedGlyph = false
     let hovered: Bool
     let pressed: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -121,7 +123,7 @@ struct IslandBubble: View {
                 }
                 .modifier(BubbleGlyph(out: reduceMotion ? 1 : out))
                 .animation(motion, value: out)
-                .animation(Animation.easeOut(duration: 0.1).paced) { $0.opacity(hidden ? 0 : 1) }
+                .modifier(BubbleContentHandoff(hidden: hidden, shared: sharedGlyph))
             }
             .frame(width: h, height: h)
             // What it shows, in words, and a click's opening.
@@ -321,5 +323,17 @@ struct BubbleBlend: View, Animatable {
             }
         }
         .padding(-Self.margin)
+    }
+}
+
+private struct BubbleContentHandoff: ViewModifier {
+    let hidden: Bool
+    let shared: Bool
+    func body(content: Content) -> some View {
+        if shared {
+            content.modifier(GrownAway(grown: hidden))
+        } else {
+            content.animation(Animation.easeOut(duration: 0.1).paced) { $0.opacity(hidden ? 0 : 1) }
+        }
     }
 }

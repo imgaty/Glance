@@ -715,15 +715,20 @@ extension NotchModel {
             stretch = 0
             if intoBubble { bubbleReach = bubbleSpan }
         }
-        openedFromBubble = false
-        guard intoBubble else { return }
+        reachTask?.cancel()
+        guard intoBubble else {
+            openedFromBubble = false
+            return
+        }
         // Closed back into the bubble, the notch's end draws back from it, as it does when an
         // activity first goes out into the bubble.
-        reachTask?.cancel()
         reachTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(380))
             guard let self, !Task.isCancelled, state == .closed else { return }
             withAnimation(IslandMotion.fold) { bubbleReach = 0 }
+            try? await Task.sleep(for: .milliseconds(120))
+            guard !Task.isCancelled, state == .closed else { return }
+            openedFromBubble = false
         }
     }
 
@@ -757,6 +762,20 @@ extension CGRect {
 /// and the open player, as on the iPhone. Those places are marked with these ids.
 enum Hero: Hashable {
     case liveArtwork, openArtwork, liveWaveform, openWaveform
+}
+
+/// The bubble's cover hands back only after it has returned to its compact position.
+private struct BubbleArtworkFade: ViewModifier {
+    let shown: Bool
+    let fromBubble: Bool
+
+    func body(content: Content) -> some View {
+        if fromBubble {
+            content.modifier(GrownFade(shown: shown, grows: true))
+        } else {
+            content.islandFade(shown)
+        }
+    }
 }
 
 /// Both preference scopes stay subscribed while the view keeps its animation state.
@@ -950,7 +969,7 @@ struct NotchView: View {
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays, coming and going as the
                 // Dynamic Island's activities do, as everything in the notch does.
-                .islandFade(heroOpen || artworkShown && !expandedShown)
+                .modifier(BubbleArtworkFade(shown: heroOpen || artworkShown && !expandedShown, fromBubble: model.second == .music))
                 .modifier(PageFade(hidden: heroOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 .allowsHitTesting(places == nil && !trayShown)
@@ -1077,85 +1096,116 @@ struct NotchView: View {
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height,
             notchEnd: model.state != .open ? m.bodyWidth / 2 - m.fold : runsIn ? m.bodyWidth / 2 : restingEnd,
-            hidden: model.state == .open, runsIn: runsIn,
+            hidden: model.state == .open, runsIn: runsIn, sharedGlyph: bubbleShares,
             hovered: model.bubbleHovered, pressed: model.bubblePressed)
     }
 
-    /// How wide the notch is closed, when what it's open to shows beside the camera there, alone, and
-    /// grows out of that; with another detached, or from a bubble, it doesn't.
-    private var grownFrom: CGFloat? {
-        // A call's parts only fade, opening and closing, whatever app it's in.
-        !model.openedFromBubble && model.expanded != nil && model.expanded != .call && model.activities.first == model.expanded
-            ? model.restingWidth + 2 * model.grownSwell : nil
+    /// Keep each activity's closed pose mounted, so the notch's own transaction moves it.
+    private func grownOrigin(_ activity: NotchModel.Activity) -> CGFloat? {
+        !model.openedFromBubble && model.activities.first == activity ? model.restingWidth + 2 * grownSwell : nil
     }
 
-    /// How far below the closed notch's middle at rest its middle was, swollen as it opened.
-    private var grownDrop: CGFloat { model.grownSwell / 2 }
+    private func bubbleOrigin(_ activity: NotchModel.Activity) -> CGFloat? {
+        model.second == activity && sharesBubble(activity) ? model.closedSize.width / 2 + model.closedSize.height * (IslandBubble.gap + 0.5) : nil
+    }
 
-    /// Opened to the timer or the stopwatch: its own view, laid out at its open size, as the player
-    /// is, so the growing shape reveals it.
+    private var bubbleShares: Bool {
+        model.openedFromBubble && model.second.map(sharesBubble) == true
+    }
+
+    private func sharesBubble(_ activity: NotchModel.Activity) -> Bool {
+        switch activity {
+        case .music, .airplay, .airdrop, .voiceMemo: return true
+        case .screenRecording:
+            guard let screen = model.screenRecording else { return false }
+            return screen.isRecording || screen.isSaved
+        case .call: return model.call?.throughApple == true && model.call?.isConnected == true
+        case .timer, .stopwatch: return false
+        }
+    }
+
+    private var grownSwell: CGFloat { model.state == .open ? model.grownSwell : model.swell(in: model.state) }
+    private var grownFrom: CGFloat? { model.expanded.flatMap(grownOrigin) }
+    private var grownDrop: CGFloat { grownSwell / 2 }
+
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
-        if let clock = model.expandedClock {
-            let h = model.closedSize.height
-            let name = model.expanded.map(model.name(of:)) ?? String(localized: "Timer")
-            let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
-            ExpandedTimerView(
-                shown: clock, name: name, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom,
-                closedDrop: grownDrop
-            )
-            .frame(width: width, height: TimerLayout.tallHeight(h))
-            .allowsHitTesting(places == nil && shown)
+        ForEach([NotchModel.Activity.timer, .stopwatch], id: \.self) { activity in
+            if let clock = model.clock(of: activity) {
+                let h = model.closedSize.height
+                let name = model.name(of: activity)
+                let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
+                let visible = shown && model.expanded == activity
+                ExpandedTimerView(
+                    shown: clock, name: name, restingHeight: h, camera: model.camera, width: width,
+                    revealed: visible, closedWidth: grownOrigin(activity), closedDrop: grownDrop
+                )
+                .frame(width: width, height: TimerLayout.tallHeight(h))
+                .environment(\.activityBubbleCenter, bubbleOrigin(activity))
+                .allowsHitTesting(places == nil && visible)
+                .accessibilityHidden(!visible)
+                .transition(IslandMotion.fade)
+            }
         }
     }
 
-    /// Opened to a call: its own view, laid out at its open size, so the growing shape reveals it.
     @ViewBuilder private func expandedCall(shown: Bool) -> some View {
-        if model.expanded == .call, let call = model.call {
+        if let call = model.call {
             let h = model.closedSize.height
+            let visible = shown && model.expanded == .call
             ExpandedCallView(
-                call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width), revealed: shown,
-                closedWidth: grownFrom, closedDrop: grownDrop
+                call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width),
+                revealed: visible, closedWidth: grownOrigin(.call), closedDrop: grownDrop
             )
-            .allowsHitTesting(places == nil && shown)
+            .environment(\.activityBubbleCenter, bubbleOrigin(.call))
+            .allowsHitTesting(places == nil && visible)
+            .accessibilityHidden(!visible)
+            .transition(IslandMotion.fade)
         }
     }
 
-    /// Opened to AirPlay: its own view, laid out at its open size, so the growing shape reveals it.
     @ViewBuilder private func expandedAirPlay(shown: Bool) -> some View {
         if let route = model.airplay {
             let h = model.closedSize.height
-            let width = ExpandedAirPlayView.width(for: route, restingHeight: h)
             let visible = shown && model.expanded == .airplay
-            let swell = model.state == .open ? model.grownSwell : model.swell(in: model.state)
-            let origin = !model.openedFromBubble && model.activities.first == .airplay ? model.restingWidth + 2 * swell : nil
-            // Keep the closed pose mounted while the route exists. Opening then animates its
-            // symbols on the notch's transaction, with no second spring starting in onAppear.
-            ExpandedAirPlayView(route: route, restingHeight: h, width: width, revealed: visible, closedWidth: origin, closedDrop: swell / 2)
+            ExpandedAirPlayView(
+                route: route, restingHeight: h, width: ExpandedAirPlayView.width(for: route, restingHeight: h),
+                revealed: visible, closedWidth: grownOrigin(.airplay), closedDrop: grownDrop
+            )
+            .environment(\.activityBubbleCenter, bubbleOrigin(.airplay))
+            .allowsHitTesting(places == nil && visible)
+            .accessibilityHidden(!visible)
+            .transition(IslandMotion.fade)
+        }
+    }
+
+    @ViewBuilder private func expandedAirDrop(shown: Bool) -> some View {
+        if let transfer = model.airdrop {
+            let h = model.closedSize.height
+            let visible = shown && model.expanded == .airdrop
+            ExpandedAirDropView(
+                shown: transfer, restingHeight: h, width: AirDropLayout.width(restingHeight: h, camera: model.camera),
+                revealed: visible, closedWidth: grownOrigin(.airdrop), closedDrop: grownDrop
+            )
+            .environment(\.activityBubbleCenter, bubbleOrigin(.airdrop))
+            .allowsHitTesting(places == nil && visible)
+            .accessibilityHidden(!visible)
+            .transition(IslandMotion.fade)
+        }
+    }
+
+    @ViewBuilder private func expandedRecording(shown: Bool) -> some View {
+        ForEach([NotchModel.Activity.screenRecording, .voiceMemo], id: \.self) { activity in
+            if let recording = model.recording(of: activity) {
+                let visible = shown && model.expanded == activity
+                ExpandedRecordingView(
+                    recording: recording, restingHeight: model.closedSize.height, camera: model.camera, width: model.openWidth(of: recording),
+                    revealed: visible, closedWidth: grownOrigin(activity), closedDrop: grownDrop
+                )
+                .environment(\.activityBubbleCenter, bubbleOrigin(activity))
                 .allowsHitTesting(places == nil && visible)
                 .accessibilityHidden(!visible)
-        }
-    }
-
-    /// Opened to AirDrop: its own view, laid out at its open size, so the growing shape reveals it.
-    @ViewBuilder private func expandedAirDrop(shown: Bool) -> some View {
-        if model.expanded == .airdrop, let transfer = model.airdrop {
-            let h = model.closedSize.height
-            let width = AirDropLayout.width(restingHeight: h, camera: model.camera)
-            ExpandedAirDropView(shown: transfer, restingHeight: h, width: width, revealed: shown, closedWidth: grownFrom, closedDrop: grownDrop)
-                .allowsHitTesting(places == nil && shown)
-        }
-    }
-
-    /// Opened to a recording: its own view, laid out at its open size, so the growing shape reveals it.
-    @ViewBuilder private func expandedRecording(shown: Bool) -> some View {
-        if let recording = model.expanded.flatMap(model.recording(of:)) {
-            let h = model.closedSize.height
-            let width = model.openWidth(of: recording)
-            ExpandedRecordingView(
-                recording: recording, restingHeight: h, camera: model.camera, width: width, revealed: shown, closedWidth: grownFrom,
-                closedDrop: grownDrop
-            )
-            .allowsHitTesting(places == nil && shown)
+                .transition(IslandMotion.fade)
+            }
         }
     }
 
@@ -1171,7 +1221,9 @@ struct NotchView: View {
             Color.clear
                 .frame(width: side, height: side)
                 .matchedGeometryEffect(id: Hero.liveArtwork, in: hero)
-                .position(x: m.flare + edge + side / 2, y: m.height / 2)
+                .position(
+                    x: model.second == .music ? m.totalWidth / 2 + (bubbleOrigin(.music) ?? 0) : m.flare + edge + side / 2,
+                    y: model.second == .music ? h / 2 : m.height / 2)
             Color.clear
                 .frame(width: side, height: side)
                 .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)

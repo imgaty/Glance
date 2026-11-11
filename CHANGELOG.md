@@ -87,6 +87,12 @@
 
 ### Live Activities
 
+- Fixed shared covers, rings, call times and recording waveforms restarting or
+  fading early while opening and closing. Reopening during a close keeps the
+  same motion, including activities opened from the detached bubble.
+- Changed expanded-only recording details and controls to fade before the notch
+  closes. With Reduce Motion on, shared elements change with a fade.
+
 - Changed Allow Access and permission review to native grouped forms, with a
   checkmark beside allowed access and one action per row.
 

@@ -513,6 +513,7 @@ struct MemoWaveform: View {
     var live = true
     /// Future places belong only to the expanded presentation.
     var futureShown = true
+    var compactRecorded: Int? = nil
     @Environment(\.notchOnScreen) private var onScreen
 
     var body: some View {
@@ -535,7 +536,9 @@ struct MemoWaveform: View {
         .frame(width: spec.width, height: height)
         .mask(alignment: .leading) {
             HStack(spacing: 0) {
-                Color.white.frame(width: spec.recordedWidth)
+                let older = spec.pitch * CGFloat(max(recorded - (compactRecorded ?? recorded), 0))
+                Color.white.frame(width: older).islandFade(futureShown)
+                Color.white.frame(width: spec.recordedWidth - older)
                 Color.white.islandFade(futureShown)
             }
             .frame(width: spec.width, height: height)
@@ -679,16 +682,16 @@ struct ExpandedRecordingView: View {
     /// How wide the notch is closed, if it shows beside the camera there, and grows out of that.
     var closedWidth: CGFloat? = nil
     var closedDrop: CGFloat = 0
-    @State private var arrived = false
+    @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
         let h = restingHeight
         let tall = TimerLayout.tallHeight(h)
-        let out = revealed && arrived
+        let out = revealed
         let rise = (h - tall) / 2 + closedDrop
         let spread = ((closedWidth ?? width) - width) / 2
-        let grows = out || closedWidth == nil
+        let grows = out || closedWidth == nil && bubbleCenter == nil
         ZStack {
             switch recording {
             case .voiceMemo(let memo):
@@ -698,7 +701,6 @@ struct ExpandedRecordingView: View {
             }
         }
         .frame(width: width, height: tall)
-        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(recording.spoken())
     }
@@ -708,15 +710,19 @@ struct ExpandedRecordingView: View {
         let edge = PlayerLayout.padding
         let open = MemoBars.Spec(slots: RecordingLook.openBars, recorded: RecordingLook.openRecorded, height: tall * RecordingLook.openBarMost, scale: tall, open: true)
         let closed = MemoBars.Spec(slots: RecordingLook.bars, recorded: RecordingLook.bars, height: h * RecordingLook.barMost, scale: h, open: false)
-        let waveFrom = CGSize(width: h * RecordingLook.waveEdge - edge - spread, height: rise)
+        let waveFrom = CGSize(
+            width: bubbleCenter.map { $0 + width / 2 - edge - closed.pitch * (CGFloat(open.recorded) - 2.5) }
+                ?? (h * RecordingLook.waveEdge - edge - spread), height: rise)
         let text = LiveActivityView.textSize(for: h)
         let size = NotchType.size * RecordingLook.memoTime
         let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.memoTimeEdge(h), height: rise)
-        MemoWaveform(slots: open.slots, recorded: open.recorded, height: open.height, scale: tall, open: true, live: memo.isRecording, futureShown: revealed)
-            .modifier(GrowsOut(out: grows, scale: closed.pitch / open.pitch, anchor: .leading, from: waveFrom))
-            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
-            .padding(.leading, edge)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        MemoWaveform(
+            slots: open.slots, recorded: open.recorded, height: open.height, scale: tall, open: true, live: memo.isRecording, futureShown: revealed, compactRecorded: bubbleCenter == nil ? nil : 5
+        )
+        .modifier(GrowsOut(out: grows, scale: closed.pitch / open.pitch, anchor: .leading, from: waveFrom))
+        .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
+        .padding(.leading, edge)
+        .frame(maxWidth: .infinity, alignment: .leading)
         RecordingTime(memo: memo)
             .font(.system(size: size, weight: .semibold).monospacedDigit())
             .foregroundStyle(RecordingLook.memoRed)
@@ -743,14 +749,16 @@ struct ExpandedRecordingView: View {
         let closedDot = h * RecordingLook.dot
         // The dot slides out from beside the camera to before the time, the same size: down from
         // the first line to the closed notch's middle.
-        let dotFrom = CGSize(width: LiveActivityView.concentric(closedDot, in: h) - edge - spread, height: rise + Self.firstLineRise(h))
+        let dotFrom = CGSize(
+            width: bubbleCenter.map { $0 + width / 2 - edge - closedDot / 2 }
+                ?? (LiveActivityView.concentric(closedDot, in: h) - edge - spread), height: rise + Self.firstLineRise(h))
         VStack(alignment: .leading, spacing: 0) {
             // Recording, the dot and the time fade and come back together, as on the iPhone.
             HStack(spacing: NotchType.size * RecordingLook.openDotGap) {
                 Circle().fill(RecordingLook.screenRed)
                     .frame(width: dot, height: dot)
                     .modifier(GrowsOut(out: grows, scale: closedDot / dot, anchor: .leading, from: dotFrom))
-                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
                 ScreenTime(screen: screen)
                     .font(NotchType.title.monospacedDigit())
                     .foregroundStyle(RecordingLook.screenRed)
@@ -772,13 +780,13 @@ struct ExpandedRecordingView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // Being saved, the spinner beside the camera grows into the ring around the square.
         let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
-        ScreenRecordingButton(screen: screen, h: h)
+        ScreenRecordingButton(screen: screen, h: h, revealed: revealed)
             .modifier(
                 GrowsOut(
                     out: grows || !screen.isSaving || !trailingGrows, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing,
                     from: ringFrom)
             )
-            .modifier(IslandReveal(hidden: !revealed))
+            .modifier(GrownFade(shown: revealed, grows: screen.isSaving && closedWidth != nil && trailingGrows))
             .padding(.trailing, TimerLayout.buttonEdge(h))
             .frame(maxWidth: .infinity, alignment: .trailing)
     }
@@ -896,6 +904,7 @@ struct RecordingBubbleGlyph: View {
 struct ScreenRecordingButton: View {
     let screen: ScreenRecording
     let h: CGFloat
+    let revealed: Bool
 
     var body: some View {
         let side = TimerLayout.content(h)
@@ -921,6 +930,7 @@ struct ScreenRecordingButton: View {
                     }
                     .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
                     .frame(width: picture, height: picture)
+                    .islandFade(revealed)
             }
             .frame(width: side, height: side)
             .contentShape(Circle())

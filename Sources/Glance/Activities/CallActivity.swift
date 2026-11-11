@@ -264,10 +264,12 @@ struct CallAvatar: View {
 /// How long the call has been going, a second at a time.
 struct CallTime: View {
     let since: Date
+    var bubble = false
 
     var body: some View {
         TimelineView(.periodic(from: since, by: 1)) { context in
-            Text(ClockText.of(max(Int(context.date.timeIntervalSince(since)), 0)))
+            let seconds = max(Int(context.date.timeIntervalSince(since)), 0)
+            Text(bubble ? CallBubbleMark.text(seconds) : ClockText.of(seconds))
                 .monospacedDigit()
         }
     }
@@ -587,10 +589,10 @@ struct ExpandedCallView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
+    @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.playerKeys) private var keys
     @Environment(\.colorSchemeContrast) private var contrast
     @ObservedObject private var microphone = CallMicrophone.shared
-    @State private var arrived = false
 
     var body: some View {
         Group {
@@ -601,9 +603,8 @@ struct ExpandedCallView: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .onAppear {
-            microphone.refresh()
-            withAnimation(NotchMotion.expand) { arrived = true }
+        .onChange(of: revealed) { _, visible in
+            if visible { microphone.refresh() }
         }
     }
 
@@ -614,14 +615,19 @@ struct ExpandedCallView: View {
         let h = restingHeight
         let side = CallLayout.round(h)
         let edge = CallLayout.roundEdge(h)
-        let out = revealed && arrived
+        let out = revealed
         let words = edge + side + CallLayout.wordsGap(h)
         let detail = NSFont.systemFont(ofSize: NotchType.size)
         // The time grows out of where it shows beside the camera, going from green to gray as it comes.
         let spread = ((closedWidth ?? width) - width) / 2
         let timeBaseline = edge + side
+        let bubbleText = CallBubbleMark.text(max(Int(Date.now.timeIntervalSince(since)), 0))
+        let fit = CallBubbleMark.fit(bubbleText, restingHeight: h)
+        let compactSize = bubbleCenter == nil ? LiveActivityView.textSize(for: h) : fit.size
+        let compactWidth = (bubbleText as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: compactSize, weight: .semibold)]).width
         let timeFrom = CGSize(
-            width: h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread,
+            width: bubbleCenter.map { $0 + width / 2 - words - compactWidth / 2 + (fit.phone ? fit.size * (CallBubbleMark.phone + CallBubbleMark.gap) / 2 : 0) }
+                ?? (h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread),
             height: h / 2 + closedDrop - (timeBaseline - detail.capHeight / 2))
         let count = CGFloat(3 + (microphone.available ? 1 : 0) + (call.canEnd ? 1 : 0))
         return VStack(alignment: .leading, spacing: Self.rowGap(restingHeight: h)) {
@@ -639,15 +645,15 @@ struct ExpandedCallView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .modifier(IslandReveal(hidden: !revealed))
-                        CallTime(since: since)
+                        CallTime(since: since, bubble: bubbleCenter != nil)
                             .font(NotchType.detail)
-                            .foregroundStyle(out || closedWidth == nil ? NotchType.detailColor : CallLook.green)
+                            .foregroundStyle(out || closedWidth == nil && bubbleCenter == nil ? NotchType.detailColor : CallLook.green)
                             .modifier(
                                 GrowsOut(
-                                    out: out || closedWidth == nil, scale: LiveActivityView.textSize(for: h) / NotchType.size, anchor: .leading,
+                                    out: out || closedWidth == nil && bubbleCenter == nil, scale: compactSize / NotchType.size, anchor: .leading,
                                     from: timeFrom)
                             )
-                            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil))
+                            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
                     }
                     .padding(.leading, side + CallLayout.wordsGap(h))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -722,7 +728,7 @@ struct ExpandedCallView: View {
     private var coming: some View {
         let h = restingHeight
         let side = CallLayout.round(h)
-        let out = revealed && arrived
+        let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
         let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)

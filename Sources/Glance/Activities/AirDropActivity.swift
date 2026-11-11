@@ -299,8 +299,8 @@ struct ExpandedAirDropView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
-    @State private var arrived = false
     @State private var hovering = false
+    @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
 
     /// Who it's with; going out, the file, until macOS's window says who it's going to.
@@ -332,15 +332,17 @@ struct ExpandedAirDropView: View {
         }
         .padding(.leading, AirDropLayout.thumbEdge(h))
         // The ring grows out of where it shows beside the camera, as the Timer's does.
-        let out = revealed && arrived
+        let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
         let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
-        let ringFrom = CGSize(width: spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h), height: rise)
+        let ringFrom = CGSize(
+            width: bubbleCenter.map { $0 - width / 2 + AirDropLayout.ringEdge(h) + h * AirDropLayout.ring / 2 }
+                ?? (spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h)), height: rise)
         let right = stopButton(h)
             .modifier(
-                GrowsOut(out: out || closedWidth == nil || !trailingGrows, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom)
+                GrowsOut(out: out || (closedWidth == nil || !trailingGrows) && bubbleCenter == nil, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom)
             )
-            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
+            .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows || bubbleCenter != nil))
             .padding(.trailing, AirDropLayout.ringEdge(h))
         // AirDrop's name stops at the camera; who it's from, below it, runs on underneath.
         ZStack {
@@ -348,7 +350,6 @@ struct ExpandedAirDropView: View {
             right.frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(width: width, height: TimerLayout.tallHeight(h))
-        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Self.spoken(shown))
     }
@@ -364,6 +365,7 @@ struct ExpandedAirDropView: View {
                 RoundedRectangle(cornerRadius: h * AirDropLayout.stop * 0.22, style: .continuous)
                     .fill(AirDropLayout.tint)
                     .frame(width: h * AirDropLayout.stop, height: h * AirDropLayout.stop)
+                    .islandFade(revealed)
             }
             .frame(width: TimerLayout.content(h), height: TimerLayout.content(h))
             .contentShape(Circle())

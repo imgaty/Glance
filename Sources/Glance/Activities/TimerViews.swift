@@ -218,7 +218,6 @@ struct ExpandedTimerView: View {
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
     @ObservedObject private var clock = ClockActivity.shared
-    @State private var arrived = false
     @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
@@ -226,7 +225,7 @@ struct ExpandedTimerView: View {
         // The buttons at the left end, the time at the right, the time's name under the camera; to
         // spare, beside the camera.
         let side = max((width - camera) / 2, 0)
-        let out = revealed && arrived
+        let out = revealed
         let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let spread = ((closedWidth ?? width) - width) / 2
         let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.timeEdge(h), height: rise)
@@ -248,7 +247,6 @@ struct ExpandedTimerView: View {
         // In the middle of its height, as the iPhone's is.
         .frame(height: TimerLayout.content(h))
         .frame(maxHeight: .infinity)
-        .onAppear { withAnimation(NotchMotion.expand) { arrived = true } }
     }
 
     /// Pause or go on, and cancel; or start or stop, and start over or reset.
@@ -371,11 +369,12 @@ struct GrowsOut: ViewModifier {
     let anchor: UnitPoint
     /// Where it shows beside the camera, from its place here.
     let from: CGSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
-            .scaleEffect(out ? 1 : scale, anchor: anchor)
-            .offset(out ? .zero : from)
+            .scaleEffect(out || reduceMotion ? 1 : scale, anchor: anchor)
+            .offset(out || reduceMotion ? .zero : from)
     }
 }
 
@@ -398,19 +397,32 @@ struct IslandReveal: ViewModifier {
     }
 }
 
+/// A shared glyph's closed position when its activity lives in the detached bubble.
+private struct ActivityBubbleCenterKey: EnvironmentKey {
+    static let defaultValue: CGFloat? = nil
+}
+
+extension EnvironmentValues {
+    var activityBubbleCenter: CGFloat? {
+        get { self[ActivityBubbleCenterKey.self] }
+        set { self[ActivityBubbleCenterKey.self] = newValue }
+    }
+}
+
 /// What grows out of the notch takes over from what's beside the camera at once, as they're in the
 /// same place at the same size, and hands back only once it has shrunk there. What doesn't fades as
 /// the rest of the page does.
 struct GrownFade: ViewModifier {
     let shown: Bool
     let grows: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// When what grew hands back to what's beside the camera, once it has all but shrunk there: the
     /// fold's spring is within half a point of its place by then, so the two are one.
     static let handBack = 0.4
 
     func body(content: Content) -> some View {
-        if grows {
+        if grows && !reduceMotion {
             content.animation((shown ? Animation.linear(duration: 0.01) : .linear(duration: 0.08).delay(Self.handBack)).paced) {
                 $0.opacity(shown ? 1 : 0)
             }

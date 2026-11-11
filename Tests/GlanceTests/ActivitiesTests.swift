@@ -565,9 +565,9 @@ struct ActivitiesTests {
         #expect(model.bubbleReach == 0 && model.state == .open)
         // Closed, it goes back over the bubble, then draws back from it.
         model.close()
-        #expect(model.bubbleReach == model.bubbleSpan && !model.openedFromBubble)
-        try await Task.sleep(for: .milliseconds(500))
-        #expect(model.bubbleReach == 0)
+        #expect(model.bubbleReach == model.bubbleSpan && model.openedFromBubble)
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(model.bubbleReach == 0 && !model.openedFromBubble)
         // Opened from the notch, it never reaches out.
         model.open()
         model.close()
