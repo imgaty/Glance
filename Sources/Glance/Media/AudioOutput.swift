@@ -17,6 +17,11 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// An SF Symbol for the current device, such as AirPods Pro or the built-in speakers.
     @Published private(set) var symbol = "speaker.wave.2.fill"
+    @Published private(set) var devices: [Device] = []
+    @Published private(set) var current = AudioDeviceID(0)
+    private var appVolumeWatch: AnyCancellable?
+    private var watchedOutput = AudioDeviceID(0)
+    private var volumeWatches: [(AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
 
     private override init() {
         super.init()
@@ -24,6 +29,13 @@ final class AudioOutput: NSObject, ObservableObject {
         var address = AudioProperty.address(kAudioHardwarePropertyDefaultOutputDevice)
         AudioObjectAddPropertyListenerBlock(AudioProperty.system, &address, .main) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.refresh() }
+        }
+        address = AudioProperty.address(kAudioHardwarePropertyDevices)
+        AudioObjectAddPropertyListenerBlock(AudioProperty.system, &address, .main) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+        appVolumeWatch = AppVolume.shared.$level.removeDuplicates().sink { [weak self] level in
+            self?.refreshSymbol(appLevel: level)
         }
     }
 
@@ -38,10 +50,12 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 
     func soundView() -> some View {
-        SoundOutputView(
-            devices: Self.outputs(), current: Self.defaultOutput, volume: AppVolume.shared,
-            choose: { Self.use($0.id) }, settings: openSoundSettings)
+        LiveSoundOutputView(output: self)
     }
+
+    func refreshDevices() { refresh() }
+
+    func chooseOutput(_ device: Device) { Self.use(device.id) }
 
     func menu(withVolume: Bool = true, outputsOnly: Bool = false) -> NSMenu {
         let menu = NSMenu()
@@ -106,7 +120,7 @@ final class AudioOutput: NSObject, ObservableObject {
         return item.view!
     }
 
-    @objc private func openSoundSettings() {
+    @objc fileprivate func openSoundSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension") { NSWorkspace.shared.open(url) }
     }
 
@@ -181,8 +195,11 @@ final class AudioOutput: NSObject, ObservableObject {
             }
             if current != choice.device || Date.now.timeIntervalSince(choice.at) >= Choice.keptFor { chosen = nil }
         }
-        let device = Self.outputs().first { $0.id == current }
-        symbol = device?.model?.symbol ?? device?.symbol ?? "speaker.wave.2.fill"
+        devices = Self.outputs()
+        self.current = current
+        watchVolume(of: current)
+        refreshSymbol(appLevel: AppVolume.shared.level)
+        let device = devices.first { $0.id == current }
         // Bluetooth headphones are pictured as their model once System Information has told it,
         // which can take a few seconds after they've connected.
         modelTask?.cancel()
@@ -199,6 +216,70 @@ final class AudioOutput: NSObject, ObservableObject {
                 }
             }
         }
+    }
+
+    /// Device changes rebuild the volume listeners; volume changes only redraw the symbol.
+    private func watchVolume(of device: AudioDeviceID) {
+        guard device != watchedOutput else { return }
+        for (var address, listener) in volumeWatches {
+            AudioObjectRemovePropertyListenerBlock(watchedOutput, &address, .main, listener)
+        }
+        volumeWatches.removeAll()
+        watchedOutput = device
+        guard device != 0 else { return }
+        for selector in [kAudioDevicePropertyVolumeScalar, kAudioDevicePropertyMute] {
+            for channel: AudioObjectPropertyElement in [kAudioObjectPropertyElementMain, 1, 2] {
+                var address = AudioProperty.address(selector, scope: kAudioObjectPropertyScopeOutput)
+                address.mElement = channel
+                guard AudioObjectHasProperty(device, &address) else { continue }
+                let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+                    MainActor.assumeIsolated {
+                        self?.refreshSymbol(appLevel: AppVolume.shared.level)
+                    }
+                }
+                if AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) == noErr {
+                    volumeWatches.append((address, listener))
+                }
+            }
+        }
+    }
+
+    private func refreshSymbol(appLevel: Double) {
+        let device = devices.first { $0.id == current }
+        let hardware = Self.outputLevel(of: current)
+        symbol = Self.controlSymbol(device: device, appLevel: appLevel, outputLevel: hardware.level, muted: hardware.muted)
+    }
+
+    nonisolated static func speakerSymbol(level: Double, muted: Bool) -> String {
+        if muted || level <= 0 { return "speaker.slash.fill" }
+        if level <= 1.0 / 3.0 { return "speaker.wave.1.fill" }
+        if level <= 2.0 / 3.0 { return "speaker.wave.2.fill" }
+        return "speaker.wave.3.fill"
+    }
+
+    static func controlSymbol(device: Device?, appLevel: Double, outputLevel: Double, muted: Bool) -> String {
+        let level = appLevel * outputLevel
+        guard let device else { return speakerSymbol(level: level, muted: muted) }
+        if device.transport == kAudioDeviceTransportTypeBuiltIn, device.symbol != "headphones" {
+            return speakerSymbol(level: level, muted: muted)
+        }
+        return device.model?.symbol ?? device.symbol
+    }
+
+    private static func outputLevel(of device: AudioDeviceID) -> (level: Double, muted: Bool) {
+        func value<T: BitwiseCopyable>(_ selector: AudioObjectPropertySelector, channel: AudioObjectPropertyElement, initial: T) -> T? {
+            var address = AudioProperty.address(selector, scope: kAudioObjectPropertyScopeOutput)
+            address.mElement = channel
+            var result = initial
+            var size = UInt32(MemoryLayout<T>.size)
+            guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &result) == noErr else { return nil }
+            return result
+        }
+        let main = value(kAudioDevicePropertyVolumeScalar, channel: kAudioObjectPropertyElementMain, initial: Float32(1))
+        let channels = [1, 2].compactMap { value(kAudioDevicePropertyVolumeScalar, channel: $0, initial: Float32(1)) }
+        let level = main.map(Double.init) ?? (channels.isEmpty ? 1 : Double(channels.reduce(0, +)) / Double(channels.count))
+        let muted = value(kAudioDevicePropertyMute, channel: kAudioObjectPropertyElementMain, initial: UInt32(0)) == 1
+        return (min(max(level, 0), 1), muted)
     }
 
     // MARK: Core Audio
@@ -245,6 +326,13 @@ final class AudioOutput: NSObject, ObservableObject {
             .filter { !(AudioProperty.uid(of: $0)?.hasPrefix(AudioProperty.ownDevicePrefix) ?? false) }
             // macOS's own hidden aggregate, made while an app records and plays at once, isn't a place to play.
             .filter { !Self.isSystemAggregate(uid: AudioProperty.uid(of: $0)) }
+            .filter { id in
+                var alive: UInt32 = 1, eligible: UInt32 = 1, hidden: UInt32 = 0
+                _ = AudioProperty.read(id, kAudioDevicePropertyDeviceIsAlive, &alive)
+                _ = AudioProperty.read(id, kAudioDevicePropertyDeviceCanBeDefaultDevice, scope: kAudioObjectPropertyScopeOutput, &eligible)
+                _ = AudioProperty.read(id, kAudioDevicePropertyIsHidden, &hidden)
+                return alive != 0 && eligible != 0 && hidden == 0
+            }
             .map { id in
                 var name: Unmanaged<CFString>?
                 var transport: UInt32 = 0
@@ -269,6 +357,19 @@ final class AudioOutput: NSObject, ObservableObject {
         case kAudioDeviceTransportTypeHDMI, kAudioDeviceTransportTypeDisplayPort: return "tv"
         default: return "hifispeaker.fill"
         }
+    }
+}
+
+/// Observes the live device inventory even when the selected device's symbol stays the same.
+private struct LiveSoundOutputView: View {
+    @ObservedObject var output: AudioOutput
+
+    var body: some View {
+        SoundOutputView(
+            devices: output.devices, current: output.current, volume: AppVolume.shared,
+            choose: output.chooseOutput, settings: output.openSoundSettings
+        )
+        .onAppear { output.refreshDevices() }
     }
 }
 
@@ -322,11 +423,16 @@ final class VolumeMenuSlider: NSView {
             Slider(value: Binding(get: { level.value }, set: level.move), in: 0...1) {
                 Text("Sound")
             } minimumValueLabel: {
-                Image(systemName: "speaker.fill").font(.system(size: 12))
+                Image(systemName: "speaker.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary)
             } maximumValueLabel: {
-                Image(systemName: "speaker.wave.3.fill").font(.system(size: 12))
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary)
             }
             .labelsHidden()
+            .controlSize(.regular)
             .tint(.white)
             .disabled(volume?.canChange == false)
             .task {
@@ -343,6 +449,7 @@ final class VolumeMenuSlider: NSView {
 struct SoundOutputView: View {
     let devices: [AudioOutput.Device]
     @State private var current: AudioDeviceID
+    private let selectedOutput: AudioDeviceID
     let volume: AppVolume?
     let choose: (AudioOutput.Device) -> Void
     let settings: () -> Void
@@ -353,15 +460,17 @@ struct SoundOutputView: View {
 
     init(
         devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?,
+        batteries: [String: DeviceWatch.BluetoothInfo]? = nil,
         choose: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void
     ) {
         self.devices = devices
         _current = State(initialValue: current)
+        selectedOutput = current
         self.volume = volume
         self.choose = choose
         self.settings = settings
         _level = StateObject(wrappedValue: .init(volume?.level ?? 0.5) { [weak volume] in volume?.set($0) })
-        _bluetooth = State(initialValue: AudioOutput.bluetooth)
+        _bluetooth = State(initialValue: batteries ?? AudioOutput.bluetooth)
     }
 
     private var ordered: [AudioOutput.Device] {
@@ -401,7 +510,9 @@ struct SoundOutputView: View {
                 .accessibilityLabel(device.name)
                 .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
-            Divider().padding(.vertical, 5)
+            Divider()
+                .padding(.horizontal, SoundPopoverLayout.contentInset)
+                .padding(.vertical, SoundMenu.highlightInset)
             Button {
                 dismiss()
                 settings()
@@ -410,7 +521,8 @@ struct SoundOutputView: View {
                     .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, SoundPopoverLayout.contentInset)
-                    .frame(height: 22)
+                    .padding(.vertical, SoundPopoverLayout.rowVerticalInset)
+                    .frame(minHeight: SoundMenu.rowHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(SoundRowStyle())
@@ -421,6 +533,7 @@ struct SoundOutputView: View {
         .frame(width: 308)
         .defaultFocus($focusedOutput, current)
         .background(SoundPopoverFocus())
+        .onChange(of: selectedOutput) { _, current in self.current = current }
         .task {
             guard volume != nil else { return }
             await AudioOutput.readBluetooth()
@@ -464,9 +577,12 @@ private struct SoundPopoverFocus: NSViewRepresentable {
     static func dismantleNSView(_ view: FocusView, coordinator: ()) { view.releaseFocus() }
 }
 
-/// Text and the volume separator share a gutter; row highlights and the footer separator extend farther.
+/// Both separators share the content gutter; inset highlights follow the native body corners.
 private enum SoundPopoverLayout {
     static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
+    static let rowVerticalInset: CGFloat = 8
+    static let outerRadius: CGFloat = 20
+    static let highlightRadius = outerRadius - SoundMenu.highlightInset
 }
 
 private struct SoundRowStyle: ButtonStyle {
@@ -483,7 +599,7 @@ private struct SoundRowHighlight<Content: View>: View {
     var body: some View {
         content()
             .background {
-                RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
+                RoundedRectangle(cornerRadius: SoundPopoverLayout.highlightRadius, style: .continuous)
                     .fill(Color(nsColor: SoundMenu.highlightColor))
                     .opacity(hovered || pressed ? 1 : 0)
             }
@@ -506,7 +622,7 @@ private struct SoundOutputLabel: View {
                 .frame(width: SoundMenu.circle, height: SoundMenu.circle)
                 .background(playing ? Color(nsColor: .systemBlue) : Color(nsColor: SoundMenu.circleGray), in: Circle())
             VStack(alignment: .leading, spacing: 0) {
-                Text(device.name).font(.system(size: 13)).lineLimit(1)
+                Text(device.name).font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
                 if let levels {
                     SoundBatteryLabel(levels: levels, symbols: device.model, dark: colorScheme == .dark)
                         .fixedSize()
@@ -515,7 +631,7 @@ private struct SoundOutputLabel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, SoundPopoverLayout.contentInset)
-        .frame(height: SoundMenu.rowHeight)
+        .frame(minHeight: SoundMenu.rowHeight)
         .contentShape(Rectangle())
     }
 }

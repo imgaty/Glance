@@ -246,21 +246,26 @@ Customize Controls.
 
 The `Sound Output` button opens a native popover anchored to the button. The
 notch stays open while it is in use. Escape or a click outside closes it.
-The system's default slider sets the playing app's volume, with a white track
-and the system's glass handle. Drag the knob or click the track to change it.
+The native slider sets the playing app's volume, with a white track and the
+system's glass handle. Drag the knob or click the track to change it.
 For `Music` and `Spotify`, it reads their volume as the popover opens; other
 apps need the `Audio from apps` permission.
 
-Speakers and headphones appear as rows under **Output**, with a blue circle
-for the current output and battery details when available. Selecting a row
-closes the popover. The full **Sound Settings…** row highlights under the
+Connected speakers and headphones appear as rows under **Output**, with a
+blue circle for the current output and battery details when available. The
+list updates as outputs connect or disconnect. Nearby wireless destinations
+that are not connected appear only in macOS. Selecting a row closes the
+popover. The full **Sound Settings…** row highlights under the
 pointer and opens **System Settings > Sound**. Headphone listening modes and
 other headphone options are managed in macOS.
 
 The popover takes focus when opened and keeps its notch open while you use it.
 Headings, output icons and the Settings label share the same leading edge.
-The compact Settings row sits below the output list, with a rounded highlight
-that appears under the pointer.
+Both dividers use the same inset. The Settings row sits below the output
+list, with a rounded highlight that follows the popover corners. Long output
+names wrap above their battery details. When the laptop speakers are selected,
+the button shows muted, low, medium or high volume as the app or speaker
+volume changes.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic
