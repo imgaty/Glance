@@ -610,6 +610,9 @@ it to stop the recording, as the stop button in the menu bar does. From macOS
 for an instant as the recording stops. Turn it off, with voice memos, with
 `Recordings` in **Settings > Live Activities**.
 
+Screen recordings are detected while Screenshot runs in the background as well
+as while its controls are open.
+
 ### Voice Memos
 
 While Voice Memos records, the notch shows it as the iPhone does: a red waveform

@@ -92,6 +92,8 @@
 
 ### Live Activities
 
+- Fixed screen recordings sometimes not appearing in the notch when Screenshot
+  ran in the background or macOS used a different recording indicator.
 - Fixed shared covers, rings, call times and recording waveforms restarting or
   fading early while opening and closing. Reopening during a close keeps the
   same motion when the element stays on the same side. Elements that switch

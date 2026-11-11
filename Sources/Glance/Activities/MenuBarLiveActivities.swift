@@ -55,6 +55,8 @@ final class MenuBarLiveActivities {
     /// all, so Screenshot's is always left.
     static var capturing: Bool {
         guard UserDefaults.standard.bool(forKey: Preferences.activityScreenRecording) else { return true }
+        // Protect its stop control before the next recording-indicator check has completed.
+        if !NSRunningApplication.runningApplications(withBundleIdentifier: capture).isEmpty { return true }
         switch ScreenRecordingWatch.shared.recording {
         case .countdown?, .recording?: return true
         default: return false

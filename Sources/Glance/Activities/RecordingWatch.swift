@@ -273,25 +273,42 @@ final class ScreenRecordingWatch: ObservableObject {
     /// At the bench: made up.
     private var benching = false
     private var clock: Timer?
-    private var apps: NSKeyValueObservation?
+    private var looking = false
+    private var lastLook = Date.distantPast
     private var startedAt = Date.distantPast
     private var savingSince = Date.distantPast
     private var files: NSMetadataQuery?
+    private let readIndicator: @Sendable () -> String?
+    private let isEnabled: @MainActor () -> Bool
+    private let captureIsRunning: @MainActor () -> Bool
+
+    init(
+        readIndicator: (@Sendable () -> String?)? = nil,
+        isEnabled: (@MainActor () -> Bool)? = nil,
+        captureIsRunning: (@MainActor () -> Bool)? = nil
+    ) {
+        self.readIndicator = readIndicator ?? { Self.stopItem().map(Self.words) }
+        self.isEnabled = isEnabled ?? { Self.enabled }
+        self.captureIsRunning = captureIsRunning ?? { !NSRunningApplication.runningApplications(withBundleIdentifier: Self.capture).isEmpty }
+    }
+
+    deinit { clock?.invalidate() }
 
     nonisolated static let capture = "com.apple.screencaptureui"
     /// Longest it waits for the file once stopped, before it lets it go unsaid.
     static let savingLimit: TimeInterval = 20
 
-    /// Looks twice a second while Screenshot is open, as it is only while capturing. Screenshot
-    /// runs in the background, with no icon in the Dock, and macOS says nothing of such an app
-    /// starting or quitting; it's known by the running apps changing.
+    /// Background capture services do not always announce a launch. Keep a light idle check,
+    /// and follow active recordings twice a second, without waiting for a running-app change.
     func start() {
-        guard apps == nil, ActivityBench.scene == nil else { return }
-        apps = NSWorkspace.shared.observe(\.runningApplications, options: [.initial]) { [weak self] _, _ in
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated { self?.follow() }
-            }
+        guard clock == nil, ActivityBench.scene == nil else { return }
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.look() }
         }
+        timer.tolerance = 0.1
+        RunLoop.main.add(timer, forMode: .common)
+        clock = timer
+        look()
     }
 
     private static var enabled: Bool {
@@ -299,33 +316,28 @@ final class ScreenRecordingWatch: ObservableObject {
         return defaults.bool(forKey: Preferences.activityScreenRecording) && defaults.bool(forKey: Preferences.notchEnabled)
     }
 
-    private var captureApp: NSRunningApplication? { NSRunningApplication.runningApplications(withBundleIdentifier: Self.capture).first }
-
-    /// Looking while Screenshot is open, or a recording is being saved.
-    private func follow() {
-        let wanted = captureApp != nil || recording != nil
-        if wanted, clock == nil {
-            let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-                MainActor.assumeIsolated { self?.look() }
-            }
-            timer.tolerance = 0.1
-            RunLoop.main.add(timer, forMode: .common)
-            clock = timer
-            look()
-        } else if !wanted {
-            clock?.invalidate()
-            clock = nil
+    private func look() {
+        guard isEnabled() else {
+            recording = nil
+            return
+        }
+        guard !benching, !looking else { return }
+        let now = Date.now
+        guard captureIsRunning() || recording != nil || now.timeIntervalSince(lastLook) >= 2 else { return }
+        lastLook = now
+        looking = true
+        let read = readIndicator
+        Task { [weak self] in
+            let words = await Task.detached { read() }.value
+            guard let self else { return }
+            self.looking = false
+            guard !self.benching, self.isEnabled() else { return }
+            self.update(words: words, at: .now)
         }
     }
 
-    private func look() {
-        guard Self.enabled else {
-            recording = nil
-            return follow()
-        }
-        let now = Date.now
-        let item = Self.stopItem()
-        switch (item.map(Self.words), recording) {
+    private func update(words: String?, at now: Date) {
+        switch (words, recording) {
         case (let words?, let shown):
             // Waiting to start, it counts down the seconds left; recording, it's a stop button.
             if let seconds = Self.countdown(in: words) {
@@ -355,21 +367,64 @@ final class ScreenRecordingWatch: ObservableObject {
         case (nil, nil):
             break
         }
-        follow()
     }
 
-    /// The menu bar's button that stops it, while there's one: in Screenshot's own menu bar items,
-    /// or among the menu bar's, by its identifier.
-    static func stopItem() -> AXUIElement? {
+    /// Screenshot's legacy stop item, or its Live Activity in either menu-bar tree.
+    nonisolated static func stopItem() -> AXUIElement? {
         guard AXIsProcessTrusted() else { return nil }
         for bundle in [capture, "com.apple.MenuBarAgent"] {
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first else { continue }
             let element = AXUIElementCreateApplication(app.processIdentifier)
             AXUIElementSetMessagingTimeout(element, 0.1)
-            guard let bar = SystemNotices.value(element, kAXExtrasMenuBarAttribute) else { continue }
-            let items = SystemNotices.findAll(in: bar as! AXUIElement) { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXMenuBarItemRole }
-            if bundle == capture, let first = items.first { return first }
-            if let item = items.first(where: { isRecordingItem(SystemNotices.value($0, kAXIdentifierAttribute) as? String) }) { return item }
+            let roots = indicatorRoots(of: element)
+            if let item = first(
+                in: roots,
+                matching: { item in
+                    isRecordingControl(
+                        role: SystemNotices.value(item, kAXRoleAttribute) as? String,
+                        subrole: SystemNotices.value(item, kAXSubroleAttribute) as? String,
+                        identifier: SystemNotices.value(item, kAXIdentifierAttribute) as? String
+                    )
+                })
+            {
+                return item
+            }
+            // The older stop button has no identifier, and belongs to Screenshot alone.
+            if bundle == capture,
+                let bar = SystemNotices.value(element, kAXExtrasMenuBarAttribute), CFGetTypeID(bar) == AXUIElementGetTypeID(),
+                let item = first(in: [bar as! AXUIElement], matching: { SystemNotices.value($0, kAXRoleAttribute) as? String == kAXMenuBarItemRole })
+            {
+                return item
+            }
+        }
+        return nil
+    }
+
+    nonisolated static func isRecordingControl(role: String?, subrole: String?, identifier: String?) -> Bool {
+        (role == kAXMenuBarItemRole || subrole == liveActivity) && isRecordingItem(identifier)
+    }
+
+    nonisolated private static func indicatorRoots(of app: AXUIElement) -> [AXUIElement] {
+        var roots = SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        if let bar = SystemNotices.value(app, kAXExtrasMenuBarAttribute), CFGetTypeID(bar) == AXUIElementGetTypeID() {
+            roots.append(bar as! AXUIElement)
+        }
+        return roots
+    }
+
+    /// A first match with bounded work, including trees that repeat the same element.
+    nonisolated private static func first(in roots: [AXUIElement], matching match: (AXUIElement) -> Bool) -> AXUIElement? {
+        var pending = roots.map { ($0, 0) }, seen = Set<AXUIElement>()
+        var next = 0
+        let deadline = Date.now.addingTimeInterval(0.5)
+        while next < pending.count, seen.count < 750, Date.now < deadline {
+            let (element, depth) = pending[next]
+            next += 1
+            guard seen.insert(element).inserted else { continue }
+            if match(element) { return element }
+            if depth < 12 {
+                pending += (SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).map { ($0, depth + 1) }
+            }
         }
         return nil
     }
@@ -381,7 +436,7 @@ final class ScreenRecordingWatch: ObservableObject {
     }
 
     /// What a menu bar item says.
-    static func words(_ item: AXUIElement) -> String {
+    nonisolated static func words(_ item: AXUIElement) -> String {
         [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute].compactMap { SystemNotices.value(item, $0) as? String }.joined(separator: " ")
     }
 
@@ -418,7 +473,7 @@ final class ScreenRecordingWatch: ObservableObject {
         guard case .saving(let length)? = recording else { return }
         guard let file else {
             recording = nil
-            return follow()
+            return
         }
         saved = file
         let folder = FileManager.default.displayName(atPath: file.deletingLastPathComponent().path)
@@ -428,7 +483,6 @@ final class ScreenRecordingWatch: ObservableObject {
             self.recording = .saved(length: length, folder: folder, preview: preview)
             try? await Task.sleep(for: .seconds(Self.savedFor))
             if case .saved? = self.recording { self.recording = nil }
-            self.follow()
         }
     }
 
@@ -475,19 +529,10 @@ final class ScreenRecordingWatch: ObservableObject {
         guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return nil }
         let element = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(element, 0.1)
-        guard let bar = SystemNotices.value(element, kAXExtrasMenuBarAttribute) else { return nil }
-        let opened = SystemNotices.findAll(in: bar as! AXUIElement) {
-            SystemNotices.value($0, kAXRoleAttribute) as? String == kAXGroupRole
-                && SystemNotices.value($0, kAXSubroleAttribute) as? String == liveActivity
+        return first(in: indicatorRoots(of: element)) {
+            SystemNotices.value($0, kAXRoleAttribute) as? String == kAXButtonRole
+                && isOpenedStopButton(SystemNotices.value($0, kAXIdentifierAttribute) as? String)
         }
-        for activity in opened {
-            let buttons = SystemNotices.findAll(in: activity) {
-                SystemNotices.value($0, kAXRoleAttribute) as? String == kAXButtonRole
-                    && isOpenedStopButton(SystemNotices.value($0, kAXIdentifierAttribute) as? String)
-            }
-            if let button = buttons.first { return button }
-        }
-        return nil
     }
 
     /// The stop button in a screen recording's opened Live Activity, by its identifier, which is
