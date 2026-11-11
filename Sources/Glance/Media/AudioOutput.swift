@@ -379,7 +379,7 @@ struct SoundOutputView: View {
             if volume == nil || volume?.app != nil {
                 VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
                     .padding(.horizontal, SoundMenu.inset)
-                    .padding(.bottom, SoundMenu.inset)
+                    .padding(.bottom, 10)
             }
             Divider().padding(.horizontal, SoundMenu.inset)
             Text("Output")
@@ -400,7 +400,7 @@ struct SoundOutputView: View {
                 .accessibilityLabel(device.name)
                 .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
-            Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
+            Divider().padding(.horizontal, SoundMenu.highlightInset).padding(.vertical, 6)
             Button {
                 dismiss()
                 settings()
@@ -413,7 +413,7 @@ struct SoundOutputView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(SoundRowStyle())
-            .padding(.bottom, SoundMenu.inset)
+            .padding(.bottom, SoundMenu.highlightInset)
         }
         .foregroundStyle(.primary)
         .frame(width: 308)
