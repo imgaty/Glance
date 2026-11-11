@@ -1,6 +1,6 @@
 # Design review: Glance
 
-`Created: 10 November 2026` | `Last updated: 10 November 2026`
+`Created: 10 November 2026` | `Last updated: 11 November 2026`
 
 The app’s design findings, verification limits, and source coverage.
 <br>
@@ -10,8 +10,26 @@ The app’s design findings, verification limits, and source coverage.
 Glance has a clear identity: one island beside the camera that grows from a
 glanceable indicator into a useful control surface. Its native Settings
 structure and shared visual rules are strong. Overall rating: **Critical
-issues**, because five accessibility findings remain. Readability, privacy
-wording and localized onboarding also need attention.
+issues**, because five accessibility findings were identified on 10 November. Readability, privacy
+wording and localized onboarding were also flagged. Fixes are recorded below.
+<br>
+
+## Fix verification
+
+The original findings below describe the source reviewed on 10 November.
+Follow-up captures use the same native views and inert fixtures, behind the
+wallpaper, on 11 November. Screenshots are kept outside the repository.
+
+- C1: Replaced the flattened rows with directly labeled native sliders
+- C2: Hid decorative thumbnails and inactive page layers from accessibility
+- C3: Used native disabled Button semantics for status-menu rows
+- C4: Exposed selected sound-output state in both output-menu paths
+
+Native accessibility inspection confirmed adjustable Appearance controls,
+selection-only background buttons, no hidden player actions on the Tray,
+disabled Check for Updates, and the selected Speakers output. Captures:
+`appearance-light.png`, `tray-dark.png`, `status-light.png`, `sound-light.png`.
+
 <br>
 
 ## Scope and method
@@ -95,7 +113,7 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 - **Why:**
   [menus.md › Labels](https://developer.apple.com/design/human-interface-guidelines/menus)
 : “Show people when a menu item is unavailable.”
-- **Fix:** Use a Button with.disabled(!row.enabled), keeping the present menu
+- **Fix:** Use a Button with `.disabled(!row.enabled)`, keeping the present menu
   styling and keyboard navigation.
 - **Source:**
   [Sources/Glance/App/StatusBar.swift:609](https://github.com/imgaty/Glance/blob/86493b97f8155c53863361ddd610d4dab0a4fee8/Sources/Glance/App/StatusBar.swift#L609)
@@ -109,7 +127,7 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 - **Why:**
   [voiceover.md › Navigation](https://developer.apple.com/design/human-interface-guidelines/voiceover)
 : “Specify how elements are grouped, ordered, or linked.”
-- **Fix:** Expose the current device as selected and announce Current Output;
+- **Fix:** Expose the current device as selected with a selected trait;
   set the NSMenuItem state in the outputs-only path too.
 - **Source:**
   [Sources/Glance/Media/AudioOutput.swift:405](https://github.com/imgaty/Glance/blob/86493b97f8155c53863361ddd610d4dab0a4fee8/Sources/Glance/Media/AudioOutput.swift#L405)

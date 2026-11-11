@@ -612,24 +612,25 @@ private struct StatusMenuRow: View {
     let action: () -> Void
 
     var body: some View {
-        Text(row.title)
-            .font(.system(size: 13))
-            .foregroundStyle(row.enabled ? .primary : .tertiary)
-            .padding(.horizontal, 9)
-            .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
-            .background { StatusMenuLight(lit: row.enabled && state.lit == row.action) }
-            .contentShape(Rectangle())
-            // The pointer and the arrow keys light the same one, as in a menu.
-            .onHover { inside in
-                if inside, row.enabled {
-                    state.lit = row.action
-                } else if !inside, state.lit == row.action {
-                    state.lit = nil
-                }
+        Button(action: action) {
+            Text(row.title)
+                .font(.system(size: 13))
+                .foregroundStyle(row.enabled ? .primary : .tertiary)
+                .padding(.horizontal, 9)
+                .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
+                .background { StatusMenuLight(lit: row.enabled && state.lit == row.action) }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!row.enabled)
+        // The pointer and the arrow keys light the same one, as in a menu.
+        .onHover { inside in
+            if inside, row.enabled {
+                state.lit = row.action
+            } else if !inside, state.lit == row.action {
+                state.lit = nil
             }
-            .onTapGesture { if row.enabled { action() } }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { if row.enabled { action() } }
+        }
     }
 }
 

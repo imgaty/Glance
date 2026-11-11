@@ -83,12 +83,10 @@ private struct LookEditor: View {
                 Text("Uses the style set in Appearance settings.")
             }
             if !followsSystem {
-                LabeledContent("Liquid Glass") {
-                    slider($darkness, from: "capsule.on.rectangle.liquid.glass", String(localized: "Clear"), to: "capsule.on.rectangle.fill", String(localized: "Black"))
-                }
-                LabeledContent("Blur") {
-                    slider($blur, from: "circle", String(localized: "None"), to: "circle.dotted", String(localized: "Full"))
-                }
+                slider(
+                    $darkness, title: String(localized: "Liquid Glass"), from: "capsule.on.rectangle.liquid.glass", String(localized: "Clear"), to: "capsule.on.rectangle.fill",
+                    String(localized: "Black"))
+                slider($blur, title: String(localized: "Blur"), from: "circle", String(localized: "None"), to: "circle.dotted", String(localized: "Full"))
             }
         } footer: {
             if accessibility.reducesTransparency {
@@ -119,26 +117,20 @@ private struct LookEditor: View {
     /// As System Settings shows its Liquid Glass slider: a symbol at each end. The symbols get the
     /// same room on every slider, so the sliders are as long as each other and line up.
     private func slider(
-        _ value: Binding<Double>, from low: String, _ lowName: String,
+        _ value: Binding<Double>, title: String, from low: String, _ lowName: String,
         to high: String, _ highName: String
     ) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: low)
-                .frame(width: 24)
-                .accessibilityLabel(lowName)
-            Slider(value: value, in: 0...1)
-                .labelsHidden()
-                .accessibilityValue(
-                    value.wrappedValue < 0.05
-                        ? lowName
-                        : value.wrappedValue > 0.95
-                            ? highName
-                            : Int(value.wrappedValue * 100).formatted(.percent))
-            Image(systemName: high)
-                .frame(width: 24)
-                .accessibilityLabel(highName)
+        Slider(value: value, in: 0...1) {
+            Text(title)
+        } minimumValueLabel: {
+            Image(systemName: low).frame(width: 24).foregroundStyle(.secondary).help(lowName)
+        } maximumValueLabel: {
+            Image(systemName: high).frame(width: 24).foregroundStyle(.secondary).help(highName)
         }
-        .foregroundStyle(.secondary)
-        .frame(width: 260)
+        // Keep the native adjustable control as the row's accessibility representation.
+        // Decorative endpoint symbols otherwise flatten this slider in a grouped form.
+        .accessibilityRepresentation {
+            Slider(value: value, in: 0...1) { Text(title) }
+        }
     }
 }

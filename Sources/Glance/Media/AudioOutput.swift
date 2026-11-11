@@ -98,6 +98,7 @@ final class AudioOutput: NSObject, ObservableObject {
             let item = NSMenuItem(title: device.name, action: outputsOnly ? #selector(chooseForCall(_:)) : #selector(choose(_:)), keyEquivalent: "")
             item.target = self
             item.tag = Int(device.id)
+            item.state = device.id == current ? .on : .off
             item.view = row
             menu.addItem(item)
             rows.append(row)
@@ -418,6 +419,7 @@ private struct SoundOutputView: View {
                 }
                 .onHover { hovered = $0 ? device.id : nil }
                 .accessibilityLabel(device.name)
+                .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
             Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
             Button("Sound Settings…", action: settings).buttonStyle(.plain)

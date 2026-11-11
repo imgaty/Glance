@@ -336,5 +336,6 @@ struct NotchThumbnail: View {
         .onChange(of: "\(layout) \(hidden)") {
             if !hidden, model.layout != layout { model.use(layout) }
         }
+        .accessibilityHidden(true)
     }
 }

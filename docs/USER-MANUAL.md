@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 10 November 2026`
+`Created: 11 October 2026` | `Last updated: 11 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -597,6 +597,7 @@ Glance's icon in the menu bar opens a menu:
 The menu works from the keyboard too: the up and down arrows go from row to
 row, the switch among them, **Return** or **Space** chooses the one lit, a
 letter goes to the next row starting with it, and **Escape** closes it.
+Unavailable actions are disabled for VoiceOver as well as the pointer.
 
 <br>
 
@@ -642,6 +643,11 @@ the cover's colors behind the player are darker, so its words read on any
 cover, and a call's green Accept button is darker, so its phone stands out. With **Reduce motion** on, covers and their
 colors hold still, without pulsing on the beat, the spotlight stays by the
 cover, and long titles end in an ellipsis instead of scrolling.
+
+VoiceOver identifies the Liquid Glass and Blur sliders by name. The background
+pictures are single choices; their pictured playback controls are decorative.
+Only the visible notch page exposes its controls, and the sound menu identifies
+the selected output.
 
 ### Player
 

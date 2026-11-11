@@ -1380,6 +1380,8 @@ struct PageFade: ViewModifier {
         content.animation(preview ? .smooth(duration: 0.25) : NotchView.fade(in: !hidden)) {
             $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0)
         }
+        .allowsHitTesting(!hidden)
+        .accessibilityHidden(hidden)
     }
 }
 

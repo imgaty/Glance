@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 10 November 2026`
+`Created: 11 October 2026` | `Last updated: 11 November 2026`
 
 <br>
 
@@ -12,6 +12,13 @@
 
 - Fixed the Low Power Mode button opening Settings without changing the mode.
   It now changes the source in use and keeps the other power source's choice.
+
+### Accessibility
+
+- Fixed appearance sliders missing from VoiceOver, decorative previews exposing
+  playback actions, and hidden player controls remaining reachable on the Tray.
+- Fixed disabled status-menu actions being announced as enabled and the current
+  sound output missing its selected state.
 
 ### Live Activities
 
