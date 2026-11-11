@@ -114,12 +114,13 @@
 - Replaced the sound panel with a native popover, inline output rows and a
   white volume slider. Output icons, battery details and the full-width
   Settings action align and adapt to the appearance.
-- Fixed Sound slider symbol weight and color, aligned both dividers and
-  adjusted the Settings highlight to follow the popover corners. Long output
-  names and battery details can grow without clipping.
+- Fixed Sound slider symbol weight and color and aligned both dividers.
+  Output symbols use smaller, aligned glyphs, and the Settings row keeps a
+  compact rounded highlight. Long output names and battery details can grow
+  without clipping.
 - Fixed the speaker button staying unchanged as the app or speaker volume
-  changed. Connected outputs and the selected row now update while Sound is
-  open.
+  changed. Its waves now change in place without shifting or replacing the
+  speaker. Connected outputs and the selected row update while Sound is open.
 - Removed the headphone listening modes and their extra Settings shortcut.
 - Fixed clicks and pointer movement inside Sound closing the notch underneath
   it. The popover takes focus as it opens.

@@ -305,7 +305,7 @@ struct NowPlayingView: View {
             }
             .disabled(options.repeatMode == nil)
         case .output:
-            IslandButton(symbol: output.symbol, size: size, color: sideGray, label: slot.title) { use(.output, at: place) }
+            IslandButton(symbol: output.buttonSymbol, size: size, symbolValue: output.speakerLevel, color: sideGray, label: slot.title) { use(.output, at: place) }
                 .popover(
                     isPresented: Binding(
                         get: { soundPlace == place },

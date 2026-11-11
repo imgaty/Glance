@@ -17,6 +17,12 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// An SF Symbol for the current device, such as AirPods Pro or the built-in speakers.
     @Published private(set) var symbol = "speaker.wave.2.fill"
+    /// Only the laptop speaker uses a variable symbol; other outputs keep their model's image.
+    @Published private(set) var speakerLevel: Double?
+    var buttonSymbol: String {
+        guard let speakerLevel else { return symbol }
+        return speakerLevel > 0 ? "speaker.wave.3.fill" : "speaker.slash.fill"
+    }
     @Published private(set) var devices: [Device] = []
     @Published private(set) var current = AudioDeviceID(0)
     private var appVolumeWatch: AnyCancellable?
@@ -248,6 +254,7 @@ final class AudioOutput: NSObject, ObservableObject {
         let device = devices.first { $0.id == current }
         let hardware = Self.outputLevel(of: current)
         symbol = Self.controlSymbol(device: device, appLevel: appLevel, outputLevel: hardware.level, muted: hardware.muted)
+        speakerLevel = symbol.hasPrefix("speaker.") ? (hardware.muted ? 0 : min(max(appLevel * hardware.level, 0), 1)) : nil
     }
 
     nonisolated static func speakerSymbol(level: Double, muted: Bool) -> String {
@@ -521,8 +528,8 @@ struct SoundOutputView: View {
                     .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, SoundPopoverLayout.contentInset)
-                    .padding(.vertical, SoundPopoverLayout.rowVerticalInset)
-                    .frame(minHeight: SoundMenu.rowHeight)
+                    .padding(.vertical, SoundPopoverLayout.settingsVerticalInset)
+                    .frame(minHeight: SoundPopoverLayout.settingsHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(SoundRowStyle())
@@ -577,12 +584,13 @@ private struct SoundPopoverFocus: NSViewRepresentable {
     static func dismantleNSView(_ view: FocusView, coordinator: ()) { view.releaseFocus() }
 }
 
-/// Both separators share the content gutter; inset highlights follow the native body corners.
+/// Both separators share the content gutter; text actions keep the compact menu row height.
 private enum SoundPopoverLayout {
     static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
-    static let rowVerticalInset: CGFloat = 8
-    static let outerRadius: CGFloat = 20
-    static let highlightRadius = outerRadius - SoundMenu.highlightInset
+    static let settingsVerticalInset: CGFloat = 3
+    static let settingsHeight: CGFloat = 22
+    static let highlightRadius: CGFloat = 11
+    static let outputGlyphSize: CGFloat = 13.5
 }
 
 private struct SoundRowStyle: ButtonStyle {
@@ -616,9 +624,11 @@ private struct SoundOutputLabel: View {
     var body: some View {
         HStack(spacing: SoundMenu.gap) {
             Image(systemName: device.pictured)
-                .font(.system(size: 14, weight: .regular))
+                .font(.system(size: SoundPopoverLayout.outputGlyphSize, weight: .regular))
+                .imageScale(.medium)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(playing ? .white : Color(nsColor: SoundMenu.speakerGray))
+                .offset(y: 0.5)
                 .frame(width: SoundMenu.circle, height: SoundMenu.circle)
                 .background(playing ? Color(nsColor: .systemBlue) : Color(nsColor: SoundMenu.circleGray), in: Circle())
             VStack(alignment: .leading, spacing: 0) {

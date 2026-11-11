@@ -12,6 +12,8 @@ import SwiftUI
 struct IslandButton: View {
     let symbol: String
     let size: CGFloat
+    /// A variable symbol keeps its full canvas while its layers draw to the new value.
+    var symbolValue: Double? = nil
     var color: Color = .white
     /// Struck through, for an option that's off; the slash draws across, and back, as it changes.
     var slashed = false
@@ -31,41 +33,65 @@ struct IslandButton: View {
     var body: some View {
         let glyph = size, glowColor = burstColor
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: size, weight: .semibold))
-                .foregroundStyle(color)
-                .contentTransition(swapsAtOnce ? .identity : .symbolEffect(.replace))
-                .modifier(Slashed(progress: slashed ? 1 : 0, color: color, weight: size * 0.075))
-                .animation(.spring(response: 0.32, dampingFraction: 0.9), value: slashed)
-                // Saving: the star swells once, slowly and smoothly, with a soft glow in the accent
-                // color behind it, then settles back with no overshoot. With Reduce Motion on, only
-                // the glow.
-                .keyframeAnimator(initialValue: SaveEffect(), trigger: burst) { icon, effect in
-                    icon
-                        .scaleEffect(reduceMotion ? 1 : effect.scale)
-                        .background {
-                            Circle()
-                                .fill(glowColor)
-                                .frame(width: glyph * 2, height: glyph * 2)
-                                .blur(radius: glyph * 0.5)
-                                .opacity(effect.glow)
-                        }
-                } keyframes: { _ in
-                    KeyframeTrack(\.scale) {
-                        CubicKeyframe(1.22, duration: 0.35)
-                        CubicKeyframe(1.22, duration: 0.1)
-                        CubicKeyframe(1, duration: 0.45)
-                    }
-                    KeyframeTrack(\.glow) {
-                        CubicKeyframe(0.6, duration: 0.35)
-                        CubicKeyframe(0.6, duration: 0.1)
-                        CubicKeyframe(0, duration: 0.55)
-                    }
+            Group {
+                if let symbolValue {
+                    VariableControlSymbol(symbol: symbol, value: symbolValue)
+                } else {
+                    Image(systemName: symbol)
                 }
+            }
+            .font(.system(size: size, weight: .semibold))
+            .foregroundStyle(color)
+            .contentTransition(swapsAtOnce || symbolValue != nil || reduceMotion ? .identity : .symbolEffect(.replace))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: symbolValue)
+            .modifier(Slashed(progress: slashed ? 1 : 0, color: color, weight: size * 0.075))
+            .animation(.spring(response: 0.32, dampingFraction: 0.9), value: slashed)
+            // Saving: the star swells once, slowly and smoothly, with a soft glow in the accent
+            // color behind it, then settles back with no overshoot. With Reduce Motion on, only
+            // the glow.
+            .keyframeAnimator(initialValue: SaveEffect(), trigger: burst) { icon, effect in
+                icon
+                    .scaleEffect(reduceMotion ? 1 : effect.scale)
+                    .background {
+                        Circle()
+                            .fill(glowColor)
+                            .frame(width: glyph * 2, height: glyph * 2)
+                            .blur(radius: glyph * 0.5)
+                            .opacity(effect.glow)
+                    }
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    CubicKeyframe(1.22, duration: 0.35)
+                    CubicKeyframe(1.22, duration: 0.1)
+                    CubicKeyframe(1, duration: 0.45)
+                }
+                KeyframeTrack(\.glow) {
+                    CubicKeyframe(0.6, duration: 0.35)
+                    CubicKeyframe(0.6, duration: 0.1)
+                    CubicKeyframe(0, duration: 0.55)
+                }
+            }
         }
         .buttonStyle(IslandPress())
         .notchControl()
         .modifier(SpokenAs(label: label, value: value))
+    }
+}
+
+/// Interpolates the waves inside one SF Symbol instead of replacing differently sized images.
+struct VariableControlSymbol: View, Animatable {
+    let symbol: String
+    var value: Double
+
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+
+    var body: some View {
+        Image(systemName: symbol, variableValue: value)
+            .symbolVariableValueMode(.draw)
+            .contentTransition(.identity)
     }
 }
 
