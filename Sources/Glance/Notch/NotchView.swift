@@ -776,6 +776,7 @@ struct NotchView: View {
     /// Whether there are lyrics at all.
     @AppStorage(Preferences.lyrics) private var lyricsOn = true
     @Environment(\.notchThumbnail) private var thumbnail
+    @Environment(\.activityPreview) private var activityPreview
     /// With Reduce Motion on, the player and the tray swap with a fade, without sliding.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Preferences.tray) private var trayOn = true
@@ -872,6 +873,8 @@ struct NotchView: View {
             }
             // With another detached, the trailing side showed nothing beside the camera.
             .environment(\.trailingGrows, model.second == nil)
+            // Preview activities are made up; their controls must never act on real sessions.
+            .allowsHitTesting(!activityPreview)
             // Laid out at their open sizes so they never reflow; the growing shape reveals them.
             // With the lyrics, the notch widens both ways: the player takes the left, the lyrics the
             // right. They start below the camera, which sits over their left side, and the line
@@ -1457,6 +1460,7 @@ private struct NotchControl: ViewModifier {
 
 extension EnvironmentValues {
     @Entry var notchControls = true
+    @Entry var activityPreview = false
     @Entry var tray: Tray? = nil
 }
 

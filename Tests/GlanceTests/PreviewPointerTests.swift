@@ -119,6 +119,56 @@ struct PreviewPointerTests {
         #expect(preview.model.state == .peek)
     }
 
+    @Test("A preview bubble opens its own call and returns to the bubble")
+    func bubbleCall() async {
+        let preview = SettingsPreview()
+        preview.feelsOpening = false
+        preview.setInteractive(true, animated: false)
+        preview.model.activity = true
+        preview.model.call = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now))
+        #expect(preview.model.detached == .call)
+        preview.model.openBubble()
+        #expect(preview.model.state == .open)
+        #expect(preview.model.expanded == .call)
+        #expect(preview.model.openedFromBubble)
+        preview.pointer(at: nil, geometry)
+        #expect(await eventually { preview.model.state == .closed })
+        #expect(preview.model.detached == .call)
+    }
+
+    @Test("Opening the main preview keeps its player while the call bubble merges")
+    func mainBesideCall() async {
+        let preview = SettingsPreview()
+        preview.feelsOpening = false
+        preview.setInteractive(true, animated: false)
+        preview.model.activity = true
+        preview.model.call = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now))
+        preview.model.openNotch()
+        #expect(await eventually { preview.model.state == .open })
+        #expect(preview.model.expanded == nil)
+        #expect(!preview.model.openedFromBubble)
+        preview.pointer(at: nil, geometry)
+        #expect(await eventually { preview.model.state == .closed && !preview.model.bubbleMerged })
+    }
+
+    @Test("The bubble has its own hover target outside the main notch")
+    func bubbleTarget() {
+        let preview = SettingsPreview()
+        preview.setInteractive(true, animated: false)
+        preview.holdsHoverOpening = true
+        preview.model.activity = true
+        preview.model.timer = .running(until: .now + 300, total: 300)
+        var split = geometry
+        split.bubble = { CGRect(x: 270, y: 0, width: 30, height: 30) }
+        preview.pointer(at: CGPoint(x: 285, y: 15), split)
+        #expect(preview.model.bubbleHovered)
+        #expect(preview.model.state == .closed)
+        preview.pointer(at: CGPoint(x: 200, y: 15), split)
+        #expect(!preview.model.bubbleHovered)
+        #expect(preview.model.state == .peek)
+        preview.pointer(at: nil, split)
+    }
+
     @Test("Resting closed, it stays closed once the pointer leaves")
     func restsClosed() async {
         let preview = SettingsPreview()

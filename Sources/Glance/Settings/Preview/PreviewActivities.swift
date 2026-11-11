@@ -11,14 +11,15 @@ import SwiftUI
 /// What the picture on the Live Activities page shows besides what's playing, in the order of the
 /// page's switches: each turned on there, made up, one after another.
 enum PreviewActivity: CaseIterable {
-    case announcement, charging, lowBattery, device, airDrop, timer, stopwatch, screenRecording, voiceMemo
+    case announcement, charging, lowBattery, device, airplay, call, airDrop, screenRecording, voiceMemo, timer, stopwatch
 
     private var key: String {
         switch self {
         case .announcement: Preferences.musicTrackPop
         case .charging: Preferences.activityCharging
         case .lowBattery: Preferences.activityLowBattery
-        case .device: Preferences.activityDevices
+        case .device, .airplay: Preferences.activityDevices
+        case .call: Preferences.activityCalls
         case .airDrop: Preferences.activityAirDrop
         case .timer: Preferences.activityClockTimers
         case .stopwatch: Preferences.activityStopwatch
@@ -35,7 +36,7 @@ enum PreviewActivity: CaseIterable {
             switch activity {
             case .announcement: on(activity.key) && on(Preferences.liveActivity)
             case .charging, .lowBattery: on(activity.key) && hasBattery
-            case .device, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo: on(activity.key)
+            case .device, .airplay, .call, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo: on(activity.key)
             }
         }
     }
@@ -77,12 +78,15 @@ extension SettingsPreview {
         guard
             model.alert != nil || model.switching || model.pop || model.airdrop != nil
                 || model.timer != nil || model.stopwatch != nil || model.screenRecording != nil || model.voiceMemo != nil
+                || model.call != nil || model.airplay != nil
         else { return }
         withAnimation(IslandMotion.fold) {
             model.alert = nil
             model.switching = false
             model.pop = false
             model.airdrop = nil
+            model.call = nil
+            model.airplay = nil
             model.timer = nil
             model.stopwatch = nil
             model.screenRecording = nil
@@ -107,6 +111,10 @@ extension SettingsPreview {
             _ = await DeviceTurn.prepare(.airpodsPro2)
             guard !Task.isCancelled else { return }
             await say(DeviceWatch.alert(name: "AirPods Pro", model: .airpodsPro2, battery: 88))
+        case .airplay:
+            await hold(\.airplay, AirPlayRoute(name: "Living Room", symbol: "homepod"))
+        case .call:
+            await hold(\.call, CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now)))
         case .airDrop:
             await hold(\.airdrop, AirDropShown(id: "preview", sender: "iPhone", preview: ActivityBench.photo(), fraction: 0.35))
         case .timer:
@@ -180,6 +188,7 @@ extension SettingsPreview {
         let model = model
         withAnimation(IslandMotion.open) { model[keyPath: activity] = value }
         await pause(Self.held)
+        while model.state != .closed, !Task.isCancelled { await pause(0.3) }
         guard !Task.isCancelled else { return }
         withAnimation(IslandMotion.fold) { model[keyPath: activity] = nil }
     }

@@ -34,6 +34,8 @@ final class SettingsPreview: ObservableObject {
         let display = Self.defaultDisplay
         self.display = display
         model = .picture(of: ScreenTop(NSScreen.with(id: display) ?? NSScreen.main), state: .closed)
+        model.openBubble = { [weak self] in self?.open(fromBubble: true) }
+        model.openNotch = { [weak self] in self?.open(fromBubble: false) }
     }
 
     /// The notch is the display's: as large.
@@ -69,6 +71,9 @@ final class SettingsPreview: ObservableObject {
     private var openTask: Task<Void, Never>?
     private var closeTask: Task<Void, Never>?
     private var pressBeganClosed = false
+    private var pressOnBubble = false
+    private var restPoint: CGPoint?
+    private var mergeTask: Task<Void, Never>?
 
     /// On the Opening page it closes, to be opened; leaving, it opens again and stays open, as it
     /// does after the Tray page's drag, which leaves it closed. It folds and opens as the notch on
@@ -76,6 +81,13 @@ final class SettingsPreview: ObservableObject {
     func setInteractive(_ on: Bool, animated: Bool) {
         guard on != interactive || (!on && revealed && model.state != .open) else { return }
         interactive = on
+        mergeTask?.cancel()
+        restPoint = nil
+        model.bubbleHovered = false
+        model.bubblePressed = false
+        model.bubbleMerged = false
+        model.bubbleReach = 0
+        model.openedFromBubble = false
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil
@@ -114,6 +126,7 @@ final class SettingsPreview: ObservableObject {
         let rect: (NotchState) -> CGRect
         /// Preview points per screen point.
         let scale: CGFloat
+        var bubble: () -> CGRect? = { nil }
     }
 
     /// Where the pointer counts as on the notch: a little past the closed notch, or the notch as
@@ -135,12 +148,26 @@ final class SettingsPreview: ObservableObject {
         homeTask = nil
         switch model.state {
         case .closed, .peek:
-            if zone(g).contains(p) {
-                if model.state == .closed { peek() }
-            } else if model.state == .peek {
-                settle()
+            let onBubble = g.bubble()?.contains(p) == true
+            let onNotch = zone(g).contains(p) && !onBubble
+            if onBubble != model.bubbleHovered {
+                openTask?.cancel()
+                restPoint = nil
+                withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = onBubble }
+            }
+            if onBubble || onNotch {
+                if onNotch, model.state == .closed { peek() }
+                let opening = Opening.current
+                if model.detached != nil, opening.onHover, !holdsHoverOpening, !pressBeganClosed {
+                    if restPoint == nil || hypot(p.x - restPoint!.x, p.y - restPoint!.y) >= 3 * g.scale {
+                        restPoint = p
+                        scheduleOpen(after: opening.hoverDelay + 0.25)
+                    }
+                }
             } else {
-                model.approach(1 - g.rect(.closed).distance(to: p) / (60 * g.scale))
+                openTask?.cancel()
+                restPoint = nil
+                if model.state == .peek { settle() } else { model.approach(1 - g.rect(.closed).distance(to: p) / (60 * g.scale)) }
             }
         case .open:
             if g.rect(.open).insetBy(dx: -8 * g.scale, dy: -8 * g.scale).contains(p) {
@@ -161,6 +188,8 @@ final class SettingsPreview: ObservableObject {
     /// settles at once, as on screen; one that rests open opens again a moment later.
     private func goHome(_ g: Geometry) {
         openTask?.cancel()
+        restPoint = nil
+        withAnimation(IslandMotion.fold) { model.bubbleHovered = false }
         switch model.state {
         case .closed, .peek:
             if model.state == .peek { settle() } else { model.approach(0) }
@@ -228,9 +257,11 @@ final class SettingsPreview: ObservableObject {
 
     /// Pressing the closed notch squeezes it, and letting go opens it (or holding, with a hold time).
     func press(at p: CGPoint, _ g: Geometry) {
-        pressBeganClosed = model.state != .open && zone(g).contains(p)
+        pressOnBubble = g.bubble()?.contains(p) == true
+        pressBeganClosed = model.state != .open && (zone(g).contains(p) || pressOnBubble)
         guard pressBeganClosed else { return }
-        model.press(true)
+        model.bubbleHovered = pressOnBubble
+        if pressOnBubble { model.bubblePressed = true } else { model.press(true) }
         let opening = Opening.current
         if opening.onClick, opening.clickDelay > 0 { scheduleOpen(after: opening.clickDelay) }
     }
@@ -239,10 +270,11 @@ final class SettingsPreview: ObservableObject {
         guard pressBeganClosed else { return }
         pressBeganClosed = false
         model.press(false)
+        model.bubblePressed = false
         let opening = Opening.current
         if opening.clickDelay > 0 {
             if model.state != .open { openTask?.cancel() }
-        } else if opening.onClick, zone(g).contains(p) {
+        } else if opening.onClick, pressOnBubble ? g.bubble()?.contains(p) == true : zone(g).contains(p) {
             open()
         }
     }
@@ -250,7 +282,7 @@ final class SettingsPreview: ObservableObject {
     private func peek() {
         model.peek()
         let opening = Opening.current
-        if opening.onHover, !holdsHoverOpening { scheduleOpen(after: opening.hoverDelay) }
+        if opening.onHover, !holdsHoverOpening, model.detached == nil { scheduleOpen(after: opening.hoverDelay) }
     }
 
     /// A press that won't be let go, as the tour's pointer gives way: the notch springs back, and
@@ -260,10 +292,12 @@ final class SettingsPreview: ObservableObject {
         pressBeganClosed = false
         openTask?.cancel()
         model.press(false)
+        model.bubblePressed = false
     }
 
     private func settle() {
         openTask?.cancel()
+        restPoint = nil
         model.settle(closeness: 0)
     }
 
@@ -276,20 +310,52 @@ final class SettingsPreview: ObservableObject {
         }
     }
 
-    private func open() {
+    private func open(fromBubble: Bool? = nil) {
         guard model.state != .open else { return }
+        let bubble = fromBubble ?? model.bubbleHovered
+        guard !model.opensToNothing(fromBubble: bubble) else { return }
         openTask?.cancel()
+        mergeTask?.cancel()
+        restPoint = nil
         closeTask?.cancel()
         closeTask = nil
-        model.open()
+        let expansion = model.expansion(fromBubble: bubble)
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) {
+            model.expanded = expansion
+            model.openedFromBubble = bubble && model.detached != nil
+            model.bubbleReach = model.openedFromBubble ? model.bubbleSpan : 0
+            model.bubbleHovered = false
+            model.bubblePressed = false
+            model.pressed = false
+        }
+        if model.detached != nil, !model.openedFromBubble, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            withAnimation(IslandMotion.fold) { model.bubbleMerged = true }
+            mergeTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(NotchController.mergeTime))
+                guard !Task.isCancelled else { return }
+                self?.model.open()
+            }
+        } else {
+            model.open()
+        }
         if feelsOpening { Opening.tap() }
     }
 
     private func close() {
         openTask?.cancel()
+        mergeTask?.cancel()
         closeTask = nil
         model.close()
+        guard model.bubbleMerged else { return }
+        mergeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(NotchController.budAfter))
+            guard let self, !Task.isCancelled, model.state != .open else { return }
+            withAnimation(IslandMotion.open) { model.bubbleMerged = false }
+        }
     }
+
 }
 
 extension NotchModel {

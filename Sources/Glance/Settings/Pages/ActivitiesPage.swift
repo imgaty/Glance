@@ -31,13 +31,13 @@ struct ActivitiesPage: View {
     @State private var accessibilityAllowed = AXIsProcessTrusted()
     private let hasBattery = BatteryWatch.hasBattery
 
-    /// The page's switches, in order, and what the picture shows as each is turned on: nothing for
-    /// calls, which it doesn't make up.
+    /// The page's switches in visible order, including each activity within a group.
     static let previews: [(key: String, shows: PreviewActivity?)] = [
         (Preferences.musicTrackPop, .announcement), (Preferences.activityCharging, .charging), (Preferences.activityLowBattery, .lowBattery),
-        (Preferences.activityDevices, .device), (Preferences.activityCalls, nil), (Preferences.activityAirDrop, .airDrop),
-        (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
+        (Preferences.activityDevices, .device), (Preferences.activityDevices, .airplay),
+        (Preferences.activityCalls, .call), (Preferences.activityAirDrop, .airDrop),
         (Preferences.activityScreenRecording, .screenRecording), (Preferences.activityVoiceMemos, .voiceMemo),
+        (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
     ]
 
     /// One switch for a kind of activity: on while any of its own is, turning them all on or off.

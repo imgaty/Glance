@@ -42,6 +42,7 @@ struct NotchPreview: View {
     @State private var hintStart = Date.now
     @Environment(\.notchPaused) private var paused
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         let hinting = interactive && hintsOpening && !paused && !hovering && !pressing
@@ -57,7 +58,15 @@ struct NotchPreview: View {
                         return CGRect(
                             x: proxy.size.width / 2 - m.totalWidth * scale / 2, y: top.edge * scale,
                             width: m.totalWidth * scale, height: m.height * scale)
-                    }, scale: scale)
+                    }, scale: scale,
+                    bubble: {
+                        guard model.detached != nil else { return nil }
+                        let h = model.closedSize.height
+                        let m = model.metrics(for: .closed)
+                        let out = m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
+                        let x = proxy.size.width / 2 + (layoutDirection == .rightToLeft ? -out - h : out) * scale
+                        return CGRect(x: x - 4 * scale, y: (top.edge - 2) * scale, width: (h + 8) * scale, height: (h + 6) * scale)
+                    })
                 ZStack(alignment: .top) {
                     // Laid out once, as large as it's ever seen, drawn back with the lyrics, so drawing
                     // back only scales it: laid out afresh at each scale, the page, menu bar and window
@@ -70,6 +79,7 @@ struct NotchPreview: View {
                         // Its sizes change as a whole: drawn smaller, the glass otherwise loses its place
                         // as the notch changes size, and stays there.
                         NotchView(model: model, display: display)
+                            .environment(\.activityPreview, true)
                             .geometryGroup()
                     }
                     .scaleEffect(scale, anchor: .top)

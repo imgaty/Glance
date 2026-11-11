@@ -23,7 +23,7 @@ struct PreviewActivitiesTests {
     func everything() {
         #expect(
             PreviewActivity.turnedOn(in: defaults(), hasBattery: true) == [
-                .announcement, .charging, .lowBattery, .device, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo,
+                .announcement, .charging, .lowBattery, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch,
             ])
     }
 
@@ -31,7 +31,7 @@ struct PreviewActivitiesTests {
     func turnedOff() {
         let shown = PreviewActivity.turnedOn(
             in: defaults([Preferences.activityDevices: false, Preferences.activityStopwatch: false]), hasBattery: true)
-        #expect(shown == [.announcement, .charging, .lowBattery, .airDrop, .timer, .screenRecording, .voiceMemo])
+        #expect(shown == [.announcement, .charging, .lowBattery, .call, .airDrop, .screenRecording, .voiceMemo, .timer])
     }
 
     @Test("A new song's name shows only with the cover and waveform on")
@@ -40,16 +40,16 @@ struct PreviewActivitiesTests {
         #expect(!shown.contains(.announcement))
     }
 
-    @Test("Each switch on the page shows its own activity as it's turned on, and Calls none")
+    @Test("Each switch on the page shows its own activity as it's turned on, including Calls")
     @MainActor
     func switches() {
         #expect(ActivitiesPage.previews.compactMap(\.shows) == PreviewActivity.allCases)
-        #expect(ActivitiesPage.previews.first { $0.key == Preferences.activityCalls }.map { $0.shows == nil } == true)
+        #expect(ActivitiesPage.previews.first { $0.key == Preferences.activityCalls }.map { $0.shows == .call } == true)
     }
 
     @Test("The battery's show only on a Mac with one")
     func battery() {
         let shown = PreviewActivity.turnedOn(in: defaults(), hasBattery: false)
-        #expect(shown == [.announcement, .device, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo])
+        #expect(shown == [.announcement, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch])
     }
 }

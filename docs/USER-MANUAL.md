@@ -703,8 +703,12 @@ and growing again as it passes. Pausing freezes the glow where it is.
 ### Live Activities
 
 The picture of the notch at the top of the page shows what's turned on, made up,
-one after another, and turning a switch on shows it at once. With Reduce Motion
-on, it stays on what's playing.
+in list order: Now Playing, Battery, Devices, Calls, AirDrop, Recordings, and
+Clock. Turning a switch on shows it at once. The notch and its second bubble
+open separately, after the pointer rests on them or with the chosen click.
+The cycle waits while an activity is open. Its sample controls do not change
+real calls, recordings, timers, or sound routes. With Reduce Motion on, the
+preview stays on what's playing.
 
 | Setting | Operation |
 | --- | --- |

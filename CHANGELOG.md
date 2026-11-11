@@ -28,6 +28,11 @@
 
 ### Settings
 
+- Fixed the Live Activities preview skipping Calls and showing Clock before
+  Recordings. It now follows the visible list, including AirPlay under Devices.
+- Fixed both preview activities opening the player. The notch and its bubble now
+  open their own activity and wait for the pointer to rest before opening.
+
 - Fixed changing the shared appearance or selected display replacing the notch
   preview. Existing display notches now keep their window and activity state.
 - Changed new external displays to hide the notch in full screen by default,
