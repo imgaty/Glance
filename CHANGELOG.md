@@ -20,6 +20,8 @@
 
 ### Player
 
+- Fixed Glance closing itself after Sound stayed open for several seconds.
+  The menu now keeps the app responsive without triggering its freeze check.
 - Fixed the cover opening a stale source in Spotify. With `Accessibility`
   allowed, it now uses the app's own current-song navigation.
 - Fixed the Sound menu opening at a fixed position after a pointer click. It

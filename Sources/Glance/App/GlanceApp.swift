@@ -758,7 +758,12 @@ final class MainThreadWatch: @unchecked Sendable {
     private var answered = DispatchTime.now()
 
     func ask() {
-        DispatchQueue.main.async { [self] in lock.withLock { answered = .now() } }
+        // A native menu can run a responsive nested loop while its caller still occupies the
+        // main dispatch queue. Ask the run loop itself, including menu and modal tracking.
+        let main = CFRunLoopGetMain()
+        let modes = [RunLoop.Mode.common.rawValue, RunLoop.Mode.eventTracking.rawValue, RunLoop.Mode.modalPanel.rawValue] as CFArray
+        CFRunLoopPerformBlock(main, modes) { [self] in lock.withLock { answered = .now() } }
+        CFRunLoopWakeUp(main)
     }
 
     /// Seconds since the main thread last answered.

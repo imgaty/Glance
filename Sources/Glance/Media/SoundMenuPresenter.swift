@@ -13,7 +13,7 @@ struct SoundMenuPresenter: NSViewRepresentable {
 
     @MainActor
     final class Coordinator {
-        private var pending: DispatchWorkItem?
+        private var pending: Timer?
         private var menu: NSMenu?
         private var presenting = false
         private var dismissed: () -> Void = {}
@@ -23,38 +23,43 @@ struct SoundMenuPresenter: NSViewRepresentable {
             guard shown else { return cancel() }
             guard !presenting else { return }
             presenting = true
-            let work = DispatchWorkItem { [weak self, weak anchor] in
-                guard let self, let anchor, let window = anchor.window, window.isVisible else {
-                    self?.finish()
-                    return
-                }
-                self.pending = nil
-                let activated = !NSApp.isActive
-                NSApp.activate()
-                let menu = makeMenu()
-                menu.appearance = anchor.effectiveAppearance
-                self.menu = menu
-                let frame = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
-                let visible = window.screen?.visibleFrame ?? frame
-                let location = SoundMenuPlacement.location(for: menu.size, anchor: frame, visible: visible, pointer: pointer)
-                defer {
-                    self.menu = nil
-                    self.finish()
-                    if activated, NSApp.isActive,
-                        !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) })
-                    {
-                        NSApp.deactivate()
+            let work = Timer(timeInterval: 0, repeats: false) { [weak self, weak anchor] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.pending = nil
+                    guard let anchor, let window = anchor.window, window.isVisible else {
+                        self.finish()
+                        return
                     }
+                    let activated = !NSApp.isActive
+                    NSApp.activate()
+                    let menu = makeMenu()
+                    menu.appearance = anchor.effectiveAppearance
+                    self.menu = menu
+                    let frame = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
+                    let visible = window.screen?.visibleFrame ?? frame
+                    let location = SoundMenuPlacement.location(for: menu.size, anchor: frame, visible: visible, pointer: pointer)
+                    defer {
+                        self.menu = nil
+                        self.finish()
+                        if activated, NSApp.isActive,
+                            !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) })
+                        {
+                            NSApp.deactivate()
+                        }
+                    }
+                    let point = anchor.convert(window.convertPoint(fromScreen: location), from: nil)
+                    menu.popUp(positioning: nil, at: point, in: anchor)
                 }
-                let point = anchor.convert(window.convertPoint(fromScreen: location), from: nil)
-                menu.popUp(positioning: nil, at: point, in: anchor)
             }
             pending = work
-            DispatchQueue.main.async(execute: work)
+            // Menu tracking is synchronous. A run-loop timer leaves the main queue free for
+            // device changes, volume read-backs and the rest of the app while the menu is open.
+            RunLoop.main.add(work, forMode: .common)
         }
 
         func cancel() {
-            pending?.cancel()
+            pending?.invalidate()
             pending = nil
             if let menu { menu.cancelTracking() } else { presenting = false }
         }
