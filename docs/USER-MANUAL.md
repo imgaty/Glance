@@ -758,6 +758,11 @@ different display reshapes the same Settings preview, keeping its current page.
 
 ## Permissions
 
+Once control of Music or Spotify has been confirmed, **Allow Access** keeps the
+last answer while that player is closed. It checks again when the player runs
+or Glance comes forward. A player is never opened just to read its permission;
+only choosing **Request…** may open it so macOS can ask.
+
 macOS asks for each of these the first time Glance needs it. Review them in
 **Settings > General > Permissions**, or in
 **System Settings > Privacy & Security**.

@@ -26,14 +26,29 @@ final class Permissions: ObservableObject {
     @Published private(set) var accessibility: State = SpotifyMenu.allowed ? .granted : .notDetermined
 
     private var watching = false
+    private let defaults: UserDefaults
+    private var automationReads: [String: Int] = [:]
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        musicControl = Self.rememberedAutomation(for: PlayerScripting.music, in: defaults)
+        spotifyControl = Self.rememberedAutomation(for: PlayerScripting.spotify, in: defaults)
+    }
 
     /// Reads them now, and whenever Glance comes forward.
     func start() {
         refresh()
         guard !watching else { return }
         watching = true
-        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { Permissions.shared.refresh() }
+        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                guard [PlayerScripting.music, PlayerScripting.spotify].contains(app?.bundleIdentifier ?? "") else { return }
+                MainActor.assumeIsolated { self?.refresh() }
+            }
         }
     }
 
@@ -81,9 +96,16 @@ final class Permissions: ObservableObject {
             accessibility = fresh.accessibility
         }
         for app in [PlayerScripting.music, PlayerScripting.spotify] {
+            let read = (automationReads[app] ?? 0) + 1
+            automationReads[app] = read
             DispatchQueue.global().async {
                 let state = Self.automation(app, ask: false)
-                DispatchQueue.main.async { MainActor.assumeIsolated { self.set(state, for: app) } }
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        guard self.automationReads[app] == read else { return }
+                        self.set(state, for: app)
+                    }
+                }
             }
         }
     }
@@ -125,6 +147,7 @@ final class Permissions: ObservableObject {
             let state = Self.automation(app, ask: true)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
+                    self.automationReads[app, default: 0] += 1
                     self.set(state, for: app)
                     answered?()
                 }
@@ -137,22 +160,43 @@ final class Permissions: ObservableObject {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
     }
 
-    private func set(_ state: State, for app: String) {
+    /// A missing process is not a permission decision. Keep the last definitive answer until
+    /// macOS can check the running target again, without launching it just to update this row.
+    func set(_ reading: State?, for app: String) {
+        if let reading, reading != .notInstalled {
+            let code = reading == .granted ? 1 : reading == .denied ? 0 : 2
+            defaults.set(code, forKey: Self.automationKey(app))
+        }
+        let state = reading ?? Self.rememberedAutomation(for: app, in: defaults)
         if app == PlayerScripting.music { musicControl = state } else { spotifyControl = state }
     }
 
-    /// Blocks while macOS shows its prompt, so it runs off the main thread.
-    nonisolated private static func automation(_ app: String, ask: Bool) -> State {
+    private static func automationKey(_ app: String) -> String { "automationPermission." + app }
+
+    private static func rememberedAutomation(for app: String, in defaults: UserDefaults) -> State {
+        guard let code = defaults.object(forKey: automationKey(app)) as? Int else { return .notDetermined }
+        return code == 1 ? .granted : code == 0 ? .denied : .notDetermined
+    }
+
+    nonisolated static func automationState(_ status: OSStatus) -> State? {
+        switch status {
+        case noErr: .granted
+        case OSStatus(errAEEventNotPermitted): .denied
+        case OSStatus(errAEEventWouldRequireUserConsent): .notDetermined
+        default: nil
+        }
+    }
+
+    /// Blocks while macOS shows its prompt, so it runs off the main thread. Apple's API requires
+    /// an already-running target and returns procNotFound when it is closed.
+    nonisolated private static func automation(_ app: String, ask: Bool) -> State? {
         guard NSWorkspace.shared.urlForApplication(withBundleIdentifier: app) != nil else { return .notInstalled }
+        guard !NSRunningApplication.runningApplications(withBundleIdentifier: app).isEmpty else { return nil }
         var target = AEAddressDesc()
         let bytes = Array(app.utf8)
-        guard AECreateDesc(typeApplicationBundleID, bytes, bytes.count, &target) == noErr else { return .notDetermined }
+        guard AECreateDesc(typeApplicationBundleID, bytes, bytes.count, &target) == noErr else { return nil }
         defer { AEDisposeDesc(&target) }
-        switch AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, ask) {
-        case noErr: return .granted
-        case OSStatus(errAEEventNotPermitted): return .denied
-        default: return .notDetermined  // not asked yet, or the app isn't running to ask
-        }
+        return automationState(AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, ask))
     }
 
     nonisolated private static let audioService = "kTCCServiceAudioCapture"

@@ -28,6 +28,10 @@
 
 ### Settings
 
+- Fixed a confirmed Spotify or Music permission reverting to `Request…` when
+  that player closed. Glance remembers the answer and checks it again when the
+  player runs, without opening the player to check.
+
 - Fixed the Live Activities preview skipping Calls and showing Clock before
   Recordings. It now follows the visible list, including AirPlay under Devices.
 - Fixed both preview activities opening the player. The notch and its bubble now
