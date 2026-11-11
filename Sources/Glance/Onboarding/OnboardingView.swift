@@ -725,21 +725,17 @@ private struct PermissionRow: View {
             Spacer(minLength: 8)
             switch state {
             case .granted:
-                Menu {
-                    if let remove {
-                        Button("Remove", role: .destructive, action: remove)
-                    } else {
-                        Button("Remove in System Settings…", action: openSettings)
-                    }
-                } label: {
+                VStack(alignment: .trailing, spacing: 6) {
                     Label("Allowed", systemImage: "checkmark.circle.fill")
-                        .labelStyle(.titleAndIcon)
-                        .foregroundStyle(.green)
-                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11))
+                    if let remove {
+                        Button("Remove", action: remove)
+                    } else {
+                        Button("Open Settings…", action: openSettings)
+                    }
                 }
-                .menuStyle(.borderlessButton)
                 .fixedSize()
-                .accessibilityLabel(title + ", " + String(localized: "Allowed"))
             case .denied:
                 Button("Open Settings…", action: openSettings)
             case .notDetermined:
@@ -751,6 +747,7 @@ private struct PermissionRow: View {
                     .foregroundStyle(.tertiary)
             }
         }
+        .controlSize(.small)
         .padding(.horizontal, GroupMetrics.inset)
         .padding(.vertical, 8)
         .frame(minHeight: GroupMetrics.rowHeight)

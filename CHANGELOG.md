@@ -33,9 +33,9 @@
 
 ### Settings
 
-- Added a removal menu to each allowed permission. Privacy permissions open
-  their System Settings page; power control can be removed directly without
-  changing Low Power Mode.
+- Replaced permission dropdowns with visible action buttons and a separate
+  status. Privacy permissions open their System Settings page; power control
+  can be removed directly without changing Low Power Mode.
 
 - Corrected the Liquid Glass slider's symbol size and changed the Blur slider's
   ends to show the same shape sharp and blurred.

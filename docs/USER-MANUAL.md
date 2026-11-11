@@ -24,9 +24,9 @@ says it couldn't verify it. Click **Done**, then:
 
 1. Open **System Settings > Privacy & Security**.
 
-Choose **Allowed > Remove in System Settings…** beside a permission to open
-its privacy settings, then turn off Glance there. For `Power control`, choose
-**Allowed > Remove** to remove its approval directly. Removing power control
+The status appears above a standard action button. Choose **Open Settings…**
+beside a privacy permission, then turn off Glance there. For `Power control`,
+choose **Remove** to remove its approval directly. Removing power control
 leaves the current Low Power Mode setting unchanged.
 2. Scroll down to "Glance was blocked to protect your Mac." and click
    **Open Anyway**.
