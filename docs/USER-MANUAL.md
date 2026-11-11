@@ -247,22 +247,22 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a native popover anchored to the button. The
+The `Sound Output` button opens a native menu below the button. The
 notch stays open while it is in use. Escape or a click outside closes it.
 The native slider sets the playing app's volume, with a white track and the
 system's glass handle. Drag the knob or click the track to change it.
-For `Music` and `Spotify`, it reads their volume as the popover opens; other
+For `Music` and `Spotify`, it reads their volume as the menu opens; other
 apps need the `Audio from apps` permission.
 
 Connected speakers and headphones appear as rows under **Output**, with a
 blue circle for the current output and battery details when available. The
 list updates as outputs connect or disconnect. Nearby wireless destinations
 that are not connected appear only in macOS. Selecting a row closes the
-popover. The full **Sound Settings…** row highlights under the
+menu. The full **Sound Settings…** row highlights under the
 pointer and opens **System Settings > Sound**. Headphone listening modes and
 other headphone options are managed in macOS.
 
-The popover takes focus when opened and keeps its notch open while you use it.
+The menu is ready for interaction when opened and keeps its notch open.
 Headings, output icons and the Settings label share the same leading edge. Both
 dividers use the same inset. The compact Settings row sits below the output
 list, with a highlight whose bottom corners are more rounded than its top

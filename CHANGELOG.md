@@ -20,6 +20,8 @@
 
 ### Player
 
+- Changed the Sound popup to a native menu anchored below its button, keeping
+  the white volume slider, inline outputs and battery details.
 - Changed player buttons to use the same native symbol transition when their
   state or assigned control changes.
 - Rounded the Sound Settings row's bottom corners more, keeping its top
@@ -117,7 +119,7 @@
 - Fixed test scenes disappearing at different heights. Every activity now folds
   before its window leaves, including tall alerts and expanded recordings.
 
-- Replaced the sound panel with a native popover, inline output rows and a
+- Replaced the sound panel with a native menu, inline output rows and a
   white volume slider. Output icons, battery details and the full-width
   Settings action align and adapt to the appearance.
 - Fixed Sound slider symbol weight and color and aligned both dividers.
@@ -129,7 +131,7 @@
   speaker. Connected outputs and the selected row update while Sound is open.
 - Removed the headphone listening modes and their extra Settings shortcut.
 - Fixed clicks and pointer movement inside Sound closing the notch underneath
-  it. The popover takes focus as it opens.
+  it. The menu is ready for interaction as it opens.
 
 - Fixed a straight edge appearing while the background morphed into the
   Spotlight. The colors now stay in place as the soft mask moves and shrinks.

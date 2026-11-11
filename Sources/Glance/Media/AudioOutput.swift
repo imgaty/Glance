@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import Combine
 import CoreAudio
 import SwiftUI
@@ -55,8 +56,11 @@ final class AudioOutput: NSObject, ObservableObject {
         menu(withVolume: withVolume, outputsOnly: outputsOnly).popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
     }
 
-    func soundView() -> some View {
-        LiveSoundOutputView(output: self)
+    func soundMenu() -> SoundOutputMenu {
+        refreshDevices()
+        let menu = SoundOutputMenu(devices: devices, current: current, volume: AppVolume.shared, choose: chooseOutput, settings: openSoundSettings)
+        menu.follow(self)
+        return menu
     }
 
     func refreshDevices() { refresh() }
@@ -367,26 +371,15 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 }
 
-/// Observes the live device inventory even when the selected device's symbol stays the same.
-private struct LiveSoundOutputView: View {
-    @ObservedObject var output: AudioOutput
-
-    var body: some View {
-        SoundOutputView(
-            devices: output.devices, current: output.current, volume: AppVolume.shared,
-            choose: output.chooseOutput, settings: output.openSoundSettings
-        )
-        .onAppear { output.refreshDevices() }
-    }
-}
-
 /// The system's SwiftUI slider, with a white track and no custom pointer handling.
 final class VolumeMenuSlider: NSView {
-    init(volume: AppVolume) {
-        super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
+    let level: VolumeSlider.Level
+
+    init(volume: AppVolume?, level: VolumeSlider.Level? = nil) {
+        self.level = level ?? VolumeSlider.Level(volume?.level ?? 0.5) { [weak volume] in volume?.set($0) }
+        super.init(frame: NSRect(x: 0, y: 0, width: 308, height: 30))
         autoresizingMask = [.width]
-        let level = VolumeSlider.Level(volume.level) { [weak volume] in volume?.set($0) }
-        let host = NSHostingView(rootView: VolumeSlider(volume: volume, level: level))
+        let host = FirstMouseHostingView(rootView: VolumeSlider(volume: volume, level: self.level).environment(\.controlActiveState, .key))
         host.translatesAutoresizingMaskIntoConstraints = false
         addSubview(host)
         NSLayoutConstraint.activate([
@@ -452,180 +445,231 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// Native popover content, with the Sound menu's inline output rows and footer.
-struct SoundOutputView: View {
-    let devices: [AudioOutput.Device]
-    @State private var current: AudioDeviceID
-    private let selectedOutput: AudioDeviceID
-    let volume: AppVolume?
-    let choose: (AudioOutput.Device) -> Void
-    let settings: () -> Void
-    @Environment(\.dismiss) private var dismiss
-    @StateObject private var level: VolumeMenuSlider.VolumeSlider.Level
-    @State private var bluetooth: [String: DeviceWatch.BluetoothInfo]
-    @FocusState private var focusedOutput: AudioDeviceID?
+/// AppKit owns the menu surface and tracking; each item supplies its own content view.
+@MainActor
+final class SoundOutputMenu: NSMenu, NSMenuDelegate {
+    let level: VolumeMenuSlider.VolumeSlider.Level
+    private let volume: AppVolume?
+    private let choose: (AudioOutput.Device) -> Void
+    private let settings: () -> Void
+    private var devices: [AudioOutput.Device] = []
+    private var batteries: [String: DeviceWatch.BluetoothInfo]
+    private var deviceItems: [NSMenuItem] = []
+    private var deviceStart = 0
+    private var outputWatch: AnyCancellable?
+    private var keyWatch: Any?
+    private var tracking = false
 
     init(
         devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?,
         batteries: [String: DeviceWatch.BluetoothInfo]? = nil,
         choose: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void
     ) {
-        self.devices = devices
-        _current = State(initialValue: current)
-        selectedOutput = current
         self.volume = volume
         self.choose = choose
         self.settings = settings
-        _level = StateObject(wrappedValue: .init(volume?.level ?? 0.5) { [weak volume] in volume?.set($0) })
-        _bluetooth = State(initialValue: batteries ?? AudioOutput.bluetooth)
-    }
-
-    private var ordered: [AudioOutput.Device] {
-        devices.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn }
-            + devices.filter { $0.transport != kAudioDeviceTransportTypeBuiltIn }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Sound")
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.horizontal, SoundPopoverLayout.contentInset)
-                .padding(.top, SoundMenu.inset)
-                .padding(.bottom, 8.5)
-            if volume == nil || volume?.app != nil {
-                VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
-                    .padding(.horizontal, SoundPopoverLayout.contentInset)
-                    .padding(.bottom, 8.5)
-            }
-            Divider().padding(.horizontal, SoundPopoverLayout.contentInset)
-            Text("Output")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color(nsColor: SoundMenu.headingGray))
-                .padding(.top, 6)
-                .frame(height: 27, alignment: .center)
-                .padding(.horizontal, SoundPopoverLayout.contentInset)
-            ForEach(ordered, id: \.id) { device in
-                Button {
-                    current = device.id
-                    choose(device)
-                    dismiss()
-                } label: {
-                    SoundOutputLabel(device: device, playing: device.id == current, levels: bluetooth[device.name.lowercased()]?.levels)
-                }
-                .buttonStyle(SoundRowStyle())
-                .focused($focusedOutput, equals: device.id)
-                .accessibilityLabel(device.name)
-                .accessibilityAddTraits(device.id == current ? .isSelected : [])
-            }
-            Divider()
-                .padding(.horizontal, SoundPopoverLayout.contentInset)
-                .padding(.vertical, SoundMenu.highlightInset)
-            Button {
-                dismiss()
-                settings()
-            } label: {
+        self.batteries = batteries ?? AudioOutput.bluetooth
+        level = .init(volume?.level ?? 0.5) { [weak volume] in volume?.set($0) }
+        super.init(title: String(localized: "Sound"))
+        autoenablesItems = false
+        showsStateColumn = false
+        minimumWidth = 308
+        delegate = self
+        append(String(localized: "Sound"), view: SoundMenuHeading(title: String(localized: "Sound"), main: true))
+        if volume == nil || volume?.app != nil {
+            append(String(localized: "Volume"), view: VolumeMenuSlider(volume: volume, level: level), enabled: true)
+        }
+        append("", view: SoundMenuDivider(height: 7))
+        append(String(localized: "Output"), view: SoundMenuHeading(title: String(localized: "Output"), main: false))
+        deviceStart = numberOfItems
+        append("", view: SoundMenuDivider(height: 11))
+        let footer = append(
+            String(localized: "Sound Settings…"),
+            view: SoundMenuContentRow(bottomRadius: SoundOutputLayout.settingsBottomRadius) {
                 Text("Sound Settings…")
                     .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, SoundPopoverLayout.contentInset)
-                    .padding(.vertical, SoundPopoverLayout.settingsVerticalInset)
-                    .frame(minHeight: SoundPopoverLayout.settingsHeight)
-                    .contentShape(Rectangle())
+                    .padding(.horizontal, SoundOutputLayout.contentInset)
+                    .padding(.vertical, SoundOutputLayout.settingsVerticalInset)
+                    .frame(minHeight: SoundOutputLayout.settingsHeight)
+            }, enabled: true
+        )
+        footer.target = self
+        footer.action = #selector(openSettings)
+        refresh(devices: devices, current: current, batteries: self.batteries)
+    }
+
+    required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func follow(_ output: AudioOutput) {
+        outputWatch = output.$devices.combineLatest(output.$current).sink { [weak self] devices, current in
+            self?.refresh(devices: devices, current: current, batteries: AudioOutput.bluetooth)
+        }
+    }
+
+    /// Retain the slider and its edit revision while device rows or the selected output change.
+    func refresh(devices: [AudioOutput.Device], current: AudioDeviceID, batteries: [String: DeviceWatch.BluetoothInfo]) {
+        let ordered = devices.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn } + devices.filter { $0.transport != kAudioDeviceTransportTypeBuiltIn }
+        self.devices = ordered
+        self.batteries = batteries
+        if deviceItems.map(\.tag) != ordered.map({ Int($0.id) }) {
+            for item in deviceItems { removeItem(item) }
+            deviceItems = ordered.enumerated().map { index, device in
+                let item = NSMenuItem(title: device.name, action: #selector(selectOutput(_:)), keyEquivalent: "")
+                item.target = self
+                item.tag = Int(device.id)
+                item.view = SoundMenuContentRow { outputLabel(device, playing: device.id == current) }
+                insertItem(item, at: deviceStart + index)
+                return item
             }
-            .buttonStyle(SoundRowStyle(bottomRadius: SoundPopoverLayout.settingsBottomRadius))
         }
-        .padding(.horizontal, SoundMenu.highlightInset)
-        .padding(.bottom, SoundMenu.highlightInset)
-        .foregroundStyle(.primary)
-        .frame(width: 308)
-        .defaultFocus($focusedOutput, current)
-        .background(SoundPopoverFocus())
-        .onChange(of: selectedOutput) { _, current in self.current = current }
-        .task {
-            guard volume != nil else { return }
+        for (item, device) in zip(deviceItems, ordered) {
+            item.title = device.name
+            item.state = device.id == current ? .on : .off
+            (item.view as? SoundMenuContentRow)?.replace { outputLabel(device, playing: device.id == current) }
+        }
+        update()
+    }
+
+    private func outputLabel(_ device: AudioOutput.Device, playing: Bool) -> some View {
+        SoundOutputLabel(device: device, playing: playing, levels: batteries[device.name.lowercased()]?.levels)
+    }
+
+    @discardableResult
+    private func append(_ title: String, view: NSView, enabled: Bool = false) -> NSMenuItem {
+        view.setFrameSize(NSSize(width: 308, height: view.frame.height))
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.isEnabled = enabled
+        item.view = view
+        addItem(item)
+        return item
+    }
+
+    @objc private func selectOutput(_ item: NSMenuItem) {
+        guard let device = devices.first(where: { Int($0.id) == item.tag }) else { return }
+        choose(device)
+    }
+
+    @objc private func openSettings() { settings() }
+
+    @discardableResult
+    func adjustVolume(by change: Double) -> Bool {
+        guard volume?.canChange != false else { return false }
+        level.move(to: min(max(level.value + change, 0), 1))
+        return true
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        tracking = true
+        keyWatch = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return event }
+            let change: Double
+            switch Int(event.keyCode) {
+            case kVK_LeftArrow: change = -0.05
+            case kVK_RightArrow: change = 0.05
+            default: return event
+            }
+            return self?.adjustVolume(by: change) == true ? nil : event
+        }
+        guard volume != nil else { return }
+        Task { [weak self] in
             await AudioOutput.readBluetooth()
-            bluetooth = AudioOutput.bluetooth
+            guard let self, self.tracking else { return }
+            let current = deviceItems.first(where: { $0.state == .on }).map { AudioDeviceID($0.tag) } ?? 0
+            refresh(devices: devices, current: current, batteries: AudioOutput.bluetooth)
         }
+    }
+
+    func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
+        for row in items.compactMap({ $0.view as? SoundMenuContentRow }) {
+            row.highlighted = row.enclosingMenuItem === item
+        }
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        tracking = false
+        if let keyWatch { NSEvent.removeMonitor(keyWatch) }
+        keyWatch = nil
+        outputWatch = nil
     }
 }
 
-/// SwiftUI owns the popover; its native window takes focus even from a nonactivating notch.
-private struct SoundPopoverFocus: NSViewRepresentable {
-    final class FocusView: NSView {
-        private var activated = false
-        private var activationWatch: AnyCancellable?
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            activationWatch = nil
-            guard let window else { return }
-            activationWatch = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
-                .sink { [weak window] _ in
-                    MainActor.assumeIsolated {
-                        guard let window, window.isVisible else { return }
-                        window.makeKey()
-                    }
-                }
-            DispatchQueue.main.async { [weak self, weak window] in
-                guard let self, let window, self.window === window else { return }
-                self.activated = !NSApp.isActive
-                NSApp.activate()
-                window.makeKeyAndOrderFront(nil)
-            }
-        }
-        func releaseFocus() {
-            activationWatch = nil
-            guard activated, NSApp.isActive else { return }
-            let hasOtherWindow = NSApp.windows.contains { $0 !== window && $0.isVisible && !($0 is NSPanel) }
-            if !hasOtherWindow { NSApp.deactivate() }
-        }
+/// A menu's hosting view accepts the first slider press even though its window is not key.
+private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+/// The native menu handles selection and keyboard navigation; this view draws the rich row.
+private final class SoundMenuContentRow: NSView {
+    private let host: NSHostingView<AnyView>
+    private let bottomRadius: CGFloat
+    private var content: AnyView
+    var highlighted = false { didSet { needsDisplay = true } }
+
+    init<Content: View>(bottomRadius: CGFloat = SoundOutputLayout.highlightRadius, @ViewBuilder content: () -> Content) {
+        self.bottomRadius = bottomRadius
+        self.content = AnyView(content())
+        host = NSHostingView(rootView: Self.root(self.content, width: 308))
+        super.init(frame: NSRect(x: 0, y: 0, width: 308, height: ceil(host.fittingSize.height)))
+        autoresizingMask = [.width]
+        host.frame = bounds.insetBy(dx: SoundMenu.highlightInset, dy: 0)
+        host.autoresizingMask = [.width, .height]
+        addSubview(host)
+        setAccessibilityElement(false)
     }
-    func makeNSView(context: Context) -> FocusView { FocusView() }
-    func updateNSView(_ view: FocusView, context: Context) {}
-    static func dismantleNSView(_ view: FocusView, coordinator: ()) { view.releaseFocus() }
+
+    required init?(coder: NSCoder) { nil }
+    override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { bounds.contains(convert(point, from: superview)) ? self : nil }
+
+    func replace<Content: View>(@ViewBuilder content: () -> Content) {
+        self.content = AnyView(content())
+        host.rootView = Self.root(self.content, width: bounds.width)
+        setFrameSize(NSSize(width: bounds.width, height: ceil(host.fittingSize.height)))
+        needsDisplay = true
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        let widthChanged = newSize.width != frame.width
+        super.setFrameSize(newSize)
+        guard widthChanged else { return }
+        // AppKit can widen custom menu items; keep their content on the same inset as the headings.
+        host.rootView = Self.root(content, width: newSize.width)
+        super.setFrameSize(NSSize(width: newSize.width, height: ceil(host.fittingSize.height)))
+    }
+
+    private static func root(_ view: AnyView, width: CGFloat) -> AnyView {
+        AnyView(view.frame(width: width - SoundMenu.highlightInset * 2).environment(\.controlActiveState, .key).accessibilityHidden(true))
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard highlighted else { return }
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: SoundOutputLayout.highlightRadius, bottomLeadingRadius: bottomRadius,
+            bottomTrailingRadius: bottomRadius, topTrailingRadius: SoundOutputLayout.highlightRadius, style: .continuous
+        )
+        SoundMenu.highlightColor.setFill()
+        NSBezierPath(cgPath: shape.path(in: bounds.insetBy(dx: SoundMenu.highlightInset, dy: 0)).cgPath).fill()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard bounds.contains(convert(event.locationInWindow, from: nil)),
+            let item = enclosingMenuItem, item.isEnabled, let menu = item.menu
+        else { return }
+        menu.cancelTracking()
+        menu.performActionForItem(at: menu.index(of: item))
+    }
 }
 
 /// Both separators share the content gutter; text actions keep the compact menu row height.
-private enum SoundPopoverLayout {
+private enum SoundOutputLayout {
     static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
     static let settingsVerticalInset: CGFloat = 3
     static let highlightRadius: CGFloat = 11
     static let settingsBottomRadius: CGFloat = 15
     static let settingsHeight = highlightRadius + settingsBottomRadius
     static let outputGlyphSize: CGFloat = 13.5
-}
-
-private struct SoundRowStyle: ButtonStyle {
-    var bottomRadius = SoundPopoverLayout.highlightRadius
-
-    func makeBody(configuration: Configuration) -> some View {
-        SoundRowHighlight(pressed: configuration.isPressed, bottomRadius: bottomRadius) { configuration.label }
-    }
-}
-
-private struct SoundRowHighlight<Content: View>: View {
-    let pressed: Bool
-    let bottomRadius: CGFloat
-    @ViewBuilder let content: () -> Content
-    @State private var hovered = false
-
-    var body: some View {
-        content()
-            .background {
-                shape.fill(Color(nsColor: SoundMenu.highlightColor))
-                    .opacity(hovered || pressed ? 1 : 0)
-            }
-            .onHover { hovered = $0 }
-    }
-
-    private var shape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            topLeadingRadius: SoundPopoverLayout.highlightRadius,
-            bottomLeadingRadius: bottomRadius,
-            bottomTrailingRadius: bottomRadius,
-            topTrailingRadius: SoundPopoverLayout.highlightRadius,
-            style: .continuous
-        )
-    }
 }
 
 private struct SoundOutputLabel: View {
@@ -637,7 +681,7 @@ private struct SoundOutputLabel: View {
     var body: some View {
         HStack(spacing: SoundMenu.gap) {
             Image(systemName: device.pictured)
-                .font(.system(size: SoundPopoverLayout.outputGlyphSize, weight: .regular))
+                .font(.system(size: SoundOutputLayout.outputGlyphSize, weight: .regular))
                 .imageScale(.medium)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(playing ? .white : Color(nsColor: SoundMenu.speakerGray))
@@ -653,7 +697,7 @@ private struct SoundOutputLabel: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, SoundPopoverLayout.contentInset)
+        .padding(.horizontal, SoundOutputLayout.contentInset)
         .frame(minHeight: SoundMenu.rowHeight)
         .contentShape(Rectangle())
     }

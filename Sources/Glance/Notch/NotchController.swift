@@ -131,7 +131,7 @@ final class NotchController {
         /// A menu opened from inside it, like the sound output's, is up: the pointer is on the menu,
         /// outside the notch, but the notch stays open under it until it's gone.
         case menu
-        /// The native sound popover belonging to this notch.
+        /// The native Sound menu belonging to this notch.
         case sound
         /// Opened from the keyboard: it stays open with the pointer elsewhere, until the shortcut
         /// comes again, a click lands outside it, or the pointer visits it and leaves.
@@ -426,7 +426,7 @@ final class NotchController {
             NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification).sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.menuClosed() }
             },
-            model.$soundPopoverShown.removeDuplicates().dropFirst().sink { [weak self] shown in
+            model.$soundMenuShown.removeDuplicates().dropFirst().sink { [weak self] shown in
                 MainActor.assumeIsolated {
                     guard let self else { return }
                     if shown {
@@ -1385,6 +1385,8 @@ final class NotchController {
         keyWatch = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { [weak self] event in
             let used = MainActor.assumeIsolated { () -> Bool in
                 guard let self, self.hasKeys, event.window === self.panel else { return false }
+                // Native menus own their keys until tracking ends.
+                guard !self.holds.contains(.menu), !self.holds.contains(.sound) else { return false }
                 // A click goes where it's aimed, and the ring goes.
                 guard event.type == .keyDown else {
                     self.model.keys.clear()
