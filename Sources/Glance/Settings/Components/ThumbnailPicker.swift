@@ -113,9 +113,10 @@ struct ThumbnailPicker<Value: Hashable, Thumbnail: View>: View {
                 Text(title)
                     .font(.system(size: 11, weight: selected ? .semibold : .regular))
                     .foregroundStyle(selected ? Color.primary : Color.secondary)
-                    .lineLimit(1)
-                    // Kept under its picture: a little smaller where the picture is.
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(minHeight: 26, alignment: .top)
             }
             .contentShape(Rectangle())
         }

@@ -57,6 +57,10 @@ brings up macOS's own question. To see the permissions again, use
 **Settings > General > Permissions > Review…**: they open over the Settings
 window, and **Done** closes them.
 
+The page dots sit between the navigation buttons, or above them when the labels
+need more room. Layout and background names wrap under their pictures without
+shrinking the text.
+
 <br>
 
 ## Language

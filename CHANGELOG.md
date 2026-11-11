@@ -18,6 +18,12 @@
 - Corrected the clipboard privacy explanation to describe copies marked private
   and copies from known password managers.
 
+### Welcome tour
+
+- Fixed long navigation labels crowding the page dots and choice captions
+  shrinking or being cut short. Captions now wrap, and the dots move above the
+  buttons when the row needs more room.
+
 ### Accessibility
 
 - Fixed lyrics availability and connection messages becoming too dim while

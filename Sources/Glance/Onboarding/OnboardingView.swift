@@ -71,24 +71,26 @@ struct OnboardingView: View {
                         .transition(pageTransition)
                 }
             }
-            ZStack {
-                if pages.count > 1 {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) {
+                    backButton
+                    Spacer(minLength: 12)
                     PageDots(count: pages.count, current: place) { go(to: $0) }
+                        .fixedSize()
+                    Spacer(minLength: 12)
+                    continueButton(last: last)
                 }
-                HStack {
-                    if pages.count > 1 {
-                        Button(place == 0 ? String(localized: "Set Up Later") : String(localized: "Back")) { place == 0 ? onDone() : go(to: place - 1) }
-                            .buttonStyle(.glass)
+                // Longer translations keep their button labels and full page-dot hit areas.
+                VStack(spacing: 12) {
+                    PageDots(count: pages.count, current: place) { go(to: $0) }
+                    HStack {
+                        backButton
+                        Spacer(minLength: 12)
+                        continueButton(last: last)
                     }
-                    Spacer()
-                    Button(last ? String(localized: "Get Started") : String(localized: "Continue")) {
-                        last ? onDone() : go(to: place + 1)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .keyboardShortcut(.defaultAction)
                 }
-                .controlSize(.large)
             }
+            .controlSize(.large)
             .padding(OnboardingMetrics.bottom)
         }
         .environmentObject(song)
@@ -109,6 +111,21 @@ struct OnboardingView: View {
             go(to: place + (layoutDirection == .leftToRight ? 1 : -1))
             return .handled
         }
+    }
+
+    private var backButton: some View {
+        Button(place == 0 ? String(localized: "Set Up Later") : String(localized: "Back")) { place == 0 ? onDone() : go(to: place - 1) }
+            .buttonStyle(.glass)
+            .fixedSize()
+    }
+
+    private func continueButton(last: Bool) -> some View {
+        Button(last ? String(localized: "Get Started") : String(localized: "Continue")) {
+            last ? onDone() : go(to: place + 1)
+        }
+        .buttonStyle(.glassProminent)
+        .keyboardShortcut(.defaultAction)
+        .fixedSize()
     }
 
     @ViewBuilder private func content(_ page: OnboardingPage) -> some View {

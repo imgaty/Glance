@@ -8,10 +8,11 @@ The app’s design findings, verification limits, and source coverage.
 ## Summary
 
 Glance has a clear identity: one island beside the camera that grows from a
-glanceable indicator into a useful control surface. Its native Settings
-structure and shared visual rules are strong. Overall rating: **Critical
-issues**, because five accessibility findings were identified on 10 November. Readability, privacy
-wording and localized onboarding were also flagged. Fixes are recorded below.
+glanceable indicator into a useful control surface. The initial review on
+10 November found eight issues. All eight have been addressed and checked in
+native views on 11 November. Overall rating after these fixes: **Good**.
+Spoken assistive-technology sessions, live action checks, and reference-motion
+comparisons remain verification limits, described below.
 <br>
 
 ## Fix verification
@@ -27,6 +28,8 @@ wallpaper, on 11 November. Screenshots are kept outside the repository.
 - C5: Kept lyrics status messages at full opacity in both playback states
 - H1: Changed empty-Tray instructions to white on clear glass
 - H2: Narrowed the clipboard privacy explanation in all 34 translated entries
+- M1: Laid out footer controls together, with a stacked fallback, and allowed
+  two-line choice captions without shrinking the 11 pt text
 
 Native accessibility inspection confirmed adjustable Appearance controls,
 selection-only background buttons, no hidden player actions on the Tray,
@@ -46,6 +49,15 @@ The clipboard explanation was checked in the native Tray form
 (`clipboard-privacy-light.png`). All 34 translated entries carry the narrower
 claim; the two English regional fallbacks retain their existing behavior.
 Translation coverage is structural, without a native-speaker fluency review.
+
+Onboarding was captured at its actual 450 by 600 pt size in French, Ukrainian,
+Romanian and Arabic. French choice captions show in full at 11 pt; navigation
+buttons and six independent page targets no longer overlap. Ukrainian uses the
+stacked footer. Arabic keeps its mirrored layout and left-to-right playback.
+All six French pages were captured to check the remaining content and footer.
+Captures include `onboarding-welcome-fr.png`, `onboarding-layout-fr.png`,
+`onboarding-welcome-uk.png`, `onboarding-welcome-ro.png` and
+`onboarding-layout-ar.png`.
 
 <br>
 
@@ -89,6 +101,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 
 ### C1: Critical: Appearance sliders are missing from accessibility
 
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
+
 - **What:** Both visible sliders were absent from the native accessibility tree.
   Sound and Opening sliders were exposed by the same inspection.
 - **Why:**
@@ -101,6 +115,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 - **Screenshot:** `settings-appearance-light.png`.
 
 ### C2: Critical: Decorative and hidden player layers expose playback actions
+
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
 
 - **What:** The three background-choice buttons expose Increment, Decrement,
   Favorite, Previous, Play, Next, Sound Output and Show Where It's Playing as
@@ -124,6 +140,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 
 ### C3: Critical: Unavailable status-menu action is exposed as enabled
 
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
+
 - **What:** Check for Updates… is visibly dimmed but its accessibility element
   is an enabled button. The callback checks a Boolean; the element itself is
   never disabled.
@@ -138,6 +156,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 
 ### C4: Critical: Current sound output is conveyed only by color
 
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
+
 - **What:** MacBook Pro Speakers is the current fixture output and has a blue
   circle. Accessibility reports two ordinary device buttons with no selected
   trait or current-output value.
@@ -151,6 +171,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 - **Screenshot:** `sound-light.png`.
 
 ### C5: Critical: Lyrics status messages are dimmed twice while paused
+
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
 
 - **What:** Unavailable and network-error messages use 40% white, then the
   paused lyrics pane applies another 60% opacity: 24% effective white. On black,
@@ -177,6 +199,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 
 ### H1: High: Empty-Tray instructions become hard to read on clear glass
 
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
+
 - **What:** 14 pt regular #9E9EA2 against a nearby sampled #495560 backdrop is
   2.86:1 in the sRGB-converted capture; white would be 7.63:1. Clear glass, zero
   added blur/darkness, Increase Contrast off.
@@ -191,6 +215,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 - **Screenshot:** `tray-empty-dark.png`.
 
 ### H2: High: Clipboard privacy copy promises more than the filters can know
+
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
 
 - **What:** The UI says passwords and other private items are never kept.
   TrayCapture rejects marked private types and known password-manager apps;
@@ -208,6 +234,8 @@ tested in this pass. No claim of 1:1 the reference player motion parity is made.
 - **Screenshot:** `settings-tray-light.png`.
 
 ### M1: Medium: French onboarding crowds navigation and truncates a choice label
+
+**Resolved 11 November 2026.** See [Fix verification](#fix-verification).
 
 - **What:** In the 450 pt French welcome window, Configurer plus tard finishes
   roughly 2.5 pt from the first visible page dot. The layout-choice page
@@ -292,10 +320,9 @@ review is distinguished from a dependency scan. Screenshots remain outside the
 repository.
 <br>
 
-## Follow-up order
+## Remaining verification
 
-1. Restore accessibility semantics and hide decorative/invisible playback
-  actions.
-2. Improve the empty-Tray explanation contrast and narrow the clipboard promise.
-3. Verify rapid Settings switching and Spotlight with fresh frame timing, then
-  compare motion with the real Apple reference.
+- Run a spoken VoiceOver session and a Full Keyboard Access traversal
+- Check real playback, sound-output and live-activity actions in normal use
+- Compare motion against the agreed real-device references before claiming
+  exact parity
