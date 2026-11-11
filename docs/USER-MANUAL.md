@@ -244,19 +244,20 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a compact glass panel centered under the
+The `Sound Output` button opens a compact glass panel aligned with the
 button, staying within its display. It shows the playing app's volume and the
 Mac's sound outputs. The notch stays open while the panel is in use. Escape or
 a click outside closes the panel. At its top, the system's default slider sets
 the playing app's volume without touching any other app's. The slider uses the
-system's glass handle, including its pressed look.
+system's glass handle, including its pressed look, and a white track.
 Drag the knob to change the level, or click the track to move it there.
 For `Music` and `Spotify` it reads their own volume as the menu opens; other
 apps need the `Audio from apps` permission. Below it, under **Output**, each
 speaker and pair of headphones is in a circle, the one playing filled in your
 accent color.
 AirPods show each earbud's battery and the case's, and other headphones their
-one battery. Click one to play there. **Sound Settings…** opens
+one battery. Click one to play there. The full **Sound Settings…** row
+highlights under the pointer and opens
 **System Settings > Sound**.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound

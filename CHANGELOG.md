@@ -94,8 +94,9 @@
   before its window leaves, including tall alerts and expanded recordings.
 
 - Corrected the sound panel's speaker sizes, row spacing, corners and icon
-  colors. It now opens centered under its button and stays within the display,
-  while keeping the system's default volume slider.
+  colors. It opens aligned with its button and stays within the display.
+  The native volume slider now has a white track, and the whole
+  `Sound Settings…` row highlights under the pointer.
 - Fixed opening Sound Output from the keyboard closing the notch underneath it.
 
 - Fixed a straight edge appearing while the background morphed into the

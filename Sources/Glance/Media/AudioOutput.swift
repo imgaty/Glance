@@ -55,7 +55,7 @@ final class AudioOutput: NSObject, ObservableObject {
         soundPanel.onClose = { [weak self] _ in self?.popoverShown = false }
         soundPanel.close()
         popoverShown = true
-        soundPanel.show(at: point, centered: true, content: content.frame(width: width).modifier(SoundMenuSurface()))
+        soundPanel.show(at: point, content: content.frame(width: width).modifier(SoundMenuSurface()))
         popoverShown = soundPanel.isShown
     }
 
@@ -297,7 +297,7 @@ private struct SoundMenuSurface: ViewModifier {
     }
 }
 
-/// The system's SwiftUI slider, hosted without pointer handling or style overrides.
+/// The system's SwiftUI slider, with a white track and no custom pointer handling.
 final class VolumeMenuSlider: NSView {
     init(volume: AppVolume) {
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
@@ -352,6 +352,7 @@ final class VolumeMenuSlider: NSView {
                 Image(systemName: "speaker.wave.3.fill").font(.system(size: 12))
             }
             .labelsHidden()
+            .tint(.white)
             .disabled(volume?.canChange == false)
             .task {
                 guard let volume else { return }
@@ -374,6 +375,7 @@ private struct SoundOutputView: View {
     @StateObject private var level: VolumeMenuSlider.VolumeSlider.Level
     @State private var refreshed = false
     @State private var hovered: AudioDeviceID?
+    @State private var settingsHovered = false
 
     init(devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?, choose: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void) {
         self.devices = devices
@@ -414,8 +416,19 @@ private struct SoundOutputView: View {
                 .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
             Divider().padding(.horizontal, SoundMenu.highlightInset).padding(.top, 6).padding(.bottom, 1)
-            Button("Sound Settings…", action: settings).buttonStyle(.plain).font(.system(size: 13))
-                .padding(.horizontal, SoundMenu.inset).padding(.vertical, 5)
+            Button(action: settings) {
+                Text("Sound Settings…").font(.system(size: 13))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, SoundMenu.inset).padding(.vertical, 5)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .background {
+                RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
+                    .fill(.quaternary.opacity(settingsHovered ? 1 : 0))
+                    .padding(.horizontal, SoundMenu.highlightInset)
+            }
+            .onHover { settingsHovered = $0 }
         }
         .padding(.vertical, 5)
         .task {
