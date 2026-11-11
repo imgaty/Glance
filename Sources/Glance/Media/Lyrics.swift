@@ -403,7 +403,7 @@ struct LyricsView: View {
         let request = isVisible ? [nowPlaying.title, nowPlaying.artist] : []
         // Spotify marks a break in the singing with a note; elsewhere it's Apple Music's dots.
         let notes = nowPlaying.appBundleID == PlayerScripting.spotify
-        // Dimmed while the song's paused, whichever way it's shown (see `PausedLook`).
+        // Lyric content dims while paused; availability and error messages stay readable.
         let kept = nowPlaying.hasMedia && !nowPlaying.isPlaying ? PausedLook.kept : 1
         GeometryReader { proxy in
             Group {
@@ -415,8 +415,10 @@ struct LyricsView: View {
                     )
                     // Each song's own: the heights it keeps of its lines aren't the next song's.
                     .id(lyrics)
+                    .opacity(kept)
                 case .plain(let lines):
                     PlainLyricsView(lines: lines, credits: store.credits, isVisible: isVisible)
+                        .opacity(kept)
                 case .loading where notes:
                     LoadingNote(breathing: isVisible)
                         .position(x: proxy.size.width / 2, y: middle)
@@ -435,7 +437,6 @@ struct LyricsView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
-        .opacity(kept)
         .animation(.easeInOut(duration: 0.4), value: kept)
         // A little apart from the player, the padding in from the notch's edge.
         .padding(.leading, 12)
@@ -449,7 +450,7 @@ struct LyricsView: View {
     private func message(_ text: String) -> some View {
         Text(text)
             .font(LyricsStyle.font)
-            .foregroundStyle(.white.opacity(LyricsStyle.dim))
+            .foregroundStyle(.white)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

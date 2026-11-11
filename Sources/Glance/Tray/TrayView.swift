@@ -178,7 +178,7 @@ struct TrayView: View {
                 .font(NotchType.title)
             Text(emptyLine)
                 .font(NotchType.detail)
-                .foregroundStyle(NotchType.detailColor)
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 260)
         }

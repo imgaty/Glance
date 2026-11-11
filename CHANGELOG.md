@@ -15,6 +15,8 @@
 
 ### Accessibility
 
+- Fixed lyrics availability and connection messages becoming too dim while
+  paused, and empty-Tray instructions fading into clear glass.
 - Fixed appearance sliders missing from VoiceOver, decorative previews exposing
   playback actions, and hidden player controls remaining reachable on the Tray.
 - Fixed disabled status-menu actions being announced as enabled and the current

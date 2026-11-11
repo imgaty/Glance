@@ -24,11 +24,22 @@ wallpaper, on 11 November. Screenshots are kept outside the repository.
 - C2: Hid decorative thumbnails and inactive page layers from accessibility
 - C3: Used native disabled Button semantics for status-menu rows
 - C4: Exposed selected sound-output state in both output-menu paths
+- C5: Kept lyrics status messages at full opacity in both playback states
+- H1: Changed empty-Tray instructions to white on clear glass
 
 Native accessibility inspection confirmed adjustable Appearance controls,
 selection-only background buttons, no hidden player actions on the Tray,
 disabled Check for Updates, and the selected Speakers output. Captures:
 `appearance-light.png`, `tray-dark.png`, `status-light.png`, `sound-light.png`.
+
+Readability captures cover paused unavailable lyrics, a connection error during
+playback on white artwork, the paused error with app-owned Increase Contrast
+flags, and an empty Tray on clear glass. The Mac's accessibility preferences
+were not changed. Nearby sRGB background samples give white text at least
+5.25:1 for these lyrics messages and 6.54:1 for the Tray instructions. These
+samples do not certify every possible desktop backdrop. Captures:
+`lyrics-unavailable-paused-black.png`, `lyrics-error-playing-white.png`,
+`lyrics-error-paused-contrast.png`, `tray-empty-clear.png`.
 
 <br>
 

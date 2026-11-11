@@ -258,12 +258,17 @@ cover and the colors behind the player do. Lyrics come from
 [LRCLIB](https://lrclib.net), found as
 each song starts so they're ready when you ask for them, and show only when a
 record matches the song's title, artist and length.
+Messages about unavailable lyrics or a connection problem stay bright while
+paused. Only the lyrics themselves dim with the song.
 With Reduce Motion on, each line fades in where it rests rather than gliding
 up, and the dots in a pause in the singing hold still.
 
 <br>
 
 ## The tray
+
+When the Tray is empty, its instructions use white text to stay readable on
+clear glass. They describe what appears there with your current settings.
 
 The tray keeps the files you drop on the notch, what you copy, and your
 screenshots and screen recordings, newest first, as Finder shows files: each
