@@ -134,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.observe(key) { _, _ in Task { @MainActor in action() } }
         }
         settingsWatch = [
-            watch(\.notchHiddenDisplays) { notches.reload() },
+            watch(\.notchHiddenDisplays) { notches.reload(switching: true) },
             watch(\.hideInFullScreen) { notches.refreshFullScreen() },
             // Turned off and on from the menu bar: the notches close away and come back.
             watch(\.notchEnabled) { notches.reload(switching: true) },
