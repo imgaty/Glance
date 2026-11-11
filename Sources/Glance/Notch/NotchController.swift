@@ -2119,12 +2119,7 @@ final class NotchController {
     /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
     /// spring.
     private func turn(to page: NotchPage) {
-        guard model.page != page || model.expanded != nil else { return }
-        withAnimation(NotchMotion.expand) {
-            model.expanded = nil
-            model.page = page
-            model.pageStretch = 0
-        }
+        model.turn(to: page)
     }
 
     private func scrollTray(by delta: CGFloat) {

@@ -415,12 +415,10 @@ struct PreviewHeader: View {
     private func settle(animated: Bool) {
         preview.setInteractive(pane.restsClosed, animated: animated)
         let page: NotchPage = onTray ? .tray : .player
-        if preview.model.page != page {
-            withAnimation(animated ? .smooth(duration: 0.35) : nil) { preview.model.page = page }
-        }
+        preview.model.turn(to: page, animated: animated)
     }
 
-    /// What the preview shows: another display, the shared look, or the display's notch made anew.
+    /// The current display and appearance scope, used to restart the activity sequence.
     private var identity: String {
         "\(sameLook)-\(preview.display)-\(ObjectIdentifier(preview.model).hashValue)"
     }

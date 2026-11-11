@@ -109,7 +109,8 @@ than slide.
 
 The notch opens on the player. The tray is to its right: swipe toward it with
 three fingers on the open notch, or hold Shift and scroll, and back to return.
-Three fingers anywhere else still move between desktops.
+Three fingers anywhere else still move between desktops. Switching these pages
+in Settings, or turning the Tray off while it shows, uses the same slide.
 
 Pulled with two fingers, the notch stretches after them, down and sideways at
 once when they go at a slant, and what's in it half as much, then settles back
@@ -170,7 +171,8 @@ the controls. Drag the progress bar to move through the song. With
 corner.
 
 The cover lifts gently under the pointer, with a soft shadow, squashes as it's
-pressed, and springs back as it's let go.
+pressed, and springs back as it's let go. Paused, it settles to half its playing
+width and height.
 Click the cover, or the app's icon, to go where the music plays from: the tab
 playing it in Safari, Chrome, Brave, Edge or Vivaldi, the playlist or album
 Spotify plays it from, or the song in the playlist Music plays it from. Other
@@ -179,7 +181,8 @@ current desktop. Otherwise, it switches to the app.
 
 Changing the background reshapes the same field of color into the spotlight.
 The colors stay pinned to the notch while the soft mask moves and shrinks,
-keeping the transition free of a moving rectangular edge.
+keeping the transition free of a moving rectangular edge. Choosing `None`
+shrinks and fades the current shape away.
 Changing the layout moves the title, timeline and controls with the cover and
 the notch, keeping them visible throughout.
 

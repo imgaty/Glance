@@ -636,6 +636,16 @@ extension NotchMotion {
 
 /// How the notch moves between its states, the same on screen and in Settings' preview.
 extension NotchModel {
+    /// The page turn used by gestures, shortcuts and Settings, including Tray's switch.
+    func turn(to page: NotchPage, animated: Bool = true) {
+        guard self.page != page || expanded != nil else { return }
+        withAnimation(animated ? NotchMotion.expand : nil) {
+            expanded = nil
+            self.page = page
+            pageStretch = 0
+        }
+    }
+
     func peek() {
         withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { state = .peek }
     }
@@ -758,6 +768,7 @@ struct NotchView: View {
     private var blur: Double { look.blur }
     /// Shown instead of the display's own background, for Settings' pictures of each one.
     private let backgroundShown: MusicBackground?
+    @State private var lastLitBackground = MusicBackground.replaceGlass
     /// In Settings' picture of the player, nothing in it responds.
     @Environment(\.controlPlaces) private var places
     /// Settings' pictures on pages not shown hold still.
@@ -935,7 +946,7 @@ struct NotchView: View {
         }
         // Turned off while it shows, the tray slides away for the player, as swiping to it does.
         .onChange(of: trayOn) {
-            if !trayOn, model.page == .tray { withAnimation(.spring(response: 0.4, dampingFraction: 1)) { model.page = .player } }
+            if !trayOn, model.page == .tray { model.turn(to: .player) }
         }
         // Liquid Glass takes a new size at once, while a frame's size otherwise animates only in
         // the picture, so the glass and the notch's black and outline would part as it changes size
@@ -1174,9 +1185,10 @@ struct NotchView: View {
     @ViewBuilder
     private func artworkBackground(_ m: NotchMetrics, shown: Bool) -> some View {
         let lit = shown && background != .none
-        let fills = background != .spotlight
+        let shape = background == .none ? lastLitBackground : background
+        let fills = shape != .spotlight
         let travels = background == .spotlight && !reduceMotion
-        let opacity = (background == .spotlight ? 0.9 : 1) * (nowPlaying.isPlaying ? 1.0 : PausedLook.kept)
+        let opacity = (shape == .spotlight ? 0.9 : 1) * (nowPlaying.isPlaying ? 1.0 : PausedLook.kept)
         LightClock(running: travels && lit && !paused && nowPlaying.isPlaying, shown: lit) { travelled in
             let spot = spotlight(m, travelled: reduceMotion ? 0 : travelled)
             ArtworkLight(
@@ -1197,14 +1209,18 @@ struct NotchView: View {
         .frame(width: lightSize.width, height: lightSize.height)
         .opacity(lit ? opacity : 0)
         .animation(.easeInOut(duration: 0.5), value: nowPlaying.isPlaying)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.6).paced, value: background)
-        .animation(lit ? .easeOut(duration: 0.5).delay(0.1).paced : .easeOut(duration: 0.2).paced, value: lit)
+        .animation(reduceMotion ? .easeOut(duration: 0.2) : .easeInOut(duration: 0.6).paced, value: background)
+        .animation(reduceMotion ? .easeOut(duration: 0.2) : .easeInOut(duration: 0.5).paced, value: lit)
+        .onChange(of: background, initial: true) { _, value in
+            if value != .none { lastLitBackground = value }
+        }
     }
 
     /// The background spreads out from the middle slowly enough to be seen, once the notch has
-    /// begun to open; the spotlight pops. Going, it just fades: the shape only resets once it's gone.
+    /// begun to open; the spotlight pops. Choosing None shrinks the same soft field
+    /// while it fades, preserving the previous mode's position until it has gone.
     private func lightGrowth(_ growing: Bool, fills: Bool) -> Animation {
-        guard growing else { return .linear(duration: 0.01).delay(0.25) }
+        guard growing else { return .easeInOut(duration: 0.5).paced }
         return fills ? .easeOut(duration: 0.7).delay(0.1) : NotchMotion.spring(response: 0.6, dampingFraction: 0.72)
     }
 
@@ -1400,12 +1416,9 @@ private struct LightClock<Content: View>: View {
 
 struct PageFade: ViewModifier {
     let hidden: Bool
-    @Environment(\.previewPageMotion) private var preview
-
     func body(content: Content) -> some View {
-        // A new sidebar choice can arrive during the previous fade. No delayed entrance
-        // here: it follows its current opacity and position straight toward the latest page.
-        content.animation(preview ? .smooth(duration: 0.25) : NotchView.fade(in: !hidden)) {
+        // Every page change uses the same timing, whether a swipe, shortcut or setting.
+        content.animation(NotchView.fade(in: !hidden)) {
             $0.opacity(hidden ? 0 : 1).blur(radius: hidden ? 4 : 0)
         }
         .allowsHitTesting(!hidden)

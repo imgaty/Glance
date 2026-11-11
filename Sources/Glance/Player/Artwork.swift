@@ -85,8 +85,7 @@ struct HeroArtwork: View {
                         .animation(.easeInOut(duration: 0.5), value: motionReady)
                 }
             }
-            // Like Music's mini player: the artwork dims (see `PausedLook`), and settles back a
-            // little, while paused.
+            // Paused, the artwork dims and settles to half its open size.
             .overlay(Color.black.opacity(nowPlaying.hasMedia && !nowPlaying.isPlaying ? 1 - PausedLook.kept : 0))
             .overlay(Color.white.opacity(light))
             .clipShape(
@@ -141,7 +140,7 @@ struct HeroArtwork: View {
                     .allowsHitTesting(showsBadge && isOpen)
                 }
             }
-            .scaleEffect(isOpen && nowPlaying.hasMedia && !nowPlaying.isPlaying ? 0.92 : 1)
+            .scaleEffect(isOpen && nowPlaying.hasMedia && !nowPlaying.isPlaying ? 0.5 : 1)
             .animation(.spring(response: 0.45, dampingFraction: 0.8), value: nowPlaying.isPlaying)
             // Lifted under the pointer, squashed while held, sprung back past its lift when let go.
             .scaleEffect(x: coverScale.width, y: coverScale.height)

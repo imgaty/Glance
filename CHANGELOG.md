@@ -13,6 +13,14 @@
 - Fixed the Low Power Mode button opening Settings without changing the mode.
   It now changes the source in use and keeps the other power source's choice.
 
+### Player
+
+- Changed paused artwork to half its playing width and height.
+- Fixed choosing `None` removing the artwork background abruptly. Its existing
+  shape now shrinks and fades away.
+- Matched player and Tray switches, including Settings previews and turning the
+  Tray off, to the three-finger page animation.
+
 ### Tray
 
 - Corrected the clipboard privacy explanation to describe copies marked private
