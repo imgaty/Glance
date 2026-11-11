@@ -20,14 +20,14 @@
 
 ### Player
 
+- Fixed inconsistent Sound menu corners. Output and Settings highlights now
+  share one continuous curve, inset from the native menu frame.
 - Fixed Glance closing itself after Sound stayed open for several seconds.
   The menu now keeps the app responsive without triggering its freeze check.
 - Fixed the cover opening a stale source in Spotify. With `Accessibility`
   allowed, it now uses the app's own current-song navigation.
 - Fixed the Sound menu opening at a fixed position after a pointer click. It
   now opens at the click, while keyboard access stays anchored to the button.
-- Fixed the Sound Settings highlight using the larger bottom curve from the
-  previous popup. Its top corners and gray styling stay the same.
 - Changed the Sound popup to a native menu, keeping the white volume slider,
   inline outputs and battery details.
 - Changed player buttons to use the same native symbol transition when their

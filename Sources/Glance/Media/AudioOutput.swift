@@ -485,7 +485,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
         append("", view: SoundMenuDivider(height: 11))
         let footer = append(
             String(localized: "Sound Settings…"),
-            view: SoundMenuContentRow(bottomRadius: SoundOutputLayout.settingsBottomRadius) {
+            view: SoundMenuContentRow {
                 Text("Sound Settings…")
                     .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -602,12 +602,10 @@ private final class FirstMouseHostingView<Content: View>: NSHostingView<Content>
 /// The native menu handles selection and keyboard navigation; this view draws the rich row.
 private final class SoundMenuContentRow: NSView {
     private let host: NSHostingView<AnyView>
-    private let bottomRadius: CGFloat
     private var content: AnyView
     var highlighted = false { didSet { needsDisplay = true } }
 
-    init<Content: View>(bottomRadius: CGFloat = SoundMenu.highlightRadius, @ViewBuilder content: () -> Content) {
-        self.bottomRadius = bottomRadius
+    init<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
         host = NSHostingView(rootView: Self.root(self.content, width: 308))
         super.init(frame: NSRect(x: 0, y: 0, width: 308, height: ceil(host.fittingSize.height)))
@@ -645,10 +643,7 @@ private final class SoundMenuContentRow: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard highlighted else { return }
-        let shape = UnevenRoundedRectangle(
-            topLeadingRadius: SoundMenu.highlightRadius, bottomLeadingRadius: bottomRadius,
-            bottomTrailingRadius: bottomRadius, topTrailingRadius: SoundMenu.highlightRadius, style: .continuous
-        )
+        let shape = RoundedRectangle(cornerRadius: SoundOutputLayout.highlightRadius, style: .continuous)
         SoundMenu.highlightColor.setFill()
         NSBezierPath(cgPath: shape.path(in: bounds.insetBy(dx: SoundMenu.highlightInset, dy: 0)).cgPath).fill()
     }
@@ -662,12 +657,13 @@ private final class SoundMenuContentRow: NSView {
     }
 }
 
-/// Output content shares the menu's text inset.
+/// All player menu highlights share one inset curve inside the native frame.
 private enum SoundOutputLayout {
     static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
     static let settingsVerticalInset: CGFloat = 3
-    /// Inset from the native menu's observed 14-point bottom curve.
-    static let settingsBottomRadius: CGFloat = 14 - SoundMenu.highlightInset
+    /// macOS owns the frame; its observed curve is the reference for every inset row.
+    static let menuRadius: CGFloat = 14
+    static let highlightRadius = max(0, menuRadius - SoundMenu.highlightInset)
     static let settingsHeight: CGFloat = 26
     static let outputGlyphSize: CGFloat = 13.5
 }

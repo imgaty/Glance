@@ -270,11 +270,12 @@ other headphone options are managed in macOS.
 The menu is ready for interaction when opened and keeps its notch open.
 Headings, output icons and the Settings label share the same leading edge. Both
 dividers use the same inset. The compact Settings row sits below the output
-list, with a gray highlight inset from the menu's bottom corners. Output glyphs
-sit inside matching circles, and long output names wrap above their battery
-details. When the laptop speakers are selected, the button
-shows muted, low, medium or high volume as the app or speaker volume changes.
-The speaker stays in place as its waves follow the volume.
+list. Output and Settings highlights share the same continuous corner curve,
+inset from the menu frame. Output glyphs sit inside matching circles, and long
+output names wrap above their battery details. When the laptop speakers are
+selected, the button shows muted, low, medium or high volume as the app or
+speaker volume changes. The speaker stays in place as its waves follow the
+volume.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic
