@@ -40,7 +40,7 @@ final class SettingsPreview: ObservableObject {
     /// The notch is the display's: as large.
     private func followDisplay() {
         let top = self.top
-        guard model.closedSize != top.notch else { return }
+        guard model.closedSize != top.notch || model.hasCamera != top.camera else { return }
         model = .picture(of: top, state: model.state)
     }
 
@@ -296,7 +296,7 @@ final class SettingsPreview: ObservableObject {
 extension NotchModel {
     /// A notch for Settings' pictures: the display's own at rest, playing, and open unless said.
     static func picture(of top: ScreenTop, layout: PlayerLayout = .current, state: NotchState = .open) -> NotchModel {
-        let model = NotchModel(closedSize: top.notch, layout: layout, hasCamera: false)
+        let model = NotchModel(closedSize: top.notch, layout: layout, hasCamera: top.camera)
         model.activity = true
         model.state = state
         return model

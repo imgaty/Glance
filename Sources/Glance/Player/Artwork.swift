@@ -287,7 +287,7 @@ struct ArtworkSwirl: View {
                         .frame(width: spread.width, height: spread.height)
                         .scaleEffect(1 + 0.015 * pulse)
                         .brightness(0.03 * pulse)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 }
             }
         }

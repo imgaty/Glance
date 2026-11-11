@@ -1156,8 +1156,9 @@ struct NotchView: View {
                 dim: accessibility.increasesContrast ? Self.contrastDim : (fills ? Self.colorsDim : 0),
                 active: lit && !paused, spread: lightSpread
             )
+            // Keep the painted plane on the notch while its soft mask moves and shrinks.
+            // Moving the plane with the spotlight exposed its rectangular edge mid-morph.
             .frame(width: lightSize.width, height: lightSize.height)
-            .offset(x: fills ? 0 : spot.center.x - lightSize.width / 2, y: fills ? 0 : spot.center.y - lightSize.height / 2)
             .mask {
                 lightShape(m, grown: lit, fills: fills, spot: spot)
                     .animation(reduceMotion ? nil : lightGrowth(lit, fills: fills), value: lit)

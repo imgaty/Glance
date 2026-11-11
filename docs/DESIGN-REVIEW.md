@@ -76,12 +76,24 @@ preview assignments, they were 20.0 and 17.7 ms. Maximum rapid gaps were still
 improvement, not a claim of stutter-free first visits. Cold-start ranges overlap
 across runs, and callback times do not measure every compositor presentation.
 
-Normal-speed runs of 24 background changes and 24 layout changes, 120 ms apart,
+Normal-speed runs before the geometry correction made 24 background and
+24 layout changes, 120 ms apart. They
 gave 95th-percentile gaps of 14.3 and 10.2 ms, with maxima of 20.8 and 16.7 ms.
 Slowed native still frames were inspected separately. They exposed a hard
-background edge during the mask morph, which needs a geometry correction;
-frame timing alone did not reveal it. The reference-motion comparison remains
-open.
+background edge during the mask morph; frame timing alone did not reveal it.
+The color plane had moved away while the soft mask still covered a wider area.
+The follow-up pins the field to the notch and aligns its painted area to the
+top, then moves and shrinks the mask. It also uses the display's real camera
+clearance in previews. Mirrored layouts keep the existing logical coordinates,
+which SwiftUI mirrors with the cover.
+
+In a blank six-pixel strip inside the lower player, 21 of 103 before frames had
+an adjacent-channel step over 20 sRGB levels; the largest was 58. In 102 after
+frames, none exceeded 20 and the largest was 9. Native frames were also checked
+visually. This samples that exposed seam, without certifying every pixel or
+claiming reference-motion parity. Separate captures confirmed the demo Tray's
+page transition, the mirrored cover and glow, and hidden lyrics leaving the
+native accessibility tree after being opened and closed.
 
 Lyrics rows now wait until first opened and remain available for a quick return.
 Hidden lyrics are excluded from accessibility and pointer navigation. A paused

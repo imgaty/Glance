@@ -43,6 +43,11 @@
 
 ### Live Activities
 
+- Fixed a straight edge appearing while the background morphed into the
+  Spotlight. The colors now stay in place as the soft mask moves and shrinks.
+- Corrected camera clearance in the preview so the Spotlight passes the camera
+  as it does in the notch.
+
 - Changed `Spotlight` to shrink and grow gently as it passes the camera,
   without an abrupt stop at full size or as it disappears behind the cover.
   Its colors flow within the glow, without a second rotation.

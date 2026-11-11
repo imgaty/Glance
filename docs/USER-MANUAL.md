@@ -178,6 +178,8 @@ browsers switch to the tab with `Accessibility` allowed, in the windows on the
 current desktop. Otherwise, it switches to the app.
 
 Changing the background reshapes the same field of color into the spotlight.
+The colors stay pinned to the notch while the soft mask moves and shrinks,
+keeping the transition free of a moving rectangular edge.
 Changing the layout moves the title, timeline and controls with the cover and
 the notch, keeping them visible throughout.
 
