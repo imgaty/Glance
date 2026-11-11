@@ -275,63 +275,43 @@ struct NowPlayingView: View {
 
     @ViewBuilder private func slot(_ slot: PlayerSlot, at place: PlayerControl) -> some View {
         let options = nowPlaying.options
-        let size = PlayerLayout.optionGlyph
-        let burstColor = accent
-        switch slot {
-        case .favorite:
-            IslandButton(
-                symbol: symbol(for: .favorite), size: size,
-                color: optionColor(options.favorite), burst: favoriteBursts, burstColor: burstColor, swapsAtOnce: true,
-                label: slot.title, value: Self.spoken(options.favorite)
-            ) {
-                use(.favorite)
+        let state: (color: Color, slashed: Bool, disabled: Bool, value: String?) =
+            switch slot {
+            case .favorite: (optionColor(options.favorite), false, options.favorite == nil, Self.spoken(options.favorite))
+            case .shuffle: (switchColor(options.shuffle), options.shuffle != true, options.shuffle == nil, Self.spoken(options.shuffle))
+            case .repeatMode:
+                (switchColor(options.repeatMode.map { $0 != .off }), repeatSlashed, options.repeatMode == nil, options.repeatMode?.rawValue.capitalized)
+            case .lyrics:
+                (optionColor(lyricsControl.available ? lyricsControl.shown : nil), false, !lyricsControl.available, Self.spoken(lyricsControl.available ? lyricsControl.shown : nil))
+            case .output, .empty: (sideGray, false, false, nil)
             }
-            .disabled(options.favorite == nil)
-        case .shuffle:
-            // Off, struck through rather than dimmed.
-            IslandButton(
-                symbol: "shuffle", size: size, color: switchColor(options.shuffle), slashed: options.shuffle != true,
-                label: slot.title, value: Self.spoken(options.shuffle)
-            ) {
-                use(.shuffle)
-            }
-            .disabled(options.shuffle == nil)
-        case .repeatMode:
-            IslandButton(
-                symbol: symbol(for: .repeatMode), size: size, color: switchColor(options.repeatMode.map { $0 != .off }),
-                slashed: repeatSlashed, label: slot.title, value: options.repeatMode?.rawValue.capitalized
-            ) {
-                use(.repeatMode)
-            }
-            .disabled(options.repeatMode == nil)
-        case .output:
-            IslandButton(symbol: output.buttonSymbol, size: size, symbolValue: output.speakerLevel, color: sideGray, label: slot.title) { use(.output, at: place) }
-                .popover(
-                    isPresented: Binding(
-                        get: { soundPlace == place },
-                        set: { shown in
-                            if !shown {
-                                soundPlace = nil
-                                soundPopoverChanged(false)
-                            }
-                        }), arrowEdge: .bottom
-                ) {
-                    output.soundView()
-                        .onDisappear { soundPopoverChanged(false) }
-                }
-
-        case .lyrics:
-            IslandButton(
-                symbol: symbol(for: .lyrics), size: size,
-                color: optionColor(lyricsControl.available ? lyricsControl.shown : nil),
-                label: slot.title, value: Self.spoken(lyricsControl.available ? lyricsControl.shown : nil)
-            ) {
-                use(.lyrics)
-            }
-            .disabled(!lyricsControl.available)
-        case .empty:
-            // Nothing, but the space stays, so the transport controls stay where they are.
+        if slot == .empty {
             Color.clear.frame(width: Self.hitbox, height: Self.hitbox)
+        } else {
+            // One button keeps its symbol identity when the assigned control changes, so the
+            // system can transition between its old and new symbols.
+            IslandButton(
+                symbol: slot == .output ? output.buttonSymbol : symbol(for: slot), size: PlayerLayout.optionGlyph,
+                symbolValue: slot == .output ? output.speakerLevel : nil, color: state.color, slashed: state.slashed,
+                burst: favoriteBursts, burstEnabled: slot == .favorite, burstColor: accent,
+                label: slot.title, value: state.value
+            ) {
+                use(slot, at: place)
+            }
+            .disabled(state.disabled)
+            .popover(
+                isPresented: Binding(
+                    get: { soundPlace == place },
+                    set: { shown in
+                        if !shown {
+                            soundPlace = nil
+                            soundPopoverChanged(false)
+                        }
+                    }), arrowEdge: .bottom
+            ) {
+                output.soundView()
+                    .onDisappear { soundPopoverChanged(false) }
+            }
         }
     }
 

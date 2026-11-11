@@ -20,6 +20,10 @@
 
 ### Player
 
+- Changed player buttons to use the same native symbol transition when their
+  state or assigned control changes.
+- Rounded the Sound Settings row's bottom corners more, keeping its top
+  corners as they were.
 - Changed paused artwork to 85% of its playing width and height.
 - Fixed choosing `None` removing the artwork background abruptly. Its existing
   shape now shrinks and fades away.

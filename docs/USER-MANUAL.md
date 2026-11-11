@@ -175,6 +175,9 @@ the controls. Drag the progress bar to move through the song. With
 **Show app icon on cover** on, the playing app's icon sits on the cover's
 corner.
 
+The buttons use the system's symbol transition when their state or assigned
+control changes. With Reduce Motion on, their symbols change without motion.
+
 The cover lifts gently under the pointer, with a soft shadow, squashes as it's
 pressed, and springs back as it's let go. Paused, it settles to 85% of its
 playing width and height.
@@ -262,11 +265,11 @@ other headphone options are managed in macOS.
 The popover takes focus when opened and keeps its notch open while you use it.
 Headings, output icons and the Settings label share the same leading edge. Both
 dividers use the same inset. The compact Settings row sits below the output
-list, with a rounded highlight. Output glyphs sit inside matching circles, and
-long output names wrap above their battery details. When the laptop speakers are
-selected, the button shows muted, low, medium or high volume as the app or
-speaker volume changes. The speaker stays in place as its waves follow the
-volume.
+list, with a highlight whose bottom corners are more rounded than its top
+corners. Output glyphs sit inside matching circles, and long output names wrap
+above their battery details. When the laptop speakers are selected, the button
+shows muted, low, medium or high volume as the app or speaker volume changes.
+The speaker stays in place as its waves follow the volume.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic

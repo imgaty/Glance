@@ -532,7 +532,7 @@ struct SoundOutputView: View {
                     .frame(minHeight: SoundPopoverLayout.settingsHeight)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(SoundRowStyle())
+            .buttonStyle(SoundRowStyle(bottomRadius: SoundPopoverLayout.settingsBottomRadius))
         }
         .padding(.horizontal, SoundMenu.highlightInset)
         .padding(.bottom, SoundMenu.highlightInset)
@@ -588,30 +588,43 @@ private struct SoundPopoverFocus: NSViewRepresentable {
 private enum SoundPopoverLayout {
     static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
     static let settingsVerticalInset: CGFloat = 3
-    static let settingsHeight: CGFloat = 22
     static let highlightRadius: CGFloat = 11
+    static let settingsBottomRadius: CGFloat = 15
+    static let settingsHeight = highlightRadius + settingsBottomRadius
     static let outputGlyphSize: CGFloat = 13.5
 }
 
 private struct SoundRowStyle: ButtonStyle {
+    var bottomRadius = SoundPopoverLayout.highlightRadius
+
     func makeBody(configuration: Configuration) -> some View {
-        SoundRowHighlight(pressed: configuration.isPressed) { configuration.label }
+        SoundRowHighlight(pressed: configuration.isPressed, bottomRadius: bottomRadius) { configuration.label }
     }
 }
 
 private struct SoundRowHighlight<Content: View>: View {
     let pressed: Bool
+    let bottomRadius: CGFloat
     @ViewBuilder let content: () -> Content
     @State private var hovered = false
 
     var body: some View {
         content()
             .background {
-                RoundedRectangle(cornerRadius: SoundPopoverLayout.highlightRadius, style: .continuous)
-                    .fill(Color(nsColor: SoundMenu.highlightColor))
+                shape.fill(Color(nsColor: SoundMenu.highlightColor))
                     .opacity(hovered || pressed ? 1 : 0)
             }
             .onHover { hovered = $0 }
+    }
+
+    private var shape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: SoundPopoverLayout.highlightRadius,
+            bottomLeadingRadius: bottomRadius,
+            bottomTrailingRadius: bottomRadius,
+            topTrailingRadius: SoundPopoverLayout.highlightRadius,
+            style: .continuous
+        )
     }
 }
 
