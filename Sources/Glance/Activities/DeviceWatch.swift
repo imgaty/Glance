@@ -18,8 +18,8 @@ import UniformTypeIdentifiers
 /// The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device whose battery
 /// runs down past 20% or 10% is announced the same way, its ring red, as the iPhone announces AirPods
 /// running low; macOS's own banner for it, and AirPods' notification, are taken away (see
-/// `SystemNotices`). A charging case is announced apart from its earbuds, closed, and only then: it
-/// never shows as they connect.
+/// `SystemNotices`). A charging case is announced apart from its earbuds, closed. If it is already
+/// low when the earbuds connect, its warning takes the connection announcement's place.
 @MainActor
 final class DeviceWatch {
     /// Sound devices there are, by ID.
@@ -53,13 +53,12 @@ final class DeviceWatch {
             Task { [weak self] in
                 // Its battery, which AirPods tell a moment after they connect.
                 var info = await Self.bluetooth(named: device.name)
-                if info?.battery == nil {
+                if info?.battery == nil || (info?.model?.chargingCase != nil && info?.levels.chargingCase == nil) {
                     try? await Task.sleep(for: .seconds(1.5))
                     info = await Self.bluetooth(named: device.name) ?? info
                 }
-                // They turn in 3D, from a clip read once, before they're shown.
-                guard let model = info?.model, await DeviceTurn.prepare(model) != nil else { return }
-                self?.announce(device.name, model: model, battery: info?.battery)
+                guard let battery = info.flatMap(Battery.init) else { return }
+                await self?.announce(device.name, battery: battery)
             }
         }
     }
@@ -287,19 +286,31 @@ final class DeviceWatch {
 
     /// `news` when macOS announced it too, which it may as the Mac wakes, when what reconnects isn't
     /// otherwise announced.
-    private func announce(_ name: String, model: Headphones, battery: Int?, news: Bool = false) {
+    private func announce(_ name: String, battery: Battery, news: Bool = false) async {
+        guard news || !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices),
+            let alert = Self.connection(name: Self.shortName(name), battery: battery),
+            case .device(let model, _) = alert.content,
+            await DeviceTurn.prepare(model) != nil
+        else { return }
         let now = Date.now
         recent = recent.filter { now.timeIntervalSince($0.value) < 5 }
-        guard recent[name] == nil, news || !Activities.shared.settling, UserDefaults.standard.bool(forKey: Preferences.activityDevices)
-        else {
-            return
-        }
-        // A device is announced with its battery, as AirPods are; one that doesn't tell it, not at all.
-        guard battery != nil else { return }
+        guard recent[name] == nil else { return }
         recent[name] = now
-        Activities.shared.post(Self.alert(name: Self.shortName(name), model: model, battery: battery))
-        // macOS's own banner for it says the same.
+        if alert.kind == .caseBattery { caseBatteries[name] = battery.casePercent }
+        Activities.shared.post(alert)
         SystemNotices.hideBluetoothBanner()
+    }
+
+    /// An already-low case is more useful than the earbuds' connection level, even when the
+    /// earbuds' level has not arrived yet. A case above the warning level stays out of the way.
+    static func connection(name: String, battery: Battery) -> NotchAlert? {
+        if let chargingCase = battery.model.chargingCase, let percent = battery.casePercent,
+            percent <= (BatteryWatch.warnings.max() ?? 20)
+        {
+            return caseLowBattery(name: name, model: chargingCase, battery: percent)
+        }
+        guard let percent = battery.percent else { return nil }
+        return alert(name: name, model: battery.model, battery: percent)
     }
 
     /// macOS announced a device with a banner, which was taken away for the notch to say the same.
@@ -314,10 +325,9 @@ final class DeviceWatch {
             let devices = AudioOutput.outputs().filter { Self.isBluetooth($0.transport) }
             guard
                 let device = devices.first(where: { said.contains(Self.shortName($0.name).lowercased()) && report[$0.name.lowercased()]?.model != nil }),
-                let info = report[device.name.lowercased()], let model = info.model, let battery = Battery(info),
-                await DeviceTurn.prepare(model) != nil
+                let info = report[device.name.lowercased()], let battery = Battery(info)
             else { return }
-            self?.announce(device.name, model: model, battery: battery.percent, news: true)
+            await self?.announce(device.name, battery: battery, news: true)
         }
     }
 

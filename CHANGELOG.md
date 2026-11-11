@@ -61,6 +61,9 @@
 
 ### Live Activities
 
+- Changed connecting earbuds to show their case's low-battery warning instead
+  when the case is at 20% or lower, even if the earbuds' level is not yet known.
+
 - Fixed future gray dots shrinking into the closed voice-memo waveform. They now
   blur and fade away while the recorded bars return to the notch.
 - Fixed AirPlay symbols starting a second motion as the notch opened.
@@ -136,8 +139,8 @@
 - Added a low battery alert of its own for the charging case of AirPods and
   Beats earbuds: at 20% and again at 10%, the case on its own, closed and turning
   in 3D, from Apple's and Beats' own models, beside its red ring. It starts from
-  the front, holding still a moment. It's the only time the case shows, never as
-  the earbuds connect.
+  the front, holding still a moment. A case already at 20% or lower also takes
+  priority when its earbuds connect.
 - Changed everything open or tall in the notch to one set of bottom corners,
   concentric with what's round at its ends, top corners that grow with its
   height, and one padding all around. Closed, the notch keeps the camera housing's
