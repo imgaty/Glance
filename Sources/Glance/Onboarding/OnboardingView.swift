@@ -439,7 +439,7 @@ private struct PermissionsPage: View {
                 symbol: "music.quarternote.3", title: String(localized: "Control Spotify"),
                 detail: String(localized: "For the shuffle, repeat and volume controls. Repeating one song also takes Accessibility."),
                 state: permissions.spotify, allow: permissions.requestSpotify,
-                openSettings: { permissions.openSettings(for: permissions.spotifyControl == .denied ? \.spotifyControl : \.accessibility) })
+                openSettings: { permissions.openSettings(for: permissions.spotifyControl == .granted && permissions.accessibility != .granted ? \.accessibility : \.spotifyControl) })
             Divider().padding(.leading, GroupMetrics.inset + PermissionRow.icon + PermissionRow.spacing)
             PermissionRow(
                 symbol: "accessibility", title: String(localized: "Accessibility"),
@@ -452,7 +452,7 @@ private struct PermissionsPage: View {
                 symbol: "battery.100percent", title: String(localized: "Power control"),
                 detail: String(localized: "One-time approval for the battery button. Changes only Low Power Mode."),
                 state: permissions.powerControl, allow: PowerModeSettings.requestAuthorization,
-                openSettings: PowerModeSettings.requestAuthorization)
+                openSettings: PowerModeSettings.requestAuthorization, remove: PowerModeSettings.removeAuthorization)
         }
         .background(RoundedRectangle(cornerRadius: GroupMetrics.radius, style: .continuous).fill(.quinary))
     }
@@ -705,6 +705,7 @@ private struct PermissionRow: View {
     let state: Permissions.State
     let allow: () -> Void
     let openSettings: () -> Void
+    var remove: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: Self.spacing) {
@@ -724,10 +725,21 @@ private struct PermissionRow: View {
             Spacer(minLength: 8)
             switch state {
             case .granted:
-                Label("Allowed", systemImage: "checkmark.circle.fill")
-                    .labelStyle(.titleAndIcon)
-                    .foregroundStyle(.green)
-                    .font(.system(size: 12, weight: .medium))
+                Menu {
+                    if let remove {
+                        Button("Remove", role: .destructive, action: remove)
+                    } else {
+                        Button("Remove in System Settings…", action: openSettings)
+                    }
+                } label: {
+                    Label("Allowed", systemImage: "checkmark.circle.fill")
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.green)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .accessibilityLabel(title + ", " + String(localized: "Allowed"))
             case .denied:
                 Button("Open Settings…", action: openSettings)
             case .notDetermined:

@@ -50,6 +50,21 @@ enum PowerModeSettings {
         Permissions.shared.refresh()
     }
 
+    /// Removes the approved service without changing either power source's current policy.
+    static func removeAuthorization() {
+        Task {
+            do {
+                try await service.unregister()
+            } catch {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "Power control")
+                alert.informativeText = error.localizedDescription
+                alert.runModal()
+            }
+            Permissions.shared.refresh()
+        }
+    }
+
     static func set(_ on: Bool) async -> Bool {
         guard isReady else {
             requestAuthorization()

@@ -23,6 +23,11 @@ Glance is signed but not notarized by Apple, so the first time it opens, macOS
 says it couldn't verify it. Click **Done**, then:
 
 1. Open **System Settings > Privacy & Security**.
+
+Choose **Allowed > Remove in System Settings…** beside a permission to open
+its privacy settings, then turn off Glance there. For `Power control`, choose
+**Allowed > Remove** to remove its approval directly. Removing power control
+leaves the current Low Power Mode setting unchanged.
 2. Scroll down to "Glance was blocked to protect your Mac." and click
    **Open Anyway**.
 3. Confirm with your password or Touch ID, and click **Open Anyway** once more.
