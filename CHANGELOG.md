@@ -33,6 +33,9 @@
 
 ### Settings
 
+- Corrected the Liquid Glass slider's symbol size and changed the Blur slider's
+  ends to show the same shape sharp and blurred.
+
 - Removed the extra display heading and the external-display master switch.
   Each external display now has one `Show notch on external display` switch.
   Existing hidden displays keep their choice.

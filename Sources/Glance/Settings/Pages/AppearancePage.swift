@@ -86,7 +86,7 @@ private struct LookEditor: View {
                 slider(
                     $darkness, title: String(localized: "Liquid Glass"), from: "capsule.on.rectangle.liquid.glass", String(localized: "Clear"), to: "capsule.on.rectangle.fill",
                     String(localized: "Black"))
-                slider($blur, title: String(localized: "Blur"), from: "circle", String(localized: "None"), to: "circle.dotted", String(localized: "Full"))
+                slider($blur, title: String(localized: "Blur"), from: "circle.fill", String(localized: "None"), to: "circle.fill", String(localized: "Full"), highBlur: 2)
             }
         } footer: {
             if accessibility.reducesTransparency {
@@ -118,14 +118,14 @@ private struct LookEditor: View {
     /// same room on every slider, so the sliders are as long as each other and line up.
     private func slider(
         _ value: Binding<Double>, title: String, from low: String, _ lowName: String,
-        to high: String, _ highName: String
+        to high: String, _ highName: String, highBlur: CGFloat = 0
     ) -> some View {
         Slider(value: value, in: 0...1) {
             Text(title)
         } minimumValueLabel: {
-            Image(systemName: low).frame(width: 24).foregroundStyle(.secondary).help(lowName)
+            Image(systemName: low).symbolVariant(.none).font(.system(size: 11)).blur(radius: 0).frame(width: 24).foregroundStyle(.secondary).help(lowName)
         } maximumValueLabel: {
-            Image(systemName: high).frame(width: 24).foregroundStyle(.secondary).help(highName)
+            Image(systemName: high).symbolVariant(.none).font(.system(size: 11)).blur(radius: highBlur).frame(width: 24).foregroundStyle(.secondary).help(highName)
         }
         // Keep the native adjustable control as the row's accessibility representation.
         // Decorative endpoint symbols otherwise flatten this slider in a grouped form.

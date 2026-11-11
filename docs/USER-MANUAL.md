@@ -654,6 +654,9 @@ keeps moving.
 
 ### Appearance
 
+The Liquid Glass slider shows clear and filled glass symbols. The Blur slider
+shows a sharp circle at one end and the same circle blurred at the other.
+
 | Setting | Operation |
 | --- | --- |
 | `Use the same appearance on all displays` | One look for every display, or a separate one for each (with more than one display) |
