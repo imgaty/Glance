@@ -746,15 +746,12 @@ preview stays on what's playing.
 
 | Setting | Operation |
 | --- | --- |
-| `Show the notch` | Whether the display shown has a notch (external displays only; the Mac's own always has one) |
+| `Show notch on external display` | Whether the display shown has a notch (external displays only; the Mac's own always has one) |
 | `Hide in full screen` | In full-screen apps, on the display shown, folds the notch back to the camera with nothing beside it, and it still opens from there as usual. On a display with no camera, it hides with the menu bar |
-| `Show on external displays` | Draws a notch on external displays too |
 
-With more than one display, choose one at the top of the page. `Show the notch`
-and `Hide in full screen` apply to that display. The display name above the
-switches identifies their scope. `Show on external displays` is the master
-switch: turning it off hides all external notches without forgetting each
-display's `Show the notch` choice. A new external display starts with
+With more than one display, choose one at the top of the page. Both switches
+apply to that display. Each external display has one switch to show its notch;
+there is no separate master switch. A new external display starts with
 `Hide in full screen` on; an explicit choice for it is kept.
 
 Changing the shared appearance updates existing notches in place. Choosing a
@@ -826,7 +823,7 @@ their signature matches the one built into Glance.
    **Settings > Player > Apps**.
 
 7. **There's no notch on an external display.** Turn on
-   **Settings > Displays > Show on external displays**.
+   **Settings > Displays > Show notch on external display**.
 
 8. **What I copy doesn't show up in the tray.** Turn on
    **Settings > Tray > Keep what you copy**. If macOS asked about pasting from

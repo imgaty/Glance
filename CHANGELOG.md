@@ -33,6 +33,10 @@
 
 ### Settings
 
+- Removed the extra display heading and the external-display master switch.
+  Each external display now has one `Show notch on external display` switch.
+  Existing hidden displays keep their choice.
+
 - Fixed a confirmed Spotify or Music permission reverting to `Request…` when
   that player closed. Glance remembers the answer and checks it again when the
   player runs, without opening the player to check.

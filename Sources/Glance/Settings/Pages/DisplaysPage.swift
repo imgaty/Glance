@@ -10,9 +10,8 @@ import Combine
 import SwiftUI
 
 /// As System Settings' Displays: the display first, pictured with its own desktop and named under
-/// it, or chosen across the top; then the settings for that display; then the one for them all.
+/// it, or chosen across the top; then the settings for that display.
 struct DisplaysPage: View {
-    @AppStorage(Preferences.showOnExternalDisplays) private var showOnExternalDisplays = true
     @State private var screens = NSScreen.screens
     /// The display shown, chosen across the top as in System Settings' Displays.
     @State private var chosen = (NSScreen.main ?? NSScreen.screens.first)?.notchID ?? ""
@@ -26,10 +25,6 @@ struct DisplaysPage: View {
             if let screen {
                 DisplaySettings(screen: screen)
                     .id(screen.notchID)
-            }
-            // A master switch; each display keeps its own Show the notch choice.
-            Section {
-                Toggle("Show on external displays", isOn: $showOnExternalDisplays)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
@@ -70,7 +65,6 @@ struct DisplaysPage: View {
 private struct DisplaySettings: View {
     let screen: NSScreen
     @AppStorage private var hidesInFullScreen: Bool
-    @AppStorage(Preferences.showOnExternalDisplays) private var showOnExternalDisplays = true
     @AppStorage(Preferences.notchHiddenDisplays) private var hiddenDisplays = ""
 
     init(screen: NSScreen) {
@@ -82,12 +76,9 @@ private struct DisplaySettings: View {
     var body: some View {
         Section {
             if !screen.isBuiltIn {
-                Toggle("Show the notch", isOn: shown)
-                    .disabled(!showOnExternalDisplays)
+                Toggle("Show notch on external display", isOn: shown)
             }
             Toggle("Hide in full screen", isOn: $hidesInFullScreen)
-        } header: {
-            Text(screen.localizedName)
         }
     }
 

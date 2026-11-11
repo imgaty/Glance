@@ -59,6 +59,21 @@ struct PreferencesTests {
         #expect(key == stored)
     }
 
+    @Test("The removed external switch keeps hidden displays without overriding later choices")
+    func externalDisplayMigration() {
+        let name = "GlanceTests.ExternalDisplays." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(false, forKey: Preferences.showOnExternalDisplays)
+        defaults.set("disconnected", forKey: Preferences.notchHiddenDisplays)
+        Preferences.migrateExternalDisplays(["external"], defaults: defaults)
+        #expect(defaults.string(forKey: Preferences.notchHiddenDisplays) == "disconnected,external")
+        #expect(defaults.object(forKey: Preferences.showOnExternalDisplays) == nil)
+        defaults.set("disconnected", forKey: Preferences.notchHiddenDisplays)
+        Preferences.migrateExternalDisplays(["external"], defaults: defaults)
+        #expect(defaults.string(forKey: Preferences.notchHiddenDisplays) == "disconnected")
+    }
+
     @Test("Each display keeps its own look")
     func perDisplayKeys() {
         #expect(
@@ -187,7 +202,7 @@ struct PreferencesTests {
     func registeredDefaults() {
         Preferences.registerDefaults()
         let registered = UserDefaults.standard.volatileDomain(forName: UserDefaults.registrationDomain)
-        #expect(registered[Preferences.showOnExternalDisplays] as? Bool == true)
+        #expect(registered[Preferences.showOnExternalDisplays] == nil)
         #expect(registered[Preferences.liveActivity] as? Bool == true)
         #expect(registered[Preferences.musicBackground] as? String == MusicBackground.none.rawValue)
         #expect(registered[Preferences.musicAnimatedArtwork] as? Bool == true)

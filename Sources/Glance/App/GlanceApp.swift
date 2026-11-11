@@ -134,7 +134,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.observe(key) { _, _ in Task { @MainActor in action() } }
         }
         settingsWatch = [
-            watch(\.showOnDisplaysWithoutNotch) { notches.reload() },
             watch(\.notchHiddenDisplays) { notches.reload() },
             watch(\.hideInFullScreen) { notches.refreshFullScreen() },
             // Turned off and on from the menu bar: the notches close away and come back.
@@ -287,10 +286,21 @@ enum Preferences {
         defaults.set(latest, forKey: defaultsVersion)
     }
 
+    /// The removed master switch becomes an individual choice for each connected external
+    /// display. Once migrated, a display's own switch is the only authority.
+    static func migrateExternalDisplays(_ displays: [String], defaults: UserDefaults = .standard) {
+        guard let enabled = defaults.object(forKey: showOnExternalDisplays) as? Bool else { return }
+        if !enabled {
+            var hidden = Set((defaults.string(forKey: notchHiddenDisplays) ?? "").split(separator: ",").map(String.init))
+            hidden.formUnion(displays)
+            defaults.set(hidden.sorted().joined(separator: ","), forKey: notchHiddenDisplays)
+        }
+        defaults.removeObject(forKey: showOnExternalDisplays)
+    }
+
     /// What each setting is until it's changed.
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
-            showOnExternalDisplays: true,
             liveActivity: true,
             musicBackground: MusicBackground.none.rawValue,
             musicAnimatedArtwork: true,
@@ -330,7 +340,7 @@ enum Preferences {
         ])
     }
 
-    /// The key from when this meant every display without a notch, so the choice carries over.
+    /// The removed master switch, read only to migrate existing display choices.
     static let showOnExternalDisplays = "showOnDisplaysWithoutNotch"
     /// External displays the notch is kept off, one by one, comma separated.
     static let notchHiddenDisplays = "notchHiddenDisplays"
@@ -443,7 +453,6 @@ enum Preferences {
 
 /// The settings that are watched by their keys.
 extension UserDefaults {
-    @objc dynamic var showOnDisplaysWithoutNotch: Bool { bool(forKey: Preferences.showOnExternalDisplays) }
     @objc dynamic var notchHiddenDisplays: String? { string(forKey: Preferences.notchHiddenDisplays) }
     @objc dynamic var hideInFullScreen: Bool { bool(forKey: Preferences.hideInFullScreen) }
     @objc dynamic var sameLookEverywhere: Bool { bool(forKey: Preferences.sameLook) }
@@ -573,11 +582,10 @@ final class NotchManager {
             controllers = []
             return
         }
-        let external = defaults.bool(forKey: Preferences.showOnExternalDisplays)
+        Preferences.migrateExternalDisplays(NSScreen.screens.filter { !$0.isBuiltIn }.map(\.notchID), defaults: defaults)
         let hidden = Set((defaults.string(forKey: Preferences.notchHiddenDisplays) ?? "").split(separator: ",").map(String.init))
         let screens = NSScreen.screens
-        var wanted = screens.filter { $0.isBuiltIn || (external && !hidden.contains($0.notchID)) }
-        if wanted.isEmpty, let main = NSScreen.main { wanted = [main] }
+        let wanted = screens.filter { $0.isBuiltIn || !hidden.contains($0.notchID) }
         controllers = wanted.compactMap { screen in
             Preferences.seed(screen.notchID)
             let configuration = NotchController.configuration(on: screen)
