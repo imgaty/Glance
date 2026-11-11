@@ -65,6 +65,8 @@
 
 ### Live Activities
 
+- Fixed `Hide native Live Activities` failing to restore the switches in
+  Menu Bar settings. Failed changes now stay queued for another attempt.
 - Changed connecting earbuds to show their case's low-battery warning instead
   when the case is at 20% or lower, even if the earbuds' level is not yet known.
 

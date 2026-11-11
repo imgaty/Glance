@@ -43,7 +43,8 @@ final class MenuBarLiveActivities {
     private var wasOn = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
     /// Every switch is to be turned off, not only those whose pill shows: just turned on, or with
     /// Screenshot's left on during a recording.
-    private var allPending = false
+    private var allPending = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
+    private var capturePending = false
 
     /// Screenshot's pill's app.
     nonisolated static let capture = "com.apple.screencaptureui"
@@ -80,6 +81,8 @@ final class MenuBarLiveActivities {
                 MenuBarLiveActivities.shared.wasOn = on
                 // Turned on, every switch goes off at once, so nothing starts with its pill.
                 MenuBarLiveActivities.shared.allPending = on
+                MenuBarLiveActivities.shared.capturePending = false
+                MenuBarLiveActivities.shared.retryAfter = .distantPast
                 MenuBarLiveActivities.shared.check()
             }
         }
@@ -101,52 +104,62 @@ final class MenuBarLiveActivities {
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
         guard on || !hidden.isEmpty else { return }
         let capturing = Self.capturing
-        // Turning every switch off waits for a recording to end, for Screenshot's sake.
-        if on, allPending, capturing { return }
         working = true
         Task {
-            // Screenshot's pill shows only while the screen is being recorded or counted down to, so
-            // it never sets this off: its switch goes off once the recording ends.
+            defer {
+                working = false
+                // A second toggle may arrive while the first Settings instance is still working.
+                if UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities) != on {
+                    retryAfter = .distantPast
+                    allPending = !on
+                    capturePending = false
+                    check()
+                }
+            }
             let (showing, screenshot) = await Task.detached { (Self.pillShowing(ignoring: [Self.capture]), Self.pillShowing(only: Self.capture)) }.value
+            guard UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities) == on else { return }
             let recording = capturing || screenshot
-            if on, screenshot { allPending = true }
+            if on, capturePending, !recording { allPending = true }
+            if on, screenshot, !capturePending { allPending = true }
             var reached = true
-            if on, showing || (allPending && !recording) {
+            if on, showing || allPending {
                 reached = await switchApps(off: true, sparing: recording ? [Self.screenshotName] : [])
-                if reached { allPending = recording }
+                if reached {
+                    allPending = false
+                    capturePending = recording
+                }
             } else if !on {
                 reached = await switchApps(off: false)
             }
             if !reached { retryAfter = .now + Self.retryDelay }
-            working = false
         }
     }
 
-    /// One app's pill in the menu bar, by its bundle ID.
+    /// One app's pill, or any pill except those being ignored, in either native menu bar tree.
     nonisolated static func pillShowing(only app: String) -> Bool {
-        guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return false }
-        let element = AXUIElementCreateApplication(agent.processIdentifier)
-        AXUIElementSetMessagingTimeout(element, 0.2)
-        guard let bar = SystemNotices.value(element, kAXExtrasMenuBarAttribute) else { return false }
-        return !SystemNotices.findAll(in: bar as! AXUIElement) { SystemNotices.value($0, kAXIdentifierAttribute) as? String == pillPrefix + app }.isEmpty
+        pills().contains(app)
     }
 
-    /// A Live Activity's pill in the menu bar, any app's but those `ignoring`, by their bundle IDs.
     nonisolated static func pillShowing(ignoring: [String] = []) -> Bool {
-        guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return false }
+        pills().contains { !ignoring.contains($0) }
+    }
+
+    nonisolated private static func pills() -> Set<String> {
+        guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return [] }
         let app = AXUIElementCreateApplication(agent.processIdentifier)
-        // Never kept waiting by the menu bar.
         AXUIElementSetMessagingTimeout(app, 0.2)
-        func find(_ element: AXUIElement, _ depth: Int) -> Bool {
-            if let identifier = SystemNotices.value(element, kAXIdentifierAttribute) as? String, identifier.hasPrefix(pillPrefix),
-                !ignoring.contains(String(identifier.dropFirst(pillPrefix.count)))
-            {
-                return true
+        var roots = SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        if let bar = SystemNotices.value(app, kAXExtrasMenuBarAttribute), CFGetTypeID(bar) == AXUIElementGetTypeID() { roots.append(bar as! AXUIElement) }
+        var pending = roots.map { ($0, 0) }, seen = Set<AXUIElement>(), found = Set<String>()
+        let deadline = Date.now.addingTimeInterval(1)
+        while let (element, depth) = pending.popLast(), seen.count < 1500, Date.now < deadline {
+            guard seen.insert(element).inserted else { continue }
+            if let identifier = SystemNotices.value(element, kAXIdentifierAttribute) as? String, identifier.hasPrefix(pillPrefix) {
+                found.insert(String(identifier.dropFirst(pillPrefix.count)))
             }
-            guard depth < 10 else { return false }
-            return (SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).contains { find($0, depth + 1) }
+            if depth < 12 { pending += (SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).map { ($0, depth + 1) } }
         }
-        return (SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).contains { find($0, 0) }
+        return found
     }
 
     /// What MenuBarAgent names a Live Activity's pill by, before the app's bundle ID.
@@ -165,9 +178,11 @@ final class MenuBarLiveActivities {
         guard let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.settingsApp) else { return false }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
+        configuration.hides = true
         // Beside any the user has open, which may be on another Space, and left as it is.
         configuration.createsNewApplicationInstance = true
         guard let instance = try? await NSWorkspace.shared.open([Self.pane], withApplicationAt: settings, configuration: configuration) else { return false }
+        instance.hide()
         defer { instance.terminate() }
         let pid = instance.processIdentifier
         let rows = await Task.detached { () -> [(name: String, box: AXUIElement)] in
@@ -181,51 +196,97 @@ final class MenuBarLiveActivities {
             return []
         }.value
         guard !rows.isEmpty else { return false }
-        var hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
-        for row in rows {
-            let isOn = SystemNotices.value(row.box, kAXValueAttribute) as? Int == 1
-            if off, isOn, !sparing.contains(row.name) {
-                AXUIElementPerformAction(row.box, kAXPressAction as CFString)
-                if !hidden.contains(row.name) { hidden.append(row.name) }
-            } else if !off, !isOn, hidden.contains(row.name) {
-                AXUIElementPerformAction(row.box, kAXPressAction as CFString)
+        let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
+        let result = await Task.detached { () -> SwitchResult in
+            var result = SwitchResult(hidden: hidden)
+            for row in rows {
+                guard off ? !sparing.contains(row.name) : hidden.contains(row.name) else { continue }
+                let target = !off
+                var state = SystemNotices.value(row.box, kAXValueAttribute) as? Int
+                let changed = state == (target ? 0 : 1)
+                if changed {
+                    guard AXUIElementPerformAction(row.box, kAXPressAction as CFString) == .success else {
+                        result.failed = true
+                        continue
+                    }
+                    for _ in 0..<20 {
+                        try? await Task.sleep(for: .milliseconds(75))
+                        state = SystemNotices.value(row.box, kAXValueAttribute) as? Int
+                        if state == (target ? 1 : 0) { break }
+                    }
+                }
+                result.record(name: row.name, off: off, changed: changed, confirmed: state == (target ? 1 : 0))
             }
-        }
-        UserDefaults.standard.set(off ? hidden : [], forKey: Self.turnedOffKey)
-        // Long enough for the switches to be written before it quits.
+            return result
+        }.value
+        UserDefaults.standard.set(result.hidden, forKey: Self.turnedOffKey)
+        // Keep missing and failed restores for another attempt, including after a restart.
+        let reached = !result.failed && (off || result.hidden.isEmpty)
         try? await Task.sleep(for: .milliseconds(300))
-        return true
+        return reached
     }
 
-    /// Each app's name and switch in Menu Bar settings' Live Activities section: the checkboxes after
-    /// its heading, each after its name, until its buttons.
-    nonisolated private static func rows(in pid: pid_t) -> [(name: String, box: AXUIElement)] {
-        let app = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(app, 1)
-        var flat: [AXUIElement] = []
-        func walk(_ element: AXUIElement, _ depth: Int) {
-            guard depth < 40, flat.count < 3000 else { return }
-            flat.append(element)
-            for child in SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { walk(child, depth + 1) }
+    struct SwitchResult {
+        var hidden: [String]
+        var failed = false
+
+        mutating func record(name: String, off: Bool, changed: Bool, confirmed: Bool) {
+            guard confirmed else {
+                failed = true
+                return
+            }
+            if off, changed, !hidden.contains(name) { hidden.append(name) }
+            if !off { hidden.removeAll { $0 == name } }
         }
-        for window in SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? [] { walk(window, 0) }
-        let name = sectionName
-        guard
-            let heading = flat.firstIndex(where: { element in
-                SystemNotices.value(element, kAXRoleAttribute) as? String == "AXHeading"
-                    && [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute].contains { SystemNotices.value(element, $0) as? String == name }
-            })
-        else { return [] }
-        var rows: [(name: String, box: AXUIElement)] = []
-        var label: String?
-        for element in flat[(heading + 1)...] {
-            switch SystemNotices.value(element, kAXRoleAttribute) as? String {
-            case "AXStaticText": label = SystemNotices.value(element, kAXValueAttribute) as? String
-            case "AXCheckBox": if let label { rows.append((label, element)) }
-            case "AXButton", "AXHeading": return rows
+    }
+
+    /// Recent systems label the switch itself. Earlier systems place a text label before a
+    /// checkbox. In either case, stop at the next heading or section button.
+    struct SectionReader {
+        let heading: String
+        private(set) var inside = false
+        private(set) var finished = false
+        private var precedingLabel: String?
+
+        mutating func read(role: String, labels: [String], value: String?) -> String? {
+            guard !finished else { return nil }
+            if !inside {
+                inside = role == "AXHeading" && (labels + [value ?? ""]).contains(heading)
+                return nil
+            }
+            switch role {
+            case "AXButton", "AXHeading": finished = true
+            case "AXStaticText": precedingLabel = value
+            case "AXSwitch", "AXCheckBox":
+                let name = labels.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? precedingLabel
+                precedingLabel = nil
+                return name
             default: break
             }
+            return nil
         }
-        return rows
+    }
+
+    nonisolated private static func rows(in pid: pid_t) -> [(name: String, box: AXUIElement)] {
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.2)
+        var pending = (SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).reversed().map { ($0, 0) }
+        var seen = Set<AXUIElement>(), rows: [(name: String, box: AXUIElement)] = []
+        var section = SectionReader(heading: sectionName)
+        let deadline = Date.now.addingTimeInterval(2)
+        while let (element, depth) = pending.popLast(), seen.count < 3000, Date.now < deadline {
+            guard seen.insert(element).inserted else { continue }
+            let role = SystemNotices.value(element, kAXRoleAttribute) as? String ?? ""
+            let relevant = section.inside || role == "AXHeading"
+            let labels = relevant ? [kAXTitleAttribute, kAXDescriptionAttribute].compactMap { SystemNotices.value(element, $0) as? String } : []
+            let value = relevant ? SystemNotices.value(element, kAXValueAttribute) as? String : nil
+            if let name = section.read(role: role, labels: labels, value: value) { rows.append((name, element)) }
+            if section.finished { return rows }
+            if depth < 40 {
+                pending += (SystemNotices.value(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).reversed().map { ($0, depth + 1) }
+            }
+        }
+        // A partial tree must not silently count as a complete restore or hide operation.
+        return section.finished ? rows : []
     }
 }
