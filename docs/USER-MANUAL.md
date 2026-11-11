@@ -244,31 +244,17 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a compact glass panel aligned with the
-button, staying within its display. It shows the playing app's volume and the
-Mac's sound outputs. The notch stays open while the panel is in use. Escape or
-a click outside closes the panel. At its top, the system's default slider sets
-the playing app's volume without touching any other app's. The slider uses the
-system's glass handle, including its pressed look, and a white track.
-Drag the knob to change the level, or click the track to move it there.
-For `Music` and `Spotify` it reads their own volume as the menu opens; other
-apps need the `Audio from apps` permission. Below it, under **Output**, each
-speaker and pair of headphones is in a circle, the one playing filled in your
-accent color.
-AirPods show each earbud's battery and the case's, and other headphones their
-one battery. Click one to play there. The full **Sound Settings…** row
-highlights under the pointer and opens
-**System Settings > Sound**.
+The `Sound Output` button opens a native popover anchored to the button. The
+notch stays open while it is in use. Escape or a click outside closes it.
+The system's default slider sets the playing app's volume, with a white track
+and the system's glass handle. Drag the knob or click the track to change it.
+For `Music` and `Spotify`, it reads their volume as the popover opens; other
+apps need the `Audio from apps` permission.
 
-Headphones that report listening modes have a disclosure beside their name.
-Open it to choose `Transparency`, `Adaptive` or `Noise Cancellation`, according
-to what the headphones support. The checkmark follows the headphones' reported
-mode. If a change cannot be confirmed, the menu keeps the reported choice and
-shows a message. The menu grows from the same anchor as it opens.
-
-The connected headphones' **Settings…** button opens their page in System
-Settings using Accessibility. Without that access, it opens Bluetooth settings.
-Spatial Audio and Conversation Awareness remain in the system controls.
+Choose a speaker or headphones from the **Output** dropdown. Selecting an
+output closes the popover. The full **Sound Settings…** row highlights under
+the pointer and opens **System Settings > Sound**. Headphone listening modes
+and other headphone options are managed in macOS.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic

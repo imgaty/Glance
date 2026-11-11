@@ -38,7 +38,7 @@ struct NowPlayingView: View {
     /// player only marks where they land.
     let hero: Namespace.ID
     @State private var scrub: Double?
-    @State private var soundFrames: [PlayerControl: CGRect] = [:]
+    @State private var soundPlace: PlayerControl?
     @State private var favoriteBursts = 0
     @State private var skipsBack = 0
     @State private var skipsForward = 0
@@ -297,11 +297,18 @@ struct NowPlayingView: View {
             .disabled(options.repeatMode == nil)
         case .output:
             IslandButton(symbol: output.symbol, size: size, color: sideGray, label: slot.title) { use(.output, at: place) }
-                .onGeometryChange(for: CGRect.self) {
-                    $0.frame(in: .named(ControlFrames.space))
-                } action: {
-                    soundFrames[place] = $0
+                .popover(
+                    isPresented: Binding(
+                        get: { soundPlace == place },
+                        set: { shown in
+                            if !shown { soundPlace = nil }
+                        }), arrowEdge: .bottom
+                ) {
+                    output.soundView()
+                        .onAppear { output.popoverShown = true }
+                        .onDisappear { output.popoverShown = false }
                 }
+
         case .lyrics:
             IslandButton(
                 symbol: symbol(for: .lyrics), size: size,
@@ -386,12 +393,8 @@ struct NowPlayingView: View {
         case .shuffle: nowPlaying.toggleShuffle()
         case .repeatMode: nowPlaying.cycleRepeat()
         case .output:
-            // Anchor to the actual button, including after a layout or display change.
-            let frame = fromKeys ? keys?.focusFrame : place.flatMap { soundFrames[$0] }
-            let point = frame.flatMap { rect in
-                keys?.screenPoint?(CGRect(x: rect.midX, y: rect.minY, width: 0, height: rect.height))
-            }
-            output.showMenu(at: point)
+            soundPlace = place ?? (keys?.focus == .left ? .left : (soundControl ?? .right))
+            output.popoverShown = true
         case .lyrics: lyricsControl.toggle()
         case .empty: break
         }

@@ -93,13 +93,9 @@
 - Fixed test scenes disappearing at different heights. Every activity now folds
   before its window leaves, including tall alerts and expanded recordings.
 
-- Corrected the sound panel's speaker sizes, row spacing, corners and icon
-  colors. It opens aligned with its button and stays within the display.
-  The native volume slider now has a white track, and the whole
-  `Sound Settings…` row highlights under the pointer.
-- Added a disclosure beside supported headphones for their listening modes,
-  with the current choice checked and changes confirmed by the headphones.
-  Their Settings button opens the connected device's page.
+- Replaced the sound panel with a native popover and output dropdown, with
+  consistent spacing, a white volume slider and a full-width Settings action.
+- Removed the headphone listening modes and their extra Settings shortcut.
 - Fixed opening Sound Output from the keyboard closing the notch underneath it.
 
 - Fixed a straight edge appearing while the background morphed into the
