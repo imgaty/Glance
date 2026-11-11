@@ -18,6 +18,7 @@ struct NowPlayingView: View {
 
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var output = AudioOutput.shared
+    @Environment(\.soundPopoverChanged) private var soundPopoverChanged
     @Environment(\.playerLayout) private var layout
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
     @AppStorage(Preferences.musicAccentTimeline) private var accentTimeline = false
@@ -92,7 +93,15 @@ struct NowPlayingView: View {
         .animation(.easeInOut(duration: 0.3), value: nowPlaying.explicit)
         .frame(maxHeight: .infinity, alignment: .top)
         .foregroundStyle(.white)
-        .onChange(of: isVisible) { if isVisible { nowPlaying.refreshOptions() } }
+        .onChange(of: isVisible) {
+            if isVisible {
+                nowPlaying.refreshOptions()
+            } else {
+                soundPlace = nil
+                soundPopoverChanged(false)
+            }
+        }
+        .onDisappear { soundPopoverChanged(false) }
         .onChange(of: nowPlaying.title) { if isVisible { nowPlaying.refreshOptions() } }
         .onChange(of: usableControls, initial: true) { keys?.usable = usableControls }
         .onChange(of: soundControl, initial: true) { keys?.soundControl = soundControl }
@@ -301,12 +310,14 @@ struct NowPlayingView: View {
                     isPresented: Binding(
                         get: { soundPlace == place },
                         set: { shown in
-                            if !shown { soundPlace = nil }
+                            if !shown {
+                                soundPlace = nil
+                                soundPopoverChanged(false)
+                            }
                         }), arrowEdge: .bottom
                 ) {
                     output.soundView()
-                        .onAppear { output.popoverShown = true }
-                        .onDisappear { output.popoverShown = false }
+                        .onDisappear { soundPopoverChanged(false) }
                 }
 
         case .lyrics:
@@ -394,7 +405,7 @@ struct NowPlayingView: View {
         case .repeatMode: nowPlaying.cycleRepeat()
         case .output:
             soundPlace = place ?? (keys?.focus == .left ? .left : (soundControl ?? .right))
-            output.popoverShown = true
+            soundPopoverChanged(true)
         case .lyrics: lyricsControl.toggle()
         case .empty: break
         }

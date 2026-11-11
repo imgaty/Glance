@@ -183,6 +183,7 @@ final class NotchModel: ObservableObject {
     var folded: Bool { switching || collapsed || entering }
     /// Holds every activity while an external display's housing slides into place.
     @Published var entering = false
+    @Published var soundPopoverShown = false
     /// Clock's timer counting down beside the camera, and its stopwatch counting up (see
     /// `ClockActivity`); and each wing's width for the one in the notch.
     @Published var timer: NotchTimer.State? {
@@ -975,6 +976,7 @@ struct NotchView: View {
         .environment(\.playerLayout, model.layout)
         .environment(\.lyricsControl, LyricsControl(shown: model.showsLyrics, available: model.songPlaying && lyricsOn, toggle: toggleLyrics))
         .environment(\.playerKeys, model.keys)
+        .environment(\.soundPopoverChanged, { model.soundPopoverShown = $0 })
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
             if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
@@ -1524,6 +1526,7 @@ private struct NotchControl: ViewModifier {
 extension EnvironmentValues {
     @Entry var notchControls = true
     @Entry var activityPreview = false
+    @Entry var soundPopoverChanged: (Bool) -> Void = { _ in }
     @Entry var tray: Tray? = nil
 }
 

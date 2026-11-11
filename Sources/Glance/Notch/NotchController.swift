@@ -131,6 +131,8 @@ final class NotchController {
         /// A menu opened from inside it, like the sound output's, is up: the pointer is on the menu,
         /// outside the notch, but the notch stays open under it until it's gone.
         case menu
+        /// The native sound popover belonging to this notch.
+        case sound
         /// Opened from the keyboard: it stays open with the pointer elsewhere, until the shortcut
         /// comes again, a click lands outside it, or the pointer visits it and leaves.
         case keyboard
@@ -424,9 +426,17 @@ final class NotchController {
             NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification).sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.menuClosed() }
             },
-            AudioOutput.shared.$popoverShown.dropFirst().sink { [weak self] shown in
+            model.$soundPopoverShown.removeDuplicates().dropFirst().sink { [weak self] shown in
                 MainActor.assumeIsolated {
-                    if shown { self?.menuOpened() } else { self?.menuClosed() }
+                    guard let self else { return }
+                    if shown {
+                        self.holds.insert(.sound)
+                        self.closeTask?.cancel()
+                        self.closeTask = nil
+                    } else {
+                        self.holds.remove(.sound)
+                        self.pointerMoved(to: NSEvent.mouseLocation)
+                    }
                 }
             },
         ]
@@ -830,7 +840,7 @@ final class NotchController {
     /// Done showing itself: it closes, unless the pointer came to it.
     private func endPresenting() {
         presentTask?.cancel()
-        guard holds.remove(.presented) != nil, model.state == .open else { return }
+        guard holds.remove(.presented) != nil, model.state == .open, holds.isEmpty else { return }
         if !openZone.contains(NSEvent.mouseLocation) { close(holdUntilExit: false) }
     }
 
@@ -1066,6 +1076,7 @@ final class NotchController {
     }
 
     func clicked(outsideAt p: CGPoint) {
+        guard !holds.contains(.sound) else { return }
         if model.state == .open, !openZone.contains(p) { close(holdUntilExit: false) }
     }
 
@@ -1074,6 +1085,7 @@ final class NotchController {
     /// swipe up. A tap in its window's margin, which takes them while a finger holds it open, closes
     /// it, as one anywhere else does.
     private func press(at p: CGPoint) {
+        guard !holds.contains(.sound) else { return }
         // A done timer's buttons, in the closed notch, are buttons of their own.
         pressedButton = alertButton(at: p)
         if pressedButton != nil { return }
@@ -1424,7 +1436,7 @@ final class NotchController {
                         }
                     return
                 }
-                if self.holds.contains(.menu) { return }
+                if self.holds.contains(.menu) || self.holds.contains(.sound) { return }
                 self.giveBackKeys()
                 // Share's picker took it: the notch stays under it.
                 if self.model.state == .open, !Tray.shared.sharing { self.close(holdUntilExit: false) }
@@ -1659,7 +1671,8 @@ final class NotchController {
         closeTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(280))
             guard !Task.isCancelled else { return }
-            self?.close(holdUntilExit: false)
+            guard let self, self.holds.isEmpty else { return }
+            self.close(holdUntilExit: false)
         }
     }
 

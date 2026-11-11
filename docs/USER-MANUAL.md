@@ -251,10 +251,14 @@ and the system's glass handle. Drag the knob or click the track to change it.
 For `Music` and `Spotify`, it reads their volume as the popover opens; other
 apps need the `Audio from apps` permission.
 
-Choose a speaker or headphones from the **Output** dropdown. Selecting an
-output closes the popover. The full **Sound Settings…** row highlights under
-the pointer and opens **System Settings > Sound**. Headphone listening modes
-and other headphone options are managed in macOS.
+Speakers and headphones appear as rows under **Output**, with a blue circle
+for the current output and battery details when available. Selecting a row
+closes the popover. The full **Sound Settings…** row highlights under the
+pointer and opens **System Settings > Sound**. Headphone listening modes and
+other headphone options are managed in macOS.
+
+The popover takes focus when opened and keeps its notch open while you use it.
+Its headings, rows, separators and Settings action share the same side insets.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic

@@ -111,10 +111,12 @@
 - Fixed test scenes disappearing at different heights. Every activity now folds
   before its window leaves, including tall alerts and expanded recordings.
 
-- Replaced the sound panel with a native popover and output dropdown, with
-  consistent spacing, a white volume slider and a full-width Settings action.
+- Replaced the sound panel with a native popover, inline output rows and a
+  white volume slider. Output icons, battery details and the full-width
+  Settings action share the same insets and adapt to the appearance.
 - Removed the headphone listening modes and their extra Settings shortcut.
-- Fixed opening Sound Output from the keyboard closing the notch underneath it.
+- Fixed clicks and pointer movement inside Sound closing the notch underneath
+  it. The popover takes focus as it opens.
 
 - Fixed a straight edge appearing while the background morphed into the
   Spotlight. The colors now stay in place as the soft mask moves and shrinks.

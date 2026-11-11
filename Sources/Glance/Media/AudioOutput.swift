@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import CoreAudio
 import SwiftUI
 
@@ -16,7 +17,6 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// An SF Symbol for the current device, such as AirPods Pro or the built-in speakers.
     @Published private(set) var symbol = "speaker.wave.2.fill"
-    @Published var popoverShown = false
 
     private override init() {
         super.init()
@@ -339,7 +339,7 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// Content for SwiftUI's native popover. Its picker uses the native menu presentation.
+/// Native popover content, with the Sound menu's inline output rows and footer.
 struct SoundOutputView: View {
     let devices: [AudioOutput.Device]
     @State private var current: AudioDeviceID
@@ -348,7 +348,8 @@ struct SoundOutputView: View {
     let settings: () -> Void
     @Environment(\.dismiss) private var dismiss
     @StateObject private var level: VolumeMenuSlider.VolumeSlider.Level
-    @State private var settingsHovered = false
+    @State private var bluetooth: [String: DeviceWatch.BluetoothInfo]
+    @FocusState private var focusedOutput: AudioDeviceID?
 
     init(
         devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?,
@@ -360,49 +361,171 @@ struct SoundOutputView: View {
         self.choose = choose
         self.settings = settings
         _level = StateObject(wrappedValue: .init(volume?.level ?? 0.5) { [weak volume] in volume?.set($0) })
+        _bluetooth = State(initialValue: AudioOutput.bluetooth)
+    }
+
+    private var ordered: [AudioOutput.Device] {
+        devices.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn }
+            + devices.filter { $0.transport != kAudioDeviceTransportTypeBuiltIn }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Sound").font(.headline)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Sound")
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, SoundMenu.inset)
+                .padding(.top, SoundMenu.inset)
+                .padding(.bottom, 10)
             if volume == nil || volume?.app != nil {
                 VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
+                    .padding(.horizontal, SoundMenu.inset)
+                    .padding(.bottom, SoundMenu.inset)
             }
-            Divider()
-            Picker(
-                "Output",
-                selection: Binding(
-                    get: { current },
-                    set: { id in
-                        guard let device = devices.first(where: { $0.id == id }) else { return }
-                        current = id
-                        choose(device)
-                        dismiss()
-                    })
-            ) {
-                ForEach(devices, id: \.id) { device in
-                    Label(device.name, systemImage: device.pictured).tag(device.id)
+            Divider().padding(.horizontal, SoundMenu.inset)
+            Text("Output")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color(nsColor: SoundMenu.headingGray))
+                .frame(height: 27, alignment: .center)
+                .padding(.horizontal, SoundMenu.inset)
+            ForEach(ordered, id: \.id) { device in
+                Button {
+                    current = device.id
+                    choose(device)
+                    dismiss()
+                } label: {
+                    SoundOutputLabel(device: device, playing: device.id == current, levels: bluetooth[device.name.lowercased()]?.levels)
                 }
+                .buttonStyle(SoundRowStyle())
+                .focused($focusedOutput, equals: device.id)
+                .accessibilityLabel(device.name)
+                .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
-            .pickerStyle(.menu)
-            Divider()
+            Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
             Button {
                 dismiss()
                 settings()
             } label: {
                 Text("Sound Settings…")
+                    .font(.system(size: 13))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(6)
+                    .padding(.horizontal, SoundMenu.inset)
+                    .frame(height: 22)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .background(.quaternary.opacity(settingsHovered ? 1 : 0), in: RoundedRectangle(cornerRadius: 6))
-            .onHover { settingsHovered = $0 }
-            .padding(-6)
+            .buttonStyle(SoundRowStyle())
+            .padding(.bottom, SoundMenu.inset)
         }
-        .padding(16)
+        .foregroundStyle(.primary)
         .frame(width: 308)
+        .defaultFocus($focusedOutput, current)
+        .background(SoundPopoverFocus())
+        .task {
+            guard volume != nil else { return }
+            await AudioOutput.readBluetooth()
+            bluetooth = AudioOutput.bluetooth
+        }
     }
+}
+
+/// SwiftUI owns the popover; its native window takes focus even from a nonactivating notch.
+private struct SoundPopoverFocus: NSViewRepresentable {
+    final class FocusView: NSView {
+        private var activated = false
+        private var activationWatch: AnyCancellable?
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            activationWatch = nil
+            guard let window else { return }
+            activationWatch = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+                .sink { [weak window] _ in
+                    MainActor.assumeIsolated {
+                        guard let window, window.isVisible else { return }
+                        window.makeKey()
+                    }
+                }
+            DispatchQueue.main.async { [weak self, weak window] in
+                guard let self, let window, self.window === window else { return }
+                self.activated = !NSApp.isActive
+                NSApp.activate()
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
+        func releaseFocus() {
+            activationWatch = nil
+            guard activated, NSApp.isActive else { return }
+            let hasOtherWindow = NSApp.windows.contains { $0 !== window && $0.isVisible && !($0 is NSPanel) }
+            if !hasOtherWindow { NSApp.deactivate() }
+        }
+    }
+    func makeNSView(context: Context) -> FocusView { FocusView() }
+    func updateNSView(_ view: FocusView, context: Context) {}
+    static func dismantleNSView(_ view: FocusView, coordinator: ()) { view.releaseFocus() }
+}
+
+private struct SoundRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        SoundRowHighlight(pressed: configuration.isPressed) { configuration.label }
+    }
+}
+
+private struct SoundRowHighlight<Content: View>: View {
+    let pressed: Bool
+    @ViewBuilder let content: () -> Content
+    @State private var hovered = false
+
+    var body: some View {
+        content()
+            .background {
+                RoundedRectangle(cornerRadius: SoundMenu.highlightRadius)
+                    .fill(Color(nsColor: SoundMenu.highlightColor))
+                    .padding(.horizontal, SoundMenu.highlightInset)
+                    .opacity(hovered || pressed ? 1 : 0)
+            }
+            .onHover { hovered = $0 }
+    }
+}
+
+private struct SoundOutputLabel: View {
+    let device: AudioOutput.Device
+    let playing: Bool
+    let levels: DeviceWatch.Levels?
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: SoundMenu.gap) {
+            Image(systemName: device.pictured)
+                .font(.system(size: 14, weight: .regular))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(playing ? .white : Color(nsColor: SoundMenu.speakerGray))
+                .frame(width: SoundMenu.circle, height: SoundMenu.circle)
+                .background(playing ? Color(nsColor: .systemBlue) : Color(nsColor: SoundMenu.circleGray), in: Circle())
+            VStack(alignment: .leading, spacing: 0) {
+                Text(device.name).font(.system(size: 13)).lineLimit(1)
+                if let levels {
+                    SoundBatteryLabel(levels: levels, symbols: device.model, dark: colorScheme == .dark)
+                        .fixedSize()
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, SoundMenu.inset)
+        .frame(height: SoundMenu.rowHeight)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct SoundBatteryLabel: NSViewRepresentable {
+    let levels: DeviceWatch.Levels
+    let symbols: DeviceSymbols?
+    let dark: Bool
+
+    func makeNSView(context: Context) -> NSTextField { NSTextField(labelWithString: "") }
+    func updateNSView(_ view: NSTextField, context: Context) {
+        NSAppearance(named: dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            view.attributedStringValue = OutputRow.text(levels, symbols: symbols)
+        }
+    }
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSTextField, context: Context) -> CGSize? { nsView.intrinsicContentSize }
 }
 
 /// The sound output menu's measures, as the Mac's Sound menu has them: no check marks, its
@@ -432,7 +555,7 @@ private enum SoundMenu {
         }
     }
 
-    private static let highlightColor = shade(dark: 0.1, light: 0.055)
+    fileprivate static let highlightColor = shade(dark: 0.1, light: 0.055)
     /// An output's circle: light gray, or for the one playing, the accent color made a little
     /// lighter, as the Mac's Sound menu has them.
     static let circleGray = shade(dark: 0.22, light: 0.08)
@@ -622,7 +745,7 @@ private final class OutputRow: NSView {
 
     /// Each earbud's level and the case's, in the shapes macOS gives this model, the earbuds as one
     /// pair when they're level, or the one battery's, each after its symbol.
-    private static func text(_ levels: DeviceWatch.Levels, symbols: DeviceSymbols?) -> NSAttributedString {
+    fileprivate static func text(_ levels: DeviceWatch.Levels, symbols: DeviceSymbols?) -> NSAttributedString {
         let parts: [(String, Int?)] =
             if let left = levels.left, left == levels.right {
                 [(symbols?.symbol ?? "airpods", left), (symbols?.chargingCase ?? "airpods.chargingcase.fill", levels.chargingCase)]
