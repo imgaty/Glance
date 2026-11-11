@@ -55,7 +55,7 @@ final class AudioOutput: NSObject, ObservableObject {
         soundPanel.onClose = { [weak self] _ in self?.popoverShown = false }
         soundPanel.close()
         popoverShown = true
-        soundPanel.show(at: point, content: content.frame(width: width).modifier(SoundMenuSurface()))
+        soundPanel.show(at: point, centered: true, content: content.frame(width: width).modifier(SoundMenuSurface()))
         popoverShown = soundPanel.isShown
     }
 
@@ -347,9 +347,9 @@ final class VolumeMenuSlider: NSView {
             Slider(value: Binding(get: { level.value }, set: level.move), in: 0...1) {
                 Text("Sound")
             } minimumValueLabel: {
-                Image(systemName: "speaker.fill")
+                Image(systemName: "speaker.fill").font(.system(size: 12))
             } maximumValueLabel: {
-                Image(systemName: "speaker.wave.3.fill")
+                Image(systemName: "speaker.wave.3.fill").font(.system(size: 12))
             }
             .labelsHidden()
             .disabled(volume?.canChange == false)
@@ -390,11 +390,11 @@ private struct SoundOutputView: View {
                 .padding(.horizontal, SoundMenu.inset).padding(.vertical, 8)
             if volume?.app != nil {
                 VolumeMenuSlider.VolumeSlider(volume: volume, level: level)
-                    .padding(.horizontal, SoundMenu.inset).frame(height: 30)
+                    .padding(.horizontal, SoundMenu.inset).frame(height: 20)
             }
             Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 5)
             Text("Output").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
-                .padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
+                .padding(.horizontal, SoundMenu.inset).padding(.top, 6).padding(.bottom, 4)
             ForEach(devices, id: \.id) { device in
                 Button {
                     choose(device)
@@ -413,8 +413,8 @@ private struct SoundOutputView: View {
                 .accessibilityLabel(device.name)
                 .accessibilityAddTraits(device.id == current ? .isSelected : [])
             }
-            Divider().padding(.horizontal, SoundMenu.inset).padding(.vertical, 6)
-            Button("Sound Settings…", action: settings).buttonStyle(.plain)
+            Divider().padding(.horizontal, SoundMenu.highlightInset).padding(.top, 6).padding(.bottom, 1)
+            Button("Sound Settings…", action: settings).buttonStyle(.plain).font(.system(size: 13))
                 .padding(.horizontal, SoundMenu.inset).padding(.vertical, 5)
         }
         .padding(.vertical, 5)
@@ -438,7 +438,7 @@ private struct SoundOutputRow: NSViewRepresentable {
 /// headings, rows and separators the same way in from both sides.
 private enum SoundMenu {
     /// The menu's corners, as macOS draws them: it keeps its own outline, whatever's asked of its glass.
-    static let radius: CGFloat = 12
+    static let radius: CGFloat = 16
     static let inset: CGFloat = 14
     /// Each output's circle, and between it and its name.
     static let circle: CGFloat = 26
@@ -557,7 +557,7 @@ private final class OutputRow: NSView {
 
     /// Pictures it and tells its batteries as they're known now.
     func reload() {
-        let color: NSColor = playing ? .white : .secondaryLabelColor
+        let color: NSColor = playing ? .white : .labelColor
         symbol.image = Self.picture(device.pictured, color: color)
         let levels = AudioOutput.bluetooth[device.name.lowercased()]?.levels
         battery.attributedStringValue = levels.map { Self.text($0, symbols: device.model) } ?? NSAttributedString()
@@ -570,7 +570,7 @@ private final class OutputRow: NSView {
         self.playing = playing
         super.init(frame: NSRect(x: 0, y: 0, width: 300, height: SoundMenu.rowHeight))
         autoresizingMask = [.width]
-        symbol.contentTintColor = playing ? .white : .secondaryLabelColor
+        symbol.contentTintColor = playing ? .white : .labelColor
         name.stringValue = device.name
         name.font = .systemFont(ofSize: 13)
         name.textColor = .labelColor
@@ -583,6 +583,12 @@ private final class OutputRow: NSView {
     }
 
     required init?(coder: NSCoder) { nil }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        // Symbols created before this view joins the panel otherwise retain the old appearance.
+        effectiveAppearance.performAsCurrentDrawingAppearance { reload() }
+    }
 
     /// Wide enough for its name and its batteries in full.
     var fittingWidth: CGFloat {

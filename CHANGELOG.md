@@ -93,8 +93,9 @@
 - Fixed test scenes disappearing at different heights. Every activity now folds
   before its window leaves, including tall alerts and expanded recordings.
 
-- Restored the compact sound panel without a popover arrow, anchored under its
-  button, while keeping the system's default volume slider.
+- Corrected the sound panel's speaker sizes, row spacing, corners and icon
+  colors. It now opens centered under its button and stays within the display,
+  while keeping the system's default volume slider.
 - Fixed opening Sound Output from the keyboard closing the notch underneath it.
 
 - Fixed a straight edge appearing while the background morphed into the

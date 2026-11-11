@@ -673,19 +673,19 @@ final class StatusPanel {
     }
 
     /// The same native glass panel from a control in the notch, with no popover arrow.
-    func show(at point: CGPoint, content: some View) {
+    func show(at point: CGPoint, centered: Bool = false, content: some View) {
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main else { return }
-        show(anchor: CGRect(origin: point, size: .zero), screen: screen, keepingClicksIn: nil, content: content, onKey: { _ in false })
+        show(anchor: CGRect(origin: point, size: .zero), screen: screen, keepingClicksIn: nil, centered: centered, content: content, onKey: { _ in false })
     }
 
-    static func origin(for menu: CGSize, anchor: CGRect, visible: CGRect) -> CGPoint {
-        let preferredX = anchor.minX + menu.width <= visible.maxX ? anchor.minX : anchor.maxX - menu.width
+    static func origin(for menu: CGSize, anchor: CGRect, visible: CGRect, centered: Bool = false) -> CGPoint {
+        let preferredX = centered ? anchor.midX - menu.width / 2 : (anchor.minX + menu.width <= visible.maxX ? anchor.minX : anchor.maxX - menu.width)
         return CGPoint(
             x: min(max(preferredX, visible.minX), max(visible.minX, visible.maxX - menu.width)),
             y: max(visible.minY, min(anchor.minY - 6 - menu.height, visible.maxY - menu.height)))
     }
 
-    private func show(anchor: CGRect, screen: NSScreen, keepingClicksIn anchorWindow: NSWindow?, content: some View, onKey: @escaping (NSEvent) -> Bool) {
+    private func show(anchor: CGRect, screen: NSScreen, keepingClicksIn anchorWindow: NSWindow?, centered: Bool = false, content: some View, onKey: @escaping (NSEvent) -> Bool) {
         close()
         letLingeringGo()
         previousKey = NSApp.keyWindow
@@ -706,9 +706,9 @@ final class StatusPanel {
         panel.contentView = host
         panel.onCancel = { [weak self] in self?.close() }
         panel.onKey = onKey
-        // Under the icon, as menus open from the menu bar: its left edge under the icon's left edge,
-        // or, if it wouldn't fit on the screen that way, its right edge under the icon's right edge.
-        let origin = Self.origin(for: menu, anchor: anchor, visible: screen.visibleFrame)
+        // Status menus align with the icon's edge; Sound is centered under its control.
+        // Both stay inside the display containing the control.
+        let origin = Self.origin(for: menu, anchor: anchor, visible: screen.visibleFrame, centered: centered)
         panel.setFrameOrigin(NSPoint(x: origin.x - room, y: origin.y - room))
         panel.makeKeyAndOrderFront(nil)
         self.panel = panel
