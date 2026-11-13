@@ -20,8 +20,11 @@ struct AirDropShown: Equatable {
     /// Going out: the device it's going to, as far as that's known, and the file.
     var recipient: String?
     var file: String?
+    /// Whether the transfer currently exposes a reachable cancellation action.
+    var canStop = true
 
     var done: Bool { fraction >= 1 }
+    var offersStop: Bool { canStop && !done }
 }
 
 /// Files coming in over AirDrop, as the iPhone's Dynamic Island shows them: beside the camera from
@@ -107,6 +110,7 @@ final class AirDropWatch: NSObject, ObservableObject {
 
     /// Stops the one showing, as its notice's Cancel does.
     func stop() {
+        guard transfer?.offersStop == true else { return }
         guard !ActivityBench.fakes else { return ActivityBench.shared.stopped(.airdrop) }
         if transfer?.sending == true { return sends.stop() }
         guard let id = transfer?.id, let shown = transfers[id] else { return }
@@ -172,7 +176,9 @@ final class AirDropWatch: NSObject, ObservableObject {
         let preview =
             previews[id] ?? Self.image(meta?.value(forKey: "smallPreviewImage")) ?? Self.image(meta?.value(forKey: "previewImage"))
         previews[id] = preview
-        return AirDropShown(id: id, sender: sender, preview: preview, fraction: min(max(progress.fractionCompleted, 0), 1))
+        let cancel = transfer.value(forKey: "cancelAction") as? NSObject
+        let canStop = cancel?.responds(to: NSSelectorFromString("triggerAction")) == true || progress.isCancellable
+        return AirDropShown(id: id, sender: sender, preview: preview, fraction: min(max(progress.fractionCompleted, 0), 1), canStop: canStop)
     }
 
     /// A picture as macOS hands it over: an image, its data, or a Core Graphics image.
@@ -299,6 +305,8 @@ struct ExpandedAirDropView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
+    /// Isolated render fixtures can exercise the control without touching a real transfer.
+    var stop: () -> Void = { AirDropWatch.shared.stop() }
     @State private var hovering = false
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
@@ -354,11 +362,25 @@ struct ExpandedAirDropView: View {
         .accessibilityLabel(Self.spoken(shown))
     }
 
-    /// The ring around a square that stops it, as the iPhone's, faintly lit under the pointer.
+    /// A transfer without a reachable cancellation action keeps its progress ring without a button.
+    @ViewBuilder
     private func stopButton(_ h: CGFloat) -> some View {
-        Button {
-            AirDropWatch.shared.stop()
-        } label: {
+        if shown.offersStop {
+            stopControl(h)
+        } else {
+            AirDropRing(fraction: shown.fraction, diameter: TimerLayout.content(h), line: h * AirDropLayout.bigRingLine)
+                .accessibilityHidden(true)
+        }
+    }
+
+    func performStop() {
+        guard revealed, shown.offersStop else { return }
+        stop()
+    }
+
+    /// The ring around a square that stops it, faintly lit under the pointer.
+    private func stopControl(_ h: CGFloat) -> some View {
+        Button(action: performStop) {
             ZStack {
                 Circle().fill(AirDropLayout.tint.opacity(hovering ? 0.12 : 0))
                 AirDropRing(fraction: shown.fraction, diameter: TimerLayout.content(h), line: h * AirDropLayout.bigRingLine)
@@ -374,8 +396,9 @@ struct ExpandedAirDropView: View {
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
         .onHover { hovering = $0 }
         .notchControl()
-        .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirDrop")) { AirDropWatch.shared.stop() }
+        .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirDrop"), action: performStop)
         .accessibilityLabel("Stop AirDrop")
+        .help("Stop AirDrop")
     }
 
     /// The file, as macOS pictures it, or its kind's icon, with AirDrop's badge, a dark tile with

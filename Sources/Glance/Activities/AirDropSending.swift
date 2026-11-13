@@ -40,6 +40,7 @@ final class AirDropSendWatch {
     /// The device in macOS's window, which stops it.
     private var device: AXUIElement?
     private var askedForDevice = Date.distantPast
+    private var findingDevice = false
     private var service: pid_t?
 
     func start() {
@@ -95,7 +96,7 @@ final class AirDropSendWatch {
         let id = UUID().uuidString
         shown = AirDropShown(
             id: id, sender: "", preview: NSWorkspace.shared.icon(forFile: file.path), fraction: Self.fraction(of: file), sending: true,
-            file: url.lastPathComponent)
+            file: url.lastPathComponent, canStop: false)
         findDevice()
         Task { [weak self] in
             let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 64, height: 64), scale: 2, representationTypes: .all)
@@ -115,6 +116,7 @@ final class AirDropSendWatch {
             return
         }
         self.shown?.fraction = 1
+        self.shown?.canStop = false
         clearing = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1.2))
             guard !Task.isCancelled else { return }
@@ -124,26 +126,36 @@ final class AirDropSendWatch {
 
     /// Stops it, as pressing the device in macOS's window does.
     func stop() {
-        guard let device else { return }
-        AXUIElementPerformAction(device, kAXPressAction as CFString)
+        guard shown?.offersStop == true, let device else { return }
+        guard Self.canStop(device), AXUIElementPerformAction(device, kAXPressAction as CFString) == .success else {
+            self.device = nil
+            shown?.canStop = false
+            return
+        }
+        shown?.canStop = false
     }
 
-    /// Asked every second until found: the window may take a moment, and it may be closed.
+    /// Rechecked while sending: a named recipient can outlive its window and its stop action.
     private func findDevice() {
-        guard shown?.recipient == nil, Date.now.timeIntervalSince(askedForDevice) > 1 else { return }
+        guard !findingDevice, Date.now.timeIntervalSince(askedForDevice) > 1 else { return }
         askedForDevice = .now
+        findingDevice = true
         var apps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").map(\.processIdentifier)
         if let front = NSWorkspace.shared.frontmostApplication?.processIdentifier { apps.append(front) }
         apps.append(ProcessInfo.processInfo.processIdentifier)
         let id = shown?.id
+        let recipient = shown?.recipient
         Task.detached(priority: .userInitiated) { [weak self, apps] in
-            guard let found = Self.device(in: apps) else { return }
-            nonisolated(unsafe) let button = found.button
-            let name = found.name
+            let found = Self.device(in: Array(Set(apps)), named: recipient)
+            nonisolated(unsafe) let button = found?.button
+            let name = found?.name
             await MainActor.run { [weak self] in
-                guard let self, self.shown?.id == id else { return }
+                guard let self else { return }
+                self.findingDevice = false
+                guard self.shown?.id == id else { return }
                 self.device = button
-                self.shown?.recipient = name
+                self.shown?.canStop = button != nil
+                if let name { self.shown?.recipient = name }
             }
         }
     }
@@ -210,10 +222,24 @@ final class AirDropSendWatch {
         return nil
     }
 
-    /// The device macOS's AirDrop window is sending to: the one saying more than its name, so it's
-    /// told apart in any language.
-    nonisolated private static func device(in apps: [pid_t]) -> (name: String, button: AXUIElement)? {
+    /// A recipient saying Sending, rather than Waiting or Sent, with an enabled press action.
+    nonisolated private static func canStop(_ device: AXUIElement) -> Bool {
+        guard SystemNotices.value(device, kAXEnabledAttribute) as? Bool == true,
+            let said = SystemNotices.value(device, kAXDescriptionAttribute) as? String
+        else { return false }
+        let bundle = Bundle(path: "/System/Library/PrivateFrameworks/DeviceDiscoveryUI.framework")
+        let sending = bundle?.localizedString(forKey: "SENDING", value: "Sending", table: "Localizable") ?? "Sending"
+        guard said.hasSuffix(sending) else { return false }
+        var actions: CFArray?
+        guard AXUIElementCopyActionNames(device, &actions) == .success else { return false }
+        return (actions as? [String])?.contains(kAXPressAction as String) == true
+    }
+
+    /// Only one matching recipient can safely supply the cancellation action. Several sends are
+    /// otherwise indistinguishable from file reads, so an arbitrary recipient must not be stopped.
+    nonisolated private static func device(in apps: [pid_t], named recipient: String?) -> (name: String, button: AXUIElement)? {
         guard AXIsProcessTrusted() else { return nil }
+        var found: [(name: String, button: AXUIElement)] = []
         for pid in apps {
             let app = AXUIElementCreateApplication(pid)
             AXUIElementSetMessagingTimeout(app, 0.3)
@@ -222,12 +248,12 @@ final class AirDropSendWatch {
                 let devices = SystemNotices.findAll(in: window) { SystemNotices.value($0, "AXIdentifier") as? String == "dd.nodeBody" }
                 for device in devices {
                     guard let name = SystemNotices.value(device, kAXHelpAttribute) as? String,
-                        let said = SystemNotices.value(device, kAXDescriptionAttribute) as? String, said != name
+                        recipient == nil || name == recipient, Self.canStop(device)
                     else { continue }
-                    return (name, device)
+                    if !found.contains(where: { CFEqual($0.button, device) }) { found.append((name, device)) }
                 }
             }
         }
-        return nil
+        return found.count == 1 ? found.first : nil
     }
 }

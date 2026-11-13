@@ -1550,7 +1550,8 @@ final class NotchController {
         // Coming in where it can't be declined: Accept alone.
         case .call where model.call?.rings == true && model.call?.canDecline == false: [.activitySecond]
         case .call: [.activityFirst, .activitySecond]
-        case .airdrop, .airplay, .voiceMemo: [.activityFirst]
+        case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
+        case .airplay, .voiceMemo: [.activityFirst]
         // Being saved, there's nothing left to stop.
         case .screenRecording: { if case .saving = model.screenRecording { [] } else { [.activityFirst] } }()
         case .music, nil: nil
@@ -1565,7 +1566,7 @@ final class NotchController {
         let next = views[(place + step + views.count) % views.count]
         model.keys.clear()
         withAnimation(NotchMotion.expand) { model.expanded = next }
-        if next != nil { model.keys.focus(on: .activityFirst) }
+        if next != nil, let first = activityControls?.first { model.keys.focus(on: first) }
         return true
     }
 

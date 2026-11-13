@@ -17,7 +17,8 @@
   unless the pointer is on it. Repeat keeps the warning visible when
   Accessibility permission is unavailable.
 - Added AirDrop progress for incoming and accepted outgoing files, with a
-  preview and a button to stop the transfer.
+  preview and a button to stop the transfer when cancellation is available.
+  Completed transfers and those without a reachable control show progress alone.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its
   previous output.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
