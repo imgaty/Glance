@@ -80,43 +80,44 @@ struct ActivityMotionInteractionTests {
         #expect(model.metrics.bodyWidth > model.closedSize.width)
     }
 
-    @Test("The closing rebound stays outside the camera and keeps content inaccessible")
-    func housingRebound() async throws {
+    @Test("A fold reaches the camera once without adding a separate outward pulse")
+    func singleHousingReversal() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.activity = true
         model.open()
         let transition = try #require(model.activityTransitionTask)
-        #expect(model.activityHousingRebound == 0)
-        #expect(model.metrics.bodyWidth == model.closedSize.width)
-
-        try #require(try await eventually { model.activityHousingRebound > 0 })
-        #expect(model.activityFolded && model.activityControlsHidden)
-        #expect(model.metrics.bodyWidth > model.closedSize.width)
-        #expect(model.metrics.bodyWidth <= model.closedSize.width + 12)
-        #expect(model.metrics.height > model.closedSize.height)
-        #expect(model.metrics.height <= model.closedSize.height + 3)
-        #expect(model.detached == nil && !model.expandedShown)
-
-        try #require(try await eventually { model.activityHousingRebound == 0 })
-        #expect(model.activityFolded)
-        #expect(model.metrics.bodyWidth == model.closedSize.width)
-        #expect(model.metrics.height == model.closedSize.height)
+        var samples = 0
+        for _ in 0..<80 {
+            guard model.activityFolded else { break }
+            samples += 1
+            #expect(model.metrics.bodyWidth == model.closedSize.width)
+            #expect(model.metrics.height == model.closedSize.height)
+            #expect(model.activityControlsHidden && model.detached == nil && !model.expandedShown)
+            try await Task.sleep(for: .milliseconds(15))
+        }
+        #expect(samples > 1)
+        #expect(!model.activityFolded && model.activityOpening)
         await transition.value
-        #expect(model.activityHousingRebound == 0 && !model.activityControlsHidden)
+        #expect(!model.activityControlsHidden)
     }
 
-    enum ReboundInterruption: CaseIterable { case teardown, reducedMotion, fullscreen, replacement }
+    enum MotionInterruption: CaseIterable { case teardown, reducedMotion, fullscreen, replacement }
 
-    @Test("Interrupting the rebound cannot leave a pulse or reopen an obsolete destination", arguments: ReboundInterruption.allCases)
-    func interruptedRebound(_ interruption: ReboundInterruption) async throws {
+    @Test("Interrupting either motion leg cannot reopen an obsolete destination", arguments: MotionInterruption.allCases, [false, true])
+    func interruptedReversal(_ interruption: MotionInterruption, duringReveal: Bool) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.activity = true
         model.timer = .paused(left: 75, total: 120)
         model.open()
         let first = try #require(model.activityTransitionTask)
-        try #require(try await eventually { model.activityHousingRebound > 0 })
+        if duringReveal {
+            try #require(try await eventually { model.activityOpening })
+        } else {
+            try await Task.sleep(for: .milliseconds(100))
+            #expect(model.activityFolded)
+        }
 
         switch interruption {
         case .teardown: model.cancelActivityTransition()
@@ -126,11 +127,10 @@ struct ActivityMotionInteractionTests {
         case .fullscreen: model.close(intoHousing: true)
         case .replacement: #expect(model.selectActivity(.timer))
         }
-        #expect(model.activityHousingRebound == 0)
         let current = model.activityTransitionTask
         await first.value
         await current?.value
-        #expect(model.activityHousingRebound == 0 && model.activityTransitionTask == nil)
+        #expect(model.activityTransitionTask == nil)
         #expect(!model.activityControlsHidden)
         switch interruption {
         case .teardown: #expect(model.state == .open)
