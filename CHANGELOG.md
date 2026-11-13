@@ -40,10 +40,14 @@
 
 ### Player
 
-- Rebuilt Sound in rounded glass with an accent-colored system volume slider,
-  live output selection, device pictures and headphone battery details. It
-  opens below its button, works from the keyboard and keeps the notch open.
-  The slider stays visible but disabled while idle; calls show outputs alone.
+- Rebuilt Sound as a glass popover anchored beneath its button, with a rounded
+  arrow, matching outer corners, system opening and closing animations,
+  live outputs, device pictures and headphone battery details. The selected
+  output follows the Mac's accent color. Its volume slider is white in dark
+  appearance and uses the accent color in light
+  appearance, with matching speaker heights and divider widths. Keyboard
+  activation opens it beneath the button. The slider stays visible but
+  disabled while idle; calls show outputs alone.
 - Changed the speaker button's waves to follow the current volume without
   shifting the speaker.
 - Added Spotify DJ's current artwork and controls, including `Spotify DJ` in

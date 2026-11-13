@@ -250,29 +250,32 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a rounded glass menu below the button, with
-its edge aligned to that button and room between them. It stays on that
-display and keeps the
-notch open while in use. Escape, another press on the button, or a click
-outside closes it.
+The `Sound Output` button opens Sound below the button, with a glass background,
+matching rounded corners and a rounded arrow pointing to the button center. It
+opens in the same position with the mouse or keyboard. Sound takes keyboard
+focus and stays on that display, keeping the notch open while in use. Opening
+and closing use the system animation; Reduce Motion removes it. Escape, another
+press on the button, or a click outside closes it.
 
-The system slider sets the playing app's volume, with an accent-colored
-track and glass handle. Drag the knob or click the track to change it. The
-slider stays visible and is disabled when no app is playing. For `Music`
-and `Spotify`, it reads their volume as the menu opens; other apps need the
-`Audio from apps` permission. Left and Right adjust the volume while the
-menu is open. Up and Down move between outputs and **Sound Settings…**;
-Return chooses the highlighted row.
+The system slider sets the playing app's volume. Its filled track is white in
+dark appearance and uses the accent color in light appearance, with a glass
+handle. Drag the knob or click the track to change it. The speaker symbols at
+either end have matching heights, and the two dividers share one width. The
+slider stays visible and is disabled when no app is playing. For `Music` and
+`Spotify`, it reads their volume as Sound opens; other apps need the `Audio from
+apps` permission. Left and Right adjust the volume while Sound is open. Up and
+Down move between outputs and **Sound Settings…**; Return chooses the
+highlighted row.
 
-Connected speakers and headphones appear under **Output**, with a blue
-circle for the current output and battery details when available. Long
-output names wrap above their battery details. The list updates as outputs
+Connected speakers and headphones appear under **Output**, with a circle in your
+Mac's accent color for the current output and battery details when available.
+Long output names wrap above their battery details. The list updates as outputs
 connect or disconnect. Nearby wireless destinations that are not connected
-appear only in macOS. Selecting an output closes the menu.
+appear only in macOS. Selecting an output closes Sound.
 
-**Sound Settings…** opens **System Settings > Sound**. Headphone listening
-modes and other headphone options are managed in macOS. Output rows and
-settings use the same rounded highlight under the pointer.
+**Sound Settings…** opens **System Settings > Sound**. Headphone listening modes
+and other headphone options are managed in macOS. Output rows and settings use
+the same rounded highlight under the pointer.
 
 When the laptop speakers are selected, the button shows muted, low, medium
 or high volume as the app or speaker volume changes. The speaker stays in

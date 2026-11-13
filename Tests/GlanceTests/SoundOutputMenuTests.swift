@@ -106,9 +106,11 @@ struct SoundOutputMenuTests {
                 guard let id = $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
                 return CGDisplayIsBuiltin(id.uint32Value) != 0
             })
-        let panel = SoundMenuPanel(
-            menu: menu, anchor: CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.maxY - 100, width: 40, height: 40), visible: screen.visibleFrame, appearance: NSAppearance(named: .darkAqua)!
-        )
+        let popover = SoundPopover(menu: menu, maximumHeight: screen.visibleFrame.height - 40)
+        let panel = NSWindow(
+            contentRect: CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 100, width: popover.contentView.frame.width, height: popover.contentView.frame.height),
+            styleMask: [.borderless], backing: .buffered, defer: false)
+        panel.contentView = popover.contentView
         panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
         panel.ignoresMouseEvents = true
         panel.orderFrontRegardless()

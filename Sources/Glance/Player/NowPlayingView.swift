@@ -311,7 +311,6 @@ struct NowPlayingView: View {
                                     soundMenuChanged(false)
                                 }
                             }),
-                        alignTrailing: place != .left,
                         makeMenu: output.soundMenu
                     )
                 }

@@ -48,7 +48,7 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// As the Mac's Sound menu: Sound, the playing app's volume, then every output, each in a circle,
     /// the one playing in the accent color, and AirPods with each earbud's and their case's
-    /// battery, then Sound Settings. It opens below its button.
+    /// battery, then Sound Settings. Its arrow points to the button center.
     /// `withVolume` false leaves the playing app's volume out, where it isn't what's heard, as on a
     /// call.
     /// `outputsOnly`, as a call's own: the outputs alone, with no words or settings around them.
@@ -57,10 +57,11 @@ final class AudioOutput: NSObject, ObservableObject {
     func showMenu(at point: CGPoint? = nil, withVolume: Bool = true, outputsOnly: Bool = false) {
         callMenu?.dismiss()
         let point = point ?? NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) else { return }
+        guard let anchor = NSApp.windows.first(where: { $0 is NotchPanel && $0.isVisible && $0.frame.contains(point) })?.contentView else { return }
         let menu = menu(withVolume: withVolume, outputsOnly: outputsOnly)
         callMenu = menu
-        menu.present(below: CGRect(x: point.x - 20, y: point.y - 20, width: 40, height: 40), on: screen, appearance: NSApp.effectiveAppearance) { [weak self] in
+        menu.present(from: anchor, pointer: point) { [weak self, weak menu] in
+            guard self?.callMenu === menu else { return }
             self?.callMenu = nil
         }
     }
@@ -381,16 +382,19 @@ final class VolumeMenuSlider: NSView {
         var body: some View {
             HStack(spacing: 4) {
                 Image(systemName: "speaker.fill")
+                    .resizable().scaledToFit()
                     .font(.system(size: 12, weight: .medium))
                     .soundInk(.speaker)
-                    .frame(width: 16)
+                    .frame(width: 16, height: 14)
                     .offset(x: -1.5)
                 NativeSoundSlider(level: level, enabled: volume?.canChange != false)
                     .frame(height: 16)
                 Image(systemName: "speaker.wave.3.fill")
+                    .resizable().scaledToFit()
                     .font(.system(size: 12, weight: .medium))
                     .soundInk(.speaker)
-                    .frame(width: 26)
+                    // The wave symbol has half a point more internal vertical padding.
+                    .frame(width: 26, height: 14.5)
                     .offset(x: 2)
             }
             .task {
@@ -403,7 +407,7 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// One set of output items for the player and calls, presented in a rounded glass panel.
+/// One set of output items for the player and calls, presented in a glass popover.
 /// NSMenu holds the item actions and selected states; it is never opened for tracking.
 @MainActor
 final class SoundOutputMenu: NSMenu, NSMenuDelegate {
@@ -418,7 +422,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
     private var deviceItems: [NSMenuItem] = []
     private var deviceStart = 0
     private var outputWatch: AnyCancellable?
-    private var panel: SoundMenuPanel?
+    private var popover: SoundPopover?
     private var focusedItem: NSMenuItem?
     private let withVolume: Bool
     private var tracking = false
@@ -458,7 +462,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
         }
         deviceStart = numberOfItems
         if !outputsOnly {
-            append("", view: SoundMenuPiece.divider(height: SoundLook.lowerDivider, inset: SoundLook.highlightInset))
+            append("", view: SoundMenuPiece.divider(height: SoundLook.lowerDivider))
             let footer = append(
                 String(localized: "Sound Settings…"),
                 view: SoundMenuContentRow {
@@ -508,7 +512,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
             (item.view as? SoundMenuContentRow)?.replace { outputLabel(device, playing: device.id == current) }
         }
         update()
-        panel?.reload()
+        popover?.reload()
     }
 
     private func outputLabel(_ device: AudioOutput.Device, playing: Bool) -> some View {
@@ -565,23 +569,29 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
         performActionForItem(at: index)
     }
 
-    func present(below anchor: CGRect, on screen: NSScreen, appearance: NSAppearance, alignTrailing: Bool = true, dismissed: @escaping () -> Void) {
+    func present(from anchor: NSView, pointer: CGPoint?, dismissed: @escaping () -> Void) {
         dismiss()
-        let panel = SoundMenuPanel(menu: self, anchor: anchor, visible: screen.visibleFrame, appearance: appearance, alignTrailing: alignTrailing)
-        self.panel = panel
-        panel.onDismiss = { [weak self] in
-            guard let self else { return }
-            self.panel = nil
+        guard let screen = anchor.window?.screen else {
+            dismissed()
+            return
+        }
+        let popover = SoundPopover(menu: self, maximumHeight: max(40, screen.visibleFrame.height - 40))
+        self.popover = popover
+        // Retain the menu until dismissal, even if its SwiftUI anchor goes away.
+        // SoundPopover clears this callback before calling it, breaking the temporary ownership.
+        popover.onDismiss = { [self, weak popover] in
+            guard self.popover === popover else { return }
+            self.popover = nil
             self.menuDidClose(self)
             NotificationCenter.default.post(name: Self.didClose, object: self)
             dismissed()
         }
         menuWillOpen(self)
         NotificationCenter.default.post(name: Self.didOpen, object: self)
-        panel.show()
+        popover.show(from: anchor, pointer: pointer)
     }
 
-    func dismiss() { panel?.dismiss() }
+    func dismiss() { popover?.dismiss() }
 
     func handleKey(_ event: NSEvent) -> Bool {
         guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return false }
@@ -618,6 +628,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
 /// The system slider retains its own pointer tracking and accessibility actions.
 struct NativeSoundSlider: NSViewRepresentable {
     @ObservedObject var level: VolumeMenuSlider.VolumeSlider.Level
+    @Environment(\.colorScheme) private var colorScheme
     let enabled: Bool
 
     final class Control: NSSlider {
@@ -635,7 +646,6 @@ struct NativeSoundSlider: NSViewRepresentable {
         let slider = Control(value: level.value, minValue: 0, maxValue: 1, target: context.coordinator, action: #selector(Coordinator.moved(_:)))
         slider.isContinuous = true
         slider.controlSize = .regular
-        slider.trackFillColor = .controlAccentColor
         slider.tintProminence = .primary
         slider.setAccessibilityLabel(String(localized: "Volume"))
         slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -645,10 +655,11 @@ struct NativeSoundSlider: NSViewRepresentable {
         context.coordinator.level = level
         slider.doubleValue = level.value
         slider.isEnabled = enabled
+        slider.trackFillColor = colorScheme == .dark ? .white : .controlAccentColor
     }
 }
 
-/// The panel handles selection and keyboard navigation; this view draws the rich row, and
+/// The popover handles selection and keyboard navigation; this view draws the rich row, and
 /// its highlight a little way in from the menu's sides, as tall as the row.
 final class SoundMenuContentRow: NSView {
     // Reparenting a menu item's view into a panel clears NSView.enclosingMenuItem.
@@ -838,7 +849,7 @@ private struct SoundOutputLabel: View {
         HStack(spacing: SoundLook.gap) {
             ZStack {
                 if playing {
-                    Circle().fill(Color(nsColor: .systemBlue))
+                    Circle().fill(Color(nsColor: .controlAccentColor))
                 } else {
                     Circle().soundInk(.fill)
                 }
