@@ -605,7 +605,9 @@ transfer window can make cancellation unavailable until it is opened again.
 
 A file you send shows the same way, once it's accepted, the ring filling as it
 goes out. Opened, it says who it's going to while macOS's AirDrop window is
-open, and otherwise the file's name. Turn both off with `AirDrop` in
+open, and otherwise the file's name. Outgoing progress is an estimate and
+stays short of a full ring; check macOS's AirDrop window for the final result.
+Turn both off with `AirDrop` in
 **Settings > Live Activities**.
 
 ### AirPlay

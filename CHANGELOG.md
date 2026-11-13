@@ -23,6 +23,7 @@
   preview and a button to stop the transfer when cancellation is available.
   Completed transfers and those without a reachable control show progress alone.
   Incoming transfers keep their arrival order as progress changes.
+  Outgoing progress no longer claims success before macOS confirms delivery.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its
   previous output.
 - Added screen recordings and Voice Memos, with elapsed time and a stop

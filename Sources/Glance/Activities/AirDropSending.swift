@@ -10,8 +10,8 @@ import ApplicationServices
 import QuickLookThumbnailing
 
 /// A file going out over AirDrop, shown as one coming in is. macOS tells other apps nothing of what
-/// it sends, but the service sending it runs as the user and reads the file from start to end, so
-/// how far it has read is how far along it is, from when the other side accepts it. Who it's going
+/// it sends, but the service sending it runs as the user and reads the file from start to end.
+/// That estimates progress after acceptance; reaching the end does not confirm delivery. Who it's going
 /// to is only in macOS's AirDrop window, through Accessibility, while that's open. Nothing's looked at
 /// until AirDrop's own network is busy, which is checked once a second.
 @MainActor
@@ -36,7 +36,6 @@ final class AirDropSendWatch {
     private var bytesOut: UInt64?
     private var timer: Timer?
     private var quick = false
-    private var clearing: Task<Void, Never>?
     /// The device in macOS's window, which stops it.
     private var device: AXUIElement?
     private var askedForDevice = Date.distantPast
@@ -76,7 +75,7 @@ final class AirDropSendWatch {
         if let sending {
             guard let file = files.first(where: { $0.descriptor == sending.descriptor && $0.path == sending.path }) else { return finished() }
             self.sending = file
-            let fraction = Self.fraction(of: file)
+            let fraction = Self.displayedFraction(of: file)
             if let shown, fraction > shown.fraction { self.shown?.fraction = fraction }
             findDevice()
         } else if let file = Self.sent(in: files, before: before) {
@@ -88,14 +87,13 @@ final class AirDropSendWatch {
     private static let busyBytes: UInt64 = 32 * 1024
 
     private func begin(_ file: OpenFile) {
-        clearing?.cancel()
         sending = file
         device = nil
         askedForDevice = .distantPast
         let url = URL(fileURLWithPath: file.path)
         let id = UUID().uuidString
         shown = AirDropShown(
-            id: id, sender: "", preview: NSWorkspace.shared.icon(forFile: file.path), fraction: Self.fraction(of: file), sending: true,
+            id: id, sender: "", preview: NSWorkspace.shared.icon(forFile: file.path), fraction: Self.displayedFraction(of: file), sending: true,
             file: url.lastPathComponent, canStop: false)
         findDevice()
         Task { [weak self] in
@@ -107,21 +105,12 @@ final class AirDropSendWatch {
         }
     }
 
-    /// Read to the end, it shows a moment full, as one coming in does; stopped short, it just goes.
+    /// A closed file ends this observation, not necessarily the transfer: completion, cancellation
+    /// and failure all close it. Leave the result to AirDrop rather than inventing a successful end.
     private func finished() {
         sending = nil
         device = nil
-        guard let shown, shown.fraction > 0.97 else {
-            self.shown = nil
-            return
-        }
-        self.shown?.fraction = 1
-        self.shown?.canStop = false
-        clearing = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
-            guard !Task.isCancelled else { return }
-            self?.shown = nil
-        }
+        shown = nil
     }
 
     /// Stops it, as pressing the device in macOS's window does.
@@ -164,6 +153,12 @@ final class AirDropSendWatch {
 
     nonisolated static func fraction(of file: OpenFile) -> Double {
         file.size > 0 ? min(max(Double(file.offset) / Double(file.size), 0), 1) : 0
+    }
+
+    /// Bytes can be buffered before the receiving device acknowledges them. Keep the final percent
+    /// for a confirmed result, which a file read alone cannot supply.
+    nonisolated static func displayedFraction(of file: OpenFile) -> Double {
+        min(fraction(of: file), 0.99)
     }
 
     /// What's being sent: a file read further than it was a moment ago, outside macOS's own.
