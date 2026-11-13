@@ -49,6 +49,9 @@
 
 ### Player
 
+- Fixed the detached music bubble keeping the previous cover when the next
+  track had no artwork.
+
 - Fixed player keyboard commands remaining active behind another activity or
   inside a preview. Only the visible, enabled player responds.
 

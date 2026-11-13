@@ -391,6 +391,9 @@ with two fingers, or scroll a mouse's wheel, to see the rest.
 
 ## Live Activities
 
+When a track has no artwork, the detached music bubble shows a music note
+instead of keeping the previous track's cover.
+
 While something plays, the closed notch shows the cover on its left and a
 waveform on its right, made and drawn as macOS draws its own in the menu bar:
 six bars, bass at the left and treble at the right, each as tall as its part of

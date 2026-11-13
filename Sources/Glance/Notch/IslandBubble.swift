@@ -199,15 +199,24 @@ struct IslandBubble: View {
         }
         .onChange(of: music, initial: true) { _, new in
             changes.music += 1
-            if new { return keptMusic = true }
+            if new {
+                keptMusic = true
+                keptArtwork = artwork
+                return
+            }
             let change = changes.music
             Task { @MainActor in
                 try? await Task.sleep(for: SystemActivityView.folding)
-                if changes.music == change { keptMusic = false }
+                if changes.music == change {
+                    keptMusic = false
+                    keptArtwork = nil
+                }
             }
         }
         .onChange(of: artwork.map(ObjectIdentifier.init), initial: true) { _, _ in
-            if let artwork { keptArtwork = artwork }
+            // A track without a cover uses the note. Keep an old cover only while music is
+            // leaving the bubble, so the outgoing image survives its fold back into the notch.
+            if music { keptArtwork = artwork }
         }
         .onChange(of: airdrop, initial: true) { _, new in
             changes.airdrop += 1
