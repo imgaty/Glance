@@ -139,25 +139,44 @@ struct StopwatchMark: View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: motionReduced || !watch.isRunning)) { context in
             let second = watch.elapsed(at: context.date).truncatingRemainder(dividingBy: 60)
             ZStack {
-                Circle().stroke(TimerLayout.ink, lineWidth: line).padding(line / 2)
-                ForEach([0.0, 45], id: \.self) { degrees in
-                    Capsule()
-                        .fill(TimerLayout.ink)
-                        .frame(width: line, height: stem)
-                        .offset(y: -(side + stem) / 2 + line / 2)
-                        .rotationEffect(.degrees(degrees))
+                ZStack {
+                    Circle().stroke(TimerLayout.ink, lineWidth: line).padding(line / 2)
+                    ForEach([0.0, 45], id: \.self) { degrees in
+                        Capsule()
+                            .fill(TimerLayout.ink)
+                            .frame(width: line, height: stem)
+                            .offset(y: -(side + stem) / 2 + line / 2)
+                            .rotationEffect(.degrees(degrees))
+                    }
                 }
+                .opacity(watch.isRunning ? 1 : 0.460716)
                 Capsule()
                     .fill(TimerLayout.ink)
                     .frame(width: line, height: height * (TimerLayout.handTo - TimerLayout.handFrom))
                     .offset(y: -height * (TimerLayout.handFrom + TimerLayout.handTo) / 2)
                     .rotationEffect(.degrees(second / 60 * 360))
+                    .opacity(watch.isRunning ? 1 : 0)
+                pausedMark(side: side)
+                    .opacity(watch.isRunning ? 0 : 1)
             }
             .frame(width: side, height: side)
         }
         // Its crown stands out at the top alone: lowered by half of that, all of it is centered.
         .offset(y: (stem - line / 2) / 2)
         .accessibilityHidden(true)
+    }
+
+    /// ClockAngel's stopwatch-compact-asset.ca paused state: the hand disappears and two bright
+    /// bars remain inside the dimmed ring. Its 150-unit drawing is scaled to our existing ring.
+    private func pausedMark(side: CGFloat) -> some View {
+        let scale = side / (135 * 0.423 * 2.596)
+        return HStack(spacing: 14.2782 * scale) {
+            ForEach(0..<2, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 7.3 * scale, style: .continuous)
+                    .fill(Color(.sRGB, red: 0.9993, green: 0.6943, blue: 0.2115))
+                    .frame(width: 21.7218 * scale, height: 58.7535 * scale)
+            }
+        }
     }
 }
 

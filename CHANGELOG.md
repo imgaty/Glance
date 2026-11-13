@@ -19,6 +19,7 @@
   and controls in the opened notch. A ringing timer stops after ten seconds
   unless the pointer is on it. Repeat keeps the warning visible when
   Accessibility permission is unavailable.
+  A stopped stopwatch shows a pause mark inside its dimmed ring.
 - Added AirDrop progress for incoming and accepted outgoing files, with a
   preview and a button to stop the transfer when cancellation is available.
   Completed transfers and those without a reachable control show progress alone.
