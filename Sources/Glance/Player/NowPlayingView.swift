@@ -49,6 +49,16 @@ struct NowPlayingView: View {
 
     private var accent: Color { nowPlaying.accent(from: accentSource) }
 
+    /// Unknown-length streams have no position to seek to, just like the DJ's spoken segments.
+    /// The labels, pointer control and keyboard all use the same availability.
+    private var hasTimeline: Bool {
+        Self.timelineAvailable(hasMedia: nowPlaying.hasMedia, duration: nowPlaying.duration, djTalking: nowPlaying.djTalking)
+    }
+
+    static func timelineAvailable(hasMedia: Bool, duration: Double, djTalking: Bool) -> Bool {
+        hasMedia && duration.isFinite && duration > 0 && !djTalking
+    }
+
     var body: some View {
         // How far below the artwork's top the camera housing ends; what's under it starts there.
         let clearance = closedNotch.height + PlayerLayout.cameraGap - PlayerLayout.padding
@@ -164,9 +174,9 @@ struct NowPlayingView: View {
         TimelineView(.animation(minimumInterval: 0.5, paused: !(isVisible && nowPlaying.isPlaying))) { context in
             // With nothing playing, no times and an empty bar, as on the iPhone.
             let playing = nowPlaying.hasMedia
-            // What the DJ says has no length, so no times, as in Spotify.
-            let timed = playing && !nowPlaying.djTalking
-            let duration = playing ? nowPlaying.duration : 0
+            // A stream or a DJ segment without a known length has neither times nor seeking.
+            let timed = hasTimeline
+            let duration = timed ? nowPlaying.duration : 0
             let position = scrub.map { $0 * duration } ?? (playing ? nowPlaying.position(at: context.date) : 0)
             HStack(spacing: 10) {
                 Text(timed ? Self.time(position) : "--:--")
@@ -174,7 +184,7 @@ struct NowPlayingView: View {
                 Scrubber(
                     fraction: duration > 0 ? position / duration : 0,
                     color: accentTimeline ? accent : .white.opacity(0.7),
-                    spoken: playing ? String(localized: "\(Self.time(position)) of \(Self.time(duration))") : "",
+                    spoken: timed ? String(localized: "\(Self.time(position)) of \(Self.time(duration))") : "",
                     // Ten seconds at a time.
                     step: duration > 0 ? min(10 / duration, 1) : 0
                 ) {
@@ -183,7 +193,7 @@ struct NowPlayingView: View {
                     nowPlaying.seek(to: fraction * duration)
                     scrub = nil
                 }
-                .disabled(duration <= 0)
+                .disabled(!timed)
                 .keyRing(.position, in: Capsule(), outset: CGSize(width: 6, height: 0))
                 Text(timed ? ClockText.left(Int(max(duration - position, 0).rounded())) : "--:--")
                     .frame(minWidth: 30, alignment: .trailing)
@@ -352,7 +362,7 @@ struct NowPlayingView: View {
         if media { controls.append(.cover) }
         if lyricsControl.available { controls.append(.lyrics) }
         if keys?.hasLines == true { controls.append(.line) }
-        if media, nowPlaying.duration > 0 { controls.append(.position) }
+        if hasTimeline { controls.append(.position) }
         if showsDJ || usable(leftSlot) { controls.append(.left) }
         if media { controls += [.previous, .playPause, .next] }
         if usable(rightSlot) { controls.append(.right) }

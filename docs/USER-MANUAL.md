@@ -213,6 +213,10 @@ late, the pulse and the waveform wait for the sound. The beat needs the
 
 ### Controls
 
+Live streams and other audio without a known duration show `--:--` for their
+time. The timeline cannot be dragged or selected with Tab until a duration
+is available.
+
 Beside the playback controls are two buttons of your choice. Choose them in
 **Settings > Player > Controls > Customize Controls…**. From the keyboard, Tab
 goes between the two buttons and the controls under them, Space selects a button

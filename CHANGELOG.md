@@ -41,6 +41,9 @@
 
 ### Player
 
+- Fixed unknown-length streams showing a misleading remaining time. Their
+  timeline stays unavailable until the playing app supplies a duration.
+
 - Rebuilt Sound as an independent dropdown with native glass, concentric rounded
   corners and no arrow. It opens at the click or below the button from the
   keyboard, with system opening and closing transitions and animated resizing.
