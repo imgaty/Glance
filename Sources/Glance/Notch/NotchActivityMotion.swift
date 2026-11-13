@@ -77,6 +77,10 @@ extension NotchModel {
 
         // An empty housing is already the midpoint. Its first activity only needs the opening leg.
         let folds = !atHousing || wasFolding
+        let clock = ContinuousClock()
+        let pace = max(NotchMotion.pace, 0.01)
+        let started = clock.now
+        let foldDeadline = started + .seconds(Self.activityFoldDuration / pace)
         withAnimation(folds ? Self.activityClosingMotion : Self.activityOpeningSpring) {
             activityFolded = folds
             activityOpening = !folds
@@ -86,13 +90,17 @@ extension NotchModel {
             pressedAlertButton = nil
         }
         activityTransitionTask = Task { @MainActor [weak self] in
+            var revealStarted = started
             if folds {
-                do { try await Task.sleep(for: .seconds(Self.activityFoldDuration / max(NotchMotion.pace, 0.01))) } catch { return }
+                // Anchor the deadline to the animation, not to whenever this task first runs.
+                // Animation joins cannot use the default wake-up coalescing tolerance.
+                do { try await clock.sleep(until: foldDeadline, tolerance: .zero) } catch { return }
                 guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
                 // Reaching the housing is the reversal into the opening spring. An extra pulse
                 // here creates two more direction changes and makes the same gesture stutter.
                 // Read the destination afresh; a source may have ended while the shell was closing.
                 let reduced = self.activityMotionReduced
+                revealStarted = clock.now
                 withAnimation(reduced ? nil : Self.activityOpeningSpring) {
                     self.activityOpening = !reduced && self.activityPresentation != .hardware
                     self.activityFolded = false
@@ -102,7 +110,7 @@ extension NotchModel {
             // A target change is not yet a visible button. Keep input out until the reveal has
             // reached its readable part, while Escape and destination navigation remain available.
             if self?.activityOpening == true {
-                do { try await Task.sleep(for: .seconds(Self.activityControlDelay / max(NotchMotion.pace, 0.01))) } catch { return }
+                do { try await clock.sleep(until: revealStarted + .seconds(Self.activityControlDelay / pace), tolerance: .zero) } catch { return }
             }
             guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
             self.activityOpening = false
