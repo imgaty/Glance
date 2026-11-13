@@ -22,6 +22,7 @@
 - Added AirDrop progress for incoming and accepted outgoing files, with a
   preview and a button to stop the transfer when cancellation is available.
   Completed transfers and those without a reachable control show progress alone.
+  Incoming transfers keep their arrival order as progress changes.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its
   previous output.
 - Added screen recordings and Voice Memos, with elapsed time and a stop

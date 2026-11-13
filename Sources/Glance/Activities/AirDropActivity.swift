@@ -27,6 +27,25 @@ struct AirDropShown: Equatable {
     var offersStop: Bool { canStop && !done }
 }
 
+/// Session updates may arrive in any order. Keep the visible transfer until it leaves, then use
+/// the oldest eligible session, without letting progress updates move it to the back.
+struct AirDropTransferOrder {
+    private var identifiers: [String] = []
+
+    mutating func received(_ id: String) {
+        if !identifiers.contains(id) { identifiers.append(id) }
+    }
+
+    mutating func removed(_ id: String) {
+        identifiers.removeAll { $0 == id }
+    }
+
+    func first(in available: Set<String>, keeping current: String?) -> String? {
+        if let current, identifiers.contains(current), available.contains(current) { return current }
+        return identifiers.first { available.contains($0) }
+    }
+}
+
 /// Files coming in over AirDrop, as the iPhone's Dynamic Island shows them: beside the camera from
 /// when the file starts coming until it's in, AirDrop's symbol at one end and how far along it is
 /// at the other; opened, a picture of it, who it's from, and a button to stop it. macOS tells
@@ -40,6 +59,7 @@ final class AirDropWatch: NSObject, ObservableObject {
     private var observer: NSObject?
     /// macOS's transfers under way, by their identifiers.
     private var transfers: [String: NSObject] = [:]
+    private var order = AirDropTransferOrder()
     /// Each one's picture, made once.
     private var previews: [String: NSImage] = [:]
     private var ticker: Timer?
@@ -77,6 +97,7 @@ final class AirDropWatch: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let id = transfer.value(forKey: "identifier") as? String else { return }
                 self.transfers[id] = nil
+                self.order.removed(id)
                 self.previews[id] = nil
                 self.refresh()
             }
@@ -123,6 +144,7 @@ final class AirDropWatch: NSObject, ObservableObject {
 
     private func updated(_ transfer: NSObject) {
         guard let id = transfer.value(forKey: "identifier") as? String else { return }
+        order.received(id)
         transfers[id] = transfer
         refresh()
     }
@@ -131,19 +153,23 @@ final class AirDropWatch: NSObject, ObservableObject {
     /// a moment full; gone once cancelled or failed.
     private func refresh() {
         let enabled = UserDefaults.standard.bool(forKey: Preferences.activityAirDrop)
-        let next = enabled ? transfers.values.lazy.compactMap(shown).first ?? outgoing : nil
+        let incoming = enabled ? Dictionary(uniqueKeysWithValues: transfers.values.compactMap(shown).map { ($0.id, $0) }) : [:]
+        let current = transfer?.sending == false ? transfer?.id : nil
+        let first = order.first(in: Set(incoming.keys), keeping: current).flatMap { incoming[$0] }
+        let next = enabled ? first ?? outgoing : nil
         if next?.id != transfer?.id {
             finishing?.cancel()
             finishing = nil
         }
         if let next, next.done, !next.sending {
-            if transfer?.done != true { transfer = next }
+            if transfer != next { transfer = next }
             finishing =
                 finishing
                 ?? Task { [weak self] in
                     try? await Task.sleep(for: .seconds(1.2))
                     guard let self, !Task.isCancelled else { return }
                     self.transfers[next.id] = nil
+                    self.order.removed(next.id)
                     self.previews[next.id] = nil
                     self.finishing = nil
                     self.refresh()

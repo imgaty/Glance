@@ -590,6 +590,9 @@ and a ring at its right, filling as the file comes in. After another activity, i
 goes in a bubble of its own, showing the ring. Something waiting to be accepted shows
 once you accept it.
 
+If several files arrive together, the visible transfer stays until it ends;
+the next accepted transfer then takes its place in arrival order.
+
 Hover over or click the notch while AirDrop has it, or click its bubble, and it
 opens to a picture of the file, who it's from, and the ring around a button:
 click it to stop the transfer. If cancellation is unavailable or the transfer
