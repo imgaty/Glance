@@ -330,6 +330,9 @@ final class ScreenRecordingWatch: ObservableObject {
     private let findSavedFile: (() -> Void)?
     private let fileIsAvailable: (URL) -> Bool
     private let openFile: (URL) -> Bool
+    private let waitForSavedDismissal: @MainActor () async throws -> Void
+    private var savedDismissal: Task<Void, Never>?
+    private var savedPresentationID = UUID()
 
     init(
         readIndicator: (@Sendable () -> String?)? = nil,
@@ -339,7 +342,8 @@ final class ScreenRecordingWatch: ObservableObject {
         stopRecording: (() -> Void)? = nil,
         findSavedFile: (() -> Void)? = nil,
         fileIsAvailable: ((URL) -> Bool)? = nil,
-        openFile: ((URL) -> Bool)? = nil
+        openFile: ((URL) -> Bool)? = nil,
+        waitForSavedDismissal: (@MainActor () async throws -> Void)? = nil
     ) {
         self.readIndicator = readIndicator ?? { Self.stopItem().map(Self.words) }
         self.isEnabled = isEnabled ?? { Self.enabled }
@@ -350,9 +354,14 @@ final class ScreenRecordingWatch: ObservableObject {
         self.findSavedFile = findSavedFile
         self.fileIsAvailable = fileIsAvailable ?? Self.savedFileIsAvailable
         self.openFile = openFile ?? { NSWorkspace.shared.open($0) }
+        let savedDelay = Self.savedFor
+        self.waitForSavedDismissal = waitForSavedDismissal ?? { try await Task.sleep(for: .seconds(savedDelay)) }
     }
 
-    deinit { clock?.invalidate() }
+    deinit {
+        clock?.invalidate()
+        savedDismissal?.cancel()
+    }
 
     nonisolated static let capture = "com.apple.screencaptureui"
     /// Longest it waits for the file once stopped, before it lets it go unsaid.
@@ -547,8 +556,6 @@ final class ScreenRecordingWatch: ObservableObject {
             let preview = await Self.firstPicture(of: file)
             guard case .saving? = self.recording else { return }
             self.presentSaved(file: file, length: length, folder: folder, preview: preview)
-            try? await Task.sleep(for: .seconds(Self.savedFor))
-            if case .saved? = self.recording { self.recording = nil }
         }
     }
 
@@ -558,6 +565,7 @@ final class ScreenRecordingWatch: ObservableObject {
         saved = file
         savedFileState = fileIsAvailable(file) ? .available : .unavailable
         recording = .saved(length: length, folder: folder, preview: preview)
+        restartSavedDismissal()
     }
 
     private static func savedFileIsAvailable(_ file: URL) -> Bool {
@@ -569,10 +577,33 @@ final class ScreenRecordingWatch: ObservableObject {
 
     func refreshSavedAvailability() {
         guard let saved, fileIsAvailable(saved) else {
-            savedFileState = .unavailable
+            showSavedError(.unavailable)
             return
         }
         if savedFileState == .unavailable { savedFileState = .available }
+    }
+
+    /// A newly visible error gets its own reading/retry time. Repeated availability polls must
+    /// not keep extending it, and an older task must never dismiss a later saved result.
+    private func showSavedError(_ state: SavedFileState) {
+        guard savedFileState != state else { return }
+        savedFileState = state
+        if case .saved? = recording { restartSavedDismissal() }
+    }
+
+    private func restartSavedDismissal() {
+        savedDismissal?.cancel()
+        let identity = UUID()
+        savedPresentationID = identity
+        let wait = waitForSavedDismissal
+        savedDismissal = Task { @MainActor [weak self] in
+            do { try await wait() } catch { return }
+            guard !Task.isCancelled, let self, self.savedPresentationID == identity,
+                !self.benching, case .saved? = self.recording
+            else { return }
+            self.savedDismissal = nil
+            self.recording = nil
+        }
     }
 
     /// How long it says where it was saved.
@@ -645,7 +676,7 @@ final class ScreenRecordingWatch: ObservableObject {
             savedFileState = .available
             return true
         }
-        savedFileState = fileIsAvailable(saved) ? .openingFailed : .unavailable
+        showSavedError(fileIsAvailable(saved) ? .openingFailed : .unavailable)
         return false
     }
 
