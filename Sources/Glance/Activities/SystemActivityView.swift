@@ -558,7 +558,7 @@ struct GrownAway: ViewModifier {
     }
 }
 
-/// The wings and detached bubble share the shell's bounded acceleration and deceleration.
+/// The wings and detached bubble share the shell's expansion spring and smooth collapse.
 /// Their contents fade through a blur; Reduce Motion keeps the fade without the blur.
 enum IslandMotion {
     static var open: Animation { NotchMotion.expand }

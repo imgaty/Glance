@@ -69,7 +69,7 @@ struct IslandBubble: View {
     /// cannot remain detached beside the bare camera housing.
     static let inBy: Double = 0.13
 
-    /// On the same bounded curve as the notch's end, so the two part evenly.
+    /// On the same expansion or collapse motion as the notch's end, so the two part evenly.
     private var motion: Animation { shown ? IslandMotion.open : IslandMotion.fold }
 
     var body: some View {

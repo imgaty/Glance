@@ -10,10 +10,10 @@
 
 ### Live Activities
 
-- Changed activity opening, closing and switching to fold to the camera housing,
-  then expand smoothly into the next view without a bounce.
-  Both legs accelerate and slow to a stop, with the contents and detached bubble
-  following the same motion. Hover and click feedback no longer add a rebound.
+- Changed activity opening, closing and switching to fold smoothly to the camera
+  housing, then expand with a small bounce into the open or inline view.
+  Only the expansion bounces. The contents and detached bubble follow the same
+  motion. Hover and click feedback do not add a separate rebound.
   Hover keeps the compact footprint fixed, so opening begins with the collapse.
   Releasing a held click or swipe during opening keeps the final size steady.
   Fixed a downward bulge and a detached activity stepping sideways at the start

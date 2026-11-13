@@ -615,7 +615,7 @@ enum NotchMotion {
     nonisolated(unsafe) static var pace: Double = 1
 
     static let foldDuration = 0.28
-    static let expandDuration = 0.38
+    static let expandDuration = 0.48
 }
 
 extension Animation {
@@ -625,7 +625,10 @@ extension Animation {
 
 extension NotchMotion {
     static var expand: Animation {
-        eased(duration: expandDuration)
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            return eased(duration: expandDuration)
+        }
+        return .spring(response: 0.45, dampingFraction: 0.7).paced
     }
 
     static var fold: Animation { eased(duration: foldDuration) }
@@ -679,7 +682,7 @@ extension NotchModel {
         }
     }
 
-    /// Collapses to the housing, then expands without overshooting its destination.
+    /// Collapses smoothly to the housing, then expands with a small settling bounce.
     func open(onCollapse: (() -> Void)? = nil) {
         guard !entering else { return }
         changeActivityPresentation(animation: Self.activityExpansionMotion, onCollapse: onCollapse) {

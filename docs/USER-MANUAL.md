@@ -90,11 +90,11 @@ Hover over the notch or click it, depending on
 notch closes when the pointer leaves it. It opens and closes the same way to
 whatever it shows: the player, the tray, the lyrics, a live activity, or an
 announcement as tall as the Alarm. Each activity opening, closing or switching
-first folds to the camera housing, then expands smoothly into its next view
-without a bounce. Hover keeps the compact footprint fixed before this collapse.
-Both legs start gently, speed up, and slow to a stop. The
-contents and detached bubble follow the same motion, including when closing
-back to the compact live activity. This also applies to detached activities and
+first folds smoothly to the camera housing, then expands into its next view with
+a small bounce. Only the expansion bounces, both into the open view and back to
+the compact live activity. Hover keeps the compact footprint fixed before the
+collapse. The contents and detached bubble follow the same motion.
+This also applies to detached activities and
 device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a
 new action replaces an unfinished transition. Between the player and the tray,
@@ -427,8 +427,8 @@ playing, its name and artist appear beside the notch for a moment. Everything
 here comes and goes as on the iPhone's Dynamic Island: the notch widens and
 folds, and what it shows rides in and out with its ends, fading in out of a blur
 and away into one. A new song's cover comes in the same way as the last one
-goes. The notch and bubble widen and fold without bouncing. With Reduce Motion
-on, what they show fades without a blur.
+goes. The notch and bubble widen with a small bounce and fold without one.
+With Reduce Motion on, they do not bounce, and what they show fades without a blur.
 
 Closed or opened, the notch is only as wide as the wider side of a live
 activity needs, the same on both sides, with nothing under the camera. Each
