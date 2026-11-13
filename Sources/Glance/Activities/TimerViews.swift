@@ -62,6 +62,11 @@ struct TimerRing: View {
     let state: NotchTimer.State
     /// The notch's height, which it's measured by.
     let height: CGFloat
+    /// A preview can exercise this appearance without changing the Mac's setting.
+    var reduceMotionOverride: Bool? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var motionReduced: Bool { reduceMotionOverride ?? reduceMotion }
 
     var body: some View {
         let line = height * TimerLayout.ringLine
@@ -80,7 +85,7 @@ struct TimerRing: View {
                     .rotationEffect(.degrees(left * 360))
             }
             .padding(line / 2)
-            .animation(.linear(duration: 0.5), value: left)
+            .animation(motionReduced ? nil : .linear(duration: 0.5), value: left)
         }
         .frame(width: height * TimerLayout.ring, height: height * TimerLayout.ring)
         .accessibilityHidden(true)
@@ -120,13 +125,18 @@ enum ClockShown: Equatable {
 struct StopwatchMark: View {
     let watch: Stopwatch
     let height: CGFloat
+    /// The time reading keeps updating; only the decorative hand stops moving.
+    var reduceMotionOverride: Bool? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var motionReduced: Bool { reduceMotionOverride ?? reduceMotion }
 
     var body: some View {
         let line = height * TimerLayout.ringLine
         let side = height * TimerLayout.ring
         // The crown and its button stand out past the ring by as much as the ring is thick.
         let stem = height * TimerLayout.ringLine * 2
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !watch.isRunning)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: motionReduced || !watch.isRunning)) { context in
             let second = watch.elapsed(at: context.date).truncatingRemainder(dividingBy: 60)
             ZStack {
                 Circle().stroke(TimerLayout.ink, lineWidth: line).padding(line / 2)
@@ -217,8 +227,13 @@ struct ExpandedTimerView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
+    /// A preview can exercise this appearance without changing the Mac's setting.
+    var reduceMotionOverride: Bool? = nil
     @ObservedObject private var clock = ClockActivity.shared
     @Environment(\.trailingGrows) private var trailingGrows
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var motionReduced: Bool { reduceMotionOverride ?? reduceMotion }
 
     var body: some View {
         let h = restingHeight
@@ -304,8 +319,8 @@ struct ExpandedTimerView: View {
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     Text(shown.reading(at: context.date))
                         .font(NotchType.time(h))
-                        .contentTransition(.numericText(countsDown: true))
-                        .animation(.snappy, value: shown.reading(at: context.date))
+                        .contentTransition(motionReduced ? .identity : .numericText(countsDown: true))
+                        .animation(motionReduced ? nil : .snappy, value: shown.reading(at: context.date))
                 }
             }
         }

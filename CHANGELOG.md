@@ -43,6 +43,8 @@
   menu bar.
 - Changed activities to share the notch's opening and closing motion, with
   their pictures and times moving into place. Reduce Motion uses fades.
+  Clock digits change without rolling, timer rings update without sweeping,
+  and the stopwatch's decorative hand stays still.
 
 ### Player
 

@@ -544,6 +544,10 @@ when their compact and open positions are on the same side. An element that
 switches sides fades in place, including a recording dot or cover opened from
 the right-hand bubble. AirDrop's ring stays on the right and moves between its
 positions. Other details fade in after opening and fade away before closing.
+With Reduce Motion on, Clock digits change without rolling and timer rings
+update without sweeping. The stopwatch's hand stays still while its time
+continues to update.
+
 Reopening during a close reverses the same motion. With Reduce Motion on,
 these changes use fades.
 

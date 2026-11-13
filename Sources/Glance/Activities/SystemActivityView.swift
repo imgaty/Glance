@@ -36,6 +36,9 @@ struct SystemActivityView: View {
     var recording: Recording? = nil
     /// The timer's name, as VoiceOver says it.
     var timerName = String(localized: "Timer")
+    /// A Clock preview can exercise reduced motion without changing the Mac's setting.
+    var clockReduceMotionOverride: Bool? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Another activity is detached: the trailing wing is folded away, and what's on it hidden, or it
     /// would show past the fold as the pointer swells the notch.
     var leadingOnly = false
@@ -137,8 +140,8 @@ struct SystemActivityView: View {
                 ZStack {
                     Group {
                         switch shown {
-                        case .timer(let timer): TimerRing(state: timer, height: restingHeight)
-                        case .stopwatch(let watch): StopwatchMark(watch: watch, height: restingHeight)
+                        case .timer(let timer): TimerRing(state: timer, height: restingHeight, reduceMotionOverride: clockReduceMotionOverride)
+                        case .stopwatch(let watch): StopwatchMark(watch: watch, height: restingHeight, reduceMotionOverride: clockReduceMotionOverride)
                         }
                     }
                     // From its end, as far as from the top and bottom.
@@ -160,8 +163,8 @@ struct SystemActivityView: View {
                                 Text(reading)
                                     .font(.system(size: size, weight: .semibold).monospacedDigit())
                                     // The digits roll down as they change, as the Timer's own do.
-                                    .contentTransition(.numericText(countsDown: true))
-                                    .animation(.snappy, value: reading)
+                                    .contentTransition((clockReduceMotionOverride ?? reduceMotion) ? .identity : .numericText(countsDown: true))
+                                    .animation((clockReduceMotionOverride ?? reduceMotion) ? nil : .snappy, value: reading)
                             case .stopwatch(let watch):
                                 // Its small hundredths end short of the time's own end.
                                 StopwatchReading(watch: watch, size: size).padding(.trailing, size * 0.09)
