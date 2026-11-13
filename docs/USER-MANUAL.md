@@ -645,6 +645,8 @@ Turn both off with `AirDrop` in
 the output changed since the activity appeared, Glance refreshes the activity
 without changing that new choice. If changing the output fails, the button
 says **Try Again** and the current destination stays visible.
+With no return destination, the inactive button says **No Local Output** in
+readable secondary text.
 
 While the sound plays on an AirPlay speaker or TV, the notch shows it as the
 iPhone shows Screen Mirroring: AirPlay's symbol in blue at its left end, and

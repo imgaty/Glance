@@ -39,6 +39,7 @@
   Stop checks that the same AirPlay route is still selected and is unavailable
   when no local output can receive the sound.
   A failed change keeps the destination visible and offers **Try Again**.
+  When there is no return destination, **No Local Output** stays readable.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
   button. A saved screen recording opens from its preview and joins the tray.
   Losing Accessibility access keeps the last known recording visible and

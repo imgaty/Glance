@@ -176,7 +176,7 @@ final class AirPlayWatch: ObservableObject {
 
 /// AirPlay as the iPhone's Screen Mirroring, measured from it, by the island's height: its symbol in
 /// the iPhone's muted blue, what it plays on in white, and a wide button in navy with blue words.
-/// Its colors are the iPhone's own, in Display P3.
+/// The Display P3 palette follows the iPhone, with readable button text at Mac sizes.
 enum AirPlayLayout {
     static let tint = Color.p3(0x3B, 0x69, 0xB4)
     static let buttonFill = Color.p3(0x12, 0x20, 0x3B)
@@ -314,14 +314,13 @@ struct ExpandedAirPlayView: View {
                             .foregroundStyle(.white)
                     }
                 }
-                .foregroundStyle(AirPlayLayout.buttonWords)
+                .foregroundStyle(route.canStop ? AirPlayLayout.buttonWords : NotchType.detailColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: TimerLayout.content(h))
-                .background(AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85), in: Capsule())
+                .background(route.canStop ? AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85) : Color.white.opacity(0.06), in: Capsule())
                 .contentShape(Capsule())
             }
             .disabled(!route.canStop)
-            .opacity(route.canStop ? 1 : 0.45)
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
             .onHover { hovering = $0 && route.canStop }
             .notchControl()
