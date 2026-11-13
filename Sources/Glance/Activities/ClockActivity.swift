@@ -405,6 +405,8 @@ final class ClockActivity: ObservableObject {
     private func control(_ control: Control) {
         guard ActivityBench.scene == nil else { return }
         let id = shownID
+        let timerExpectation = expectedTimer?.until
+        let stopwatchExpectation = expectedStopwatch?.until
         quitClock?.cancel()
         Task { @MainActor in
             if NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).isEmpty {
@@ -415,14 +417,23 @@ final class ClockActivity: ObservableObject {
                 _ = try? await NSWorkspace.shared.openApplication(at: Self.clock, configuration: config)
                 openedClock = true
             }
+            var pressed = false
             if let clock = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).first {
-                let pressed = await Self.press(control, timer: id, in: clock)
+                pressed = await Self.press(control, timer: id, in: clock)
                 // Set to another length, Clock is brought forward on its timers, to start it there.
                 if !pressed, case .repeatTimer = control {
-                    expectedTimer = nil
                     openedClock = false
                     clock.unhide()
                     clock.activate()
+                }
+            }
+            if !pressed {
+                // A failed older request must not discard a newer button press's prediction.
+                switch control {
+                case .toggleTimer, .cancelTimer, .repeatTimer:
+                    if expectedTimer?.until == timerExpectation { expectedTimer = nil }
+                case .stopwatch:
+                    if expectedStopwatch?.until == stopwatchExpectation { expectedStopwatch = nil }
                 }
             }
             read()
@@ -439,7 +450,7 @@ final class ClockActivity: ObservableObject {
         }
     }
 
-    /// Presses the button in Clock, with Clock shown for the moment it takes. Whether it found it.
+    /// Presses the button in Clock, with Clock shown for the moment it takes. Whether it succeeded.
     private static func press(_ control: Control, timer id: String?, in clock: NSRunningApplication) async -> Bool {
         let app = AXUIElementCreateApplication(clock.processIdentifier)
         AXUIElementSetMessagingTimeout(app, 0.5)
@@ -462,6 +473,17 @@ final class ClockActivity: ObservableObject {
         return pressed
     }
 
+    /// A restart depends on every earlier command succeeding: if Stop fails, LapReset would
+    /// record a lap instead of resetting. The action is injected so this sequence can be checked
+    /// against a fake clock without launching or controlling the real app.
+    static func performStopwatchCommands(_ identifiers: [String], action: (String, Int) async -> AXError) async -> Bool {
+        guard !identifiers.isEmpty else { return false }
+        for (index, identifier) in identifiers.enumerated() {
+            guard await action(identifier, index) == .success else { return false }
+        }
+        return true
+    }
+
     private static func press(_ control: Control, timer id: String?, in window: AXUIElement) async -> Bool {
         func identified(_ identifier: String) -> (AXUIElement) -> Bool {
             { value($0, kAXIdentifierAttribute) as? String == identifier && value($0, kAXRoleAttribute) as? String != kAXGroupRole }
@@ -478,13 +500,13 @@ final class ClockActivity: ObservableObject {
                     value($0, kAXRoleAttribute) as? String == kAXButtonRole
                 }
                 guard let button else { return false }
-                AXUIElementPerformAction(button, kAXPressAction as CFString)
+                return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
             } else {
                 // Its row's own action, which takes the timer away.
                 var actions: CFArray?
                 AXUIElementCopyActionNames(row, &actions)
                 guard let remove = (actions as? [String])?.first(where: { $0.hasPrefix("Name:") }) else { return false }
-                AXUIElementPerformAction(row, remove as CFString)
+                return AXUIElementPerformAction(row, remove as CFString) == .success
             }
         case .repeatTimer(let length, let title):
             // Clock keeps the length last started; its Start beside it starts it again.
@@ -495,18 +517,17 @@ final class ClockActivity: ObservableObject {
             let group = parent as! AXUIElement
             guard let start = find(in: group, where: identified("PauseResumeButton")) else { return false }
             if let label = find(in: group, where: { value($0, kAXRoleAttribute) as? String == kAXTextFieldRole }) {
-                AXUIElementSetAttributeValue(label, kAXValueAttribute as CFString, (title ?? "") as CFString)
+                guard AXUIElementSetAttributeValue(label, kAXValueAttribute as CFString, (title ?? "") as CFString) == .success else { return false }
             }
-            AXUIElementPerformAction(start, kAXPressAction as CFString)
+            return AXUIElementPerformAction(start, kAXPressAction as CFString) == .success
         case .stopwatch(let identifiers):
-            for (index, identifier) in identifiers.enumerated() {
+            return await performStopwatchCommands(identifiers) { identifier, index in
                 // Each found again once Clock has answered the last: it makes its buttons anew.
                 if index > 0 { try? await Task.sleep(for: .milliseconds(150)) }
-                guard let button = await onAnyPage(in: window, find: identified(identifier)) else { return false }
-                AXUIElementPerformAction(button, kAXPressAction as CFString)
+                guard let button = await onAnyPage(in: window, find: identified(identifier)) else { return .noValue }
+                return AXUIElementPerformAction(button, kAXPressAction as CFString)
             }
         }
-        return true
     }
 
     /// "00:05:00", as Clock's picker reads, in seconds.
@@ -522,7 +543,7 @@ final class ClockActivity: ObservableObject {
         // Its pages are the toolbar's choices.
         let pages = findAll(in: window) { value($0, kAXRoleAttribute) as? String == kAXRadioButtonRole }
         for page in pages {
-            AXUIElementPerformAction(page, kAXPressAction as CFString)
+            guard AXUIElementPerformAction(page, kAXPressAction as CFString) == .success else { continue }
             try? await Task.sleep(for: .milliseconds(200))
             if let found = find(in: window, where: match) { return found }
         }

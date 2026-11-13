@@ -556,6 +556,8 @@ the right-hand bubble. AirDrop's ring stays on the right and moves between its
 positions. Other details fade in after opening and fade away before closing.
 The stopped stopwatch shows a pause mark inside its dimmed ring, so its state
 stays clear even when there is only room for the symbol.
+If Clock cannot perform a command, Glance refreshes its state and stops the
+sequence. A failed Stop does not continue into Reset or Restart.
 
 With Reduce Motion on, Clock digits change without rolling and timer rings
 update without sweeping. The stopwatch's hand stays still while its time
