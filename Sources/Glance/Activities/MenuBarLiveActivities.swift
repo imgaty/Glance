@@ -15,8 +15,9 @@ import ApplicationServices
 /// macOS's Live Activities is on, Glance turns those switches off as soon as a pill shows, pressing
 /// them through Accessibility in a System Settings of its own, opened in the background beside any
 /// the user has open and quit after. Turned back off, it turns on again the ones it turned off.
-/// Turned on, it turns every switch off at once, but Screenshot's waits for a recording to end, as
-/// one turned off mid-recording loses the recording's only stop button until it ends.
+/// Screenshot is always left alone: its authorization also supplies the recording indicator
+/// Glance follows, and macOS doesn't reliably replace a denied Live Activity with a legacy stop
+/// item. If an older Glance version turned Screenshot off, only that owned change is restored.
 /// Behind a full-screen app, that System Settings' window opens on another Space, where
 /// Accessibility can take many seconds to see it; if it never does, Glance waits for the Space to
 /// change, or a minute, before trying again, rather than opening System Settings over and over.
@@ -41,27 +42,11 @@ final class MenuBarLiveActivities {
     private nonisolated static let patience: Duration = .seconds(20)
     private static let retryDelay: TimeInterval = 60
     private var wasOn = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
-    /// Every switch is to be turned off, not only those whose pill shows: just turned on, or with
-    /// Screenshot's left on during a recording.
+    /// Every eligible switch is to be turned off, not only those whose pill shows.
     private var allPending = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
-    private var capturePending = false
 
     /// Screenshot's pill's app.
     nonisolated static let capture = "com.apple.screencaptureui"
-    /// While the screen is being recorded, Screenshot's switch and pill are left as they are: turned
-    /// off mid-recording, its pill goes and nothing takes its place, and the recording can't be
-    /// followed or stopped until it ends. Once it's off, a recording shows Screenshot's own stop
-    /// button instead. With the notch's screen recording turned off, the notch doesn't show one at
-    /// all, so Screenshot's is always left.
-    static var capturing: Bool {
-        guard UserDefaults.standard.bool(forKey: Preferences.activityScreenRecording) else { return true }
-        // Protect its stop control before the next recording-indicator check has completed.
-        if !NSRunningApplication.runningApplications(withBundleIdentifier: capture).isEmpty { return true }
-        switch ScreenRecordingWatch.shared.recording {
-        case .countdown?, .recording?: return true
-        default: return false
-        }
-    }
     /// Screenshot's name, as System Settings lists it.
     nonisolated static var screenshotName: String {
         FileManager.default.displayName(atPath: "/System/Applications/Utilities/Screenshot.app").replacingOccurrences(of: ".app", with: "")
@@ -81,9 +66,8 @@ final class MenuBarLiveActivities {
                 let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
                 guard on != MenuBarLiveActivities.shared.wasOn else { return }
                 MenuBarLiveActivities.shared.wasOn = on
-                // Turned on, every switch goes off at once, so nothing starts with its pill.
+                // Turned on, every eligible switch goes off at once.
                 MenuBarLiveActivities.shared.allPending = on
-                MenuBarLiveActivities.shared.capturePending = false
                 MenuBarLiveActivities.shared.retryAfter = .distantPast
                 MenuBarLiveActivities.shared.check()
             }
@@ -105,7 +89,6 @@ final class MenuBarLiveActivities {
         let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
         guard on || !hidden.isEmpty else { return }
-        let capturing = Self.capturing
         working = true
         Task {
             defer {
@@ -114,22 +97,17 @@ final class MenuBarLiveActivities {
                 if UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities) != on {
                     retryAfter = .distantPast
                     allPending = !on
-                    capturePending = false
                     check()
                 }
             }
-            let (showing, screenshot) = await Task.detached { (Self.pillShowing(ignoring: [Self.capture]), Self.pillShowing(only: Self.capture)) }.value
+            let showing = await Task.detached { Self.pillShowing(ignoring: [Self.capture]) }.value
             guard UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities) == on else { return }
-            let recording = capturing || screenshot
-            if on, capturePending, !recording { allPending = true }
-            if on, screenshot, !capturePending { allPending = true }
             var reached = true
-            if on, showing || allPending {
-                reached = await switchApps(off: true, sparing: recording ? [Self.screenshotName] : [])
-                if reached {
-                    allPending = false
-                    capturePending = recording
-                }
+            // Also migrate an owned Screenshot change when no pill can appear because its
+            // authorization was disabled. A user-disabled, unowned switch is never enabled.
+            if on, showing || allPending || hidden.contains(Self.screenshotName) {
+                reached = await switchApps(off: true)
+                if reached { allPending = false }
             } else if !on {
                 reached = await switchApps(off: false)
             }
@@ -137,11 +115,7 @@ final class MenuBarLiveActivities {
         }
     }
 
-    /// One app's pill, or any pill except those being ignored, in either native menu bar tree.
-    nonisolated static func pillShowing(only app: String) -> Bool {
-        pills().contains(app)
-    }
-
+    /// Any pill except those being ignored, in either native menu bar tree.
     nonisolated static func pillShowing(ignoring: [String] = []) -> Bool {
         pills().contains { !ignoring.contains($0) }
     }
@@ -173,10 +147,9 @@ final class MenuBarLiveActivities {
         return bundle?.localizedString(forKey: "Live Activities", value: "Live Activities", table: "Localizable") ?? "Live Activities"
     }
 
-    /// Opens Menu Bar settings in a System Settings of Glance's own, in the background, turns each app's
-    /// switch off, or back on those Glance turned off, and quits it. False if its switches were never
-    /// seen.
-    private func switchApps(off: Bool, sparing: [String] = []) async -> Bool {
+    /// Reconciles eligible switches in a background System Settings of Glance's own. Screenshot is
+    /// only restored if Glance disabled it; other apps follow the hide preference and owned list.
+    private func switchApps(off: Bool) async -> Bool {
         guard let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.settingsApp) else { return false }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
@@ -199,11 +172,11 @@ final class MenuBarLiveActivities {
         }.value
         guard !rows.isEmpty else { return false }
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
+        let policy = SwitchPolicy(hiding: off, hidden: hidden, screenshot: Self.screenshotName)
         let result = await Task.detached { () -> SwitchResult in
             var result = SwitchResult(hidden: hidden)
             for row in rows {
-                guard off ? !sparing.contains(row.name) : hidden.contains(row.name) else { continue }
-                let target = !off
+                guard let target = policy.target(for: row.name) else { continue }
                 var state = SystemNotices.value(row.box, kAXValueAttribute) as? Int
                 let changed = state == (target ? 0 : 1)
                 if changed {
@@ -217,15 +190,33 @@ final class MenuBarLiveActivities {
                         if state == (target ? 1 : 0) { break }
                     }
                 }
-                result.record(name: row.name, off: off, changed: changed, confirmed: state == (target ? 1 : 0))
+                result.record(name: row.name, off: !target, changed: changed, confirmed: state == (target ? 1 : 0))
             }
             return result
         }.value
         UserDefaults.standard.set(result.hidden, forKey: Self.turnedOffKey)
         // Keep missing and failed restores for another attempt, including after a restart.
-        let reached = !result.failed && (off || result.hidden.isEmpty)
+        let reached = policy.isComplete(result)
         try? await Task.sleep(for: .milliseconds(300))
         return reached
+    }
+
+    /// Pure policy shared by migration and ordinary reconciliation, without changing settings.
+    struct SwitchPolicy {
+        let hiding: Bool
+        let hidden: [String]
+        let screenshot: String
+
+        /// Nil leaves the user's current setting untouched, including a disabled Screenshot.
+        func target(for name: String) -> Bool? {
+            if name == screenshot { return hidden.contains(name) ? true : nil }
+            if hiding { return false }
+            return hidden.contains(name) ? true : nil
+        }
+
+        func isComplete(_ result: SwitchResult) -> Bool {
+            !result.failed && (hiding ? !result.hidden.contains(screenshot) : result.hidden.isEmpty)
+        }
     }
 
     struct SwitchResult {

@@ -300,7 +300,8 @@ final class VoiceMemoWatch: ObservableObject {
 /// red dot while it records, a spinner while it's saved, then where it went. macOS's Screenshot
 /// records it, from its toolbar, Control Center or QuickTime Player, and tells other apps nothing,
 /// so it's known by its stop button in the menu bar, which shows for as long as it records; and
-/// once it's stopped, by its file, as Spotlight finds it.
+/// once it's stopped, by its file, as Spotlight finds it. Screenshot's Live Activity authorization
+/// must be preserved: denying it can remove the observable recording control without a fallback.
 @MainActor
 final class ScreenRecordingWatch: ObservableObject {
     static let shared = ScreenRecordingWatch()

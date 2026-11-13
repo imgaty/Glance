@@ -62,7 +62,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $hidesSystemActivities) {
                     Text("Hide native Live Activities")
-                    Text("Turns them off in Menu Bar settings as they show, so they show only in the notch.")
+                    Text("Hides activities from the menu bar, except screen recording so its indicator and Stop button stay available.")
                 }
                 // Said only when it's in the way.
                 if hidesSystemActivities, !accessibilityAllowed {
