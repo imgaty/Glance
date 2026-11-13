@@ -15,6 +15,7 @@ struct RecordingSavedFileTests {
         var disappearsDuringOpen = false
         var opened: [URL] = []
         var permissionRequests = 0
+        var availabilityChecks = 0
 
         func watch() -> ScreenRecordingWatch {
             ScreenRecordingWatch(
@@ -26,7 +27,10 @@ struct RecordingSavedFileTests {
                         return false
                     }),
                 stopRecording: {}, findSavedFile: {},
-                fileIsAvailable: { _ in self.available },
+                fileIsAvailable: { _ in
+                    self.availabilityChecks += 1
+                    return self.available
+                },
                 openFile: {
                     self.opened.append($0)
                     if self.disappearsDuringOpen { self.available = false }
@@ -112,5 +116,25 @@ struct RecordingSavedFileTests {
         watch.presentSaved(file: next, length: 12, folder: "Movies", preview: nil)
         #expect(watch.savedFileState == .available && watch.saved == next)
         #expect(watch.recording == .saved(length: 12, folder: "Movies", preview: nil))
+    }
+
+    @Test("A saved bench preview opens safely without reusing the last real URL")
+    func benchIsIsolated() {
+        let files = Files()
+        let watch = files.watch()
+        watch.presentSaved(file: Self.file, length: 75, folder: "Desktop", preview: nil)
+        files.availabilityChecks = 0
+        watch.bench(.saved(length: 11, folder: "Movies", preview: nil))
+        #expect(watch.saved == nil && watch.canOpenSaved)
+        #expect(watch.savedFileState == .available)
+        watch.refreshSavedAvailability()
+        #expect(watch.openSaved())
+        #expect(files.availabilityChecks == 0 && files.opened.isEmpty)
+        #expect(files.permissionRequests == 0)
+        watch.bench(.saving(length: 11))
+        #expect(!watch.canOpenSaved && !watch.openSaved())
+        watch.bench(nil)
+        #expect(!watch.openSaved())
+        #expect(files.availabilityChecks == 0 && files.opened.isEmpty)
     }
 }

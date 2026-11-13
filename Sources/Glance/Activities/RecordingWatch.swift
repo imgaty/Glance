@@ -576,6 +576,7 @@ final class ScreenRecordingWatch: ObservableObject {
     }
 
     func refreshSavedAvailability() {
+        guard !benching else { return }
         guard let saved, fileIsAvailable(saved) else {
             showSavedError(.unavailable)
             return
@@ -670,6 +671,8 @@ final class ScreenRecordingWatch: ObservableObject {
     /// Opens the one just saved, in the app that opens it.
     @discardableResult
     func openSaved() -> Bool {
+        // The bench is a visual simulation, with no file to validate or open.
+        if benching { return recording?.isSaved == true && canOpenSaved }
         refreshSavedAvailability()
         guard canOpenSaved, let saved else { return false }
         if openFile(saved) {
@@ -683,6 +686,10 @@ final class ScreenRecordingWatch: ObservableObject {
     /// A made-up one, at the bench, or none.
     func bench(_ recording: ScreenRecording?) {
         benching = true
+        savedDismissal?.cancel()
+        savedDismissal = nil
+        saved = nil
+        savedFileState = recording?.isSaved == true ? .available : .unavailable
         self.recording = recording
     }
 

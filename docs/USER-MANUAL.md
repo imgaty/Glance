@@ -702,6 +702,7 @@ If its file is missing or unreadable, the preview says `Recording Unavailable`
 and cannot be opened. If opening fails while the file is still available, the
 preview says `Couldn’t Open Recording`; press it again to retry.
 A newly shown error restarts the preview's four-second display interval.
+When a thumbnail is unavailable, a video symbol identifies the saved file.
 
 ### Voice Memos
 

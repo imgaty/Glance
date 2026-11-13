@@ -964,10 +964,15 @@ struct ScreenRecordingButton: View {
                 SavingSpinner(diameter: side, line: line)
                     .opacity(screen.isSaving ? 1 : 0)
                 RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(RecordingLook.screenRed)
+                    .fill(saved && preview == nil ? Color.white.opacity(0.12) : RecordingLook.screenRed)
                     .overlay {
                         if let preview {
                             Image(nsImage: preview).resizable().aspectRatio(contentMode: .fill)
+                        } else if saved {
+                            Image(systemName: "play.rectangle")
+                                .font(.system(size: side * 0.55, weight: .medium))
+                                .foregroundStyle(.white)
+                                .accessibilityHidden(true)
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))

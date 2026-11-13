@@ -49,6 +49,7 @@
   the file is still available.
   A new error gets time to be read, and an older preview cannot dismiss a
   more recent saved recording.
+  A saved recording without a thumbnail shows a video symbol.
 - Added charging and low-battery announcements on MacBooks. The low-battery
   alert includes a Low Power Mode button, using power control approved once
   in **Settings > General > Permissions**.
