@@ -867,13 +867,16 @@ struct ScreenTime: View {
     }
 }
 
-/// The button that stops a recording, as the iPhone's: a white ring around a red square with round
-/// corners. No light under the pointer, as the iPhone has none.
+/// The button that stops a recording: a white ring around a red square with round corners.
+/// Voice Memos uses the pressed-state proportions of its installed macOS platter asset.
 struct StopRecordingButton: View {
     /// Voice Memos', whose square is a little larger and ring heavier than the screen recording's.
     let memo: Bool
     let h: CGFloat
     var canControl = true
+    /// Isolated fixtures can show feedback without pointer events or invoking the action.
+    var pressStateOverride: Bool? = nil
+    var reduceMotionOverride: Bool? = nil
     let action: () -> Void
 
     var body: some View {
@@ -881,22 +884,83 @@ struct StopRecordingButton: View {
         let square = side * (memo ? RecordingLook.memoSquare : RecordingLook.screenSquare)
         let ring = side * (memo ? RecordingLook.memoRing : RecordingLook.screenRing)
         Button(action: action) {
-            ZStack {
-                Circle().strokeBorder(.white, lineWidth: ring)
-                RoundedRectangle(cornerRadius: square * RecordingLook.squareCorner, style: .continuous)
-                    .fill(RecordingLook.red(memo: memo))
-                    .frame(width: square, height: square)
+            Group {
+                if memo {
+                    MemoStopGlyph(side: side, pressedOverride: pressStateOverride, reduceMotionOverride: reduceMotionOverride)
+                } else {
+                    ZStack {
+                        Circle().strokeBorder(.white, lineWidth: ring)
+                        RoundedRectangle(cornerRadius: square * RecordingLook.squareCorner, style: .continuous)
+                            .fill(RecordingLook.red(memo: false))
+                            .frame(width: square, height: square)
+                    }
+                }
             }
             .frame(width: side, height: side)
             .contentShape(Circle())
         }
-        .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+        .buttonStyle(RecordingStopPress(memo: memo))
         .opacity(canControl ? 1 : 0.45)
         .notchControl()
         .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop Recording"), action: action)
         .accessibilityLabel(String(localized: "Stop Recording"))
         .accessibilityHint(canControl ? "" : String(localized: "Needs Accessibility"))
         .help(canControl ? String(localized: "Stop Recording") : String(localized: "Needs Accessibility"))
+    }
+}
+
+private struct MemoStopPressedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+private extension EnvironmentValues {
+    var memoStopPressed: Bool {
+        get { self[MemoStopPressedKey.self] }
+        set { self[MemoStopPressedKey.self] = newValue }
+    }
+}
+
+private struct RecordingStopPress: ButtonStyle {
+    let memo: Bool
+
+    @ViewBuilder
+    func makeBody(configuration: Configuration) -> some View {
+        if memo {
+            configuration.label.environment(\.memoStopPressed, configuration.isPressed)
+        } else {
+            IslandPress(highlight: false, contactSize: nil).makeBody(configuration: configuration)
+        }
+    }
+}
+
+/// Measured zoom/zoom-press model states in VoiceMemos.app/PlatterStopButton.ca. Preserve the
+/// existing resting glyph and hit target; adapt only the native press endpoints and response.
+private struct MemoStopGlyph: View {
+    let side: CGFloat
+    var pressedOverride: Bool? = nil
+    var reduceMotionOverride: Bool? = nil
+    @Environment(\.memoStopPressed) private var pressed
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let down = enabled && (pressedOverride ?? pressed)
+        let reduced = reduceMotionOverride ?? reduceMotion
+        let square = side * RecordingLook.memoSquare
+        ZStack {
+            Circle().strokeBorder(.white, lineWidth: side * RecordingLook.memoRing)
+                .scaleEffect(down && !reduced ? 0.226 / 0.246 : 1)
+            RoundedRectangle(cornerRadius: square * RecordingLook.squareCorner, style: .continuous)
+                .fill(RecordingLook.memoRed)
+                .frame(width: square, height: square)
+                .scaleEffect(down && !reduced ? 1.095 / 1.149 : 1)
+        }
+        .frame(width: side, height: side)
+        .opacity(down ? 0.2 : 1)
+        .animation(
+            reduced ? nil : .interpolatingSpring(mass: 2, stiffness: down ? 800 : 300, damping: down ? 100 : 50),
+            value: down
+        )
     }
 }
 

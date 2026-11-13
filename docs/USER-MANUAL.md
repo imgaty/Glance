@@ -714,7 +714,9 @@ from the Mac's microphone, once you allow it; nothing is recorded or kept.
 
 Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the waveform, the time, and a button: click it to stop the
-recording and keep it, as Voice Memos' **Done** does. After the bars recorded
+recording and keep it, as Voice Memos' **Done** does. The Stop button dims and
+contracts while pressed without changing its hit area. With Reduce Motion,
+it dims without contracting. After the bars recorded
 so far, gray dots stand for what's still to come: they move along with the
 waveform, and each turns red and rises to the sound as it reaches the recorded
 bars. Closing, the gray future dots blur and fade away; only the recorded bars
