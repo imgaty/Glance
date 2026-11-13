@@ -1313,7 +1313,6 @@ final class NotchController {
             // Keep the resting footprint until the shared collapse begins.
             model.bubbleReach = 0
             model.bubbleHovered = false
-            model.bubblePressed = false
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil
             model.page = page
             model.pageStretch = 0

@@ -379,8 +379,6 @@ final class SettingsPreview: ObservableObject {
             model.openedFromBubble = bubble && model.detached != nil
             model.bubbleReach = 0
             model.bubbleHovered = false
-            model.bubblePressed = false
-            model.pressed = false
         }
         model.open { [weak self] in
             guard let self, self.feelsOpening, self.opening().haptics else { return }
