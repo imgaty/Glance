@@ -50,6 +50,8 @@
   A new error gets time to be read, and an older preview cannot dismiss a
   more recent saved recording.
   A saved recording without a thumbnail shows a video symbol.
+  With Reduce Motion, the saved preview appears at its final size while the
+  saving indicator fades away.
   The Voice Memos Stop button dims and contracts while pressed, keeping its
   hit area fixed. Reduce Motion keeps the dimming without contraction.
 - Added charging and low-battery announcements on MacBooks. The low-battery

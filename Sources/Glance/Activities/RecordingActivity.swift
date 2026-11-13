@@ -1003,14 +1003,17 @@ struct ScreenRecordingButton: View {
     let revealed: Bool
     var canControl = true
     var savedFileState = ScreenRecordingWatch.SavedFileState.available
+    var reduceMotionOverride: Bool? = nil
     var stopAction: () -> Void = { ScreenRecordingWatch.shared.stop() }
     var openAction: () -> Void = { ScreenRecordingWatch.shared.openSaved() }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let side = TimerLayout.content(h)
         let square = side * RecordingLook.screenSquare
         let line = side * RecordingLook.screenRing
         let saved = screen.isSaved
+        let reduced = reduceMotionOverride ?? reduceMotion
         let picture = saved ? side : square
         let corner = saved ? side * PlayerLayout.thumbnailCorner : square * RecordingLook.squareCorner
         let preview: NSImage? = { if case .saved(_, _, let preview) = screen { preview } else { nil } }()
@@ -1025,8 +1028,10 @@ struct ScreenRecordingButton: View {
             ZStack {
                 Circle().strokeBorder(.white, lineWidth: line)
                     .opacity(screen.isSaving || saved ? 0 : 1)
+                    .animation(.easeOut(duration: 0.3), value: screen.isSaving || saved)
                 SavingSpinner(diameter: side, line: line)
                     .opacity(screen.isSaving ? 1 : 0)
+                    .animation(.easeOut(duration: 0.3), value: screen.isSaving)
                 RoundedRectangle(cornerRadius: corner, style: .continuous)
                     .fill(saved && preview == nil ? Color.white.opacity(0.12) : RecordingLook.screenRed)
                     .overlay {
@@ -1042,11 +1047,10 @@ struct ScreenRecordingButton: View {
                     .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
                     .frame(width: picture, height: picture)
                     .islandFade(revealed)
+                    .animation(reduced ? nil : NotchMotion.expand, value: saved)
             }
             .frame(width: side, height: side)
             .contentShape(Circle())
-            .animation(NotchMotion.expand, value: saved)
-            .animation(.easeOut(duration: 0.3), value: screen.isSaving)
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
         .opacity(!unavailable && (canControl || saved || screen.isSaving) ? 1 : 0.45)

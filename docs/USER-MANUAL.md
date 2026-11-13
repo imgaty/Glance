@@ -532,8 +532,8 @@ Right-click the notch and choose **Live Activities** to open an ongoing
 activity, including one waiting behind the first two. An announcement waiting
 behind an already-open page does not block the menu or keyboard navigation.
 The selected activity keeps its place in arrival order. Screen-recording
-countdowns have no expanded view and
-are skipped; completed or hidden activities leave the menu.
+countdowns have no expanded view and are skipped; completed or hidden
+activities leave the menu.
 
 ### Timer and stopwatch
 
@@ -703,6 +703,8 @@ and cannot be opened. If opening fails while the file is still available, the
 preview says `Couldn’t Open Recording`; press it again to retry.
 A newly shown error restarts the preview's four-second display interval.
 When a thumbnail is unavailable, a video symbol identifies the saved file.
+With Reduce Motion, the preview appears at its final size while the saving
+indicator fades away.
 
 ### Voice Memos
 
@@ -716,8 +718,8 @@ Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the waveform, the time, and a button: click it to stop the
 recording and keep it, as Voice Memos' **Done** does. The Stop button dims and
 contracts while pressed without changing its hit area. With Reduce Motion,
-it dims without contracting. After the bars recorded
-so far, gray dots stand for what's still to come: they move along with the
+it dims without contracting. After the bars recorded so far, gray dots stand
+for what's still to come: they move along with the
 waveform, and each turns red and rises to the sound as it reaches the recorded
 bars. Closing, the gray future dots blur and fade away; only the recorded bars
 move back beside the camera. It opens wide enough for the recorded bars to end beside the camera, as
