@@ -774,7 +774,7 @@ final class NotchController {
             withTransaction(still) {
                 model.switching = false
                 model.openedFromBubble = model.detached == activity
-                model.bubbleReach = model.openedFromBubble ? model.bubbleSpan : 0
+                model.bubbleReach = 0
                 model.bubbleHovered = false
                 model.expanded = activity == .music ? nil : activity
                 model.page = .player
@@ -1310,8 +1310,8 @@ final class NotchController {
             }
             model.alertExtended = false
             model.openedFromBubble = model.bubbleHovered && model.detached != nil
-            // It opens out of the bubble: the notch reaches over it at once, and grows from there.
-            model.bubbleReach = model.openedFromBubble ? model.bubbleSpan : 0
+            // Keep the resting footprint until the shared collapse begins.
+            model.bubbleReach = 0
             model.bubbleHovered = false
             model.bubblePressed = false
             model.expanded = page == .player && !forDrop && !holds.contains(.keyboard) ? expansion : nil

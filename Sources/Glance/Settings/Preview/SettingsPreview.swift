@@ -377,7 +377,7 @@ final class SettingsPreview: ObservableObject {
         withTransaction(still) {
             model.expanded = expansion
             model.openedFromBubble = bubble && model.detached != nil
-            model.bubbleReach = model.openedFromBubble ? model.bubbleSpan : 0
+            model.bubbleReach = 0
             model.bubbleHovered = false
             model.bubblePressed = false
             model.pressed = false
