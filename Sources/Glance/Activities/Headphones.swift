@@ -8,6 +8,7 @@
 import AVFoundation
 import AppKit
 import CoreImage
+import os
 
 /// AirPods and Beats that Glance shows turning as they connect, as the Dynamic Island shows AirPods:
 /// each from its maker's own 3D model, drawn once into a clip among Glance's resources (see
@@ -91,6 +92,12 @@ struct DeviceTurn {
     }
 
     @MainActor private static var turns: [Headphones: DeviceTurn] = [:]
+    private static let prepared = OSAllocatedUnfairLock(initialState: Set<Headphones>())
+
+    /// Banner observation runs off the main actor. Only a fully decoded clip is safe to promise.
+    static func isPrepared(_ headphones: Headphones) -> Bool {
+        prepared.withLock { $0.contains(headphones) }
+    }
 
     @MainActor static func cached(_ headphones: Headphones) -> DeviceTurn? { turns[headphones] }
 
@@ -101,6 +108,7 @@ struct DeviceTurn {
         guard let url = clip ?? headphones.url else { return nil }
         let turn = await Task.detached(priority: .userInitiated) { await load(url) }.value
         turns[headphones] = turn
+        if turn != nil { _ = prepared.withLock { $0.insert(headphones) } }
         return turn
     }
 

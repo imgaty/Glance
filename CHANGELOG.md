@@ -57,6 +57,7 @@
   cases have their own low-battery alert.
   Native device banners stay visible when the connected-device report is
   empty or does not match the device named by the banner.
+  They also stay until the matching model and battery level are ready to show.
 - Added two activities at once: the first stays beside the camera and the
   second appears in a bubble. Opening either shows its own controls, and
   another activity waits its turn.

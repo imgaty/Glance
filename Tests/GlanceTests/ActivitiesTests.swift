@@ -1628,7 +1628,7 @@ struct SystemBannersTests {
         #expect(Headphones(product: 0x200A) == .airpodsMax)
         #expect(Headphones(product: 0x201F) == .airpodsMax)
         #expect(Headphones(product: 0x202D) == .airpodsMax)
-        let withModel = DeviceWatch.BluetoothInfo(product: 0x2024, vendor: 0x4C)
+        let withModel = DeviceWatch.BluetoothInfo(product: 0x2024, vendor: 0x4C, levels: .init(main: 88))
         let withoutModel = DeviceWatch.BluetoothInfo(product: 0x200F, vendor: 0x4C)
         let otherMaker = DeviceWatch.BluetoothInfo(product: 0x2024, vendor: 0x1234, kind: "Headphones")
         #expect(withModel.model == .airpodsPro2)
@@ -1638,7 +1638,7 @@ struct SystemBannersTests {
         #expect(DeviceWatch.Battery(withoutModel) == nil)
         // Only a positively named supported device can replace the native banner.
         let connected = ["sam\u{2019}s airpods pro": withModel, "airpods": withoutModel]
-        #expect(MenuBarBanners.notchShows(["AirPods Pro", "88", "Connected"], connected: connected))
+        #expect(MenuBarBanners.notchShows(["AirPods Pro", "88", "Connected"], connected: connected, canRender: { _ in true }))
         #expect(!MenuBarBanners.notchShows(["AirPods", "88", "Connected"], connected: connected))
         #expect(!MenuBarBanners.notchShows(["Other Name", "88"], connected: connected))
         #expect(!MenuBarBanners.notchShows(["Other Name", "88"], connected: ["airpods pro": withModel]))

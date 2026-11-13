@@ -171,10 +171,24 @@ final class MenuBarBanners: @unchecked Sendable {
 
     /// A banner is replaced only for devices it positively names, with or without their owner's
     /// name. An unavailable or unrelated report cannot establish a replacement.
-    static func notchShows(_ words: [String], connected: [String: DeviceWatch.BluetoothInfo]) -> Bool {
+    static func notchShows(
+        _ words: [String], connected: [String: DeviceWatch.BluetoothInfo],
+        canRender: (Headphones) -> Bool = DeviceTurn.isPrepared
+    ) -> Bool {
         let said = Set(words.map { DeviceWatch.shortName($0).lowercased() })
         let named = connected.filter { said.contains(DeviceWatch.shortName($0.key).lowercased()) }.values
-        return !named.isEmpty && named.allSatisfy { $0.model != nil }
+        return !named.isEmpty
+            && named.allSatisfy { info in
+                guard let model = info.model else { return false }
+                // Match DeviceWatch.connection: a case at or below20% replaces the connection event.
+                if let percent = info.levels.chargingCase, percent <= 20, let chargingCase = model.chargingCase {
+                    return (0...100).contains(percent) && canRender(chargingCase)
+                }
+                guard let percent = [info.levels.left, info.levels.right].compactMap({ $0 }).min() ?? info.levels.main,
+                    (0...100).contains(percent)
+                else { return false }
+                return canRender(model)
+            }
     }
 
     /// AirPods connecting or running low show their level, which is what the notch says; offering
