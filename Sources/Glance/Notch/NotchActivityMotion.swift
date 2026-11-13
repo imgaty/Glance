@@ -49,42 +49,39 @@ extension NotchModel {
         let atHousing = before == .hardware && metrics.bodyWidth == closedSize.width && metrics.height == closedSize.height && bubbleReach == 0
         let hadActivity = !activities.isEmpty || alert != nil || expanded != nil
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        // The first arrival has no later unfold to supply its expansion. Give that initial payload
-        // the same opening motion as a destination revealed after reaching the housing.
-        let updateAnimation = animation.map { atHousing ? Self.activityExpansionMotion : $0 }
-        withAnimation(reduced ? nil : updateAnimation, changes)
-        guard before != activityPresentation else { return }
-        guard hadActivity || !activities.isEmpty || alert != nil || expanded != nil else {
-            onCollapse?()
-            return
-        }
-
-        let wasFolding = activityFolded
-        activityTransitionTask?.cancel()
-        activityTransitionTask = nil
-        advanceActivityTransition()
-        let request = activityTransitionID
-
-        // Reduced motion keeps the final geometry and its controls available without an excursion.
-        guard !reduced, animation != nil, !collapsed, !entering else {
-            var still = Transaction(animation: nil)
-            still.disablesAnimations = true
-            withTransaction(still) {
-                activityFolded = false
-                activityOpening = false
-                restoreActivityDestination()
-            }
-            onCollapse?()
-            return
-        }
-
-        // An empty housing is already the midpoint. Its first activity only needs the opening leg.
-        let folds = !atHousing || wasFolding
+        let folds = !atHousing || activityFolded
         let clock = ContinuousClock()
         let pace = max(NotchMotion.pace, 0.01)
         let started = clock.now
         let foldDeadline = started + .seconds(Self.activityFoldDuration / pace)
-        withAnimation(folds ? Self.activityClosingMotion : Self.activityExpansionMotion) {
+        var request: UInt?
+        var feedbackAtCommit = false
+
+        // State and its first geometry phase must share one transaction. Publishing the open
+        // destination before its fold starts a competing expansion, even within one run-loop turn.
+        let firstMotion = folds ? Self.activityClosingMotion : Self.activityExpansionMotion
+        var transaction = Transaction(animation: reduced ? nil : animation.map { _ in firstMotion })
+        transaction.disablesAnimations = reduced || animation == nil
+        withTransaction(transaction) {
+            changes()
+            guard before != activityPresentation else { return }
+            feedbackAtCommit = true
+            guard hadActivity || !activities.isEmpty || alert != nil || expanded != nil else { return }
+
+            activityTransitionTask?.cancel()
+            activityTransitionTask = nil
+            advanceActivityTransition()
+
+            // Reduced motion keeps final geometry and controls available without an excursion.
+            guard !reduced, animation != nil, !collapsed, !entering else {
+                activityFolded = false
+                activityOpening = false
+                restoreActivityDestination()
+                return
+            }
+
+            request = activityTransitionID
+            feedbackAtCommit = !folds
             activityFolded = folds
             activityOpening = !folds
             bubbleMerged = folds || state == .open
@@ -92,7 +89,9 @@ extension NotchModel {
             hoveredButton = nil
             pressedAlertButton = nil
         }
-        if !folds { onCollapse?() }
+        // Feedback runs only after state and phase have committed, and may itself cancel the request.
+        if feedbackAtCommit { onCollapse?() }
+        guard let request, activityTransitionID == request else { return }
         activityTransitionTask = Task { @MainActor [weak self] in
             var revealStarted = started
             if folds {

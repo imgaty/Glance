@@ -16,6 +16,7 @@
   following the same motion. Hover and click feedback no longer add a rebound.
   Hover keeps the compact footprint fixed, so opening begins with the collapse.
   Releasing a held click or swipe during opening keeps the final size steady.
+  Fixed a downward bulge at the start of the collapse.
   With `Haptic feedback` on, opening gives one tap at the housing before expanding.
   Canceling before the housing prevents the tap; automatic updates stay silent.
   Removed an extra pulse and pause at the housing that made the movement stutter.
