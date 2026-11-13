@@ -47,6 +47,12 @@ struct Opening {
         guard current.haptics else { return }
         NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
     }
+
+    /// A discrete opening beat, separate from pressure-level and gesture feedback.
+    static func openingTap() {
+        guard current.haptics else { return }
+        NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+    }
 }
 
 /// One notch on one display: owns its window and decides when to peek, open and close.
@@ -747,7 +753,7 @@ final class NotchController {
     }
 
     /// The shared presentation sequence folds the attached and detached parts together.
-    private func openMerging() { model.open(onCollapse: Opening.tap) }
+    private func openMerging() { model.open(onCollapse: Opening.openingTap) }
 
     private var presentTask: Task<Void, Never>?
 
@@ -1546,9 +1552,9 @@ final class NotchController {
         guard !tucked, model.openableActivities.contains(activity) else { return }
         model.keys.clear()
         if model.state != .open {
-            present(activity, for: nil, onCollapse: Opening.tap)
+            present(activity, for: nil, onCollapse: Opening.openingTap)
         } else {
-            _ = model.selectActivity(activity, onCollapse: Opening.tap)
+            _ = model.selectActivity(activity, onCollapse: Opening.openingTap)
         }
         holds.remove(.presented)
         holds.insert(.keyboard)

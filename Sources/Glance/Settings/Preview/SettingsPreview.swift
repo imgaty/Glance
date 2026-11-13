@@ -33,7 +33,7 @@ final class SettingsPreview: ObservableObject {
         (NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main)?.notchID ?? ""
     }
 
-    init(opening: @escaping () -> Opening = { .current }, openingFeedback: @escaping () -> Void = Opening.tap) {
+    init(opening: @escaping () -> Opening = { .current }, openingFeedback: @escaping () -> Void = Opening.openingTap) {
         self.opening = opening
         self.openingFeedback = openingFeedback
         let display = Self.defaultDisplay
