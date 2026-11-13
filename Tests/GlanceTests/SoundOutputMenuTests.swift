@@ -156,22 +156,28 @@ struct SoundOutputMenuTests {
                 guard let id = $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
                 return CGDisplayIsBuiltin(id.uint32Value) != 0
             })
-        let window = NSWindow(contentRect: CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 100, width: 308, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = popover.panel
+        popover.place(
+            at: SoundMenuPlacement.position(
+                content: popover.contentSize, anchor: .zero, visible: screen.visibleFrame,
+                pointer: CGPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.maxY - 100)))
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
         window.ignoresMouseEvents = true
-        window.contentView = popover.contentView
         window.orderFrontRegardless()
         defer { window.orderOut(nil) }
         let speaker = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view)
         let holder = try #require(speaker.superview)
-        let oldHeight = popover.popover.contentSize.height
+        let oldHeight = popover.contentSize.height
+        let oldFrame = window.frame
+        #expect(popover.contentView.cornerRadius == SoundLook.highlightRadius)
+        #expect(popover.contentView.cornerRadius == 11)
         menu.refresh(devices: [speakers, headphones], current: headphones.id, batteries: [:])
         popover.reload(animated: true)
         let headphone = try #require(menu.items.first { $0.tag == Int(headphones.id) }?.view)
         let inserted = try #require(headphone.superview as? SoundRowHolder)
         #expect(speaker.superview === holder)
-        #expect(popover.popover.contentSize.height == oldHeight + headphone.frame.height)
-        #expect(!popover.popover.isShown)
+        #expect(popover.contentSize.height == oldHeight + headphone.frame.height)
+        #expect(!popover.panel.isKeyWindow)
         if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             #expect(inserted.layer?.animation(forKey: "soundReveal") != nil)
         }
@@ -181,6 +187,8 @@ struct SoundOutputMenuTests {
         #expect(headphone.superview === inserted)
         try await Task.sleep(for: .milliseconds(500))
         #expect(inserted.alphaValue == 1)
+        #expect(abs(window.frame.height - popover.contentSize.height) < 0.5)
+        #expect(abs(window.frame.maxY - oldFrame.maxY) < 0.5)
         #expect(inserted.layer?.filters?.isEmpty != false)
         menu.refresh(devices: [speakers], current: speakers.id, batteries: [:])
         popover.reload(animated: true)
@@ -188,6 +196,8 @@ struct SoundOutputMenuTests {
         try await Task.sleep(for: .milliseconds(500))
         #expect(inserted.superview == nil)
         #expect(speaker.superview === holder)
-        #expect(popover.popover.contentSize.height == oldHeight)
+        #expect(popover.contentSize.height == oldHeight)
+        #expect(abs(window.frame.height - oldHeight) < 0.5)
+        #expect(abs(window.frame.maxY - oldFrame.maxY) < 0.5)
     }
 }

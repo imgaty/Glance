@@ -250,11 +250,13 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens Sound beneath the button in the system's
-popover, with its glass, arrow, rounded corners and shadow. It opens in the
-same position with the mouse or keyboard and takes keyboard focus, keeping
-the notch open while in use. Opening, closing and resizing use the system
-animations. Escape, another press on the button, or a click outside closes it.
+The `Sound Output` button opens a dropdown with native glass, matching rounded
+corners and no pointing arrow.
+It opens at the click, or below the button when using the keyboard, and takes
+keyboard focus while keeping the notch open. It stays on the display where it
+opened. Opening and closing use system transitions; the window resizes smoothly
+as outputs change. Escape, another press on the button, or a click outside
+closes it.
 
 The system slider sets the playing app's volume. Its filled track is white in
 dark appearance and uses the accent color in light appearance, with a glass
@@ -276,8 +278,8 @@ appear only in macOS. Selecting an output closes Sound.
 
 **Sound Settings…** opens **System Settings > Sound**. Headphone listening modes
 and other headphone options are managed in macOS. Output rows and settings
-highlight under the pointer. The compact settings row has rounded lower corners
-that fit inside the popover.
+use the same rounded highlight under the pointer. The settings row stays
+compact.
 
 When the laptop speakers are selected, the button shows muted, low, medium
 or high volume as the app or speaker volume changes. The speaker stays in

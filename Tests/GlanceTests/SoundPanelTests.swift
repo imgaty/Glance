@@ -3,36 +3,59 @@ import Testing
 
 @testable import Glance
 
-@Suite("Native Sound popover anchors")
+@Suite("Sound dropdown placement")
 @MainActor
 struct SoundPanelTests {
-    @Test("Player clicks and keyboard activation use the whole button")
-    func buttonAnchor() {
-        let view = SoundMenuPresenter.Anchor(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
-        #expect(SoundMenuPlacement.anchorRect(in: view, pointer: nil) == view.bounds)
-        #expect(SoundMenuPlacement.anchorRect(in: view, pointer: CGPoint(x: -620, y: 700)) == view.bounds)
-        #expect(SoundMenuPlacement.below(view) == .minY)
+    private let visible = CGRect(x: -1512, y: -144, width: 1512, height: 950)
+    private let anchor = CGRect(x: -780, y: 650, width: 40, height: 40)
+    private let size = CGSize(width: 308, height: 200)
+
+    @Test("Clicks open at the pointer on the built-in display with a small gap")
+    func pointerPlacement() {
+        let point = CGPoint(x: -750, y: 660)
+        let place = SoundMenuPlacement.position(content: size, anchor: anchor, visible: visible, pointer: point)
+        let frame = place.frame(for: size)
+        #expect(frame.minX == point.x)
+        #expect(frame.maxY == point.y - 6)
+        #expect(visible.contains(frame))
     }
 
-    @Test("Call anchors convert screen coordinates on a display with a negative origin")
-    func screenPoint() {
-        _ = NSApplication.shared
-        let window = NSWindow(contentRect: CGRect(x: -1100, y: 300, width: 500, height: 300), styleMask: [.borderless], backing: .buffered, defer: false)
-        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
-        window.ignoresMouseEvents = true
-        let view = NSView(frame: CGRect(x: 200, y: 100, width: 40, height: 40))
-        window.contentView?.addSubview(view)
-        let clicked = CGPoint(x: 12, y: 24)
-        let screen = window.convertPoint(toScreen: view.convert(clicked, to: nil))
-        let rect = SoundMenuPlacement.anchorRect(in: view, pointer: screen)
-        #expect(rect.midX == clicked.x)
-        #expect(rect.midY == clicked.y)
-        #expect(rect.size == CGSize(width: 1, height: 1))
+    @Test("Keyboard activation centers the dropdown below the entire button")
+    func keyboardPlacement() {
+        let frame = SoundMenuPlacement.position(content: size, anchor: anchor, visible: visible, pointer: nil).frame(for: size)
+        #expect(frame.midX == anchor.midX)
+        #expect(frame.maxY == anchor.minY - 6)
     }
 
-    @Test("A flipped call view still opens downward")
-    func flipped() {
-        class Flipped: NSView { override var isFlipped: Bool { true } }
-        #expect(SoundMenuPlacement.below(Flipped()) == .maxY)
+    @Test("Device insertion keeps the opening edge fixed instead of changing sides")
+    func stableGrowth() {
+        let place = SoundMenuPlacement.position(content: size, anchor: anchor, visible: visible, pointer: nil)
+        let before = place.frame(for: size)
+        let after = place.frame(for: CGSize(width: size.width, height: size.height + 64))
+        #expect(after.minX == before.minX)
+        #expect(after.maxY == before.maxY)
+        #expect(after.height == before.height + 64)
+    }
+
+    @Test("Near the bottom edge it opens upward and keeps its bottom edge during growth")
+    func upwardGrowth() {
+        let place = SoundMenuPlacement.position(content: size, anchor: anchor, visible: visible, pointer: CGPoint(x: -400, y: -100))
+        #expect(!place.below)
+        let before = place.frame(for: size)
+        let after = place.frame(for: CGSize(width: size.width, height: 400))
+        #expect(after.minY == before.minY)
+        #expect(visible.contains(after))
+    }
+
+    @Test("Screen confinement and right-to-left alignment work with a negative display origin")
+    func displayEdges() {
+        for point in [CGPoint(x: -1510, y: 800), CGPoint(x: -2, y: 800), CGPoint(x: -2, y: -140)] {
+            let place = SoundMenuPlacement.position(content: size, anchor: anchor, visible: visible, pointer: point)
+            #expect(visible.contains(place.frame(for: size)))
+            #expect(visible.contains(place.frame(for: CGSize(width: 308, height: 2000))))
+        }
+        let point = CGPoint(x: -700, y: 660)
+        let frame = SoundMenuPlacement.position(content: size, anchor: anchor, visible: visible, pointer: point, mirrored: true).frame(for: size)
+        #expect(frame.maxX == point.x)
     }
 }

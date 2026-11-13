@@ -407,7 +407,7 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// One set of output items for the player and calls, presented in a system popover.
+/// One set of output items for the player and calls, presented in a glass dropdown.
 /// NSMenu holds the item actions and selected states; it is never opened for tracking.
 @MainActor
 final class SoundOutputMenu: NSMenu, NSMenuDelegate {
@@ -465,7 +465,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
             append("", view: SoundMenuPiece.divider(height: SoundLook.lowerDivider))
             let footer = append(
                 String(localized: "Sound Settings…"),
-                view: SoundMenuContentRow(cornerRadii: SoundLook.actionCorners) {
+                view: SoundMenuContentRow {
                     Text("Sound Settings…")
                         .font(.system(size: 13))
                         .soundInk(.primary)
@@ -583,7 +583,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
 
     func present(from anchor: NSView, pointer: CGPoint?, dismissed: @escaping () -> Void) {
         dismiss()
-        guard let screen = anchor.window?.screen else {
+        guard let screen = SoundMenuPlacement.screen(for: pointer, fallback: anchor.window?.screen) else {
             dismissed()
             return
         }
@@ -679,13 +679,10 @@ final class SoundMenuContentRow: NSView {
     weak var item: NSMenuItem?
     private var hover: NSTrackingArea?
     private let host: NSHostingView<AnyView>
-    private let cornerRadii: RectangleCornerRadii
     private var content: AnyView
     var highlighted = false { didSet { needsDisplay = true } }
 
-    init<Content: View>(cornerRadii: RectangleCornerRadii? = nil, @ViewBuilder content: () -> Content) {
-        let radius = SoundLook.highlightRadius
-        self.cornerRadii = cornerRadii ?? .init(topLeading: radius, bottomLeading: radius, bottomTrailing: radius, topTrailing: radius)
+    init<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
         host = NSHostingView(rootView: Self.root(self.content, width: SoundLook.width))
         super.init(frame: NSRect(x: 0, y: 0, width: SoundLook.width, height: ceil(host.fittingSize.height)))
@@ -729,7 +726,7 @@ final class SoundMenuContentRow: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard highlighted else { return }
-        let shape = UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: SoundLook.highlightRadius, style: .continuous)
         SoundMenu.highlightColor.setFill()
         NSBezierPath(cgPath: shape.path(in: host.frame).cgPath).fill()
     }
@@ -787,8 +784,6 @@ enum SoundLook {
     static let glyph: CGFloat = 13.5
     static let batteryLift: CGFloat = -2
     static let actionHeight: CGFloat = 22
-    // Fit the lower popover corners while keeping the settings row compact.
-    static let actionCorners = RectangleCornerRadii(topLeading: 8, bottomLeading: 14, bottomTrailing: 14, topTrailing: 8)
 }
 
 /// Measured on the built-in display, with the desktop behind the glass and in window captures.
