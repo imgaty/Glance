@@ -48,94 +48,47 @@ final class AudioOutput: NSObject, ObservableObject {
 
     /// As the Mac's Sound menu: Sound, the playing app's volume, then every output, each in a circle,
     /// the one playing in the accent color, and AirPods with each earbud's and their case's
-    /// battery, then Sound Settings. At the pointer, or from the keyboard, under the button.
+    /// battery, then Sound Settings. It opens below its button.
     /// `withVolume` false leaves the playing app's volume out, where it isn't what's heard, as on a
     /// call.
     /// `outputsOnly`, as a call's own: the outputs alone, with no words or settings around them.
+    private var callMenu: SoundOutputMenu?
+
     func showMenu(at point: CGPoint? = nil, withVolume: Bool = true, outputsOnly: Bool = false) {
-        menu(withVolume: withVolume, outputsOnly: outputsOnly).popUp(positioning: nil, at: point ?? NSEvent.mouseLocation, in: nil)
+        callMenu?.dismiss()
+        let point = point ?? NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) else { return }
+        let menu = menu(withVolume: withVolume, outputsOnly: outputsOnly)
+        callMenu = menu
+        menu.present(below: CGRect(x: point.x - 20, y: point.y - 20, width: 40, height: 40), on: screen, appearance: NSApp.effectiveAppearance) { [weak self] in
+            self?.callMenu = nil
+        }
     }
 
-    func soundMenu() -> SoundOutputMenu {
-        refreshDevices()
-        let menu = SoundOutputMenu(devices: devices, current: current, volume: AppVolume.shared, choose: chooseOutput, settings: openSoundSettings)
-        menu.follow(self)
-        return menu
-    }
+    func soundMenu() -> SoundOutputMenu { menu() }
 
     func refreshDevices() { refresh() }
 
     func chooseOutput(_ device: Device) { Self.use(device.id) }
 
-    func menu(withVolume: Bool = true, outputsOnly: Bool = false) -> NSMenu {
-        let menu = NSMenu()
-        // No check marks: the output playing is filled in.
-        menu.showsStateColumn = false
-        let volume = AppVolume.shared
-        var views: [NSView] = outputsOnly ? [] : [SoundMenuHeading(title: String(localized: "Sound"), main: true)]
-        if withVolume, volume.app != nil { views.append(VolumeMenuSlider(volume: volume)) }
-        for view in views {
-            let item = NSMenuItem()
-            item.view = view
-            menu.addItem(item)
-        }
-        if !outputsOnly {
-            views.append(Self.addDivider(to: menu, height: 7))
-            let heading = NSMenuItem.sectionHeader(title: String(localized: "Output"))
-            heading.view = SoundMenuHeading(title: String(localized: "Output"), main: false)
-            views.append(heading.view!)
-            menu.addItem(heading)
-        }
-        let current = Self.defaultOutput
-        var rows: [OutputRow] = []
-        // The Mac's own first, as the Mac's Sound menu lists them.
-        let outputs = Self.outputs()
-        let builtIn = outputs.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn }
-        for device in builtIn + outputs.filter({ $0.transport != kAudioDeviceTransportTypeBuiltIn }) {
-            let row = OutputRow(device: device, playing: device.id == current)
-            let item = NSMenuItem(title: device.name, action: outputsOnly ? #selector(chooseForCall(_:)) : #selector(choose(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = Int(device.id)
-            item.state = device.id == current ? .on : .off
-            item.view = row
-            menu.addItem(item)
-            rows.append(row)
-        }
-        if !outputsOnly {
-            views.append(Self.addDivider(to: menu, height: 11))
-            let settings = NSMenuItem(title: String(localized: "Sound Settings…"), action: #selector(openSoundSettings), keyEquivalent: "")
-            settings.target = self
-            settings.view = SoundMenuRow(title: settings.title)
-            views.append(settings.view!)
-            menu.addItem(settings)
-        }
-        // As wide as the longest name needs, and every row as wide, so the slider is centered.
-        let width = max(Self.menuWidth, rows.map(\.fittingWidth).max() ?? 0)
-        for view in views + rows { view.setFrameSize(NSSize(width: width, height: view.frame.height)) }
-        // The models and batteries, which System Information takes a moment to tell; kept for next time.
-        Task { [weak self] in
-            await Self.readBluetooth()
-            guard self != nil else { return }
-            for row in rows { row.reload() }
-        }
+    /// Calls and the player share their rows, glass and interaction. A call retains its temporary
+    /// output choice through automatic headphone switching.
+    func menu(withVolume: Bool = true, outputsOnly: Bool = false) -> SoundOutputMenu {
+        refreshDevices()
+        let menu = SoundOutputMenu(
+            devices: devices, current: current, volume: AppVolume.shared,
+            withVolume: withVolume, outputsOnly: outputsOnly,
+            choose: { [weak self] device in
+                if outputsOnly { self?.chooseForCall(device.id) } else { self?.chooseOutput(device) }
+            }, settings: openSoundSettings)
+        menu.follow(self)
         return menu
-    }
-
-    /// A line between the menu's parts, as the Mac's Sound menu draws one, in the middle of `height`.
-    private static func addDivider(to menu: NSMenu, height: CGFloat) -> NSView {
-        let item = NSMenuItem()
-        item.view = SoundMenuDivider(height: height)
-        item.isEnabled = false
-        menu.addItem(item)
-        return item.view!
     }
 
     @objc fileprivate func openSoundSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension") { NSWorkspace.shared.open(url) }
     }
 
-    /// As wide as the Mac's Sound menu.
-    private static let menuWidth: CGFloat = 308
     /// Each Bluetooth device as last read, by its name in lowercase.
     fileprivate static var bluetooth: [String: DeviceWatch.BluetoothInfo] = [:]
 
@@ -158,17 +111,12 @@ final class AudioOutput: NSObject, ObservableObject {
     private var modelTask: Task<Void, Never>?
     static let modelRetries: [Double] = [0, 1, 2, 3, 5, 8]
 
-    @objc private func choose(_ item: NSMenuItem) {
-        Self.use(AudioDeviceID(item.tag))
-    }
-
     /// On a call, the choice is kept through AirPods' automatic switching, which takes the sound
     /// back to AirPods being worn while a call plays on them, as it can't tell the choice was made
     /// by hand: the call's app takes a second or so to follow the Mac's output, and its sound left on
     /// the AirPods until then is what brings them back. Put back at most twice, for a few seconds,
     /// so it never keeps on against anything else.
-    @objc private func chooseForCall(_ item: NSMenuItem) {
-        let id = AudioDeviceID(item.tag)
+    private func chooseForCall(_ id: AudioDeviceID) {
         chosen = Choice(device: id, at: .now, left: Choice.putBacks)
         Self.use(id)
     }
@@ -371,20 +319,31 @@ final class AudioOutput: NSObject, ObservableObject {
     }
 }
 
-/// The system's SwiftUI slider, with a white track and no custom pointer handling.
+/// An AppKit slider handles clicks, drags and accessibility through the native control, with
+/// a revisioned value so an asynchronous volume read cannot undo an edit.
 final class VolumeMenuSlider: NSView {
     let level: VolumeSlider.Level
+    private var volumeWatch: AnyCancellable?
 
     init(volume: AppVolume?, level: VolumeSlider.Level? = nil) {
+        let inset = SoundLook.inset
         self.level = level ?? VolumeSlider.Level(volume?.level ?? 0.5) { [weak volume] in volume?.set($0) }
-        super.init(frame: NSRect(x: 0, y: 0, width: 308, height: 30))
+        super.init(frame: NSRect(x: 0, y: 0, width: SoundLook.width, height: SoundLook.sliderHeight))
         autoresizingMask = [.width]
-        let host = FirstMouseHostingView(rootView: VolumeSlider(volume: volume, level: self.level).environment(\.controlActiveState, .key))
+        let host = NSHostingView(rootView: VolumeSlider(volume: volume, level: self.level).environment(\.controlActiveState, .key))
+        if let volume {
+            volumeWatch = volume.objectWillChange.sink { [weak self, weak host] in
+                Task { @MainActor in
+                    guard let self else { return }
+                    host?.rootView = VolumeSlider(volume: volume, level: self.level).environment(\.controlActiveState, .key)
+                }
+            }
+        }
         host.translatesAutoresizingMaskIntoConstraints = false
         addSubview(host)
         NSLayoutConstraint.activate([
-            host.leadingAnchor.constraint(equalTo: leadingAnchor, constant: SoundMenu.inset),
-            host.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -SoundMenu.inset),
+            host.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
+            host.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -inset),
             host.topAnchor.constraint(equalTo: topAnchor), host.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
     }
@@ -420,21 +379,20 @@ final class VolumeMenuSlider: NSView {
         }
 
         var body: some View {
-            Slider(value: Binding(get: { level.value }, set: level.move), in: 0...1) {
-                Text("Sound")
-            } minimumValueLabel: {
+            HStack(spacing: 4) {
                 Image(systemName: "speaker.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.primary)
-            } maximumValueLabel: {
+                    .soundInk(.speaker)
+                    .frame(width: 16)
+                    .offset(x: -1.5)
+                NativeSoundSlider(level: level, enabled: volume?.canChange != false)
+                    .frame(height: 16)
                 Image(systemName: "speaker.wave.3.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .soundInk(.speaker)
+                    .frame(width: 26)
+                    .offset(x: 2)
             }
-            .labelsHidden()
-            .controlSize(.regular)
-            .tint(.white)
-            .disabled(volume?.canChange == false)
             .task {
                 guard let volume else { return }
                 let revision = level.revision
@@ -445,9 +403,12 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// AppKit owns the menu surface and tracking; each item supplies its own content view.
+/// One set of output items for the player and calls, presented in a rounded glass panel.
+/// NSMenu holds the item actions and selected states; it is never opened for tracking.
 @MainActor
 final class SoundOutputMenu: NSMenu, NSMenuDelegate {
+    static let didOpen = Notification.Name("GlanceSoundMenuDidOpen")
+    static let didClose = Notification.Name("GlanceSoundMenuDidClose")
     let level: VolumeMenuSlider.VolumeSlider.Level
     private let volume: AppVolume?
     private let choose: (AudioOutput.Device) -> Void
@@ -457,15 +418,19 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
     private var deviceItems: [NSMenuItem] = []
     private var deviceStart = 0
     private var outputWatch: AnyCancellable?
-    private var keyWatch: Any?
+    private var panel: SoundMenuPanel?
+    private var focusedItem: NSMenuItem?
+    private let withVolume: Bool
     private var tracking = false
 
     init(
         devices: [AudioOutput.Device], current: AudioDeviceID, volume: AppVolume?,
         batteries: [String: DeviceWatch.BluetoothInfo]? = nil,
+        withVolume: Bool = true, outputsOnly: Bool = false,
         choose: @escaping (AudioOutput.Device) -> Void, settings: @escaping () -> Void
     ) {
         self.volume = volume
+        self.withVolume = withVolume && !outputsOnly
         self.choose = choose
         self.settings = settings
         self.batteries = batteries ?? AudioOutput.bluetooth
@@ -473,29 +438,42 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
         super.init(title: String(localized: "Sound"))
         autoenablesItems = false
         showsStateColumn = false
-        minimumWidth = 308
+        minimumWidth = SoundLook.width
         delegate = self
-        append(String(localized: "Sound"), view: SoundMenuHeading(title: String(localized: "Sound"), main: true))
-        if volume == nil || volume?.app != nil {
-            append(String(localized: "Volume"), view: VolumeMenuSlider(volume: volume, level: level), enabled: true)
+        if !outputsOnly {
+            append(
+                String(localized: "Sound"),
+                view: SoundMenuPiece.view(height: SoundLook.titleHeight) {
+                    Text("Sound").font(.system(size: 13, weight: .semibold)).soundInk(.primary)
+                        .padding(.leading, SoundLook.inset).padding(.top, SoundLook.titleTop)
+                })
+            if withVolume { append(String(localized: "Volume"), view: VolumeMenuSlider(volume: volume, level: level), enabled: true) }
+            append("", view: SoundMenuPiece.divider(height: SoundLook.upperDivider))
+            append(
+                String(localized: "Output"),
+                view: SoundMenuPiece.view(height: SoundLook.headingHeight) {
+                    Text("Output").font(.system(size: 12, weight: .semibold)).soundInk(.heading)
+                        .padding(.leading, SoundLook.inset).padding(.top, SoundLook.headingTop)
+                })
         }
-        append("", view: SoundMenuDivider(height: 7))
-        append(String(localized: "Output"), view: SoundMenuHeading(title: String(localized: "Output"), main: false))
         deviceStart = numberOfItems
-        append("", view: SoundMenuDivider(height: 11))
-        let footer = append(
-            String(localized: "Sound Settings…"),
-            view: SoundMenuContentRow {
-                Text("Sound Settings…")
-                    .font(.system(size: 13))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, SoundOutputLayout.contentInset)
-                    .padding(.vertical, SoundOutputLayout.settingsVerticalInset)
-                    .frame(minHeight: SoundOutputLayout.settingsHeight)
-            }, enabled: true
-        )
-        footer.target = self
-        footer.action = #selector(openSettings)
+        if !outputsOnly {
+            append("", view: SoundMenuPiece.divider(height: SoundLook.lowerDivider, inset: SoundLook.highlightInset))
+            let footer = append(
+                String(localized: "Sound Settings…"),
+                view: SoundMenuContentRow {
+                    Text("Sound Settings…")
+                        .font(.system(size: 13))
+                        .soundInk(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, SoundLook.inset - SoundLook.highlightInset)
+                        .offset(y: -1)
+                        .frame(height: SoundLook.actionHeight)
+                }, enabled: true
+            )
+            footer.target = self
+            footer.action = #selector(openSettings)
+        }
         refresh(devices: devices, current: current, batteries: self.batteries)
     }
 
@@ -519,6 +497,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
                 item.target = self
                 item.tag = Int(device.id)
                 item.view = SoundMenuContentRow { outputLabel(device, playing: device.id == current) }
+                (item.view as? SoundMenuContentRow)?.item = item
                 insertItem(item, at: deviceStart + index)
                 return item
             }
@@ -529,6 +508,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
             (item.view as? SoundMenuContentRow)?.replace { outputLabel(device, playing: device.id == current) }
         }
         update()
+        panel?.reload()
     }
 
     private func outputLabel(_ device: AudioOutput.Device, playing: Bool) -> some View {
@@ -537,10 +517,11 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
 
     @discardableResult
     private func append(_ title: String, view: NSView, enabled: Bool = false) -> NSMenuItem {
-        view.setFrameSize(NSSize(width: 308, height: view.frame.height))
+        view.setFrameSize(NSSize(width: SoundLook.width, height: view.frame.height))
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = enabled
         item.view = view
+        (view as? SoundMenuContentRow)?.item = item
         addItem(item)
         return item
     }
@@ -554,23 +535,13 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
 
     @discardableResult
     func adjustVolume(by change: Double) -> Bool {
-        guard volume?.canChange != false else { return false }
+        guard withVolume, volume?.canChange != false else { return false }
         level.move(to: min(max(level.value + change, 0), 1))
         return true
     }
 
     func menuWillOpen(_ menu: NSMenu) {
         tracking = true
-        keyWatch = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return event }
-            let change: Double
-            switch Int(event.keyCode) {
-            case kVK_LeftArrow: change = -0.05
-            case kVK_RightArrow: change = 0.05
-            default: return event
-            }
-            return self?.adjustVolume(by: change) == true ? nil : event
-        }
         guard volume != nil else { return }
         Task { [weak self] in
             await AudioOutput.readBluetooth()
@@ -580,40 +551,123 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
         }
     }
 
-    func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
-        for row in items.compactMap({ $0.view as? SoundMenuContentRow }) {
-            row.highlighted = row.enclosingMenuItem === item
+    func highlight(_ item: NSMenuItem?) {
+        focusedItem = item
+        for candidate in items {
+            (candidate.view as? SoundMenuContentRow)?.highlighted = item != nil && candidate === item
         }
+    }
+
+    func activate(_ item: NSMenuItem) {
+        guard item.isEnabled, item.action != nil else { return }
+        let index = index(of: item)
+        dismiss()
+        performActionForItem(at: index)
+    }
+
+    func present(below anchor: CGRect, on screen: NSScreen, appearance: NSAppearance, alignTrailing: Bool = true, dismissed: @escaping () -> Void) {
+        dismiss()
+        let panel = SoundMenuPanel(menu: self, anchor: anchor, visible: screen.visibleFrame, appearance: appearance, alignTrailing: alignTrailing)
+        self.panel = panel
+        panel.onDismiss = { [weak self] in
+            guard let self else { return }
+            self.panel = nil
+            self.menuDidClose(self)
+            NotificationCenter.default.post(name: Self.didClose, object: self)
+            dismissed()
+        }
+        menuWillOpen(self)
+        NotificationCenter.default.post(name: Self.didOpen, object: self)
+        panel.show()
+    }
+
+    func dismiss() { panel?.dismiss() }
+
+    func handleKey(_ event: NSEvent) -> Bool {
+        guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return false }
+        switch Int(event.keyCode) {
+        case kVK_Escape: dismiss()
+        case kVK_LeftArrow: return adjustVolume(by: -0.05)
+        case kVK_RightArrow: return adjustVolume(by: 0.05)
+        case kVK_UpArrow, kVK_DownArrow, kVK_Tab:
+            let rows = items.filter { $0.isEnabled && $0.action != nil }
+            guard !rows.isEmpty else { return false }
+            let backward = Int(event.keyCode) == kVK_UpArrow || (Int(event.keyCode) == kVK_Tab && event.modifierFlags.contains(.shift))
+            let old = focusedItem.flatMap { rows.firstIndex(of: $0) }
+            let next = old.map { ($0 + (backward ? -1 : 1) + rows.count) % rows.count } ?? (backward ? rows.count - 1 : 0)
+            highlight(rows[next])
+            if let view = rows[next].view {
+                view.scrollToVisible(view.bounds)
+                NSAccessibility.post(element: view, notification: .focusedUIElementChanged)
+            }
+        case kVK_Return, kVK_Space:
+            guard let focusedItem else { return false }
+            activate(focusedItem)
+        default: return false
+        }
+        return true
     }
 
     func menuDidClose(_ menu: NSMenu) {
         tracking = false
-        if let keyWatch { NSEvent.removeMonitor(keyWatch) }
-        keyWatch = nil
         outputWatch = nil
+        highlight(nil)
     }
 }
 
-/// A menu's hosting view accepts the first slider press even though its window is not key.
-private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+/// The system slider retains its own pointer tracking and accessibility actions.
+struct NativeSoundSlider: NSViewRepresentable {
+    @ObservedObject var level: VolumeMenuSlider.VolumeSlider.Level
+    let enabled: Bool
+
+    final class Control: NSSlider {
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    }
+
+    final class Coordinator: NSObject {
+        var level: VolumeMenuSlider.VolumeSlider.Level
+        init(_ level: VolumeMenuSlider.VolumeSlider.Level) { self.level = level }
+        @objc func moved(_ slider: NSSlider) { level.move(to: slider.doubleValue) }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(level) }
+    func makeNSView(context: Context) -> Control {
+        let slider = Control(value: level.value, minValue: 0, maxValue: 1, target: context.coordinator, action: #selector(Coordinator.moved(_:)))
+        slider.isContinuous = true
+        slider.controlSize = .regular
+        slider.trackFillColor = .controlAccentColor
+        slider.tintProminence = .primary
+        slider.setAccessibilityLabel(String(localized: "Volume"))
+        slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        return slider
+    }
+    func updateNSView(_ slider: Control, context: Context) {
+        context.coordinator.level = level
+        slider.doubleValue = level.value
+        slider.isEnabled = enabled
+    }
 }
 
-/// The native menu handles selection and keyboard navigation; this view draws the rich row.
-private final class SoundMenuContentRow: NSView {
+/// The panel handles selection and keyboard navigation; this view draws the rich row, and
+/// its highlight a little way in from the menu's sides, as tall as the row.
+final class SoundMenuContentRow: NSView {
+    // Reparenting a menu item's view into a panel clears NSView.enclosingMenuItem.
+    // Keep the action's identity explicitly; the menu owns both the item and this view.
+    weak var item: NSMenuItem?
+    private var hover: NSTrackingArea?
     private let host: NSHostingView<AnyView>
     private var content: AnyView
     var highlighted = false { didSet { needsDisplay = true } }
 
     init<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
-        host = NSHostingView(rootView: Self.root(self.content, width: 308))
-        super.init(frame: NSRect(x: 0, y: 0, width: 308, height: ceil(host.fittingSize.height)))
+        host = NSHostingView(rootView: Self.root(self.content, width: SoundLook.width))
+        super.init(frame: NSRect(x: 0, y: 0, width: SoundLook.width, height: ceil(host.fittingSize.height)))
         autoresizingMask = [.width]
-        host.frame = bounds.insetBy(dx: SoundMenu.highlightInset, dy: 0)
-        host.autoresizingMask = [.width, .height]
         addSubview(host)
-        setAccessibilityElement(false)
+        layoutHost()
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
     }
 
     required init?(coder: NSCoder) { nil }
@@ -631,41 +685,147 @@ private final class SoundMenuContentRow: NSView {
     override func setFrameSize(_ newSize: NSSize) {
         let widthChanged = newSize.width != frame.width
         super.setFrameSize(newSize)
-        guard widthChanged else { return }
-        // AppKit can widen custom menu items; keep their content on the same inset as the headings.
-        host.rootView = Self.root(content, width: newSize.width)
-        super.setFrameSize(NSSize(width: newSize.width, height: ceil(host.fittingSize.height)))
+        if widthChanged {
+            // AppKit can widen custom menu items; a long name then wraps at the new width.
+            host.rootView = Self.root(content, width: newSize.width)
+            super.setFrameSize(NSSize(width: newSize.width, height: ceil(host.fittingSize.height)))
+        }
+        layoutHost()
+    }
+
+    private func layoutHost() {
+        host.frame = bounds.insetBy(dx: SoundLook.highlightInset, dy: 0)
     }
 
     private static func root(_ view: AnyView, width: CGFloat) -> AnyView {
-        AnyView(view.frame(width: width - SoundMenu.highlightInset * 2).environment(\.controlActiveState, .key).accessibilityHidden(true))
+        AnyView(view.frame(width: width - SoundLook.highlightInset * 2).environment(\.controlActiveState, .key).accessibilityHidden(true))
     }
 
     override func draw(_ dirtyRect: NSRect) {
         guard highlighted else { return }
-        let shape = RoundedRectangle(cornerRadius: SoundOutputLayout.highlightRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: SoundLook.highlightRadius, style: .continuous)
         SoundMenu.highlightColor.setFill()
-        NSBezierPath(cgPath: shape.path(in: bounds.insetBy(dx: SoundMenu.highlightInset, dy: 0)).cgPath).fill()
+        NSBezierPath(cgPath: shape.path(in: host.frame).cgPath).fill()
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hover { removeTrackingArea(hover) }
+        let area = NSTrackingArea(rect: host.frame, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
+        hover = area
+        addTrackingArea(area)
+    }
+
+    override func mouseEntered(with event: NSEvent) { (item?.menu as? SoundOutputMenu)?.highlight(item) }
+    override func mouseExited(with event: NSEvent) {
+        if highlighted { (item?.menu as? SoundOutputMenu)?.highlight(nil) }
+    }
+
+    override func accessibilityLabel() -> String? { item?.title }
+    override func accessibilityValue() -> Any? { item?.state == .on ? String(localized: "Selected") : nil }
+    override func accessibilityPerformPress() -> Bool {
+        guard let item, let menu = item.menu as? SoundOutputMenu, item.isEnabled else { return false }
+        menu.activate(item)
+        return true
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard bounds.contains(convert(event.locationInWindow, from: nil)),
-            let item = enclosingMenuItem, item.isEnabled, let menu = item.menu
-        else { return }
-        menu.cancelTracking()
-        menu.performActionForItem(at: menu.index(of: item))
+        guard host.frame.contains(convert(event.locationInWindow, from: nil)) else { return }
+        _ = accessibilityPerformPress()
+    }
+
+}
+
+/// The player's Sound menu as the Mac's own Sound menu measures, read from its Accessibility
+/// frames and a capture of it on macOS 27.3: everything fourteen points in from the sides, the
+/// highlight five, each output thirty-two points tall with its picture in a circle of twenty-six.
+enum SoundLook {
+    static let radius: CGFloat = 16
+    static let edge: CGFloat = 5
+    static let width: CGFloat = 308
+    static let inset: CGFloat = 14
+    static let highlightInset: CGFloat = 5
+    static let highlightRadius: CGFloat = 11
+    /// Sound, its words' frame so far below the menu's first row.
+    static let titleHeight: CGFloat = 26.5
+    static let titleTop: CGFloat = 8
+    static let sliderHeight: CGFloat = 30
+    /// The line under the slider, three points into its seven; the one above Sound Settings, in
+    /// the middle of its eleven.
+    static let upperDivider: CGFloat = 7
+    static let lowerDivider: CGFloat = 11
+    static let headingHeight: CGFloat = 24
+    static let headingTop: CGFloat = 5.5
+    static let rowHeight: CGFloat = 32
+    static let circle: CGFloat = 26
+    static let gap: CGFloat = 8
+    static let glyph: CGFloat = 13.5
+    static let batteryLift: CGFloat = -2
+    static let actionHeight: CGFloat = 22
+}
+
+/// Measured on the built-in display, with the desktop behind the glass and in window captures.
+/// Fills, headings and symbols add light in dark appearance and subtract it in light appearance;
+/// primary and secondary text use ordinary alpha blending.
+enum SoundInk {
+    case primary, secondary, heading, symbol, speaker, fill
+
+    func color(dark: Bool) -> Color {
+        switch (self, dark) {
+        case (.primary, true): Color(.sRGB, white: 1, opacity: 0.905)
+        case (.primary, false): Color(.sRGB, white: 0, opacity: 0.85)
+        case (.secondary, true): Color(.sRGB, white: 1, opacity: 0.47)
+        case (.secondary, false): Color(white: 0, opacity: 0.45)
+        case (.heading, true): Color(.sRGB, white: 77.0 / 255, opacity: 1)
+        case (.symbol, true): Color(.sRGB, white: 76.0 / 255, opacity: 1)
+        case (.heading, false): Color(.sRGB, white: 148.0 / 255, opacity: 1)
+        case (.symbol, false): Color(.sRGB, white: 142.0 / 255, opacity: 1)
+        case (.speaker, false): Color(.sRGB, white: 123.0 / 255, opacity: 1)
+        case (.speaker, true): Color(.sRGB, white: 124.0 / 255, opacity: 1)
+        case (.fill, true): Color(.sRGB, white: 20.0 / 255, opacity: 1)
+        case (.fill, false): Color(.sRGB, white: 235.0 / 255, opacity: 1)
+        }
+    }
+
+    func blend(dark: Bool) -> BlendMode {
+        switch self {
+        case .primary, .secondary: .normal
+        case .heading, .symbol, .speaker, .fill: dark ? .plusLighter : .plusDarker
+        }
     }
 }
 
-/// All player menu highlights share one inset curve inside the native frame.
-private enum SoundOutputLayout {
-    static let contentInset = SoundMenu.inset - SoundMenu.highlightInset
-    static let settingsVerticalInset: CGFloat = 3
-    /// macOS owns the frame; its observed curve is the reference for every inset row.
-    static let menuRadius: CGFloat = 14
-    static let highlightRadius = max(0, menuRadius - SoundMenu.highlightInset)
-    static let settingsHeight: CGFloat = 26
-    static let outputGlyphSize: CGFloat = 13.5
+private struct SoundInkStyle: ViewModifier {
+    let ink: SoundInk
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        content.foregroundStyle(ink.color(dark: scheme == .dark)).blendMode(ink.blend(dark: scheme == .dark))
+    }
+}
+
+extension View {
+    func soundInk(_ ink: SoundInk) -> some View { modifier(SoundInkStyle(ink: ink)) }
+}
+
+/// A part of the Sound menu that only shows: a heading, or the line between two parts.
+private enum SoundMenuPiece {
+    @MainActor static func view<Content: View>(height: CGFloat, @ViewBuilder content: () -> Content) -> NSView {
+        let host = NSHostingView(
+            rootView: content().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).accessibilityHidden(true))
+        host.sizingOptions = []
+        host.frame = NSRect(x: 0, y: 0, width: SoundLook.width, height: height)
+        host.autoresizingMask = [.width]
+        return host
+    }
+
+    /// The line a point tall, in the middle of `height`, as far in as the headings.
+    @MainActor static func divider(height: CGFloat, inset: CGFloat = SoundLook.inset) -> NSView {
+        view(height: height) {
+            Rectangle().soundInk(.fill).frame(height: 1)
+                .padding(.horizontal, inset).padding(.top, (height - 1) / 2)
+        }
+    }
 }
 
 private struct SoundOutputLabel: View {
@@ -675,17 +835,19 @@ private struct SoundOutputLabel: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(spacing: SoundMenu.gap) {
-            Image(systemName: device.pictured)
-                .font(.system(size: SoundOutputLayout.outputGlyphSize, weight: .regular))
-                .imageScale(.medium)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(playing ? .white : Color(nsColor: SoundMenu.speakerGray))
-                .offset(y: 0.5)
-                .frame(width: SoundMenu.circle, height: SoundMenu.circle)
-                .background(playing ? Color(nsColor: .systemBlue) : Color(nsColor: SoundMenu.circleGray), in: Circle())
-            VStack(alignment: .leading, spacing: 0) {
-                Text(device.name).font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: SoundLook.gap) {
+            ZStack {
+                if playing {
+                    Circle().fill(Color(nsColor: .systemBlue))
+                } else {
+                    Circle().soundInk(.fill)
+                }
+                picture
+            }
+            .frame(width: SoundLook.circle, height: SoundLook.circle)
+            // The batteries a little way up under the name, as the Mac sets the two lines.
+            VStack(alignment: .leading, spacing: levels == nil ? 0 : SoundLook.batteryLift) {
+                Text(device.name).font(.system(size: 13)).soundInk(.primary).fixedSize(horizontal: false, vertical: true)
                 if let levels {
                     SoundBatteryLabel(levels: levels, symbols: device.model, dark: colorScheme == .dark)
                         .fixedSize()
@@ -693,9 +855,17 @@ private struct SoundOutputLabel: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, SoundOutputLayout.contentInset)
-        .frame(minHeight: SoundMenu.rowHeight)
+        .padding(.horizontal, SoundLook.inset - SoundLook.highlightInset)
+        // As tall as the Mac's rows; taller only for a name that wraps.
+        .frame(minHeight: SoundLook.rowHeight)
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private var picture: some View {
+        let image = Image(systemName: device.pictured)
+            .font(.system(size: SoundLook.glyph, weight: .regular))
+            .symbolRenderingMode(.hierarchical)
+        if playing { image.foregroundStyle(.white) } else { image.soundInk(.symbol) }
     }
 }
 
@@ -707,227 +877,23 @@ private struct SoundBatteryLabel: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField { NSTextField(labelWithString: "") }
     func updateNSView(_ view: NSTextField, context: Context) {
         NSAppearance(named: dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
-            view.attributedStringValue = OutputRow.text(levels, symbols: symbols)
+            view.attributedStringValue = SoundBatteryText.text(levels, symbols: symbols)
         }
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSTextField, context: Context) -> CGSize? { nsView.intrinsicContentSize }
 }
 
-/// The sound output menu's measures, as the Mac's Sound menu has them: no check marks, its
-/// headings, rows and separators the same way in from both sides.
 private enum SoundMenu {
-    /// The menu's corners, as macOS draws them: it keeps its own outline, whatever's asked of its glass.
-    static let radius: CGFloat = 16
-    static let inset: CGFloat = 14
-    /// Each output's circle, and between it and its name.
-    static let circle: CGFloat = 26
-    static let gap: CGFloat = 8
-    static let rowHeight: CGFloat = 32
-    /// A row under the pointer: lighter, in from the menu's sides, its corners as much rounder
-    /// than the menu's as they're inset.
-    static let highlightInset: CGFloat = 5
-    static let highlightRadius = radius - highlightInset
-
-    static func drawHighlight(in bounds: NSRect) {
-        highlightColor.setFill()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: highlightInset, dy: 0), xRadius: highlightRadius, yRadius: highlightRadius).fill()
-    }
-
-    /// White in the dark menu, black in the light one.
     private static func shade(dark: CGFloat, light: CGFloat) -> NSColor {
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 1, alpha: dark) : NSColor(white: 0, alpha: light)
         }
     }
-
-    fileprivate static let highlightColor = shade(dark: 0.1, light: 0.055)
-    /// An output's circle: light gray, or for the one playing, the accent color made a little
-    /// lighter, as the Mac's Sound menu has them.
-    static let circleGray = shade(dark: 0.22, light: 0.08)
-    static var circlePlaying: NSColor { NSColor.controlAccentColor.blended(withFraction: 0.15, of: .white) ?? .controlAccentColor }
-    /// The Output heading, the slider's speakers, and an AirPods' batteries, as light as the Mac's
-    /// draw them.
-    static let headingGray = shade(dark: 0.45, light: 0.5)
-    static let speakerGray = shade(dark: 0.62, light: 0.5)
-    static let batteryGray = shade(dark: 0.5, light: 0.45)
+    static let highlightColor = shade(dark: 0.1, light: 0.055)
+    static let batteryGray = shade(dark: 0.45, light: 0.45)
 }
 
-/// A line between the sound output menu's parts, as far in from both sides as everything else.
-private final class SoundMenuDivider: NSView {
-    init(height: CGFloat) {
-        super.init(frame: NSRect(x: 0, y: 0, width: 300, height: height))
-        autoresizingMask = [.width]
-    }
-
-    required init?(coder: NSCoder) { nil }
-
-    override func draw(_ dirtyRect: NSRect) {
-        NSColor.separatorColor.setFill()
-        NSRect(x: SoundMenu.inset, y: (bounds.height - 1) / 2, width: bounds.width - SoundMenu.inset * 2, height: 1).fill()
-    }
-}
-
-/// A plain row in the sound output menu, as Sound Settings is in the Mac's: its title, highlighted
-/// under the pointer as the outputs are; clicking it does what it says.
-private final class SoundMenuRow: NSView {
-    private let label: NSTextField
-
-    init(title: String) {
-        label = NSTextField(labelWithString: title)
-        super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 22))
-        autoresizingMask = [.width]
-        label.font = .systemFont(ofSize: 13)
-        label.textColor = .labelColor
-        label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: SoundMenu.inset),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -1),
-        ])
-    }
-
-    required init?(coder: NSCoder) { nil }
-
-    override func draw(_ dirtyRect: NSRect) {
-        if enclosingMenuItem?.isHighlighted == true { SoundMenu.drawHighlight(in: bounds) }
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        guard let item = enclosingMenuItem, let menu = item.menu else { return }
-        menu.cancelTracking()
-        menu.performActionForItem(at: menu.index(of: item))
-    }
-}
-
-/// A heading in the sound output menu: Sound, bold, at the top; or Output, smaller, in gray. Each
-/// sits as far below the one before as in the Mac's Sound menu.
-private final class SoundMenuHeading: NSView {
-    private let main: Bool
-
-    init(title: String, main: Bool) {
-        self.main = main
-        super.init(frame: NSRect(x: 0, y: 0, width: 300, height: main ? 26.5 : 24))
-        autoresizingMask = [.width]
-        let label = NSTextField(labelWithString: title)
-        label.font = main ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = main ? .labelColor : SoundMenu.headingGray
-        label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: SoundMenu.inset),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor, constant: main ? 2.75 : 1),
-        ])
-    }
-
-    required init?(coder: NSCoder) { nil }
-}
-
-/// An output in the sound output menu, as the Mac's Sound menu shows it: its symbol in a circle,
-/// light gray with the symbol gray, or the accent color with the symbol white for the one playing,
-/// beside its name, and under it, for AirPods, each earbud's battery and the case's, or the one
-/// battery of other headphones. AirPods are drawn as the Mac draws them there, their two earbuds
-/// side by side. Highlighted under the pointer; clicking it chooses it.
-private final class OutputRow: NSView {
-    let device: AudioOutput.Device
-    private let playing: Bool
-    private let symbol = NSImageView()
-    private let name = NSTextField(labelWithString: "")
-    private let battery = NSTextField(labelWithString: "")
-
-    /// Pictures it and tells its batteries as they're known now.
-    func reload() {
-        let color: NSColor = playing ? .white : .labelColor
-        symbol.image = Self.picture(device.pictured, color: color)
-        let levels = AudioOutput.bluetooth[device.name.lowercased()]?.levels
-        battery.attributedStringValue = levels.map { Self.text($0, symbols: device.model) } ?? NSAttributedString()
-        battery.isHidden = battery.attributedStringValue.length == 0
-        needsLayout = true
-    }
-
-    init(device: AudioOutput.Device, playing: Bool) {
-        self.device = device
-        self.playing = playing
-        super.init(frame: NSRect(x: 0, y: 0, width: 300, height: SoundMenu.rowHeight))
-        autoresizingMask = [.width]
-        symbol.contentTintColor = playing ? .white : .labelColor
-        name.stringValue = device.name
-        name.font = .systemFont(ofSize: 13)
-        name.textColor = .labelColor
-        name.lineBreakMode = .byTruncatingTail
-        battery.font = .systemFont(ofSize: 11, weight: .medium)
-        battery.textColor = SoundMenu.batteryGray
-        for view in [symbol, name, battery] { addSubview(view) }
-        defer { reload() }
-        setAccessibilityElement(false)
-    }
-
-    required init?(coder: NSCoder) { nil }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        // Symbols created before this view joins the panel otherwise retain the old appearance.
-        effectiveAppearance.performAsCurrentDrawingAppearance { reload() }
-    }
-
-    /// Wide enough for its name and its batteries in full.
-    var fittingWidth: CGFloat {
-        let widest = Self.text(DeviceWatch.Levels(left: 100, right: 100, chargingCase: 100), symbols: device.model)
-        let text = max(name.intrinsicContentSize.width, widest.size().width)
-        return SoundMenu.inset + SoundMenu.circle + SoundMenu.gap + ceil(text) + SoundMenu.inset + 4
-    }
-
-    override var isFlipped: Bool { true }
-
-    override func layout() {
-        super.layout()
-        let textX = SoundMenu.inset + SoundMenu.circle + SoundMenu.gap
-        let textWidth = bounds.width - textX - SoundMenu.inset
-        // Half a point above the circle's middle, as the Mac sets its pictures.
-        symbol.frame = circleRect.offsetBy(dx: 0, dy: -0.5)
-        // At the far end of the row from the circle, right to left.
-        func placed(_ rect: NSRect) -> NSRect {
-            userInterfaceLayoutDirection == .leftToRight ? rect : NSRect(x: bounds.width - rect.maxX, y: rect.minY, width: rect.width, height: rect.height)
-        }
-        let nameHeight = name.intrinsicContentSize.height, batteryHeight = battery.intrinsicContentSize.height
-        // By their text, which starts a little way into a label's frame.
-        if battery.isHidden {
-            name.frame = name.frame(forAlignmentRect: placed(NSRect(x: textX, y: (bounds.height - nameHeight) / 2, width: textWidth, height: nameHeight)))
-        } else {
-            // Name and batteries together, centered on the circle.
-            let top = (bounds.height - nameHeight - batteryHeight) / 2
-            name.frame = name.frame(forAlignmentRect: placed(NSRect(x: textX, y: top, width: textWidth, height: nameHeight)))
-            battery.frame = battery.frame(forAlignmentRect: placed(NSRect(x: textX, y: top + nameHeight, width: textWidth, height: batteryHeight)))
-        }
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        if enclosingMenuItem?.isHighlighted == true { SoundMenu.drawHighlight(in: bounds) }
-        (playing ? SoundMenu.circlePlaying : SoundMenu.circleGray).setFill()
-        NSBezierPath(ovalIn: circleRect).fill()
-    }
-
-    private var circleRect: NSRect {
-        let circle = SoundMenu.circle
-        let x = userInterfaceLayoutDirection == .leftToRight ? SoundMenu.inset : bounds.width - SoundMenu.inset - circle
-        return NSRect(x: x, y: (bounds.height - circle) / 2, width: circle, height: circle)
-    }
-
-    /// Chooses it, as the menu's own items are chosen: the menu closes, then it plays there.
-    override func mouseUp(with event: NSEvent) {
-        guard let item = enclosingMenuItem, let menu = item.menu else { return }
-        menu.cancelTracking()
-        menu.performActionForItem(at: menu.index(of: item))
-    }
-
-    /// The device's picture in its circle, as large as the Mac's Sound menu has them, its parts in
-    /// shades of `color`, as the Mac draws a laptop's screen and an earbud's tip.
-    private static func picture(_ symbol: String, color: NSColor) -> NSImage? {
-        (NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-            ?? NSImage(systemSymbolName: "speaker.wave.2", accessibilityDescription: nil))?
-            .withSymbolConfiguration(
-                NSImage.SymbolConfiguration(pointSize: 14, weight: .regular).applying(.init(hierarchicalColor: color)))
-    }
-
+private enum SoundBatteryText {
     /// Each earbud's level and the case's, in the shapes macOS gives this model, the earbuds as one
     /// pair when they're level, or the one battery's, each after its symbol.
     fileprivate static func text(_ levels: DeviceWatch.Levels, symbols: DeviceSymbols?) -> NSAttributedString {
@@ -948,7 +914,7 @@ private final class OutputRow: NSView {
             guard let level else { continue }
             if text.length > 0 { text.append(NSAttributedString(string: "  ", attributes: [.font: font, .kern: 0.5])) }
             // Each earbud and the case with its tip or lid a lighter shade, as the Mac draws them.
-            let size: CGFloat = symbol.contains("chargingcase") ? 12 : 11
+            let size: CGFloat = symbol.contains("chargingcase") ? 10.5 : 11
             if let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
                 .withSymbolConfiguration(
                     NSImage.SymbolConfiguration(pointSize: size, weight: .medium).applying(.init(hierarchicalColor: SoundMenu.batteryGray)))

@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 11 November 2026`
+`Created: 11 October 2026` | `Last updated: 13 November 2026`
 
 <br>
 
@@ -20,16 +20,11 @@
 
 ### Player
 
-- Fixed inconsistent Sound menu corners. Output and Settings highlights now
-  share one continuous curve, inset from the native menu frame.
-- Fixed Glance closing itself after Sound stayed open for several seconds.
-  The menu now keeps the app responsive without triggering its freeze check.
+- Rebuilt Sound with rounded glass, matching output highlights, an
+  accent-colored volume slider, and light and dark appearances.
+- Kept the volume slider visible while idle, disabled until an app plays.
 - Fixed the cover opening a stale source in Spotify. With `Accessibility`
   allowed, it now uses the app's own current-song navigation.
-- Fixed the Sound menu opening at a fixed position after a pointer click. It
-  now opens at the click, while keyboard access stays anchored to the button.
-- Changed the Sound popup to a native menu, keeping the white volume slider,
-  inline outputs and battery details.
 - Changed player buttons to use the same native symbol transition when their
   state or assigned control changes.
 - Changed paused artwork to 85% of its playing width and height.
@@ -125,9 +120,6 @@
 - Fixed test scenes disappearing at different heights. Every activity now folds
   before its window leaves, including tall alerts and expanded recordings.
 
-- Replaced the sound panel with a native menu, inline output rows and a
-  white volume slider. Output icons, battery details and the full-width
-  Settings action align and adapt to the appearance.
 - Fixed Sound slider symbol weight and color and aligned both dividers.
   Output symbols use smaller, aligned glyphs, and the Settings row keeps a
   compact rounded highlight. Long output names and battery details can grow
@@ -209,8 +201,6 @@
   concentric with what's round at its ends, top corners that grow with its
   height, and one padding all around. Closed, the notch keeps the camera housing's
   own corners.
-- Changed the volume slider to Apple's own, with its Liquid Glass knob, filled
-  with the Mac's accent color in light mode and white in dark mode.
 - Changed opening with two live activities showing: the notch or the bubble opens
   once the pointer stops on it, so passing over them opens neither, and a click
   on the bubble follows `Open with`, as one on the notch does. Opened from the

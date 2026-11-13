@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 11 November 2026`
+`Created: 11 October 2026` | `Last updated: 13 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -250,32 +250,33 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a native menu at the pointer's click position.
-Opened from the keyboard, it appears below the button. macOS keeps the menu
-within the display. The notch stays open while it is in use. Escape or a click
+The `Sound Output` button opens a rounded glass menu below the button, with
+its edge aligned to that button and room between them. It stays on that
+display and keeps the
+notch open while in use. Escape, another press on the button, or a click
 outside closes it.
-The native slider sets the playing app's volume, with a white track and the
-system's glass handle. Drag the knob or click the track to change it.
-For `Music` and `Spotify`, it reads their volume as the menu opens; other
-apps need the `Audio from apps` permission.
 
-Connected speakers and headphones appear as rows under **Output**, with a
-blue circle for the current output and battery details when available. The
-list updates as outputs connect or disconnect. Nearby wireless destinations
-that are not connected appear only in macOS. Selecting a row closes the
-menu. The full **Sound Settings…** row highlights under the
-pointer and opens **System Settings > Sound**. Headphone listening modes and
-other headphone options are managed in macOS.
+The system slider sets the playing app's volume, with an accent-colored
+track and glass handle. Drag the knob or click the track to change it. The
+slider stays visible and is disabled when no app is playing. For `Music`
+and `Spotify`, it reads their volume as the menu opens; other apps need the
+`Audio from apps` permission. Left and Right adjust the volume while the
+menu is open. Up and Down move between outputs and **Sound Settings…**;
+Return chooses the highlighted row.
 
-The menu is ready for interaction when opened and keeps its notch open.
-Headings, output icons and the Settings label share the same leading edge. Both
-dividers use the same inset. The compact Settings row sits below the output
-list. Output and Settings highlights share the same continuous corner curve,
-inset from the menu frame. Output glyphs sit inside matching circles, and long
-output names wrap above their battery details. When the laptop speakers are
-selected, the button shows muted, low, medium or high volume as the app or
-speaker volume changes. The speaker stays in place as its waves follow the
-volume.
+Connected speakers and headphones appear under **Output**, with a blue
+circle for the current output and battery details when available. Long
+output names wrap above their battery details. The list updates as outputs
+connect or disconnect. Nearby wireless destinations that are not connected
+appear only in macOS. Selecting an output closes the menu.
+
+**Sound Settings…** opens **System Settings > Sound**. Headphone listening
+modes and other headphone options are managed in macOS. Output rows and
+settings use the same rounded highlight under the pointer.
+
+When the laptop speakers are selected, the button shows muted, low, medium
+or high volume as the app or speaker volume changes. The speaker stays in
+place as its waves follow the volume.
 
 On a call, the sound button opens the outputs alone. If macOS moves the sound
 back to AirPods you're wearing within a few seconds, as their automatic

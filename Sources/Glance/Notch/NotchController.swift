@@ -420,6 +420,12 @@ final class NotchController {
             }
         }
         menuWatches = [
+            NotificationCenter.default.publisher(for: SoundOutputMenu.didOpen).sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.model.soundMenuShown = true }
+            },
+            NotificationCenter.default.publisher(for: SoundOutputMenu.didClose).sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.model.soundMenuShown = false }
+            },
             NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification).sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.menuOpened() }
             },

@@ -18,6 +18,7 @@ struct NowPlayingView: View {
 
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var output = AudioOutput.shared
+    @Environment(\.notchThumbnail) private var thumbnail
     @Environment(\.soundMenuChanged) private var soundMenuChanged
     @Environment(\.playerLayout) private var layout
     @AppStorage(Preferences.musicAccentSource) private var accentSource = AccentSource.artwork
@@ -40,7 +41,6 @@ struct NowPlayingView: View {
     let hero: Namespace.ID
     @State private var scrub: Double?
     @State private var soundPlace: PlayerControl?
-    @State private var soundPointer: CGPoint?
     @State private var favoriteBursts = 0
     @State private var skipsBack = 0
     @State private var skipsForward = 0
@@ -301,17 +301,20 @@ struct NowPlayingView: View {
             }
             .disabled(state.disabled)
             .background {
-                SoundMenuPresenter(
-                    isPresented: Binding(
-                        get: { soundPlace == place },
-                        set: { shown in
-                            if !shown {
-                                soundPlace = nil
-                                soundMenuChanged(false)
-                            }
-                        }),
-                    pointer: soundPointer, makeMenu: output.soundMenu
-                )
+                if !thumbnail {
+                    SoundMenuPresenter(
+                        isPresented: Binding(
+                            get: { soundPlace == place },
+                            set: { shown in
+                                if !shown {
+                                    soundPlace = nil
+                                    soundMenuChanged(false)
+                                }
+                            }),
+                        alignTrailing: place != .left,
+                        makeMenu: output.soundMenu
+                    )
+                }
             }
         }
     }
@@ -385,7 +388,6 @@ struct NowPlayingView: View {
         case .shuffle: nowPlaying.toggleShuffle()
         case .repeatMode: nowPlaying.cycleRepeat()
         case .output:
-            soundPointer = fromKeys ? nil : SoundMenuPlacement.pointer(for: NSApp.currentEvent)
             soundPlace = place ?? (keys?.focus == .left ? .left : (soundControl ?? .right))
             soundMenuChanged(true)
         case .lyrics: lyricsControl.toggle()
