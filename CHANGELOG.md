@@ -16,6 +16,7 @@
   and progress updates keep their place. Reduce Motion skips the bounce.
   Controls become available as their content appears. Hover keeps its intended
   target during a fold, and detached activities return after leaving full screen.
+  Releasing a hold early cancels its pending opening, including during a fold.
 
 - Added pressed feedback to timer, incoming-call and low-battery alert
   buttons. Dragging away cancels the click, and a new alert cannot inherit it.
@@ -40,6 +41,8 @@
   preview and a button to stop the transfer when cancellation is available.
   Completed transfers and those without a reachable control show progress alone.
   Incoming transfers keep their arrival order as progress changes.
+  Switching to the next visible transfer uses the same housing transition;
+  progress on the current transfer stays in place.
   Outgoing progress no longer claims success before macOS confirms delivery.
   With Reduce Motion, the progress ring updates without sweeping.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its

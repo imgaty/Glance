@@ -102,6 +102,9 @@ than slide.
 
 Controls become available as they appear. Escape can close an opening activity,
 and the activity navigation keys can change its destination during the animation.
+Releasing a hold before its delay ends cancels opening, even during a fold.
+The next visible AirDrop transfer uses the same transition; the current transfer's
+progress updates without restarting it.
 
 | Gesture | Operation |
 | --- | --- |

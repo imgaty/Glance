@@ -1082,6 +1082,8 @@ final class NotchController {
 
     private func release(at p: CGPoint) {
         guard !model.activityControlsHidden else {
+            openTask?.cancel()
+            openingZone = nil
             _ = alertPress.end(over: nil, alert: model.alert?.id)
             model.pressedAlertButton = nil
             model.bubblePressed = false

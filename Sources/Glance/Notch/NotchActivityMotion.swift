@@ -12,19 +12,19 @@ import SwiftUI
 extension NotchModel {
     private enum Presentation: Equatable {
         case hardware
-        case compact([Activity], title: Bool)
+        case compact([Activity], transfer: String?, title: Bool)
         case announcement(String, extended: Bool)
-        case expanded(NotchPage, Activity?, stage: Int, available: Bool)
+        case expanded(NotchPage, Activity?, transfer: String?, stage: Int, available: Bool)
     }
 
     private var activityPresentation: Presentation {
         if collapsed || entering { return .hardware }
         if state == .open {
-            return .expanded(page, expanded, stage: activityStage, available: !expandedGone)
+            return .expanded(page, expanded, transfer: expanded == .airdrop ? airdrop?.id : nil, stage: activityStage, available: !expandedGone)
         }
         if let alert { return .announcement(String(describing: alert.id), extended: alertExtended) }
         let shown = Array(activities.prefix(2))
-        return shown.isEmpty ? .hardware : .compact(shown, title: pop)
+        return shown.isEmpty ? .hardware : .compact(shown, transfer: shown.contains(.airdrop) ? airdrop?.id : nil, title: pop)
     }
 
     /// Layout-changing phases, without their running timestamps, progress or error messages.

@@ -149,4 +149,34 @@ struct ActivityMotionInteractionTests {
         if let closing = model.activityTransitionTask { await closing.value }
         #expect(model.state == .closed && !model.activityControlsHidden)
     }
+
+    @Test("Releasing a hold early during an unrelated fold cancels the pending pointer opening")
+    func releaseHoldDuringFold() async throws {
+        let preview = SettingsPreview(opening: {
+            Opening(onHover: false, onClick: true, hoverDelay: 0, clickDelay: 0.1, haptics: false)
+        })
+        preview.feelsOpening = false
+        preview.model.activityReducesMotion = false
+        preview.setInteractive(true, animated: false)
+        let model = preview.model
+        defer { model.cancelActivityTransition() }
+        model.activity = true
+        let geometry = geometry(model)
+        let point = CGPoint(x: 0, y: model.closedSize.height / 2)
+
+        preview.press(at: point, geometry)
+        #expect(model.pressed)
+        model.changeActivityPresentation { model.timer = .paused(left: 75, total: 120) }
+        #expect(model.activityFolded)
+        let unrelatedTransition = try #require(model.activityTransitionTask)
+        let transitionID = model.activityTransitionID
+        preview.release(at: point, geometry)
+        #expect(!model.pressed && !model.bubblePressed)
+        await unrelatedTransition.value
+
+        // Resting inside may produce the ordinary peek, but the abandoned hold must never open.
+        #expect(model.state != .open)
+        #expect(model.activityTransitionID == transitionID)
+        #expect(!model.activityControlsHidden && model.activityTransitionTask == nil)
+    }
 }

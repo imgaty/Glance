@@ -17,6 +17,8 @@ final class SettingsPreview: ObservableObject {
     /// One model for the life of the window, including when the selected display changes.
     let model: NotchModel
     let scrollClock = ScrollClock()
+    /// Read afresh in production; isolated scenes can supply their own opening configuration.
+    private let opening: () -> Opening
     @Published var display: String {
         didSet { followDisplay() }
     }
@@ -30,7 +32,8 @@ final class SettingsPreview: ObservableObject {
         (NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main)?.notchID ?? ""
     }
 
-    init() {
+    init(opening: @escaping () -> Opening = { .current }) {
+        self.opening = opening
         let display = Self.defaultDisplay
         self.display = display
         model = .picture(of: ScreenTop(NSScreen.with(id: display) ?? NSScreen.main), state: .closed)
@@ -190,7 +193,7 @@ final class SettingsPreview: ObservableObject {
             }
             if onBubble || onNotch {
                 if onNotch, model.state == .closed { peek() }
-                let opening = Opening.current
+                let opening = self.opening()
                 if model.detached != nil, opening.onHover, !holdsHoverOpening, !pressBeganClosed {
                     if restPoint == nil || hypot(p.x - restPoint!.x, p.y - restPoint!.y) >= 3 * g.scale {
                         restPoint = p
@@ -298,17 +301,23 @@ final class SettingsPreview: ObservableObject {
         guard pressBeganClosed else { return }
         model.bubbleHovered = pressOnBubble
         if pressOnBubble { model.bubblePressed = true } else { model.press(true) }
-        let opening = Opening.current
+        let opening = self.opening()
         if opening.onClick, opening.clickDelay > 0 { scheduleOpen(after: opening.clickDelay) }
     }
 
     func release(at p: CGPoint, _ g: Geometry) {
+        pointerLocation = p
+        pointerGeometry = g
         guard pressBeganClosed else { return }
         pressBeganClosed = false
         model.press(false)
         model.bubblePressed = false
-        guard !model.activityControlsHidden else { return }
-        let opening = Opening.current
+        guard !model.activityControlsHidden else {
+            openTask?.cancel()
+            openingZone = nil
+            return
+        }
+        let opening = self.opening()
         if opening.clickDelay > 0 {
             if model.state != .open { openTask?.cancel() }
         } else if opening.onClick, pressOnBubble ? g.bubble()?.contains(p) == true : zone(g).contains(p) {
@@ -318,7 +327,7 @@ final class SettingsPreview: ObservableObject {
 
     private func peek() {
         model.peek()
-        let opening = Opening.current
+        let opening = self.opening()
         if opening.onHover, !holdsHoverOpening, model.detached == nil { scheduleOpen(after: opening.hoverDelay) }
     }
 
