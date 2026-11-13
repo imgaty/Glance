@@ -527,7 +527,9 @@ unavailable leave the Tab order, and previews never control a real activity.
 In a call, Tab also reaches **Show in [app]** when the calling app can be opened.
 
 Right-click the notch and choose **Live Activities** to open an ongoing
-activity, including one waiting behind the first two. Its place in arrival
+activity, including one waiting behind the first two. An announcement waiting
+behind an already-open page does not block the menu or keyboard navigation.
+Its place in arrival
 order stays the same. Screen-recording countdowns have no expanded view and
 are skipped; completed or hidden activities leave the menu.
 

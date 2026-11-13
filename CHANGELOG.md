@@ -67,6 +67,8 @@
   another activity waits its turn.
   The notch's **Live Activities** menu opens any ongoing activity, including
   those waiting behind the first two, without changing their order.
+  An announcement waiting behind an open page no longer blocks that menu or
+  keyboard navigation between activities.
 - Added swiping up to dismiss an activity until it changes, and **Hide** in
   the notch's menu. Calls and recordings stay when swiped away.
 - Added **Settings > Live Activities** to choose what appears, including

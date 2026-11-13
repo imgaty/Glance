@@ -376,9 +376,10 @@ final class NotchModel: ObservableObject {
     }
 
     /// Every ongoing activity with an expanded view, including those waiting behind the two
-    /// visible places. An announcement keeps its own controls until it leaves.
+    /// visible places. A visible announcement keeps its own controls; one waiting behind an
+    /// already-open page must not block navigation to the other activities.
     var openableActivities: [Activity] {
-        guard alert == nil else { return [] }
+        guard alert == nil || state == .open else { return [] }
         return activities.filter { activity in
             if activity == .screenRecording, case .countdown = screenRecording { return false }
             return true
