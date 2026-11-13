@@ -46,6 +46,8 @@
 - Added charging and low-battery announcements on MacBooks. The low-battery
   alert includes a Low Power Mode button, using power control approved once
   in **Settings > General > Permissions**.
+  Its instruction has stronger contrast, and compact accessory percentages
+  stay at least 10 points tall.
 - Added connection and low-battery announcements for supported AirPods and
   Beats, showing their model turning beside a battery ring. Earbud charging
   cases have their own low-battery alert.

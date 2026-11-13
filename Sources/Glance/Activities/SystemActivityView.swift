@@ -481,7 +481,7 @@ struct DeviceLayout {
     /// As thick as the iPhone's: an eighth of the ring across; thinner around numbers.
     var ringLine: CGFloat { extended ? height * ExpandedDeviceLayout.ringLine : max(ring * (low ? 0.1 : 0.12), 2) }
     /// The level in numbers, inside the ring.
-    var number: CGFloat { extended ? height * ExpandedDeviceLayout.number : ring * 0.42 }
+    var number: CGFloat { extended ? height * ExpandedDeviceLayout.number : max(ring * 0.42, 10) }
     /// From the left end to the device, as it reaches furthest turning.
     var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
     var trailing: CGFloat { extended ? PlayerLayout.padding : LiveActivityView.concentric(ring, in: height) }

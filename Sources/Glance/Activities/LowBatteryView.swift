@@ -119,8 +119,8 @@ enum LowBatteryLayout {
         insertion: .opacity.animation(.easeOut(duration: 0.25).delay(0.15)),
         removal: .opacity.animation(.easeIn(duration: 0.2)))
 
-    /// The words under the level, as the iPhone's, and once Low Power Mode is on.
-    static let offerColor = Color.p3(0x6E, 0x6E, 0x6E)
+    /// The instruction remains legible at Mac text sizes; the enabled state keeps its warm tint.
+    static let offerColor = NotchType.detailColor
     static let doneColor = Color.p3(0xE1, 0xC8, 0x78)
 
     /// Each part's color: the capsule, the battery's body and cap, and the level.
