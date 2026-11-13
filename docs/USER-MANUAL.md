@@ -513,6 +513,11 @@ The keyboard controls only the activity currently open. A hidden player or a
 preview does not respond to player commands. Controls that become
 unavailable leave the Tab order, and previews never control a real activity.
 
+Right-click the notch and choose **Live Activities** to open an ongoing
+activity, including one waiting behind the first two. Its place in arrival
+order stays the same. Screen-recording countdowns have no expanded view and
+are skipped; completed or hidden activities leave the menu.
+
 ### Timer and stopwatch
 
 The timer and the stopwatch are Clock's: start them in the Clock app, in Control

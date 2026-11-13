@@ -375,6 +375,25 @@ final class NotchModel: ObservableObject {
             .sorted { (arrivals[$0.element] ?? .max, $0.offset) < (arrivals[$1.element] ?? .max, $1.offset) }.map(\.element)
     }
 
+    /// Every ongoing activity with an expanded view, including those waiting behind the two
+    /// visible places. An announcement keeps its own controls until it leaves.
+    var openableActivities: [Activity] {
+        guard alert == nil else { return [] }
+        return activities.filter { activity in
+            if activity == .screenRecording, case .countdown = screenRecording { return false }
+            return true
+        }
+    }
+
+    @discardableResult
+    func selectActivity(_ activity: Activity) -> Bool {
+        guard openableActivities.contains(activity) else { return false }
+        keys.clear()
+        page = .player
+        expanded = activity == .music ? nil : activity
+        return true
+    }
+
     /// Music has the notch's wings: it comes first. Second, it's detached beside the notch.
     var musicShown: Bool { activities.first == .music }
 

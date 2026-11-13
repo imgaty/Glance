@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.nowPlaying = nowPlaying
         notches.contextMenu = statusBar.menu
         statusBar.putAway = (title: { [notches] in notches.putAwayTitle }, action: { [notches] in notches.putAway() })
+        statusBar.activityChoices = { [notches] in notches.activityChoices }
         notches.start()
         Tray.shared.start()
         NSApp.servicesProvider = trayService
@@ -734,6 +735,7 @@ final class NotchManager {
     /// What the menu offers to put away on that notch, and putting it away.
     var putAwayTitle: String? { pointed?.putAwayTitle }
     func putAway() { pointed?.putAway() }
+    var activityChoices: [(title: String, action: () -> Void)] { pointed?.activityChoices ?? [] }
 
     func perform(_ action: Shortcuts.Action) {
         let location = NSEvent.mouseLocation

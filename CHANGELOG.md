@@ -44,6 +44,8 @@
 - Added two activities at once: the first stays beside the camera and the
   second appears in a bubble. Opening either shows its own controls, and
   another activity waits its turn.
+  The notch's **Live Activities** menu opens any ongoing activity, including
+  those waiting behind the first two, without changing their order.
 - Added swiping up to dismiss an activity until it changes, and **Hide** in
   the notch's menu. Calls and recordings stay when swiped away.
 - Added **Settings > Live Activities** to choose what appears, including

@@ -1564,13 +1564,31 @@ final class NotchController {
     /// Up or down: from the player to each live activity's own view, the ring on its first button,
     /// and on back to the player.
     private func showActivity(by step: Int) -> Bool {
-        let views: [NotchModel.Activity?] = [nil] + model.activities.filter { $0 != .music }
+        let views: [NotchModel.Activity?] = [nil] + model.openableActivities.filter { $0 != .music }
         guard views.count > 1, let place = views.firstIndex(of: model.expanded) else { return false }
         let next = views[(place + step + views.count) % views.count]
         model.keys.clear()
         withAnimation(NotchMotion.expand) { model.expanded = next }
         if next != nil, let first = activityControls?.first { model.keys.focus(on: first) }
         return true
+    }
+
+    /// The context menu reaches waiting activities without changing their arrival order.
+    var activityChoices: [(title: String, action: () -> Void)] {
+        guard !tucked else { return [] }
+        return model.openableActivities.map { activity in
+            (title: model.name(of: activity), action: { [weak self] in self?.openActivity(activity) })
+        }
+    }
+
+    private func openActivity(_ activity: NotchModel.Activity) {
+        guard !tucked, model.openableActivities.contains(activity) else { return }
+        if model.state != .open { present(activity, for: nil) }
+        withAnimation(NotchMotion.expand) { model.selectActivity(activity) }
+        holds.remove(.presented)
+        holds.insert(.keyboard)
+        if let first = activityControls?.first { model.keys.focus(on: first) }
+        takeKeys()
     }
 
     /// Up or down on Sound Output: the sound of the app playing, by a tenth, said to VoiceOver. Music's

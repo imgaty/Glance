@@ -34,6 +34,8 @@ final class StatusBarController: NSObject {
     var onOpenSettings: (() -> Void)?
     /// What the notch under the pointer would put away if swiped up, and putting it away.
     var putAway: (title: () -> String?, action: () -> Void)?
+    var activityChoices: (() -> [(title: String, action: () -> Void)])?
+    private var offeredActivities: [(title: String, action: () -> Void)] = []
 
     /// Square, as an icon in the menu bar is: macOS's pill around it comes out the size of the
     /// system's own icons', and the icons beside it as far away. Any wider, the pill is wider still.
@@ -333,6 +335,20 @@ extension StatusBarController: NSMenuDelegate {
             items.append(item)
         }
         if let title = putAway?.title() { add(title, #selector(putAwayActivity)) }
+        offeredActivities = activityChoices?() ?? []
+        if !offeredActivities.isEmpty {
+            let item = NSMenuItem(title: String(localized: "Live Activities"), action: nil, keyEquivalent: "")
+            let choices = NSMenu()
+            choices.autoenablesItems = false
+            for (index, choice) in offeredActivities.enumerated() {
+                let row = NSMenuItem(title: choice.title, action: #selector(openActivityFromMenu), keyEquivalent: "")
+                row.target = self
+                row.tag = index
+                choices.addItem(row)
+            }
+            item.submenu = choices
+            items.append(item)
+        }
         if let timer = clock.timer {
             add(timer.isRunning ? String(localized: "Pause Timer") : String(localized: "Resume Timer"), #selector(pauseOrResumeTimer))
             add(String(localized: "Cancel Timer"), #selector(cancelTimer))
@@ -353,6 +369,11 @@ extension StatusBarController: NSMenuDelegate {
     }
 
     @objc private func putAwayActivity() { putAway?.action() }
+
+    @objc private func openActivityFromMenu(_ item: NSMenuItem) {
+        guard offeredActivities.indices.contains(item.tag) else { return }
+        offeredActivities[item.tag].action()
+    }
 
     /// Marks the timer's items in the menu, to take them out before it's made again.
     private static let timerItem = 7_000
