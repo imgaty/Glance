@@ -496,6 +496,8 @@ struct TurningDevice: View {
     let height: CGFloat
     /// How long it stays face on before it starts turning.
     var hold: TimeInterval = 0
+    /// Isolated reviews can exercise both motion preferences without changing the Mac.
+    var reduceMotionOverride: Bool? = nil
     @State private var start = Date.now
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -528,8 +530,9 @@ struct TurningDevice: View {
 
     var body: some View {
         let scale = height / turn.rest.height
-        TimelineView(.animation(paused: reduceMotion)) { context in
-            Image(decorative: turn.frame(at: reduceMotion ? 0 : Self.degrees(after: context.date.timeIntervalSince(start), holding: hold)), scale: 1)
+        let still = reduceMotionOverride ?? reduceMotion
+        TimelineView(.animation(paused: still)) { context in
+            Image(decorative: turn.frame(at: still ? 0 : Self.degrees(after: context.date.timeIntervalSince(start), holding: hold)), scale: 1)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: turn.canvas.width * scale, height: turn.canvas.height * scale)

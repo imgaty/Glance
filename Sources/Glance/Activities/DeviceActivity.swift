@@ -67,8 +67,11 @@ struct DeviceActivityView: View {
     let extended: Bool
     /// The size the notch is going to, less its flares.
     let notch: CGSize
+    /// Isolated previews can exercise this preference without changing the Mac's setting.
+    var reduceMotionOverride: Bool? = nil
     /// Riding out with the wings' ends as it arrives, from the camera's.
     @State private var arrived = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// How far an end of the notch is from its middle.
     private var toEnd: CGFloat { (arrived || extended ? notch.width : closedWidth) / 2 }
@@ -110,12 +113,12 @@ struct DeviceActivityView: View {
             }
             .frame(width: 0, height: 0)
         }
-        .onAppear { withAnimation(IslandMotion.open) { arrived = true } }
+        .onAppear { withAnimation((reduceMotionOverride ?? reduceMotion) ? nil : IslandMotion.open) { arrived = true } }
     }
 
     @ViewBuilder private func picture(height: CGFloat) -> some View {
         if let turn = DeviceTurn.cached(model) {
-            TurningDevice(turn: turn, height: height, hold: model.isChargingCase ? TurningDevice.caseHold : 0)
+            TurningDevice(turn: turn, height: height, hold: model.isChargingCase ? TurningDevice.caseHold : 0, reduceMotionOverride: reduceMotionOverride)
         }
     }
 

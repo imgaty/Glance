@@ -62,6 +62,7 @@
   Native device banners stay visible when the connected-device report is
   empty or does not match the device named by the banner.
   They also stay until the matching model and battery level are ready to show.
+  Reduce Motion keeps the device still as it arrives, as well as afterward.
 - Added two activities at once: the first stays beside the camera and the
   second appears in a bubble. Opening either shows its own controls, and
   another activity waits its turn.

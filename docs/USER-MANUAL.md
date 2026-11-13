@@ -456,6 +456,8 @@ Their native banners stay visible. An empty or unrelated connected-device
 report also leaves the native banner in place. For a supported device, Glance
 waits until the battery level and matching model are ready before replacing
 the banner. A low case needs its own case model ready.
+With Reduce Motion, the device stays face-on at its final position from the
+moment it appears.
 
 The caller's name responds to hover and press without shifting. When its app
 is available, the same source link is reachable from the keyboard. Its focus
@@ -529,8 +531,8 @@ In a call, Tab also reaches **Show in [app]** when the calling app can be opened
 Right-click the notch and choose **Live Activities** to open an ongoing
 activity, including one waiting behind the first two. An announcement waiting
 behind an already-open page does not block the menu or keyboard navigation.
-Its place in arrival
-order stays the same. Screen-recording countdowns have no expanded view and
+The selected activity keeps its place in arrival order. Screen-recording
+countdowns have no expanded view and
 are skipped; completed or hidden activities leave the menu.
 
 ### Timer and stopwatch
