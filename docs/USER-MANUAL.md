@@ -270,6 +270,7 @@ highlighted row.
 
 Connected speakers and headphones appear under **Output**, with a circle in your
 Mac's accent color for the current output and battery details when available.
+The selected output's circle becomes lighter while pressed.
 Long output names wrap above their battery details. The list expands as outputs
 connect, with new rows fading in and becoming clear. Existing rows move into
 place and disconnected outputs fade away. Reduce Motion removes these

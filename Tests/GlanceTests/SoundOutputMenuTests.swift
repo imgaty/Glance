@@ -42,6 +42,29 @@ struct SoundOutputMenuTests {
         #expect(menu.level.value == before)
     }
 
+    @Test("A row press can leave and re-enter, and releasing outside cancels it")
+    func pressTracking() throws {
+        _ = NSApplication.shared
+        var selections = 0
+        let menu = SoundOutputMenu(devices: [speakers], current: speakers.id, volume: nil, batteries: [:], choose: { _ in selections += 1 }, settings: {})
+        let row = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view as? SoundMenuContentRow)
+        let inside = NSPoint(x: row.bounds.midX, y: row.bounds.midY)
+        let outside = NSPoint(x: -10, y: -10)
+        row.beginPress(at: inside)
+        #expect(row.pressed)
+        row.movePress(to: outside)
+        #expect(!row.pressed)
+        row.endPress(at: outside)
+        #expect(selections == 0)
+        row.beginPress(at: inside)
+        row.movePress(to: outside)
+        row.movePress(to: inside)
+        #expect(row.pressed)
+        row.endPress(at: inside)
+        #expect(!row.pressed)
+        #expect(selections == 1)
+    }
+
     @Test("Device updates preserve a slider edit and update the selected row")
     func updatesKeepSlider() throws {
         _ = NSApplication.shared

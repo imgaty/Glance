@@ -44,8 +44,9 @@
   corners and no arrow. It opens at the click or below the button from the
   keyboard, with system opening and closing transitions and animated resizing.
   Newly connected outputs fade in and become clear as the list expands. The
-  selected output follows the Mac's accent color. Its volume slider is white in dark appearance
-  and uses the accent color in light appearance, with matching speaker heights
+  selected output follows the Mac's accent color and lightens while pressed.
+  Its volume slider is white in dark appearance and uses the accent color in
+  light appearance, with matching speaker heights
   and divider widths. Sound Settings stays compact, with the same highlight as
   the outputs. The slider stays visible but disabled while idle; calls show
   outputs alone.

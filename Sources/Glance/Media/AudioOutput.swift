@@ -680,6 +680,13 @@ final class SoundMenuContentRow: NSView {
     private var hover: NSTrackingArea?
     private let host: NSHostingView<AnyView>
     private var content: AnyView
+    private var trackingPress = false
+    private(set) var pressed = false {
+        didSet {
+            guard pressed != oldValue else { return }
+            host.rootView = Self.root(content, width: bounds.width, pressed: pressed)
+        }
+    }
     var highlighted = false { didSet { needsDisplay = true } }
 
     init<Content: View>(@ViewBuilder content: () -> Content) {
@@ -700,7 +707,7 @@ final class SoundMenuContentRow: NSView {
 
     func replace<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
-        host.rootView = Self.root(self.content, width: bounds.width)
+        host.rootView = Self.root(self.content, width: bounds.width, pressed: pressed)
         setFrameSize(NSSize(width: bounds.width, height: ceil(host.fittingSize.height)))
         needsDisplay = true
     }
@@ -710,7 +717,7 @@ final class SoundMenuContentRow: NSView {
         super.setFrameSize(newSize)
         if widthChanged {
             // AppKit can widen custom menu items; a long name then wraps at the new width.
-            host.rootView = Self.root(content, width: newSize.width)
+            host.rootView = Self.root(content, width: newSize.width, pressed: pressed)
             super.setFrameSize(NSSize(width: newSize.width, height: ceil(host.fittingSize.height)))
         }
         layoutHost()
@@ -720,8 +727,10 @@ final class SoundMenuContentRow: NSView {
         host.frame = bounds.insetBy(dx: SoundLook.highlightInset, dy: 0)
     }
 
-    private static func root(_ view: AnyView, width: CGFloat) -> AnyView {
-        AnyView(view.frame(width: width - SoundLook.highlightInset * 2).environment(\.controlActiveState, .key).accessibilityHidden(true))
+    private static func root(_ view: AnyView, width: CGFloat, pressed: Bool = false) -> AnyView {
+        AnyView(
+            view.frame(width: width - SoundLook.highlightInset * 2)
+                .environment(\.controlActiveState, .key).environment(\.soundMenuPressed, pressed).accessibilityHidden(true))
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -752,11 +761,36 @@ final class SoundMenuContentRow: NSView {
         return true
     }
 
-    override func mouseUp(with event: NSEvent) {
-        guard host.frame.contains(convert(event.locationInWindow, from: nil)) else { return }
-        _ = accessibilityPerformPress()
+    func beginPress(at point: NSPoint) {
+        trackingPress = item?.isEnabled == true && host.frame.contains(point)
+        pressed = trackingPress
     }
 
+    func movePress(to point: NSPoint) {
+        pressed = trackingPress && host.frame.contains(point)
+    }
+
+    func endPress(at point: NSPoint) {
+        let activate = trackingPress && host.frame.contains(point)
+        trackingPress = false
+        pressed = false
+        if activate { _ = accessibilityPerformPress() }
+    }
+
+    override func mouseDown(with event: NSEvent) { beginPress(at: convert(event.locationInWindow, from: nil)) }
+    override func mouseDragged(with event: NSEvent) { movePress(to: convert(event.locationInWindow, from: nil)) }
+    override func mouseUp(with event: NSEvent) { endPress(at: convert(event.locationInWindow, from: nil)) }
+}
+
+private struct SoundMenuPressedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    fileprivate var soundMenuPressed: Bool {
+        get { self[SoundMenuPressedKey.self] }
+        set { self[SoundMenuPressedKey.self] = newValue }
+    }
 }
 
 /// The player's Sound menu as the Mac's own Sound menu measures, read from its Accessibility
@@ -857,12 +891,15 @@ private struct SoundOutputLabel: View {
     let playing: Bool
     let levels: DeviceWatch.Levels?
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.soundMenuPressed) private var pressed
 
     var body: some View {
         HStack(spacing: SoundLook.gap) {
             ZStack {
                 if playing {
                     Circle().fill(Color(nsColor: .controlAccentColor))
+                        // Measured from the normal and pressed Sound circles, in their embedded profile.
+                        .overlay { Circle().fill(.white.opacity(pressed ? 0.1 : 0)) }
                 } else {
                     Circle().soundInk(.fill)
                 }
