@@ -87,7 +87,7 @@ final class ActivityBench {
     }
 
     /// The most the notch shows at once.
-    static let most = 2
+    nonisolated static let most = 2
 
     /// The scenes and each round's seconds, from the arguments Glance was started with.
     nonisolated static func parse(_ arguments: [String]) -> (scenes: [Scene], seconds: Double)? {

@@ -662,8 +662,9 @@ Unavailable actions are disabled for VoiceOver as well as the pointer.
 ## Settings
 
 Visited pages keep their scroll position and control state while the window is
-open. Choice pictures hold still; the large shared preview carries the
-animation. Hidden pages stay out of the selected page's layout. The last page
+open. Choice pictures hold still and do not open playback menus; the large
+shared preview carries the animation. Menu-bar items that do not fit in the
+preview are hidden. Hidden pages stay out of the selected page's layout. The last page
 is saved once navigation settles, and again when the window closes.
 
 Settings opens on the page you last used. While it's open, the **View** menu has

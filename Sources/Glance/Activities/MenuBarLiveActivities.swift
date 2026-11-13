@@ -38,7 +38,7 @@ final class MenuBarLiveActivities {
     /// After System Settings' switches couldn't be reached, not before this, or the Space changing.
     private var retryAfter = Date.distantPast
     /// How long System Settings' switches are waited for, and how long before trying again without.
-    private static let patience: Duration = .seconds(20)
+    private nonisolated static let patience: Duration = .seconds(20)
     private static let retryDelay: TimeInterval = 60
     private var wasOn = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
     /// Every switch is to be turned off, not only those whose pill shows: just turned on, or with

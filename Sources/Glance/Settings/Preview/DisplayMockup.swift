@@ -466,6 +466,15 @@ private struct CameraHousing: View {
     }
 }
 
+enum MenuBarFraming {
+    /// A picture narrower than its two-point margins has no room for menu items.
+    static func inside(width: CGFloat, shown: CGFloat) -> ClosedRange<CGFloat>? {
+        guard width.isFinite, shown.isFinite, min(width, shown) >= 4 else { return nil }
+        let half = min(width, shown) / 2 - 2
+        return (width / 2 - half)...(width / 2 + half)
+    }
+}
+
 /// The menu bar as macOS 26 draws it: no bar, only its menus and icons on the desktop picture, in
 /// white, or in black on a light picture. Safari's menus from the left edge; Glance's own icon, the
 /// system's and the clock from the right.
@@ -484,7 +493,7 @@ private struct MenuBarPicture: View {
 
     var body: some View {
         let light = wallpapers.lightTop(for: top.screen)
-        let inside = (top.size.width - shown) / 2 + 2...(top.size.width + shown) / 2 - 2
+        let inside = MenuBarFraming.inside(width: top.size.width, shown: shown)
         HStack(spacing: 0) {
             Group {
                 Image(systemName: "applelogo")
@@ -528,12 +537,13 @@ private struct MenuBarPicture: View {
 
     /// Shown only if it's wholly inside the picture.
     private struct Framed: ViewModifier {
-        let inside: ClosedRange<CGFloat>
+        let inside: ClosedRange<CGFloat>?
 
         func body(content: Content) -> some View {
             content.visualEffect { [inside] content, proxy in
                 let frame = proxy.frame(in: .named(MenuBarPicture.space))
-                return content.opacity(inside.contains(frame.minX) && inside.contains(frame.maxX) ? 1 : 0)
+                let fits = inside.map { $0.contains(frame.minX) && $0.contains(frame.maxX) } ?? false
+                return content.opacity(fits ? 1 : 0)
             }
         }
     }

@@ -140,7 +140,7 @@ final class AirDropSendWatch {
             guard let found = Self.device(in: apps) else { return }
             nonisolated(unsafe) let button = found.button
             let name = found.name
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 guard let self, self.shown?.id == id else { return }
                 self.device = button
                 self.shown?.recipient = name

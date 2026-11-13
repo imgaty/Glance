@@ -45,7 +45,8 @@ struct ArtworkFlowTests {
     @Test("One picture has one flow, for the background and the waveform alike")
     func shared() throws {
         let image = Self.cover()
-        #expect(try #require(ArtworkFlow.of(image)) === ArtworkFlow.of(image))
+        let first = try #require(ArtworkFlow.of(image))
+        #expect(first === ArtworkFlow.of(image))
     }
 
     static func rendered(_ flow: ArtworkFlow) async throws -> CGImage {

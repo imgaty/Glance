@@ -354,7 +354,7 @@ final class SettingsPreview: ObservableObject {
         mergeTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(NotchController.budAfter))
             guard let self, !Task.isCancelled, model.state != .open else { return }
-            withAnimation(IslandMotion.open) { model.bubbleMerged = false }
+            withAnimation(IslandMotion.open) { self.model.bubbleMerged = false }
         }
     }
 

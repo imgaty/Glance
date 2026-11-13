@@ -109,7 +109,7 @@ final class AudioOutput: NSObject, ObservableObject {
     /// While a Bluetooth output's model isn't known yet, the report is read again, as macOS lists a
     /// pair a moment after its sound goes to them, and their model sometimes later still.
     private var modelTask: Task<Void, Never>?
-    static let modelRetries: [Double] = [0, 1, 2, 3, 5, 8]
+    nonisolated static let modelRetries: [Double] = [0, 1, 2, 3, 5, 8]
 
     /// On a call, the choice is kept through AirPods' automatic switching, which takes the sound
     /// back to AirPods being worn while a call plays on them, as it can't tell the choice was made

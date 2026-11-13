@@ -1085,7 +1085,7 @@ final class CallVoices: ObservableObject {
     }
 
     /// The least of a voice a bar shows while it speaks.
-    static let rippleFloor: CGFloat = 0.55
+    nonisolated static let rippleFloor: CGFloat = 0.55
 
     /// How much of a voice a bar shows just now. The island's bars aren't an even ramp: in the
     /// user's screenshots each stands taller or shorter than its neighbours, within the voice's

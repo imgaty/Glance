@@ -539,7 +539,7 @@ final class NotchModel: ObservableObject {
 
     /// How much the closed notch swells under the pointer, and as the pointer nears: as much at its
     /// ends as at its bottom, so what its wings show keeps the same padding all round.
-    static let peekSwell: CGFloat = 7
+    nonisolated static let peekSwell: CGFloat = 7
     static let nearSwell: CGFloat = 3
 
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
@@ -726,7 +726,7 @@ extension NotchModel {
         reachTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(380))
             guard let self, !Task.isCancelled, state == .closed else { return }
-            withAnimation(IslandMotion.fold) { bubbleReach = 0 }
+            withAnimation(IslandMotion.fold) { self.bubbleReach = 0 }
             try? await Task.sleep(for: .milliseconds(120))
             guard !Task.isCancelled, state == .closed else { return }
             openedFromBubble = false
@@ -976,7 +976,7 @@ struct NotchView: View {
         .environment(\.playerLayout, model.layout)
         .environment(\.lyricsControl, LyricsControl(shown: model.showsLyrics, available: model.songPlaying && lyricsOn, toggle: toggleLyrics))
         .environment(\.playerKeys, model.keys)
-        .environment(\.soundMenuChanged, { model.soundMenuShown = $0 })
+        .environment(\.soundMenuChanged, SoundMenuAction(owner: model))
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
             if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
@@ -1523,10 +1523,18 @@ private struct NotchControl: ViewModifier {
     }
 }
 
+/// An environment action compares by its owner, so unrelated updates do not invalidate the player.
+struct SoundMenuAction: Equatable {
+    weak var owner: NotchModel?
+
+    @MainActor func callAsFunction(_ shown: Bool) { owner?.soundMenuShown = shown }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.owner === rhs.owner }
+}
+
 extension EnvironmentValues {
     @Entry var notchControls = true
     @Entry var activityPreview = false
-    @Entry var soundMenuChanged: (Bool) -> Void = { _ in }
+    @Entry var soundMenuChanged = SoundMenuAction()
     @Entry var tray: Tray? = nil
 }
 

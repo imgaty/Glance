@@ -9,8 +9,8 @@ import AppKit
 import SwiftUI
 
 /// Choosing the player's controls as Apple has controls chosen: the player as it opens on screen,
-/// life size, its two buttons in edit mode as on the iPhone's Lock Screen (− takes a control away,
-/// in a puff of smoke; an empty one shows +; clicking one selects it), and under it the controls, in
+/// life size, its two buttons in edit mode as on the iPhone's Lock Screen (− takes a control away;
+/// an empty one shows +; clicking one selects it), and under it the controls, in
 /// a section as Settings groups its settings, a click adding one to the selected button. Controls can also
 /// be dragged into the player, from one side to the other, or out of it. Restore Defaults puts back
 /// the controls it came with.
@@ -225,7 +225,6 @@ struct ControlsSheet: View {
                     selected = target
                 } else if let source {
                     set(.empty, at: source)
-                    poof()
                 }
             }
     }
@@ -240,14 +239,6 @@ struct ControlsSheet: View {
     private func remove(at place: ControlPlace) {
         set(.empty, at: place)
         selected = place
-        poof()
-    }
-
-    /// Gone in a puff of smoke at the pointer. From the keyboard the pointer can be anywhere, so
-    /// there's no puff.
-    private func poof() {
-        guard NSApp.currentEvent?.type != .keyDown else { return }
-        NSAnimationEffect.poof.show(centeredAt: NSEvent.mouseLocation, size: NSSize(width: 40, height: 40))
     }
 
     private func content(at place: ControlPlace) -> PlayerSlot {

@@ -2063,7 +2063,7 @@ final class NotchController {
                 musicDismissed = false
                 showActivity(nowPlaying.isPlaying, immediately: true)
             } else if model.dismissed.contains(activity) {
-                withAnimation(IslandMotion.open) { _ = model.dismissed.remove(activity) }
+                withAnimation(IslandMotion.open) { _ = self.model.dismissed.remove(activity) }
             }
         }
     }

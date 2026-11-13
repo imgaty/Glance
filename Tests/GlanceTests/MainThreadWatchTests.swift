@@ -37,10 +37,14 @@ struct MainThreadWatchTests {
         let watch = MainThreadWatch()
         watch.ask()
         // The main thread held, as when frozen: the question waits.
-        Thread.sleep(forTimeInterval: 1.2)
+        stallMainThread()
         #expect(watch.silent >= 1.1)
         // Free again, it answers, as soon as the main thread gets to it.
         for _ in 0..<40 where watch.silent >= 0.5 { try await Task.sleep(for: .milliseconds(50)) }
         #expect(watch.silent < 0.5)
     }
+
+    /// Deliberately block rather than suspend: the watchdog must detect a thread that cannot run.
+    private func stallMainThread() { Thread.sleep(forTimeInterval: 1.2) }
+
 }

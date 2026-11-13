@@ -14,7 +14,7 @@ import CoreImage.CIFilterBuiltins
 /// The background's three artwork planes and subdivided warp are rendered on the artwork queue.
 /// The waveform keeps its own cover treatment; it never takes its colors from the background.
 @MainActor
-final class ArtworkFlow: ObservableObject {
+final class ArtworkFlow: @MainActor ObservableObject {
     /// A paused picture still receives the first completed artwork frame. Later frames are
     /// requested by its own timeline, without publishing at the renderer's cadence.
     let objectWillChange = ObservableObjectPublisher()
@@ -65,6 +65,7 @@ final class ArtworkFlow: ObservableObject {
     /// it, as Apple's own waveform does (see `bars(of:)`): a red cover's sides red, a blue middle blue.
     let bars: CGImage
     private let cover: CGImage
+    @MainActor
     private final class Frame {
         var renderer: ArtworkBackdrop?
         var latest: CGImage?
@@ -208,7 +209,7 @@ final class ArtworkFlow: ObservableObject {
         frame.drawing = true
         frame.drawnAt = time
         let cover = cover, previous = frame.renderer, variant = variant
-        Self.queue.async {
+        Self.queue.async { [self, frame] in
             let renderer = previous ?? ArtworkBackdrop(cover, variant: variant, aspect: Double(key) / 20)
             let image = renderer?.frame(at: elapsed)
             DispatchQueue.main.async { [weak self] in

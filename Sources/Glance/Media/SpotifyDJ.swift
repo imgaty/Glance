@@ -16,7 +16,7 @@ import ApplicationServices
 @MainActor
 enum SpotifyDJ {
     /// The switch that shows Spotify's controls to Accessibility.
-    static let accessibilitySwitch = "--force-renderer-accessibility"
+    nonisolated static let accessibilitySwitch = "--force-renderer-accessibility"
     /// The button's name in Spotify's own words, under this key, in each of its languages.
     nonisolated static let nameKey = "web-player.your-dj.jumpbutton.tooltip.hover"
     /// Its Previous button's, which finds the player bar in any language.
