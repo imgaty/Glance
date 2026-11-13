@@ -306,11 +306,10 @@ final class ClockActivity: ObservableObject {
     /// Repeat, which stops its chime too; once that's gone, the length Clock is set to starts again,
     /// with its label, if it's that one's; otherwise Clock comes forward on its timers.
     func repeatTimer() {
-        guard let rang else { return }
+        guard let rang, allowed() else { return }
         self.rang = nil
         chime.stop()
         activities.dismiss(.timerDone)
-        guard allowed() else { return }
         expect(timer: .running(until: .now + rang.length, total: rang.length))
         if Self.answerAlert(.again, title: rang.title) { return }
         control(.repeatTimer(length: rang.length, title: rang.title))

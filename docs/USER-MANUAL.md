@@ -552,6 +552,9 @@ alert, which it takes away. Click **Repeat** to start the same length again, or
 Left alone, it goes by itself after ten seconds and stops ringing, as **✕**
 would, though not while the pointer is on it.
 
+If **Repeat** needs `Accessibility` permission, the warning stays visible
+until permission is available or you stop it.
+
 Without `Accessibility`, macOS's own alert and chime show beside the notch:
 **Repeat** and **✕** answer that alert too, which stops its chime, and stopped
 or repeated in macOS's alert, the timer goes from the notch as well.

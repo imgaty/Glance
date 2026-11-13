@@ -14,7 +14,8 @@
   sound output selection and controls for supported calling apps.
 - Added Clock timers and the stopwatch, with their time beside the camera
   and controls in the opened notch. A ringing timer stops after ten seconds
-  unless the pointer is on it.
+  unless the pointer is on it. Repeat keeps the warning visible when
+  Accessibility permission is unavailable.
 - Added AirDrop progress for incoming and accepted outgoing files, with a
   preview and a button to stop the transfer.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its
