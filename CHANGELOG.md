@@ -40,7 +40,7 @@
 
 ### Player
 
-- Rebuilt Sound as an independent dropdown with native glass, matching rounded
+- Rebuilt Sound as an independent dropdown with native glass, concentric rounded
   corners and no arrow. It opens at the click or below the button from the
   keyboard, with system opening and closing transitions and animated resizing.
   Newly connected outputs fade in and become clear as the list expands. The

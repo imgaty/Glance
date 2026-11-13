@@ -763,11 +763,13 @@ final class SoundMenuContentRow: NSView {
 /// frames and a capture of it on macOS 27.3: everything fourteen points in from the sides, the
 /// highlight five, each output thirty-two points tall with its picture in a circle of twenty-six.
 enum SoundLook {
-    static let edge: CGFloat = 5
+    static let edge: CGFloat = highlightInset
     static let width: CGFloat = 308
     static let inset: CGFloat = 14
     static let highlightInset: CGFloat = 5
     static let highlightRadius: CGFloat = 11
+    // Nested corners share a center when the outer radius includes the inset.
+    static let outerRadius = highlightRadius + highlightInset
     /// Sound, its words' frame so far below the menu's first row.
     static let titleHeight: CGFloat = 26.5
     static let titleTop: CGFloat = 8

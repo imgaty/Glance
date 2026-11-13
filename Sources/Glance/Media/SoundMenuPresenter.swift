@@ -103,10 +103,13 @@ final class SoundPopover: NSObject {
         guard let menu = soundMenu, !dismissing else { return }
         let animate = (animated ?? panel.isVisible) && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let views = menu.items.compactMap(\.view)
+        let rowsHeight = views.reduce(CGFloat.zero) { $0 + $1.frame.height }
+        let height = ceil(rowsHeight + SoundLook.edge * 2)
         var next: [ObjectIdentifier: SoundRowHolder] = [:]
         var inserted: [SoundRowHolder] = []
         var moves: [(SoundRowHolder, CGRect)] = []
-        var top = SoundLook.edge
+        // Put any half-point window rounding above the rows, preserving the footer's exact inset.
+        var top = height - SoundLook.edge - rowsHeight
         for view in views {
             let id = ObjectIdentifier(view)
             let frame = CGRect(x: 0, y: top, width: SoundLook.width, height: view.frame.height)
@@ -126,8 +129,6 @@ final class SoundPopover: NSObject {
         }
         let removed = holders.filter { next[$0.key] == nil }.map(\.value)
         holders = next
-        let height = top + SoundLook.edge
-        // Window dimensions are integral points even when a text row ends on a half point.
         let size = CGSize(width: SoundLook.width, height: ceil(min(height, maximumHeight)))
         scroll.hasVerticalScroller = height > size.height
         stack.setFrameSize(CGSize(width: SoundLook.width, height: height))
@@ -254,7 +255,7 @@ final class SoundPopoverContent: NSGlassEffectView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         style = .regular
-        cornerRadius = SoundLook.highlightRadius
+        cornerRadius = SoundLook.outerRadius
     }
     required init?(coder: NSCoder) { nil }
 }

@@ -169,8 +169,7 @@ struct SoundOutputMenuTests {
         let holder = try #require(speaker.superview)
         let oldHeight = popover.contentSize.height
         let oldFrame = window.frame
-        #expect(popover.contentView.cornerRadius == SoundLook.highlightRadius)
-        #expect(popover.contentView.cornerRadius == 11)
+        #expect(popover.contentView.cornerRadius == 16)
         menu.refresh(devices: [speakers, headphones], current: headphones.id, batteries: [:])
         popover.reload(animated: true)
         let headphone = try #require(menu.items.first { $0.tag == Int(headphones.id) }?.view)
@@ -189,6 +188,8 @@ struct SoundOutputMenuTests {
         #expect(inserted.alphaValue == 1)
         #expect(abs(window.frame.height - popover.contentSize.height) < 0.5)
         #expect(abs(window.frame.maxY - oldFrame.maxY) < 0.5)
+        let footer = try #require(menu.items.last?.view)
+        #expect(abs(footer.convert(footer.bounds, to: popover.contentView).minY - SoundLook.highlightInset) < 0.01)
         #expect(inserted.layer?.filters?.isEmpty != false)
         menu.refresh(devices: [speakers], current: speakers.id, batteries: [:])
         popover.reload(animated: true)

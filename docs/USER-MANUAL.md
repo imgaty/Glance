@@ -250,7 +250,7 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a dropdown with native glass, matching rounded
+The `Sound Output` button opens a dropdown with native glass, concentric rounded
 corners and no pointing arrow.
 It opens at the click, or below the button when using the keyboard, and takes
 keyboard focus while keeping the notch open. It stays on the display where it
