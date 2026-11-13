@@ -275,8 +275,9 @@ animations. Nearby wireless destinations that are not connected
 appear only in macOS. Selecting an output closes Sound.
 
 **Sound Settings…** opens **System Settings > Sound**. Headphone listening modes
-and other headphone options are managed in macOS. Output rows and settings use
-the same rounded highlight under the pointer.
+and other headphone options are managed in macOS. Output rows and settings
+highlight under the pointer. The compact settings row has rounded lower corners
+that fit inside the popover.
 
 When the laptop speakers are selected, the button shows muted, low, medium
 or high volume as the app or speaker volume changes. The speaker stays in

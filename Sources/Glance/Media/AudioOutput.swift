@@ -465,13 +465,12 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
             append("", view: SoundMenuPiece.divider(height: SoundLook.lowerDivider))
             let footer = append(
                 String(localized: "Sound Settings…"),
-                view: SoundMenuContentRow {
+                view: SoundMenuContentRow(cornerRadii: SoundLook.actionCorners) {
                     Text("Sound Settings…")
                         .font(.system(size: 13))
                         .soundInk(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, SoundLook.inset - SoundLook.highlightInset)
-                        .offset(y: -1)
                         .frame(height: SoundLook.actionHeight)
                 }, enabled: true
             )
@@ -680,10 +679,13 @@ final class SoundMenuContentRow: NSView {
     weak var item: NSMenuItem?
     private var hover: NSTrackingArea?
     private let host: NSHostingView<AnyView>
+    private let cornerRadii: RectangleCornerRadii
     private var content: AnyView
     var highlighted = false { didSet { needsDisplay = true } }
 
-    init<Content: View>(@ViewBuilder content: () -> Content) {
+    init<Content: View>(cornerRadii: RectangleCornerRadii? = nil, @ViewBuilder content: () -> Content) {
+        let radius = SoundLook.highlightRadius
+        self.cornerRadii = cornerRadii ?? .init(topLeading: radius, bottomLeading: radius, bottomTrailing: radius, topTrailing: radius)
         self.content = AnyView(content())
         host = NSHostingView(rootView: Self.root(self.content, width: SoundLook.width))
         super.init(frame: NSRect(x: 0, y: 0, width: SoundLook.width, height: ceil(host.fittingSize.height)))
@@ -727,7 +729,7 @@ final class SoundMenuContentRow: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard highlighted else { return }
-        let shape = RoundedRectangle(cornerRadius: SoundLook.highlightRadius, style: .continuous)
+        let shape = UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
         SoundMenu.highlightColor.setFill()
         NSBezierPath(cgPath: shape.path(in: host.frame).cgPath).fill()
     }
@@ -785,6 +787,8 @@ enum SoundLook {
     static let glyph: CGFloat = 13.5
     static let batteryLift: CGFloat = -2
     static let actionHeight: CGFloat = 22
+    // Fit the lower popover corners while keeping the settings row compact.
+    static let actionCorners = RectangleCornerRadii(topLeading: 8, bottomLeading: 14, bottomTrailing: 14, topTrailing: 8)
 }
 
 /// Measured on the built-in display, with the desktop behind the glass and in window captures.
