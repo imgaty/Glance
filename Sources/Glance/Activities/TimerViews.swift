@@ -540,6 +540,56 @@ enum AlertButton: Hashable {
     case accept, decline
 }
 
+/// A drawn alert button follows the same drag-out cancellation as a native button, and a new
+/// alert must never inherit a click that began on the previous one.
+struct AlertPress {
+    private var button: AlertButton?
+    private var alert: UUID?
+    var isActive: Bool { button != nil }
+
+    mutating func begin(on button: AlertButton?, alert: UUID?) {
+        self.button = alert == nil ? nil : button
+        self.alert = alert
+    }
+
+    func highlight(over button: AlertButton?, alert: UUID?) -> AlertButton? {
+        self.alert == alert && self.button == button ? button : nil
+    }
+
+    mutating func end(over button: AlertButton?, alert: UUID?) -> AlertButton? {
+        let result = highlight(over: button, alert: alert)
+        self.button = nil
+        self.alert = nil
+        return result
+    }
+}
+
+private struct PressedAlertButtonKey: EnvironmentKey {
+    static let defaultValue: AlertButton? = nil
+}
+
+extension EnvironmentValues {
+    var pressedAlertButton: AlertButton? {
+        get { self[PressedAlertButtonKey.self] }
+        set { self[PressedAlertButtonKey.self] = newValue }
+    }
+}
+
+private struct AlertButtonFeedback: ViewModifier {
+    let button: AlertButton
+    @Environment(\.pressedAlertButton) private var pressed
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        let down = enabled && pressed == button
+        content
+            .overlay(Capsule().fill(.white.opacity(down ? 0.1 : 0)))
+            .scaleEffect(down && !reduceMotion ? 0.94 : 1)
+            .animation(.easeOut(duration: 0.1), value: down)
+    }
+}
+
 /// Where the closed notch's buttons are, in the notch's points, while they show.
 struct AlertButtonFrames: PreferenceKey {
     static let defaultValue: [AlertButton: CGRect] = [:]
@@ -559,11 +609,12 @@ extension View {
     }
 
     func reportsFrame(_ button: AlertButton) -> some View {
-        background {
-            GeometryReader { proxy in
-                Color.clear.preference(key: AlertButtonFrames.self, value: [button: proxy.frame(in: .named(ControlFrames.space))])
+        modifier(AlertButtonFeedback(button: button))
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: AlertButtonFrames.self, value: [button: proxy.frame(in: .named(ControlFrames.space))])
+                }
             }
-        }
     }
 }
 

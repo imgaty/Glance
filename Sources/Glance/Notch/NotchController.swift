@@ -125,7 +125,7 @@ final class NotchController {
     /// A new layout chosen while the notch is closed, taken once things have settled.
     private var relayoutTask: Task<Void, Never>?
     /// Pressed on one of a done timer's buttons, which acts rather than opening the notch.
-    private var pressedButton: AlertButton?
+    private var alertPress = AlertPress()
     /// What keeps the open notch open with the pointer off it.
     private enum Hold {
         /// A menu opened from inside it, like the sound output's, is up: the pointer is on the menu,
@@ -1020,6 +1020,7 @@ final class NotchController {
         if fullScreen, !model.hasCamera, followMenuBar(p) { return }
         let button = alertButton(at: p)
         if model.hoveredButton != button { model.hoveredButton = button }
+        model.pressedAlertButton = alertPress.highlight(over: button, alert: model.alert?.id)
         switch model.state {
         case .closed, .peek:
             let onBubble = button == nil && bubbleZone?.contains(p) == true
@@ -1093,8 +1094,9 @@ final class NotchController {
     private func press(at p: CGPoint) {
         guard !holds.contains(.sound) else { return }
         // A done timer's buttons, in the closed notch, are buttons of their own.
-        pressedButton = alertButton(at: p)
-        if pressedButton != nil { return }
+        alertPress.begin(on: alertButton(at: p), alert: model.alert?.id)
+        model.pressedAlertButton = alertPress.highlight(over: alertButton(at: p), alert: model.alert?.id)
+        if alertPress.isActive { return }
         pressBeganClosed = model.state != .open
         if !pressBeganClosed, !openZone.contains(p) { return close(holdUntilExit: false) }
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
@@ -1118,9 +1120,10 @@ final class NotchController {
     }
 
     private func release(at p: CGPoint) {
-        if let button = pressedButton {
-            pressedButton = nil
-            if alertButton(at: p) == button { perform(button) }
+        if alertPress.isActive {
+            let button = alertPress.end(over: alertButton(at: p), alert: model.alert?.id)
+            model.pressedAlertButton = nil
+            if let button { perform(button) }
             return
         }
         guard pressBeganClosed else { return }

@@ -168,7 +168,9 @@ final class NotchModel: ObservableObject {
     @Published var popWing: CGFloat = NotchModel.maxPopWing
     /// What the Mac announces (see Activities), and each wing's width for it: for a few seconds the
     /// wings show it, over whatever else they show.
-    @Published var alert: NotchAlert?
+    @Published var alert: NotchAlert? {
+        didSet { if alert?.id != oldValue?.id { pressedAlertButton = nil } }
+    }
     @Published var alertWing: CGFloat = 0
     /// With the pointer on a device being announced, it extends, as the iPhone's AirPods do.
     @Published var alertExtended = false
@@ -286,6 +288,7 @@ final class NotchModel: ObservableObject {
     /// pointer is on.
     var alertButtons: [AlertButton: CGRect] = [:]
     @Published var hoveredButton: AlertButton?
+    @Published var pressedAlertButton: AlertButton?
 
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
     /// player: AirDrop, the timer, the stopwatch, or AirPlay.
@@ -878,6 +881,7 @@ struct NotchView: View {
                 extended: model.alertExtended,
                 notch: CGSize(width: m.bodyWidth, height: m.height)
             )
+            .environment(\.pressedAlertButton, model.pressedAlertButton)
             .atNotchStep(width: m.bodyWidth, height: m.height)
             .allowsHitTesting(false)
             // What grew out of it takes over and hands back on its own (see `GrownAway`): faded here

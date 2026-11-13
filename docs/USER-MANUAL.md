@@ -506,6 +506,9 @@ notch open, it closes to say what happened, and opens again after, if the
 pointer is still on it. Turn these off with `Battery`, `Devices` and `Calls` in
 **Settings > Live Activities**.
 
+Timer, incoming-call and low-battery buttons respond as you press them. Drag
+away before releasing to cancel. A new alert does not inherit an earlier click.
+
 The keyboard controls only the activity currently open. A hidden player or a
 preview does not respond to player commands. Controls that become
 unavailable leave the Tab order, and previews never control a real activity.

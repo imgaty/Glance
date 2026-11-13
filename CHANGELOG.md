@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Added pressed feedback to timer, incoming-call and low-battery alert
+  buttons. Dragging away cancels the click, and a new alert cannot inherit it.
+
 - Fixed keyboard commands reaching controls in activities that were hidden
   behind the opened one. Unavailable controls no longer keep keyboard focus.
 
