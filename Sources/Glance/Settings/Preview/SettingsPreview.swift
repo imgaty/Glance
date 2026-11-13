@@ -19,6 +19,7 @@ final class SettingsPreview: ObservableObject {
     let scrollClock = ScrollClock()
     /// Read afresh in production; isolated scenes can supply their own opening configuration.
     private let opening: () -> Opening
+    private let openingFeedback: () -> Void
     @Published var display: String {
         didSet { followDisplay() }
     }
@@ -32,8 +33,9 @@ final class SettingsPreview: ObservableObject {
         (NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main)?.notchID ?? ""
     }
 
-    init(opening: @escaping () -> Opening = { .current }) {
+    init(opening: @escaping () -> Opening = { .current }, openingFeedback: @escaping () -> Void = Opening.tap) {
         self.opening = opening
+        self.openingFeedback = openingFeedback
         let display = Self.defaultDisplay
         self.display = display
         model = .picture(of: ScreenTop(NSScreen.with(id: display) ?? NSScreen.main), state: .closed)
@@ -380,8 +382,10 @@ final class SettingsPreview: ObservableObject {
             model.bubblePressed = false
             model.pressed = false
         }
-        model.open()
-        if feelsOpening { Opening.tap() }
+        model.open { [weak self] in
+            guard let self, self.feelsOpening, self.opening().haptics else { return }
+            self.openingFeedback()
+        }
     }
 
     private func close() {

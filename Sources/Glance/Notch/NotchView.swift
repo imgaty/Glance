@@ -397,9 +397,9 @@ final class NotchModel: ObservableObject {
     }
 
     @discardableResult
-    func selectActivity(_ activity: Activity) -> Bool {
+    func selectActivity(_ activity: Activity, onCollapse: (() -> Void)? = nil) -> Bool {
         guard openableActivities.contains(activity) else { return false }
-        changeActivityPresentation(animation: NotchMotion.expand) {
+        changeActivityPresentation(animation: NotchMotion.expand, onCollapse: onCollapse) {
             keys.clear()
             page = .player
             expanded = activity == .music ? nil : activity
@@ -707,10 +707,10 @@ extension NotchModel {
         }
     }
 
-    /// With the Dynamic Island's spring, as its activities expand (see `NotchMotion`).
-    func open() {
+    /// Collapses to the housing, then expands without overshooting its destination.
+    func open(onCollapse: (() -> Void)? = nil) {
         guard !entering else { return }
-        changeActivityPresentation(animation: NotchMotion.expand) {
+        changeActivityPresentation(animation: Self.activityExpansionMotion, onCollapse: onCollapse) {
             state = .open
             proximity = 0
             pop = false

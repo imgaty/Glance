@@ -44,18 +44,20 @@ extension NotchModel {
 
     /// Payload updates remain immediate, so a later input always acts on the latest state. Only a
     /// change of presentation folds the shell; elapsed time, progress and button feedback do not.
-    func changeActivityPresentation(animation: Animation? = IslandMotion.open, _ changes: () -> Void) {
+    func changeActivityPresentation(animation: Animation? = IslandMotion.open, onCollapse: (() -> Void)? = nil, _ changes: () -> Void) {
         let before = activityPresentation
         let atHousing = before == .hardware && metrics.bodyWidth == closedSize.width && metrics.height == closedSize.height && bubbleReach == 0
         let hadActivity = !activities.isEmpty || alert != nil || expanded != nil
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        // The first arrival has no later unfold to supply its spring. Give that initial payload
+        // The first arrival has no later unfold to supply its expansion. Give that initial payload
         // the same opening motion as a destination revealed after reaching the housing.
-        let updateAnimation = animation.map { atHousing ? Self.activityOpeningSpring : $0 }
+        let updateAnimation = animation.map { atHousing ? Self.activityExpansionMotion : $0 }
         withAnimation(reduced ? nil : updateAnimation, changes)
-        guard before != activityPresentation,
-            hadActivity || !activities.isEmpty || alert != nil || expanded != nil
-        else { return }
+        guard before != activityPresentation else { return }
+        guard hadActivity || !activities.isEmpty || alert != nil || expanded != nil else {
+            onCollapse?()
+            return
+        }
 
         let wasFolding = activityFolded
         activityTransitionTask?.cancel()
@@ -72,6 +74,7 @@ extension NotchModel {
                 activityOpening = false
                 restoreActivityDestination()
             }
+            onCollapse?()
             return
         }
 
@@ -81,7 +84,7 @@ extension NotchModel {
         let pace = max(NotchMotion.pace, 0.01)
         let started = clock.now
         let foldDeadline = started + .seconds(Self.activityFoldDuration / pace)
-        withAnimation(folds ? Self.activityClosingMotion : Self.activityOpeningSpring) {
+        withAnimation(folds ? Self.activityClosingMotion : Self.activityExpansionMotion) {
             activityFolded = folds
             activityOpening = !folds
             bubbleMerged = folds || state == .open
@@ -89,6 +92,7 @@ extension NotchModel {
             hoveredButton = nil
             pressedAlertButton = nil
         }
+        if !folds { onCollapse?() }
         activityTransitionTask = Task { @MainActor [weak self] in
             var revealStarted = started
             if folds {
@@ -96,12 +100,14 @@ extension NotchModel {
                 // Animation joins cannot use the default wake-up coalescing tolerance.
                 do { try await clock.sleep(until: foldDeadline, tolerance: .zero) } catch { return }
                 guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
-                // Reaching the housing is the reversal into the opening spring. An extra pulse
-                // here creates two more direction changes and makes the same gesture stutter.
+                // User-initiated opening gives its single tap at the housing, before expanding.
+                // Automatic updates provide no callback and remain silent.
+                onCollapse?()
+                guard !Task.isCancelled, self.activityTransitionID == request else { return }
                 // Read the destination afresh; a source may have ended while the shell was closing.
                 let reduced = self.activityMotionReduced
                 revealStarted = clock.now
-                withAnimation(reduced ? nil : Self.activityOpeningSpring) {
+                withAnimation(reduced ? nil : Self.activityExpansionMotion) {
                     self.activityOpening = !reduced && self.activityPresentation != .hardware
                     self.activityFolded = false
                     self.restoreActivityDestination()
@@ -143,7 +149,7 @@ extension NotchModel {
     private static var activityClosingMotion: Animation {
         .easeInOut(duration: activityFoldDuration).paced
     }
-    private static var activityOpeningSpring: Animation {
-        .spring(response: 0.68, dampingFraction: 0.60).paced
+    static var activityExpansionMotion: Animation {
+        .timingCurve(0.2, 0, 0.2, 1, duration: activityControlDelay).paced
     }
 }

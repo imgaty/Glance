@@ -747,13 +747,13 @@ final class NotchController {
     }
 
     /// The shared presentation sequence folds the attached and detached parts together.
-    private func openMerging() { model.open() }
+    private func openMerging() { model.open(onCollapse: Opening.tap) }
 
     private var presentTask: Task<Void, Never>?
 
     /// Opens to an activity by itself, for a while or until it's done, unless the notch is already
     /// open for something else or tucked away.
-    private func present(_ activity: NotchModel.Activity, for seconds: Double?) {
+    private func present(_ activity: NotchModel.Activity, for seconds: Double?, onCollapse: (() -> Void)? = nil) {
         if model.state == .open {
             // Opened by the pointer or the keyboard: left as it is.
             guard holds.contains(.presented) else { return }
@@ -770,12 +770,12 @@ final class NotchController {
                 model.openedFromBubble = model.detached == activity
                 model.bubbleReach = model.openedFromBubble ? model.bubbleSpan : 0
                 model.bubbleHovered = false
-                model.expanded = activity
+                model.expanded = activity == .music ? nil : activity
                 model.page = .player
                 model.pageStretch = 0
             }
             holds.insert(.presented)
-            model.open()
+            model.open(onCollapse: onCollapse)
             startPolling()
         }
         presentTask?.cancel()
@@ -1314,7 +1314,6 @@ final class NotchController {
             }
         }
         openMerging()
-        Opening.tap()
         startPolling()
         // Accessibility may have been allowed since: three fingers can turn the page now.
         NotchSwipes.shared.start()
@@ -1545,8 +1544,12 @@ final class NotchController {
 
     private func openActivity(_ activity: NotchModel.Activity) {
         guard !tucked, model.openableActivities.contains(activity) else { return }
-        if model.state != .open { present(activity, for: nil) }
-        _ = model.selectActivity(activity)
+        model.keys.clear()
+        if model.state != .open {
+            present(activity, for: nil, onCollapse: Opening.tap)
+        } else {
+            _ = model.selectActivity(activity, onCollapse: Opening.tap)
+        }
         holds.remove(.presented)
         holds.insert(.keyboard)
         if let first = activityControls?.first { model.keys.focus(on: first) }

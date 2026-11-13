@@ -90,8 +90,8 @@ Hover over the notch or click it, depending on
 notch closes when the pointer leaves it. It opens and closes the same way to
 whatever it shows: the player, the tray, the lyrics, a live activity, or an
 announcement as tall as the Alarm. Each activity opening, closing or switching
-first folds to the camera housing, then springs directly into its next view
-with a gentler, quicker bounce. This also applies to detached activities and
+first folds to the camera housing, then expands smoothly into its next view
+without a bounce. This also applies to detached activities and
 device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a
 new action replaces an unfinished transition. Between the player and the tray,
@@ -103,6 +103,10 @@ than slide.
 
 Controls become available as they appear. Escape can close an opening activity,
 and the activity navigation keys can change its destination during the animation.
+With `Haptic feedback` on in **Settings > Opening**, opening gives one light tap
+when the notch reaches the housing, just before expanding. Canceling before that
+point prevents the tap; automatic activity updates stay silent. Reduce Motion
+gives the tap immediately.
 Releasing a hold before its delay ends cancels opening, even during a fold.
 The next visible AirDrop transfer uses the same transition; the current transfer's
 progress updates without restarting it.
@@ -884,7 +888,7 @@ preview stays on what's playing.
 | `Open with` | `Hover`, `Click`, or `Hover or click` |
 | `Hover delay` | How long the pointer rests on the notch before it opens |
 | `Click and hold` | How long a click is held before it opens |
-| `Haptic feedback` | A light tap on the trackpad when the notch opens (off at first) |
+| `Haptic feedback` | A light tap on the trackpad when the notch finishes collapsing before it opens (off at first); with Reduce Motion, the tap is immediate |
 | `Gestures` | Two-finger swipes down to open and up to close, and left and right to change songs; three-finger swipes on the open notch and scrolling sideways with Shift held to go between tools; and the same drags on a display with Touch, two fingers sideways for the tools. Scrolling goes the way your Mac scrolls |
 | `Open the player` | The keyboard shortcut, ⌥⇧1 at first; click it and type another, or Control-click it to restore ⌥⇧1 |
 | `Open the tray` | The tray's shortcut, ⌥⇧2 at first, changed the same way |

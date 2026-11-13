@@ -11,11 +11,13 @@
 ### Live Activities
 
 - Changed activity opening, closing and switching to fold to the camera housing,
-  then spring directly into the next view with a gentler, quicker bounce.
+  then expand smoothly into the next view without a bounce.
+  With `Haptic feedback` on, opening gives one tap at the housing before expanding.
+  Canceling before the housing prevents the tap; automatic updates stay silent.
   Removed an extra pulse and pause at the housing that made the movement stutter.
   This includes detached activities and announcements.
   New input replaces an unfinished transition, and routine time
-  and progress updates keep their place. Reduce Motion skips the bounce.
+  and progress updates keep their place. Reduce Motion skips the housing excursion.
   Controls become available as their content appears. Hover keeps its intended
   target during a fold, and detached activities return after leaving full screen.
   Releasing a hold early cancels its pending opening, including during a fold.
