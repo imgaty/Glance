@@ -851,7 +851,15 @@ struct ExpandedCallView: View {
                 .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
                 .accessibilityHint(spoken)
             if keyboard {
-                button.keyControl(.activityThird, in: RoundedRectangle(cornerRadius: CallLayout.round(restingHeight) / 2), spoken: spoken) {
+                // Without an avatar, the incoming/outgoing header is only two lines tall.
+                // Keep its ring outside the words instead of curving through their leading edge.
+                let textOnlyHeader = !call.throughApple && !call.isConnected
+                button.keyControl(
+                    .activityThird,
+                    in: RoundedRectangle(cornerRadius: textOnlyHeader ? 8 : CallLayout.round(restingHeight) / 2),
+                    outset: textOnlyHeader ? CGSize(width: 4, height: 4) : .zero,
+                    spoken: spoken
+                ) {
                     actions.openSource()
                 }
             } else {

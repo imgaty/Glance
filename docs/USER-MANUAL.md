@@ -456,7 +456,8 @@ Their native banners stay visible. An empty or unrelated connected-device
 report also leaves the native banner in place.
 
 The caller's name responds to hover and press without shifting. When its app
-is available, the same source link is reachable from the keyboard.
+is available, the same source link is reachable from the keyboard. Its focus
+ring stays outside the text when the call has no avatar.
 
 Glance knows of a FaceTime or phone call from macOS's own popup for it, and
 reads the caller, the time and where its buttons are from that popup's picture,

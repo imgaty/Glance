@@ -21,6 +21,7 @@
   The caller's source app is reachable from the keyboard in each call layout;
   unavailable source links are omitted.
   Hovering and pressing the caller gives feedback without moving the name.
+  The keyboard focus ring stays clear of caller text when there is no avatar.
 - Added Clock timers and the stopwatch, with their time beside the camera
   and controls in the opened notch. A ringing timer stops after ten seconds
   unless the pointer is on it. Repeat keeps the warning visible when
