@@ -148,7 +148,7 @@ struct NotchPreview: View {
         }
         // As on screen: closed, the notch shows what's playing only while something plays.
         .onChange(of: "\(nowPlaying.isPlaying) \(liveActivity) \(ObjectIdentifier(model).hashValue)", initial: true) {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { model.activity = nowPlaying.isPlaying && liveActivity }
+            model.changeActivityPresentation { model.activity = nowPlaying.isPlaying && liveActivity }
         }
         // As on screen: while a song plays, the waveform in the open player shows its lyrics.
         .onChange(of: "\(nowPlaying.isSong) \(ObjectIdentifier(model).hashValue)", initial: true) {

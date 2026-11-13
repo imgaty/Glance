@@ -548,27 +548,40 @@ struct ActivitiesTests {
         #expect(SystemActivityView.widthChange(after: now, of: .stopwatch(.stopped(elapsed: 595))) == nil)
     }
 
-    @Test("Opened from the bubble, the notch is one shape reaching over the bubble, and closes back into it")
+    @Test("Opened from the bubble, the notch passes through its housing and restores the bubble when closed")
     @MainActor
     func openFromBubble() async throws {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.activityReducesMotion = false
+        defer { model.cancelActivityTransition() }
         model.activity = true
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = 60
         #expect(model.detached == .timer)
         // From the notch's end to the bubble's far side.
         #expect(abs(model.bubbleSpan - 32 * (1 + IslandBubble.gap)) < 0.001)
-        // Clicked, it reaches over the bubble at once, and opens from there to its own size.
+        // Clicked, the detached origin folds into the hardware before opening to its own size.
         model.openedFromBubble = true
+        model.expanded = .timer
         model.bubbleReach = model.bubbleSpan
         model.open()
         #expect(model.bubbleReach == 0 && model.state == .open)
-        // Closed, it goes back over the bubble, then draws back from it.
+        #expect(model.activityFolded && model.detached == nil)
+        #expect(model.metrics.bodyWidth == 185 && model.metrics.height == 32)
+        let opening = try #require(model.activityTransitionTask)
+        await opening.value
+        #expect(!model.activityFolded && model.openedFromBubble)
+        // Closing uses the same midpoint before the detached activity returns.
         model.close()
-        #expect(model.bubbleReach == model.bubbleSpan && model.openedFromBubble)
-        try await Task.sleep(for: .milliseconds(600))
+        #expect(model.activityFolded && model.bubbleReach == 0 && model.openedFromBubble)
+        #expect(model.metrics.bodyWidth == 185 && model.metrics.height == 32)
+        #expect(model.detached == nil)
+        let closing = try #require(model.activityTransitionTask)
+        await closing.value
         #expect(model.bubbleReach == 0 && !model.openedFromBubble)
+        #expect(!model.activityFolded && model.detached == .timer)
         // Opened from the notch, it never reaches out.
+        model.expanded = nil
         model.open()
         model.close()
         #expect(model.bubbleReach == 0)

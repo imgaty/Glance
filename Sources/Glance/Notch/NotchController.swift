@@ -66,6 +66,7 @@ final class NotchController {
     private let nowPlaying: NowPlaying
     private let panel: NotchPanel
     private let eventView = NotchEventView()
+    private var tornDown = false
     /// On a display that takes a finger, where the finger finds the closed notch: the notch's own
     /// window lets everything through until the pointer comes onto it, and a finger brings no
     /// pointer. As big as the closed notch, its wings and its bubbles, and just under its window,
@@ -79,7 +80,6 @@ final class NotchController {
 
     private var openTask: Task<Void, Never>?
     /// Until when an announcement is folding away for the notch to open (see `foldAnnouncement`).
-    private var foldingUntil = Date.distantPast
     private var closeTask: Task<Void, Never>?
     private var pollTimer: Timer?
     /// After an explicit close, stay shut until the pointer leaves the notch.
@@ -98,8 +98,6 @@ final class NotchController {
     private var settingsWatch: AnyCancellable?
     private var songWatch: AnyCancellable?
     private var popTask: Task<Void, Never>?
-    /// Folding to rest before an announcement opens, or before what it covered comes back.
-    private var switchTask: Task<Void, Never>?
     /// Closed to announce something: the page it opens back to once that's said, if the pointer's
     /// still on it.
     private var reopening: NotchPage?
@@ -309,7 +307,7 @@ final class NotchController {
             self.takeKeys()
         }
         eventView.passesThrough = { [weak self] point in
-            guard let model = self?.model, model.state == .open else { return false }
+            guard let model = self?.model, model.state == .open, !model.activityFolded else { return false }
             // In the notch's own points, which start below the strip past the top.
             let inNotch = CGPoint(x: point.x, y: point.y - Layout.pastTop)
             return model.controlFrames.contains { $0.contains(inNotch) }
@@ -433,6 +431,12 @@ final class NotchController {
             }
         }
         menuWatches = [
+            model.$activityFolded.removeDuplicates().dropFirst().sink { [weak self] _ in
+                // Published sends before its value changes; hit regions follow the committed phase.
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.pointerMoved(to: NSEvent.mouseLocation) }
+                }
+            },
             NotificationCenter.default.publisher(for: SoundOutputMenu.didOpen).sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.model.soundMenuShown = true }
             },
@@ -499,6 +503,7 @@ final class NotchController {
     /// Taken off screen: softly, or, as the notch is turned off, into the camera housing on a display
     /// that has one, or up into the top edge on one that doesn't.
     func tearDown(collapsing: Bool = false) {
+        tornDown = true
         entryTask?.cancel()
         entryTask = nil
         giveBackKeys()
@@ -509,14 +514,13 @@ final class NotchController {
         popTask?.cancel()
         openTask?.cancel()
         closeTask?.cancel()
-        switchTask?.cancel()
         recordingRefit?.cancel()
         timerWingTask?.cancel()
         relayoutTask?.cancel()
         glideCheck?.cancel()
         revealTask?.cancel()
-        mergeTask?.cancel()
         presentTask?.cancel()
+        model.cancelActivityTransition()
         returns.values.forEach { $0.cancel() }
         [
             playingWatch, titleWatch, settingsWatch, songWatch, alertWatch, timerWatch,
@@ -607,9 +611,10 @@ final class NotchController {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
             }
-            withAnimation(shown ? IslandMotion.open : IslandMotion.fold) {
-                self?.model.activity = shown
-                if !shown { self?.model.pop = false }
+            guard let self else { return }
+            self.model.changeActivityPresentation(animation: shown ? IslandMotion.open : IslandMotion.fold) {
+                self.model.activity = shown
+                if !shown { self.model.pop = false }
             }
         }
     }
@@ -632,97 +637,49 @@ final class NotchController {
         withAnimation(NotchMotion.expand) { model.use(PlayerLayout.current) }
     }
 
-    /// Something the Mac announces: the wings widen to show it, and fold back once it's said, with
-    /// the Dynamic Island's springs, measured from it: a touch of bounce opening, none folding. With
-    /// music or a timer showing, the notch first folds to rest, what it shows blurring away, and
-    /// opens again from there; once it's said, it folds, and what was there opens again. Open, it
-    /// closes first, as nothing announced shows over the open notch, and opens again after.
+    /// Announcements use the same housing midpoint as activity opens and switches. Their data is
+    /// set immediately; the shared transition chooses when the new presentation becomes visible.
     private func show(_ alert: NotchAlert?) {
-        switchTask?.cancel()
-        let fold = IslandMotion.fold, open = IslandMotion.open
-        let wingsShowing = !model.activities.isEmpty
-        guard let alert else {
-            withAnimation(fold) {
-                model.alert = nil
-                model.alertExtended = false
-                model.switching = wingsShowing
-            }
-            if let page = reopening, Activities.shared.waiting.isEmpty {
-                reopening = nil
-                if openZone.contains(NSEvent.mouseLocation) {
-                    holdUntilExit = false
-                    foldingUntil = .now + Self.foldTime
-                    return self.open(on: page)
-                }
-            }
-            // The pointer stayed on it: the hover it held back opens the notch now.
-            let opening = Opening.current
-            if model.state == .peek, opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 {
-                scheduleOpen(after: max(opening.hoverDelay, Self.foldTime))
-            }
-            // Folded for the notch to open: what was there shows in the open notch, not first beside
-            // the camera.
-            guard wingsShowing, foldingUntil < .now else { return }
-            switchTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(Self.switchPause))
-                guard let self, !Task.isCancelled else { return }
-                withAnimation(open) { self.model.switching = false }
-            }
-            return
-        }
-        if model.state == .open, !alert.stays, holds.isEmpty, !model.dropping {
+        if let alert, model.state == .open, !alert.stays, holds.isEmpty, !model.dropping {
             reopening = model.page
-            var still = Transaction()
-            still.disablesAnimations = true
-            // What the wings show waits, rather than coming back for a moment in between.
-            withTransaction(still) { model.switching = wingsShowing }
             close(holdUntilExit: true)
-            switchTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(Self.closeTime))
-                guard let self, !Task.isCancelled else { return }
-                // For as long as it would have shown.
-                Activities.shared.keep(alert.kind, for: alert.seconds)
-                self.show(alert)
-            }
-            return
         }
-        // The pointer resting on the notch doesn't open it over what's just been announced.
-        if model.state == .peek { openTask?.cancel() }
-        let wing = SystemActivityView.wing(
-            for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
-        func announce() {
-            // One as tall as the Alarm is an expanded activity, and grows as the notch opens.
-            withAnimation(alert.tall ? NotchMotion.expand : open) {
-                model.switching = false
-                model.alertWing = wing
-                model.alert = alert
-                // Extended already, the next device takes its own width; anything else folds.
+        if model.state == .peek, alert != nil { openTask?.cancel() }
+        model.changeActivityPresentation {
+            model.switching = false
+            model.alert = alert
+            if let alert {
+                model.alertWing = SystemActivityView.wing(
+                    for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
                 if case .device = alert.content {
                     model.alertExtendedWing = ExpandedDeviceLayout.wing(
                         name: alert.name ?? "", restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
                 } else {
                     model.alertExtended = false
                 }
+            } else {
+                model.alertExtended = false
             }
         }
-        guard wingsShowing, model.alert == nil, !model.switching else { return announce() }
-        withAnimation(fold) { model.switching = true }
-        switchTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Self.switchPause))
-            guard self != nil, !Task.isCancelled else { return }
-            announce()
+        guard alert == nil else { return }
+        if let page = reopening, Activities.shared.waiting.isEmpty {
+            reopening = nil
+            if openZone.contains(NSEvent.mouseLocation) {
+                holdUntilExit = false
+                return open(on: page)
+            }
+        }
+        let opening = Opening.current
+        if model.state == .peek, opening.onHover, NSEvent.pressedMouseButtons & 1 == 0 {
+            scheduleOpen(after: max(opening.hoverDelay, NotchModel.activityFoldDuration))
         }
     }
-
-    /// How long the notch rests between one activity folding and the next opening, as the Dynamic
-    /// Island's does.
-    private static let switchPause = 0.18
 
     /// The timer or the stopwatch started, paused or ended: its wings come, or go. Opened to it,
     /// ended, cancelled or reset, the notch closes, for what it's done to show.
     private func show(timer: NotchTimer.State?, stopwatch: Stopwatch?) {
         let ending = (timer == nil && model.timer != nil) || (stopwatch == nil && model.stopwatch != nil)
-        withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
+        model.changeActivityPresentation(animation: ending ? IslandMotion.fold : IslandMotion.open) {
             // Started, paused or ended, one swiped away comes back.
             if timer != model.timer { model.dismissed.remove(.timer) }
             if stopwatch != model.stopwatch { model.dismissed.remove(.stopwatch) }
@@ -743,7 +700,7 @@ final class NotchController {
             model.airdrop = transfer
             return
         }
-        withAnimation(transfer == nil ? IslandMotion.fold : IslandMotion.open) {
+        model.changeActivityPresentation(animation: transfer == nil ? IslandMotion.fold : IslandMotion.open) {
             if transfer?.id != model.airdrop?.id { model.dismissed.remove(.airdrop) }
             model.airdrop = transfer
         }
@@ -753,7 +710,7 @@ final class NotchController {
     /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it
     /// leaves, the notch closes.
     private func show(airplay route: AirPlayRoute?) {
-        withAnimation(route == nil ? IslandMotion.fold : IslandMotion.open) {
+        model.changeActivityPresentation(animation: route == nil ? IslandMotion.fold : IslandMotion.open) {
             if route != model.airplay { model.dismissed.remove(.airplay) }
             model.airplay = route
         }
@@ -775,7 +732,7 @@ final class NotchController {
             }
         }
         let ending = (screen == nil && model.screenRecording != nil) || (memo == nil && model.voiceMemo != nil)
-        withAnimation(ending ? IslandMotion.fold : IslandMotion.open) {
+        model.changeActivityPresentation(animation: ending ? IslandMotion.fold : IslandMotion.open) {
             if (screen == nil) != (model.screenRecording == nil) { model.dismissed.remove(.screenRecording) }
             if memo?.isRecording != model.voiceMemo?.isRecording { model.dismissed.remove(.voiceMemo) }
             model.screenRecording = screen
@@ -785,38 +742,8 @@ final class NotchController {
         refitAsRecordingCounts()
     }
 
-    /// Opens the notch. With a bubble beside it and opened from the notch, the bubble runs back into
-    /// the notch's end first, as the iPhone's does, and the notch opens from there (see `budOff`).
-    /// With Reduce Motion on, it opens at once, the bubble fading where it rests.
-    private func openMerging() {
-        mergeTask?.cancel()
-        guard model.detached != nil, !model.openedFromBubble, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            return model.open()
-        }
-        withAnimation(IslandMotion.fold) { model.bubbleMerged = true }
-        mergeTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Self.mergeTime))
-            guard let self, !Task.isCancelled else { return }
-            self.model.open()
-        }
-    }
-
-    /// Once the notch has closed, a bubble that ran into it buds off again, as the iPhone's does.
-    private func budOff() {
-        mergeTask?.cancel()
-        guard model.bubbleMerged else { return }
-        mergeTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Self.budAfter))
-            guard let self, !Task.isCancelled, self.model.state != .open else { return }
-            withAnimation(IslandMotion.open) { self.model.bubbleMerged = false }
-        }
-    }
-
-    /// How long the bubble takes to run into the notch before it opens, and how long after closing it
-    /// buds off, from the user's iPhone recording: about 0.08 s, and once the notch is all but closed.
-    static let mergeTime = 0.08
-    static let budAfter = 0.25
-    private var mergeTask: Task<Void, Never>?
+    /// The shared presentation sequence folds the attached and detached parts together.
+    private func openMerging() { model.open() }
 
     private var presentTask: Task<Void, Never>?
 
@@ -826,7 +753,7 @@ final class NotchController {
         if model.state == .open {
             // Opened by the pointer or the keyboard: left as it is.
             guard holds.contains(.presented) else { return }
-            withAnimation(NotchMotion.expand) { model.expanded = activity }
+            model.changeActivityPresentation(animation: NotchMotion.expand) { model.expanded = activity }
         } else {
             guard !tucked, model.alert == nil, model.activities.contains(activity) else { return }
             openTask?.cancel()
@@ -878,7 +805,7 @@ final class NotchController {
 
     /// A call came in, connected or ended: its wings come, change, or go.
     private func show(call: CallShown?) {
-        withAnimation(call == nil ? IslandMotion.fold : IslandMotion.open) {
+        model.changeActivityPresentation(animation: call == nil ? IslandMotion.fold : IslandMotion.open) {
             if call?.isConnected != model.call?.isConnected || call == nil { model.dismissed.remove(.call) }
             model.call = call
         }
@@ -926,7 +853,7 @@ final class NotchController {
             guard let model = self?.model, let nowPlaying = self?.nowPlaying, !Task.isCancelled,
                 nowPlaying.isPlaying, nowPlaying.hasMedia, model.state == .closed
             else { return }
-            withAnimation(IslandMotion.open) {
+            model.changeActivityPresentation {
                 model.popWing = LiveActivityView.popWing(
                     title: nowPlaying.title, artist: nowPlaying.artist,
                     restingHeight: model.closedSize.height)
@@ -935,7 +862,7 @@ final class NotchController {
             }
             try? await Task.sleep(for: .seconds(3.5))
             guard !Task.isCancelled else { return }
-            withAnimation(IslandMotion.fold) { model.pop = false }
+            model.changeActivityPresentation(animation: IslandMotion.fold) { model.pop = false }
         }
     }
 
@@ -943,7 +870,10 @@ final class NotchController {
 
     /// Back to the camera housing as a full-screen app comes, or out again as it goes.
     private func keepToCamera() {
-        if fullScreen { close(holdUntilExit: false) }
+        if fullScreen {
+            close(holdUntilExit: false)
+            model.cancelActivityTransition()
+        }
         withAnimation(fullScreen ? IslandMotion.fold : IslandMotion.open) { model.collapsed = fullScreen }
         placeTouchTarget()
     }
@@ -1028,6 +958,14 @@ final class NotchController {
     // MARK: Pointer
 
     func pointerMoved(to p: CGPoint) {
+        guard !tornDown else { return }
+        // Shrinking under a stationary pointer is not a pointer exit. Re-evaluate after unfolding.
+        if model.activityFolded {
+            closeTask?.cancel()
+            closeTask = nil
+            panel.ignoresMouseEvents = true
+            return
+        }
         // Where three fingers turn the page: the open notch, kept up to date as it opens and closes.
         NotchSwipes.shared.set(swipeZone, for: self)
         if fullScreen, !model.hasCamera, followMenuBar(p) { return }
@@ -1089,7 +1027,7 @@ final class NotchController {
     /// The button of a timer that's done, or Low Battery's, in the closed notch, at a point on the
     /// screen.
     private func alertButton(at p: CGPoint) -> AlertButton? {
-        guard model.alert?.tall == true, model.state != .open, let view = panel.contentView else { return nil }
+        guard !model.activityFolded, model.alert?.tall == true, model.state != .open, let view = panel.contentView else { return nil }
         let local = view.convert(panel.convertPoint(fromScreen: p), from: nil)
         let inNotch = CGPoint(x: local.x, y: local.y - Layout.pastTop)
         return model.alertButtons.first { $0.value.contains(inNotch) }?.key
@@ -1157,6 +1095,7 @@ final class NotchController {
 
     /// A done timer's button, or Low Battery's, in the closed notch, clicked or tapped.
     private func perform(_ button: AlertButton) {
+        guard !model.activityFolded else { return }
         switch button {
         case .again: ClockActivity.shared.repeatTimer()
         case .stop: ClockActivity.shared.dismissRing()
@@ -1177,6 +1116,7 @@ final class NotchController {
     /// or not, a finger having no other way to open it. A bubble opens to what it shows; a done
     /// timer's buttons are pressed; off the open notch, in its window's margin, it closes.
     private func tapped(at p: CGPoint) {
+        guard !model.activityFolded else { return }
         if let button = alertButton(at: p) { return perform(button) }
         guard model.state != .open else {
             if !openZone.contains(p) { close(holdUntilExit: false) }
@@ -1192,6 +1132,7 @@ final class NotchController {
     /// scrolls, gliding on as it's let go. Two fingers sideways on the open notch turn the page, as
     /// three do on the trackpad, where three on the display are the system's.
     private func panned(_ pan: NSPanGestureRecognizer) {
+        guard !model.activityFolded else { return }
         guard #available(macOS 27, *) else { return }
         // In the notch's flipped points: down is positive.
         let dragged = pan.translation(in: pan.view)
@@ -1228,7 +1169,7 @@ final class NotchController {
     /// the touches, while it's tucked away in full screen, and once it's taken down (see `tearDown`).
     private func placeTouchTarget() {
         guard let touchTarget else { return }
-        guard model.state != .open, !tucked, touchWatch != nil else { return touchTarget.orderOut(nil) }
+        guard model.state != .open, !model.activityFolded, !tucked, touchWatch != nil else { return touchTarget.orderOut(nil) }
         let zone = interactiveZone
         if touchTarget.frame != zone { touchTarget.setFrame(zone, display: false) }
         if !touchTarget.isVisible { touchTarget.orderFrontRegardless() }
@@ -1274,12 +1215,9 @@ final class NotchController {
     /// the next. One with buttons, as a rung timer, stays for them.
     private func foldAnnouncement() {
         guard let alert = model.alert, !alert.tall, model.state != .open else { return }
-        foldingUntil = .now + Self.foldTime
         Activities.shared.dismiss(alert.kind)
     }
 
-    /// As long as an announcement takes to fold away.
-    private static let foldTime = 0.32
     /// As long as the open notch takes to close, near enough to open again from.
     private static let closeTime = 0.34
 
@@ -1297,34 +1235,16 @@ final class NotchController {
         restPoint = nil
         model.settle(closeness: closeness(to: p))
         stopPolling()
-        // Gone before the notch opened, after an announcement folded away for it: what was there
-        // comes back beside the camera.
-        if foldingUntil > .distantPast, model.alert == nil, model.switching {
-            withAnimation(IslandMotion.open) { model.switching = false }
-        }
-        foldingUntil = .distantPast
+
     }
 
     /// Opens on the player, unless told otherwise; for something dragged to it, with its places to
     /// drop. An announcement folds away first, unless it's to go with the opening, for fingers
     /// already pulling the notch down, which a wait would leave stretching it.
-    private func open(on page: NotchPage = .player, forDrop: Bool = false, atOnce: Bool = false) {
+    private func open(on page: NotchPage = .player, forDrop: Bool = false) {
         guard model.state != .open else { return }
-        // An announcement folds away first, from a click or a shortcut as from the pointer (see
-        // `foldAnnouncement`); something dragged to the notch doesn't wait for it.
-        if !forDrop {
-            foldAnnouncement()
-            let wait = foldingUntil.timeIntervalSinceNow
-            if wait > 0, !atOnce {
-                openTask?.cancel()
-                openTask = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(wait))
-                    guard !Task.isCancelled else { return }
-                    self?.open(on: page)
-                }
-                return
-            }
-        }
+        // Dismissing the announcement and choosing the open destination share one housing fold.
+        if !forDrop { foldAnnouncement() }
         // The screen recording's countdown has nothing to open to, as on the iPhone.
         if !forDrop, model.opensToNothing(fromBubble: model.bubbleHovered) { return }
         // At the bench, it opens only to what's being tried, never to the player, unless what's tried
@@ -1497,6 +1417,14 @@ final class NotchController {
             close(holdUntilExit: false)
             return true
         }
+        if model.activityFolded {
+            // Navigation can replace the destination; hidden controls cannot perform actions.
+            if !command, flags.isDisjoint(with: [.control, .option]), model.page == .player {
+                if code == kVK_UpArrow { return showActivity(by: -1) }
+                if code == kVK_DownArrow { return showActivity(by: 1) }
+            }
+            return true
+        }
         guard model.page == .tray else {
             guard !command, flags.isDisjoint(with: [.control, .option]) else { return false }
             return typedOnPlayer(key: code, shift: shift)
@@ -1578,7 +1506,7 @@ final class NotchController {
         guard views.count > 1, let place = views.firstIndex(of: model.expanded) else { return false }
         let next = views[(place + step + views.count) % views.count]
         model.keys.clear()
-        withAnimation(NotchMotion.expand) { model.expanded = next }
+        model.changeActivityPresentation(animation: NotchMotion.expand) { model.expanded = next }
         if next != nil, let first = activityControls?.first { model.keys.focus(on: first) }
         return true
     }
@@ -1594,7 +1522,7 @@ final class NotchController {
     private func openActivity(_ activity: NotchModel.Activity) {
         guard !tucked, model.openableActivities.contains(activity) else { return }
         if model.state != .open { present(activity, for: nil) }
-        withAnimation(NotchMotion.expand) { _ = model.selectActivity(activity) }
+        _ = model.selectActivity(activity)
         holds.remove(.presented)
         holds.insert(.keyboard)
         if let first = activityControls?.first { model.keys.focus(on: first) }
@@ -1687,7 +1615,6 @@ final class NotchController {
         closeTask = nil
         holdUntilExit = hold
         model.close()
-        budOff()
         stopPolling()
         pointerMoved(to: NSEvent.mouseLocation)
     }
@@ -1845,6 +1772,7 @@ final class NotchController {
     // MARK: Scroll: pull down to open, push up to dismiss, swipe sideways to skip
 
     private func scrolled(_ event: NSEvent) {
+        guard !model.activityFolded else { return }
         // Positive means fingers (or wheel) moving down or right, whatever the natural-scrolling setting.
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
@@ -1959,7 +1887,7 @@ final class NotchController {
         if !pullFired, model.state != .open, pull > 40 {
             pullFired = true
             pull = 0
-            open(atOnce: true)
+            open()
         } else if !pullFired, pull < (model.state == .open ? -48 : -30) {
             pullFired = true
             pushedUp()
@@ -2073,7 +2001,7 @@ final class NotchController {
     /// timer or the stopwatch when it's started, paused or ended; AirDrop with the next file;
     /// AirPlay with the next speaker; a call when it's answered.
     private func dismiss(_ activity: NotchModel.Activity) {
-        withAnimation(IslandMotion.fold) {
+        model.changeActivityPresentation(animation: IslandMotion.fold) {
             if activity == .music {
                 musicDismissed = true
                 activityTask?.cancel()
@@ -2095,7 +2023,7 @@ final class NotchController {
                 musicDismissed = false
                 showActivity(nowPlaying.isPlaying, immediately: true)
             } else if model.dismissed.contains(activity) {
-                withAnimation(IslandMotion.open) { _ = self.model.dismissed.remove(activity) }
+                self.model.changeActivityPresentation { _ = self.model.dismissed.remove(activity) }
             }
         }
     }
@@ -2119,13 +2047,14 @@ final class NotchController {
 
     /// Where three-finger swipes are the notch's: all of it, while it's open with the tray on.
     private var swipeZone: CGRect? {
-        guard model.state == .open, Tray.isOn, UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch) else { return nil }
+        guard model.state == .open, !model.activityFolded, Tray.isOn, UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch) else { return nil }
         return openZone
     }
 
     /// Three fingers on the open notch: the page follows them, and turns as a pull down opens the
     /// notch, past a point on the way; let go, it springs back into place.
     func swipe(_ motion: NotchSwipes.Motion) {
+        guard !model.activityFolded else { return }
         switch motion {
         case .began:
             swipeBegan()
@@ -2261,7 +2190,7 @@ final class NotchController {
     }
 
     private func rect(for state: NotchState) -> CGRect {
-        let m = model.metrics(for: state)
+        let m = model.metrics(for: state, housingPhase: state != .open)
         return CGRect(x: centerX - m.totalWidth / 2, y: topY - m.height, width: m.totalWidth - m.fold, height: m.height)
     }
 

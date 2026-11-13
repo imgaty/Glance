@@ -10,6 +10,11 @@
 
 ### Live Activities
 
+- Changed activity opening, closing and switching to fold to the camera housing
+  first, then spring into the next view, including detached activities and
+  announcements. New input replaces an unfinished transition, and routine time
+  and progress updates keep their place. Reduce Motion skips the bounce.
+
 - Added pressed feedback to timer, incoming-call and low-battery alert
   buttons. Dragging away cancels the click, and a new alert cannot inherit it.
 

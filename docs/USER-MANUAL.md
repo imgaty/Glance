@@ -89,10 +89,12 @@ Hover over the notch or click it, depending on
 **Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
 notch closes when the pointer leaves it. It opens and closes the same way to
 whatever it shows: the player, the tray, the lyrics, a live activity, or an
-announcement as tall as the Alarm. As the Dynamic Island's expanded activities
-do, the notch grows with a touch of bounce while what it shows grows out of a
-blur, and folds without one as it blurs away. Between the player and the tray,
-they slide and fade. With
+announcement as tall as the Alarm. Each activity opening, closing or switching
+first folds to the camera housing, then springs into its next view. This also
+applies to detached activities and device announcements. When the last activity
+ends, it stays at the housing. Time and progress updates keep their place, and a
+new action replaces an unfinished transition. Between the player and the tray,
+they slide and fade when no activity is showing. With
 Reduce Motion on, they only fade, and nothing bounces: the notch, the bubbles and
 the cover settle straight where they're going, the star glows without swelling,
 the skip arrows stay where they are, and the welcome tour's pages fade rather

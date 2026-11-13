@@ -132,7 +132,7 @@ struct PreviewPointerTests {
         #expect(preview.model.expanded == .call)
         #expect(preview.model.openedFromBubble)
         preview.pointer(at: nil, geometry)
-        #expect(await eventually { preview.model.state == .closed })
+        #expect(await eventually { preview.model.state == .closed && !preview.model.activityFolded })
         #expect(preview.model.detached == .call)
     }
 

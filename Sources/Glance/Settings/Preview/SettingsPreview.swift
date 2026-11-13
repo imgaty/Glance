@@ -75,15 +75,14 @@ final class SettingsPreview: ObservableObject {
     private var pressBeganClosed = false
     private var pressOnBubble = false
     private var restPoint: CGPoint?
-    private var mergeTask: Task<Void, Never>?
 
     /// On the Opening page it closes, to be opened; leaving, it opens again and stays open, as it
     /// does after the Tray page's drag, which leaves it closed. It folds and opens as the notch on
     /// screen does.
     func setInteractive(_ on: Bool, animated: Bool) {
         guard on != interactive || (!on && revealed && model.state != .open) else { return }
+        model.cancelActivityTransition()
         interactive = on
-        mergeTask?.cancel()
         restPoint = nil
         model.bubbleHovered = false
         model.bubblePressed = false
@@ -317,7 +316,6 @@ final class SettingsPreview: ObservableObject {
         let bubble = fromBubble ?? model.bubbleHovered
         guard !model.opensToNothing(fromBubble: bubble) else { return }
         openTask?.cancel()
-        mergeTask?.cancel()
         restPoint = nil
         closeTask?.cancel()
         closeTask = nil
@@ -332,30 +330,15 @@ final class SettingsPreview: ObservableObject {
             model.bubblePressed = false
             model.pressed = false
         }
-        if model.detached != nil, !model.openedFromBubble, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            withAnimation(IslandMotion.fold) { model.bubbleMerged = true }
-            mergeTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(NotchController.mergeTime))
-                guard !Task.isCancelled else { return }
-                self?.model.open()
-            }
-        } else {
-            model.open()
-        }
+        model.open()
         if feelsOpening { Opening.tap() }
     }
 
     private func close() {
         openTask?.cancel()
-        mergeTask?.cancel()
         closeTask = nil
         model.close()
-        guard model.bubbleMerged else { return }
-        mergeTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(NotchController.budAfter))
-            guard let self, !Task.isCancelled, model.state != .open else { return }
-            withAnimation(IslandMotion.open) { self.model.bubbleMerged = false }
-        }
+
     }
 
 }

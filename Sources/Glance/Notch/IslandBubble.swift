@@ -65,11 +65,9 @@ struct IslandBubble: View {
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
-    /// How long after the notch starts opening a bubble running into its end is taken in. On the
-    /// user's iPhone recording it ran in on the fold's own curve for 0.21 s, then the last fifth of it
-    /// went in at once, in one frame, rather than creeping in: 0.21 s from when it starts running in,
-    /// `NotchController.mergeTime` before the notch opens.
-    static let inBy: Double = 0.21 - NotchController.mergeTime
+    /// The last part of the bubble disappears into the shell during its housing fold, so it
+    /// cannot remain detached beside the bare camera housing.
+    static let inBy: Double = 0.13
 
     /// On the spring the notch's end draws back on, so the two part evenly.
     private var motion: Animation { shown ? IslandMotion.open : IslandMotion.fold }

@@ -154,7 +154,7 @@ private struct KeyControl: ViewModifier {
                 guard shown, enabled, !preview, keys?.focus == control else { return }
                 action()
             }
-            .onChange(of: keys?.focus, initial: true) {
+            .onChange(of: shown && enabled && keys?.focus == control, initial: true) {
                 guard shown, enabled, !preview, onScreen, keys?.focus == control else { return }
                 NSAccessibility.post(
                     element: NSApp as Any, notification: .announcementRequested,

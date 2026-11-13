@@ -47,8 +47,6 @@ extension SettingsPreview {
     private static let between = 1.6
     /// How long what stays by itself on screen, like a timer, shows here.
     private static let held = 4.0
-    /// How long the notch rests between one activity folding and the next opening.
-    private static let switchPause = 0.18
 
     /// Round after round until it's cancelled, starting with the one given. While the notch is open
     /// under the pointer, it waits. Nothing here touches anything real.
@@ -76,13 +74,12 @@ extension SettingsPreview {
     func clearActivities() {
         let model = model
         guard
-            model.alert != nil || model.switching || model.pop || model.airdrop != nil
+            model.alert != nil || model.pop || model.airdrop != nil
                 || model.timer != nil || model.stopwatch != nil || model.screenRecording != nil || model.voiceMemo != nil
                 || model.call != nil || model.airplay != nil
         else { return }
-        withAnimation(IslandMotion.fold) {
+        model.changeActivityPresentation(animation: IslandMotion.fold) {
             model.alert = nil
-            model.switching = false
             model.pop = false
             model.airdrop = nil
             model.call = nil
@@ -146,50 +143,36 @@ extension SettingsPreview {
         guard model.activity else { return }
         let room = (PreviewHeader.width / NotchPreview.scale(for: PreviewHeader.width, model: model) - model.closedSize.width) / 2 - 12
         let wing = LiveActivityView.popWing(title: song.title, artist: song.artist, restingHeight: model.closedSize.height)
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+        model.changeActivityPresentation {
             model.popWing = min(wing, room)
             model.pop = true
         }
         await pause(3.5)
         guard !Task.isCancelled else { return }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { model.pop = false }
+        model.changeActivityPresentation(animation: IslandMotion.fold) { model.pop = false }
     }
 
     /// Something the Mac announces, as the notch says it: what's beside the camera folds first, and
     /// opens again after.
     private func say(_ alert: NotchAlert) async {
         let model = model
-        let wingsShowing = !model.activities.isEmpty
-        if wingsShowing {
-            withAnimation(IslandMotion.fold) { model.switching = true }
-            await pause(Self.switchPause)
-            guard !Task.isCancelled else { return }
-        }
         let wing = SystemActivityView.wing(for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
-        withAnimation(IslandMotion.open) {
-            model.switching = false
+        model.changeActivityPresentation {
             model.alertWing = wing
             model.alert = alert
         }
         await pause(alert.stays ? Self.held : alert.seconds)
         guard !Task.isCancelled else { return }
-        withAnimation(IslandMotion.fold) {
-            model.alert = nil
-            model.switching = wingsShowing
-        }
-        guard wingsShowing else { return }
-        await pause(Self.switchPause)
-        guard !Task.isCancelled else { return }
-        withAnimation(IslandMotion.open) { model.switching = false }
+        model.changeActivityPresentation(animation: IslandMotion.fold) { model.alert = nil }
     }
 
     /// An activity that stays on screen, here for a few seconds.
     private func hold<Value>(_ activity: ReferenceWritableKeyPath<NotchModel, Value?>, _ value: Value) async {
         let model = model
-        withAnimation(IslandMotion.open) { model[keyPath: activity] = value }
+        model.changeActivityPresentation { model[keyPath: activity] = value }
         await pause(Self.held)
         while model.state != .closed, !Task.isCancelled { await pause(0.3) }
         guard !Task.isCancelled else { return }
-        withAnimation(IslandMotion.fold) { model[keyPath: activity] = nil }
+        model.changeActivityPresentation(animation: IslandMotion.fold) { model[keyPath: activity] = nil }
     }
 }
