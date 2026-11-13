@@ -558,15 +558,11 @@ struct GrownAway: ViewModifier {
     }
 }
 
-/// How the Dynamic Island's activities come and go, measured frame by frame from it, for everything
-/// the closed notch shows: its wings open with a touch of bounce and fold without, what they show
-/// riding in and out with their ends; it fades in out of a blur as they open, sharpening as it comes,
-/// and fades away into one at once as they fold. With Reduce Motion on, the wings open without their
-/// bounce, as they fold, and nothing blurs.
+/// The wings and detached bubble share the shell's bounded acceleration and deceleration.
+/// Their contents fade through a blur; Reduce Motion keeps the fade without the blur.
 enum IslandMotion {
-    static var open: Animation { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? fold : opening }
-    static var fold: Animation { Animation.spring(response: 0.315, dampingFraction: 1.18).paced }
-    private static var opening: Animation { Animation.spring(response: 0.55, dampingFraction: 0.8).paced }
+    static var open: Animation { NotchMotion.expand }
+    static var fold: Animation { NotchMotion.fold }
     /// What comes and goes with the wings, as `islandFade` shows and hides it.
     static let fade = AnyTransition(IslandFade())
 }

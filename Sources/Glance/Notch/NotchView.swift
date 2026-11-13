@@ -647,12 +647,14 @@ final class NotchModel: ObservableObject {
     }
 }
 
-/// The Dynamic Island's bounce as its activities expand: past its size, by about a twentieth, and
-/// back, a bounce that's seen. With Reduce Motion on, straight to its size.
+/// Shared timing for the shell, its contents and the detached activity.
 enum NotchMotion {
     /// How fast the notch's motions run: 1 always, but slower in a test that films them a frame
     /// at a time.
     nonisolated(unsafe) static var pace: Double = 1
+
+    static let foldDuration = 0.28
+    static let expandDuration = 0.38
 }
 
 extension Animation {
@@ -662,8 +664,15 @@ extension Animation {
 
 extension NotchMotion {
     static var expand: Animation {
-        (NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            ? Animation.spring(response: 0.42, dampingFraction: 1) : .spring(response: 0.5, dampingFraction: 0.68)).paced
+        eased(duration: expandDuration)
+    }
+
+    static var fold: Animation { eased(duration: foldDuration) }
+    static var feedback: Animation { eased(duration: 0.18) }
+
+    /// Starts and stops at rest, with one speed peak and no travel beyond either endpoint.
+    private static func eased(duration: Double) -> Animation {
+        .timingCurve(0.42, 0, 0.58, 1, duration: duration).paced
     }
 
     /// A spring that bounces, or with Reduce Motion on, that settles straight where it's going.
@@ -682,12 +691,14 @@ extension NotchModel {
         changeActivityPresentation(animation: animated ? NotchMotion.expand : nil) {
             expanded = nil
             self.page = page
+            stretch = 0
+            lean = 0
             pageStretch = 0
         }
     }
 
     func peek() {
-        withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { state = .peek }
+        withAnimation(NotchMotion.feedback) { state = .peek }
     }
 
     /// Closed → a device extended, the notch and what it shows in one motion.
@@ -700,7 +711,7 @@ extension NotchModel {
 
     /// A small hover settles directly. An extended device returns through the housing first.
     func settle(closeness: CGFloat) {
-        changeActivityPresentation(animation: alertExtended ? IslandMotion.fold : NotchMotion.spring(response: 0.35, dampingFraction: 0.8)) {
+        changeActivityPresentation(animation: alertExtended ? IslandMotion.fold : NotchMotion.feedback) {
             state = .closed
             alertExtended = false
             proximity = Self.eased(closeness)
@@ -712,6 +723,11 @@ extension NotchModel {
         guard !entering else { return }
         changeActivityPresentation(animation: Self.activityExpansionMotion, onCollapse: onCollapse) {
             state = .open
+            pressed = false
+            bubblePressed = false
+            stretch = 0
+            lean = 0
+            pageStretch = 0
             proximity = 0
             pop = false
             bubbleReach = 0
@@ -769,9 +785,10 @@ extension NotchModel {
         }
     }
 
-    /// Squeezed while pressed; let go, it springs back.
+    /// Squeezed while pressed; let go, it returns without overshooting.
     func press(_ down: Bool) {
-        withAnimation(down ? NotchMotion.spring(response: 0.2, dampingFraction: 0.7) : NotchMotion.spring(response: 0.4, dampingFraction: 0.5)) { pressed = down }
+        guard pressed != down else { return }
+        withAnimation(NotchMotion.feedback) { pressed = down }
     }
 
     /// The closed notch swells a little as the pointer comes near: `closeness` from 0, far, to 1,
@@ -779,7 +796,7 @@ extension NotchModel {
     func approach(_ closeness: CGFloat) {
         let value = Self.eased(closeness)
         guard abs(value - proximity) > 0.01 || (value == 0 && proximity != 0) else { return }
-        withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8)) { proximity = value }
+        withAnimation(NotchMotion.feedback) { proximity = value }
     }
 
     private static func eased(_ closeness: CGFloat) -> CGFloat {

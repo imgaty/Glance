@@ -91,7 +91,9 @@ notch closes when the pointer leaves it. It opens and closes the same way to
 whatever it shows: the player, the tray, the lyrics, a live activity, or an
 announcement as tall as the Alarm. Each activity opening, closing or switching
 first folds to the camera housing, then expands smoothly into its next view
-without a bounce. This also applies to detached activities and
+without a bounce. Both legs start gently, speed up, and slow to a stop. The
+contents and detached bubble follow the same motion, including when closing
+back to the compact live activity. This also applies to detached activities and
 device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a
 new action replaces an unfinished transition. Between the player and the tray,
@@ -120,7 +122,7 @@ camera housing. Leaving full screen restores the compact activities and bubble.
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away, but not a call or a recording (see [Live Activities](#live-activities)) |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
-| Swipe left or right with three fingers, on the open notch | Stretches the notch and what's in it with your fingers and switches to the tray, and back to the player, springing into place as you let go (with `Accessibility` allowed) |
+| Swipe left or right with three fingers, on the open notch | Stretches the notch and what's in it with your fingers and switches to the tray, and back to the player, easing into place as you let go (with `Accessibility` allowed) |
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead, and, scrolled on past the row's end, goes back to the player |
 | Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
 | Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |
@@ -424,8 +426,8 @@ playing, its name and artist appear beside the notch for a moment. Everything
 here comes and goes as on the iPhone's Dynamic Island: the notch widens and
 folds, and what it shows rides in and out with its ends, fading in out of a blur
 and away into one. A new song's cover comes in the same way as the last one
-goes. With Reduce Motion on, the notch widens without bouncing, and what it
-shows fades without a blur.
+goes. The notch and bubble widen and fold without bouncing. With Reduce Motion
+on, what they show fades without a blur.
 
 Closed or opened, the notch is only as wide as the wider side of a live
 activity needs, the same on both sides, with nothing under the camera. Each

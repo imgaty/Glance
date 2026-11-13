@@ -12,6 +12,9 @@
 
 - Changed activity opening, closing and switching to fold to the camera housing,
   then expand smoothly into the next view without a bounce.
+  Both legs accelerate and slow to a stop, with the contents and detached bubble
+  following the same motion. Hover and click feedback no longer add a rebound.
+  Releasing a held click or swipe during opening keeps the final size steady.
   With `Haptic feedback` on, opening gives one tap at the housing before expanding.
   Canceling before the housing prevents the tap; automatic updates stay silent.
   Removed an extra pulse and pause at the housing that made the movement stutter.

@@ -66,7 +66,7 @@ final class SettingsPreview: ObservableObject {
     var top: ScreenTop { ScreenTop(NSScreen.with(id: display) ?? NSScreen.main) }
 
     /// The first time it shows, the notch opens as it does when the pointer reaches it, on the
-    /// notch's own spring; from then on it stays open.
+    /// notch's own eased motion; from then on it stays open.
     func reveal() {
         guard !revealed, !interactive else { return }
         revealed = true
@@ -172,7 +172,7 @@ final class SettingsPreview: ObservableObject {
             homeTask?.cancel()
             homeTask = nil
         }
-        if model.activityFolded {
+        if model.activityControlsHidden {
             closeTask?.cancel()
             closeTask = nil
             let leftTarget = p.map { point in openingZone.map { !$0.contains(point) } ?? false } ?? true
@@ -191,7 +191,7 @@ final class SettingsPreview: ObservableObject {
             if onBubble != model.bubbleHovered {
                 openTask?.cancel()
                 restPoint = nil
-                withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = onBubble }
+                withAnimation(NotchMotion.feedback) { model.bubbleHovered = onBubble }
             }
             if onBubble || onNotch {
                 if onNotch, model.state == .closed { peek() }
@@ -333,7 +333,7 @@ final class SettingsPreview: ObservableObject {
         if opening.onHover, !holdsHoverOpening, model.detached == nil { scheduleOpen(after: opening.hoverDelay) }
     }
 
-    /// A press that won't be let go, as the tour's pointer gives way: the notch springs back, and
+    /// A press that won't be let go, as the tour's pointer gives way: the notch eases back, and
     /// doesn't open.
     func cancelPress() {
         guard pressBeganClosed else { return }

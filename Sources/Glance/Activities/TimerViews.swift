@@ -414,7 +414,7 @@ struct GrowsOut: ViewModifier {
 
 /// What shows only in the open notch, as the Dynamic Island's expanded activities show it: out of a
 /// blur and faded in on the island's own curves, measured from it, and a little smaller at first,
-/// growing on the notch's spring as the notch does, so it rides out with it rather than fading in
+/// growing on the notch's eased curve, so it rides out with it rather than fading in
 /// where it ends up. Closing, it blurs away as fast as the wings' do, shrinking back. With Reduce
 /// Motion on, it only fades.
 struct IslandReveal: ViewModifier {

@@ -102,6 +102,59 @@ struct ActivityMotionInteractionTests {
         #expect(!model.activityControlsHidden)
     }
 
+    @Test("A held opening releases its squeeze and gesture deformation before expanding", arguments: [false, true])
+    func heldOpening(_ detached: Bool) async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        model.activity = true
+        if detached { model.timer = .paused(left: 75, total: 120) }
+        model.press(true)
+        model.bubblePressed = detached
+        model.stretch = 18
+        model.lean = 9
+        model.pageStretch = 7
+        model.open()
+        let transition = try #require(model.activityTransitionTask)
+        #expect(!model.pressed && !model.bubblePressed)
+        #expect(model.stretch == 0 && model.lean == 0 && model.pageStretch == 0)
+        try #require(try await eventually { model.activityOpening })
+        let width = model.metrics.bodyWidth
+        let height = model.metrics.height
+        let request = model.activityTransitionID
+        model.press(false)
+        #expect(model.metrics.bodyWidth == width && model.metrics.height == height)
+        #expect(model.activityTransitionID == request)
+        await transition.value
+        #expect(model.metrics.bodyWidth == width && model.metrics.height == height)
+    }
+
+    @Test("Hover cannot resize the compact destination before its reveal finishes", arguments: [false, true])
+    func hoverDuringCompactReveal(_ inside: Bool) async throws {
+        let preview = SettingsPreview(opening: {
+            Opening(onHover: false, onClick: true, hoverDelay: 0, clickDelay: 0, haptics: false)
+        })
+        preview.feelsOpening = false
+        preview.setInteractive(true, animated: false)
+        let model = preview.model
+        model.activityReducesMotion = false
+        model.activity = true
+        defer { model.cancelActivityTransition() }
+        model.open()
+        await model.activityTransitionTask?.value
+        model.close()
+        let closing = try #require(model.activityTransitionTask)
+        try #require(try await eventually { model.activityOpening })
+        let geometry = geometry(model)
+        let closed = geometry.rect(.closed)
+        let point = CGPoint(x: 0, y: inside ? closed.midY : closed.maxY + 20)
+        preview.pointer(at: point, geometry)
+        #expect(model.state == .closed && model.proximity == 0)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(model.activityOpening && model.state == .closed && model.proximity == 0)
+        await closing.value
+        #expect(try await eventually { inside ? model.state == .peek : model.proximity > 0 })
+    }
+
     enum MotionInterruption: CaseIterable { case teardown, reducedMotion, fullscreen, replacement }
 
     @Test("Interrupting either motion leg cannot reopen an obsolete destination", arguments: MotionInterruption.allCases, [false, true])

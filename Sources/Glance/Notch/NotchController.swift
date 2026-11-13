@@ -969,8 +969,8 @@ final class NotchController {
 
     func pointerMoved(to p: CGPoint) {
         guard !tornDown else { return }
-        // Shrinking under a stationary pointer is not a pointer exit. Re-evaluate after unfolding.
-        if model.activityFolded {
+        // Keep one geometry target through both legs. Re-evaluate the pointer once it settles.
+        if model.activityControlsHidden {
             closeTask?.cancel()
             closeTask = nil
             if let openingZone, !openingZone.contains(p) {
@@ -1032,7 +1032,7 @@ final class NotchController {
         if on, model.state == .peek { settle(at: p) }
         openTask?.cancel()
         restPoint = nil
-        withAnimation(NotchMotion.spring(response: 0.3, dampingFraction: 0.6)) { model.bubbleHovered = on }
+        withAnimation(NotchMotion.feedback) { model.bubbleHovered = on }
         if on {
             startPolling()
         } else if model.state == .closed {
@@ -1076,7 +1076,7 @@ final class NotchController {
             restPoint = nil
         }
         if model.bubbleHovered {
-            withAnimation(NotchMotion.spring(response: 0.2, dampingFraction: 0.7)) { model.bubblePressed = true }
+            withAnimation(NotchMotion.feedback) { model.bubblePressed = true }
         } else {
             model.press(true)
         }
@@ -1106,7 +1106,7 @@ final class NotchController {
         guard pressBeganClosed else { return }
         let onBubble = model.bubblePressed
         if onBubble {
-            withAnimation(NotchMotion.spring(response: 0.4, dampingFraction: 0.5)) { model.bubblePressed = false }
+            withAnimation(NotchMotion.feedback) { model.bubblePressed = false }
         } else {
             model.press(false)
         }
@@ -1158,7 +1158,10 @@ final class NotchController {
     /// scrolls, gliding on as it's let go. Two fingers sideways on the open notch turn the page, as
     /// three do on the trackpad, where three on the display are the system's.
     private func panned(_ pan: NSPanGestureRecognizer) {
-        guard !model.activityControlsHidden else { return }
+        guard !model.activityControlsHidden else {
+            if pan.state == .ended || pan.state == .cancelled { swipeEnded() }
+            return
+        }
         guard #available(macOS 27, *) else { return }
         // In the notch's flipped points: down is positive.
         let dragged = pan.translation(in: pan.view)
@@ -1805,7 +1808,10 @@ final class NotchController {
     // MARK: Scroll: pull down to open, push up to dismiss, swipe sideways to skip
 
     private func scrolled(_ event: NSEvent) {
-        guard !model.activityControlsHidden else { return }
+        guard !model.activityControlsHidden else {
+            if event.phase == .ended || event.phase == .cancelled { swipeEnded() }
+            return
+        }
         // Positive means fingers (or wheel) moving down or right, whatever the natural-scrolling setting.
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
@@ -1933,20 +1939,21 @@ final class NotchController {
     /// down only once it's open or pulled down, never pushed up past its closed size; across, either
     /// way, alike on both sides, as it stays centered.
     private func stretch(sideways: Bool) {
+        guard !model.activityControlsHidden else { return }
         let open = model.state == .open
-        withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) {
+        withAnimation(NotchMotion.feedback) {
             if open || pull > 0 { model.stretch = Self.rubberBand(pull) }
             if sideways { model.lean = Self.sideBand(across) }
         }
     }
 
-    /// The fingers let go: whatever leaned along with them springs back.
+    /// The fingers let go: whatever leaned along with them eases back to rest.
     private func swipeEnded() {
         pull = 0
         swipe = 0
         scrollAxis = nil
         across = 0
-        withAnimation(NotchMotion.spring(response: 0.45, dampingFraction: 0.5)) {
+        withAnimation(NotchMotion.feedback) {
             model.stretch = 0
             model.lean = 0
             model.nudge = 0
@@ -2085,9 +2092,12 @@ final class NotchController {
     }
 
     /// Three fingers on the open notch: the page follows them, and turns as a pull down opens the
-    /// notch, past a point on the way; let go, it springs back into place.
+    /// notch, past a point on the way; let go, it eases back into place.
     func swipe(_ motion: NotchSwipes.Motion) {
-        guard !model.activityControlsHidden else { return }
+        guard !model.activityControlsHidden else {
+            if case .ended = motion { swipeEnded() }
+            return
+        }
         switch motion {
         case .began:
             swipeBegan()
@@ -2125,7 +2135,8 @@ final class NotchController {
             turn(to: target)
             Opening.tap()
         }
-        withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.86)) {
+        guard !model.activityControlsHidden else { return }
+        withAnimation(NotchMotion.feedback) {
             model.pageStretch = abs(Self.pageLean(swipe))
         }
     }
@@ -2139,8 +2150,7 @@ final class NotchController {
         (swipe >= 0 ? 1 : -1) * 20 * (1 - 1 / (abs(swipe) * 0.012 + 1))
     }
 
-    /// To the other page, sliding, the notch taking the new page's width with the Dynamic Island's
-    /// spring.
+    /// To the other page, folding to the housing before easing into the new page's width.
     private func turn(to page: NotchPage) {
         model.turn(to: page)
     }
