@@ -45,6 +45,9 @@
 
 ### Player
 
+- Fixed player keyboard commands remaining active behind another activity or
+  inside a preview. Only the visible, enabled player responds.
+
 - Fixed unknown-length streams showing a misleading remaining time. Their
   timeline stays unavailable until the playing app supplies a duration.
 

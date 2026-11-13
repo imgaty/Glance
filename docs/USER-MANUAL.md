@@ -499,7 +499,8 @@ notch open, it closes to say what happened, and opens again after, if the
 pointer is still on it. Turn these off with `Battery`, `Devices` and `Calls` in
 **Settings > Live Activities**.
 
-The keyboard controls only the activity currently open. Controls that become
+The keyboard controls only the activity currently open. A hidden player or a
+preview does not respond to player commands. Controls that become
 unavailable leave the Tab order, and previews never control a real activity.
 
 ### Timer and stopwatch

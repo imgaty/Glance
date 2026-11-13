@@ -31,6 +31,10 @@ struct NowPlayingView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.playerOnLight) private var onLight
     @Environment(\.playerKeys) private var keys
+    @Environment(\.notchControls) private var pageShown
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.activityPreview) private var preview
+    @Environment(\.notchOnScreen) private var onScreen
     @AppStorage(Preferences.musicDJButton) private var djButton = true
     /// The way the Mac's language reads, outside the rows that always run left to right.
     @Environment(\.layoutDirection) private var reading
@@ -116,8 +120,14 @@ struct NowPlayingView: View {
         .onChange(of: nowPlaying.title) { if isVisible { nowPlaying.refreshOptions() } }
         .onChange(of: usableControls, initial: true) { keys?.usable = usableControls }
         .onChange(of: soundControl, initial: true) { keys?.soundControl = soundControl }
-        .onChange(of: keys?.presses) { if let control = keys?.focus { press(control, fromKeys: true) } }
-        .onChange(of: keys?.focus) { if let control = keys?.focus, !control.onActivity { announce(control) } }
+        .onChange(of: keys?.presses) {
+            guard let control = keys?.focus, usableControls.contains(control) else { return }
+            press(control, fromKeys: true)
+        }
+        .onChange(of: keys?.focus) {
+            guard onScreen, let control = keys?.focus, usableControls.contains(control) else { return }
+            announce(control)
+        }
         .task(id: isVisible) {
             // Keeps the clock, and the lyrics with it, exact while the player shows, and the star
             // true to Music.
@@ -338,15 +348,20 @@ struct NowPlayingView: View {
     /// Spotify's DJ has the left button, unless it's turned off in Customize Controls.
     private var showsDJ: Bool { djButton && nowPlaying.djPlaying }
 
+    /// The player stays mounted behind other activities and in previews. Only the visible,
+    /// enabled page owns its keyboard actions and announcements.
+    private var acceptsControls: Bool { isVisible && pageShown && enabled && !preview && places == nil }
+
     /// Which of the sides is Sound Output, for the arrows to turn the sound up and down there.
     private var soundControl: PlayerControl? {
+        guard acceptsControls else { return nil }
         if leftSlot == .output, !showsDJ { return .left }
         return rightSlot == .output ? .right : nil
     }
 
     /// The controls that can be used now, in the order Tab goes through them.
     private var usableControls: [PlayerControl] {
-        guard isVisible, places == nil else { return [] }
+        guard acceptsControls else { return [] }
         let media = nowPlaying.hasMedia
         func usable(_ slot: PlayerSlot) -> Bool {
             switch slot {
