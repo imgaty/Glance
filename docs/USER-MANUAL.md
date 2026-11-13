@@ -634,6 +634,10 @@ Turn both off with `AirDrop` in
 
 ### AirPlay
 
+**Stop AirPlay** is unavailable if there is no local output to return to. If
+the output changed since the activity appeared, Glance refreshes the activity
+without changing that new choice.
+
 While the sound plays on an AirPlay speaker or TV, the notch shows it as the
 iPhone shows Screen Mirroring: AirPlay's symbol in blue at its left end, and
 what it plays on at its right, a TV, a HomePod or a speaker. It stays for as

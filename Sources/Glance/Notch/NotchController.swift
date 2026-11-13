@@ -1545,7 +1545,8 @@ final class NotchController {
         case .call:
             model.call.map { ExpandedCallView.controls(for: $0, microphoneAvailable: CallMicrophone.canMute, sourceAvailable: $0.sourceURL != nil) } ?? []
         case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
-        case .airplay, .voiceMemo: [.activityFirst]
+        case .airplay: model.airplay?.canStop == true ? [.activityFirst] : []
+        case .voiceMemo: [.activityFirst]
         // Being saved, there's nothing left to stop.
         case .screenRecording: { if case .saving = model.screenRecording { [] } else { [.activityFirst] } }()
         case .music, nil: nil

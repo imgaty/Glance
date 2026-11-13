@@ -14,6 +14,8 @@ import SwiftUI
 struct AirPlayRoute: Equatable {
     let name: String
     let symbol: String
+    var outputID: AudioDeviceID? = nil
+    var canStop = true
 
     /// What the device is: as macOS pictures its model, if it says which; otherwise, by its name,
     /// as the iPhone draws it: a MacBook, another Mac, a TV, a HomePod, or a speaker.
@@ -60,6 +62,29 @@ final class AirPlayWatch: ObservableObject {
     /// Shown, as set in Settings with the devices.
     private var enabled = false
     private var started = false
+    private let outputs: @MainActor () -> [AudioOutput.Device]
+    private let currentOutput: @MainActor () -> AudioDeviceID
+    private let setOutput: @MainActor (AudioDeviceID) -> OSStatus
+    private let routeSymbol: @MainActor (AudioOutput.Device) -> String
+    private let isEnabled: @MainActor () -> Bool
+
+    init(
+        outputs: @escaping @MainActor () -> [AudioOutput.Device] = { AudioOutput.outputs() },
+        currentOutput: @escaping @MainActor () -> AudioDeviceID = { AudioOutput.defaultOutput },
+        setOutput: @escaping @MainActor (AudioDeviceID) -> OSStatus = { output in
+            var id = output
+            var address = AudioProperty.address(kAudioHardwarePropertyDefaultOutputDevice)
+            return AudioObjectSetPropertyData(AudioProperty.system, &address, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &id)
+        },
+        routeSymbol: @escaping @MainActor (AudioOutput.Device) -> String = { AirPlayRoute.symbol(for: $0) },
+        isEnabled: @escaping @MainActor () -> Bool = { UserDefaults.standard.bool(forKey: Preferences.activityDevices) }
+    ) {
+        self.outputs = outputs
+        self.currentOutput = currentOutput
+        self.setOutput = setOutput
+        self.routeSymbol = routeSymbol
+        self.isEnabled = isEnabled
+    }
 
     func start() {
         guard !started else { return }
@@ -83,12 +108,17 @@ final class AirPlayWatch: ObservableObject {
     /// Settings.
     func refresh() {
         guard ActivityBench.scene == nil else { return }
-        enabled = UserDefaults.standard.bool(forKey: Preferences.activityDevices)
-        let id = AudioOutput.defaultOutput
-        let device = AudioOutput.outputs().first { $0.id == id }
+        enabled = isEnabled()
+        let id = currentOutput()
+        let available = outputs()
+        let device = available.first { $0.id == id }
         let airPlay = device.map { $0.transport == kAudioDeviceTransportTypeAirPlay } ?? false
         if !airPlay, device != nil { lastLocal = id }
-        let next = airPlay && enabled ? device.map { AirPlayRoute(name: $0.name, symbol: AirPlayRoute.symbol(for: $0)) } : nil
+        let next =
+            airPlay && enabled
+            ? device.map {
+                AirPlayRoute(name: $0.name, symbol: routeSymbol($0), outputID: id, canStop: Self.returnOutput(in: available, previous: lastLocal) != nil)
+            } : nil
         if next != route { route = next }
     }
 
@@ -98,16 +128,32 @@ final class AirPlayWatch: ObservableObject {
     }
 
     /// The sound back where it played before AirPlay, or on the Mac's own speakers.
-    func stop() {
-        guard ActivityBench.scene == nil else { return ActivityBench.shared.stopped(.airplay) }
-        let outputs = AudioOutput.outputs().filter { $0.transport != kAudioDeviceTransportTypeAirPlay }
-        guard
-            let target = outputs.first(where: { $0.id == lastLocal })
-                ?? outputs.first(where: { $0.transport == kAudioDeviceTransportTypeBuiltIn }) ?? outputs.first
-        else { return }
-        var id = target.id
-        var address = AudioProperty.address(kAudioHardwarePropertyDefaultOutputDevice)
-        AudioObjectSetPropertyData(AudioProperty.system, &address, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &id)
+    @discardableResult
+    func stop(expectedOutput: AudioDeviceID? = nil) -> Bool {
+        guard ActivityBench.scene == nil else {
+            ActivityBench.shared.stopped(.airplay)
+            return true
+        }
+        guard let expected = expectedOutput ?? route?.outputID, route?.canStop == true else { return false }
+        let current = currentOutput()
+        let available = outputs()
+        guard current == expected,
+            available.first(where: { $0.id == current })?.transport == kAudioDeviceTransportTypeAirPlay,
+            let target = Self.returnOutput(in: available, previous: lastLocal)
+        else {
+            refresh()
+            return false
+        }
+        let succeeded = setOutput(target.id) == noErr
+        refresh()
+        return succeeded
+    }
+
+    /// Restore the previous local route if it still exists, then prefer the Mac's own speakers.
+    static func returnOutput(in outputs: [AudioOutput.Device], previous: AudioDeviceID?) -> AudioOutput.Device? {
+        let local = outputs.filter { $0.transport != kAudioDeviceTransportTypeAirPlay }
+        return local.first(where: { $0.id == previous })
+            ?? local.first(where: { $0.transport == kAudioDeviceTransportTypeBuiltIn }) ?? local.first
     }
 }
 
@@ -177,7 +223,7 @@ struct AirPlayMark: View {
                 .islandFade(!leadingOnly)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("AirPlay, playing on \(route.name)")
+        .accessibilityLabel("AirPlay, output: \(route.name)")
     }
 }
 
@@ -194,6 +240,7 @@ struct ExpandedAirPlayView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
+    var stop: (AudioDeviceID?) -> Void = { AirPlayWatch.shared.stop(expectedOutput: $0) }
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @State private var hovering = false
     @Environment(\.trailingGrows) private var trailingGrows
@@ -238,7 +285,7 @@ struct ExpandedAirPlayView: View {
             }
             .frame(height: h * AirPlayLayout.header)
             Button {
-                AirPlayWatch.shared.stop()
+                performStop()
             } label: {
                 Text("Stop AirPlay")
                     .font(NotchType.title)
@@ -248,10 +295,12 @@ struct ExpandedAirPlayView: View {
                     .background(AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85), in: Capsule())
                     .contentShape(Capsule())
             }
+            .disabled(!route.canStop)
+            .opacity(route.canStop ? 1 : 0.45)
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
-            .onHover { hovering = $0 }
+            .onHover { hovering = $0 && route.canStop }
             .notchControl()
-            .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirPlay")) { AirPlayWatch.shared.stop() }
+            .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirPlay")) { performStop() }
             .padding(.horizontal, PlayerLayout.padding)
             .modifier(IslandReveal(hidden: !revealed))
         }
@@ -259,7 +308,12 @@ struct ExpandedAirPlayView: View {
         .padding(.bottom, PlayerLayout.padding)
         .frame(width: width, height: AirPlayLayout.height(h), alignment: .top)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("AirPlay, playing on \(route.name)")
+        .accessibilityLabel("AirPlay, output: \(route.name)")
+    }
+
+    func performStop() {
+        guard revealed, route.canStop else { return }
+        stop(route.outputID)
     }
 
     /// As wide as the iPhone's, or as AirPlay and the device's name need.

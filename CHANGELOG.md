@@ -35,6 +35,8 @@
   With Reduce Motion, the progress ring updates without sweeping.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its
   previous output.
+  Stop checks that the same AirPlay route is still selected and is unavailable
+  when no local output can receive the sound.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
   button. A saved screen recording opens from its preview and joins the tray.
 - Added charging and low-battery announcements on MacBooks. The low-battery
