@@ -111,6 +111,7 @@ final class NotchController {
     private var callWatch: AnyCancellable?
     private var callMinutes: AnyCancellable?
     private var recordingWatch: AnyCancellable?
+    private var savedRecordingWatch: AnyCancellable?
     private var recordingRefit: Task<Void, Never>?
     private var airDropWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
@@ -385,6 +386,18 @@ final class NotchController {
             .sink { [weak self] screen, memo in
                 MainActor.assumeIsolated { self?.show(screen: screen, memo: memo) }
             }
+        savedRecordingWatch = ScreenRecordingWatch.shared.$savedFileState
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, self.model.expanded == .screenRecording,
+                        let focus = self.model.keys.focus,
+                        self.activityControls?.contains(focus) == false
+                    else { return }
+                    self.model.keys.clear()
+                }
+            }
         callMinutes = CallWatch.shared.$minutes.dropFirst().sink { [weak self] _ in
             MainActor.assumeIsolated {
                 withAnimation(IslandMotion.open) { self?.model.objectWillChange.send() }
@@ -507,7 +520,7 @@ final class NotchController {
         returns.values.forEach { $0.cancel() }
         [
             playingWatch, titleWatch, settingsWatch, songWatch, alertWatch, timerWatch,
-            clockNameWatch, airPlayWatch, callWatch, callMinutes, recordingWatch,
+            clockNameWatch, airPlayWatch, callWatch, callMinutes, recordingWatch, savedRecordingWatch,
             airDropWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
         ].forEach { $0?.cancel() }
         stopPolling()
@@ -1547,8 +1560,13 @@ final class NotchController {
         case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
         case .airplay: model.airplay?.canStop == true ? [.activityFirst] : []
         case .voiceMemo: [.activityFirst]
-        // Being saved, there's nothing left to stop.
-        case .screenRecording: { if case .saving = model.screenRecording { [] } else { [.activityFirst] } }()
+        // Saving and unavailable saved files have no action to focus.
+        case .screenRecording:
+            {
+                if case .saving = model.screenRecording { return [] }
+                if case .saved = model.screenRecording, !ScreenRecordingWatch.shared.canOpenSaved { return [] }
+                return [.activityFirst]
+            }()
         case .music, nil: nil
         }
     }

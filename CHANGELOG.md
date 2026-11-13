@@ -44,6 +44,8 @@
   button. A saved screen recording opens from its preview and joins the tray.
   Losing Accessibility access keeps the last known recording visible and
   explains the missing permission instead of claiming it finished.
+  Saved previews explain missing files and failed opening, with retry when
+  the file is still available.
 - Added charging and low-battery announcements on MacBooks. The low-battery
   alert includes a Low Power Mode button, using power control approved once
   in **Settings > General > Permissions**.

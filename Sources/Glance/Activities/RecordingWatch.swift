@@ -307,6 +307,11 @@ final class ScreenRecordingWatch: ObservableObject {
 
     @Published private(set) var recording: ScreenRecording?
     @Published private(set) var canControl: Bool
+    enum SavedFileState: Equatable {
+        case available, unavailable, openingFailed
+    }
+    @Published private(set) var savedFileState = SavedFileState.unavailable
+    var canOpenSaved: Bool { savedFileState != .unavailable }
     /// The last one saved, which the notch opens.
     private(set) var saved: URL?
     /// At the bench: made up.
@@ -323,7 +328,8 @@ final class ScreenRecordingWatch: ObservableObject {
     private let access: RecordingAccess
     private let stopRecording: () -> Void
     private let findSavedFile: (() -> Void)?
-    private let openFile: (URL) -> Void
+    private let fileIsAvailable: (URL) -> Bool
+    private let openFile: (URL) -> Bool
 
     init(
         readIndicator: (@Sendable () -> String?)? = nil,
@@ -332,7 +338,8 @@ final class ScreenRecordingWatch: ObservableObject {
         access: RecordingAccess = .system,
         stopRecording: (() -> Void)? = nil,
         findSavedFile: (() -> Void)? = nil,
-        openFile: ((URL) -> Void)? = nil
+        fileIsAvailable: ((URL) -> Bool)? = nil,
+        openFile: ((URL) -> Bool)? = nil
     ) {
         self.readIndicator = readIndicator ?? { Self.stopItem().map(Self.words) }
         self.isEnabled = isEnabled ?? { Self.enabled }
@@ -341,6 +348,7 @@ final class ScreenRecordingWatch: ObservableObject {
         canControl = access.isGranted()
         self.stopRecording = stopRecording ?? { Self.pressStop() }
         self.findSavedFile = findSavedFile
+        self.fileIsAvailable = fileIsAvailable ?? Self.savedFileIsAvailable
         self.openFile = openFile ?? { NSWorkspace.shared.open($0) }
     }
 
@@ -374,6 +382,7 @@ final class ScreenRecordingWatch: ObservableObject {
             return
         }
         guard !benching, !looking else { return }
+        if case .saved? = recording { refreshSavedAvailability() }
         canControl = access.isGranted()
         // An unavailable AX tree isn't evidence that a recording stopped. Keep the last known
         // state and explain the permission in its controls until observations are available again.
@@ -533,15 +542,37 @@ final class ScreenRecordingWatch: ObservableObject {
             recording = nil
             return
         }
-        saved = file
         let folder = FileManager.default.displayName(atPath: file.deletingLastPathComponent().path)
         Task {
             let preview = await Self.firstPicture(of: file)
             guard case .saving? = self.recording else { return }
-            self.recording = .saved(length: length, folder: folder, preview: preview)
+            self.presentSaved(file: file, length: length, folder: folder, preview: preview)
             try? await Task.sleep(for: .seconds(Self.savedFor))
             if case .saved? = self.recording { self.recording = nil }
         }
+    }
+
+    /// Accepts the saved result separately from finding the file and decoding its thumbnail, so
+    /// availability and recovery can be checked with a fake file backend.
+    func presentSaved(file: URL, length: TimeInterval, folder: String, preview: NSImage?) {
+        saved = file
+        savedFileState = fileIsAvailable(file) ? .available : .unavailable
+        recording = .saved(length: length, folder: folder, preview: preview)
+    }
+
+    private static func savedFileIsAvailable(_ file: URL) -> Bool {
+        guard file.isFileURL else { return false }
+        var directory = ObjCBool(false)
+        return FileManager.default.fileExists(atPath: file.path, isDirectory: &directory)
+            && !directory.boolValue && FileManager.default.isReadableFile(atPath: file.path)
+    }
+
+    func refreshSavedAvailability() {
+        guard let saved, fileIsAvailable(saved) else {
+            savedFileState = .unavailable
+            return
+        }
+        if savedFileState == .unavailable { savedFileState = .available }
     }
 
     /// How long it says where it was saved.
@@ -606,9 +637,16 @@ final class ScreenRecordingWatch: ObservableObject {
     }
 
     /// Opens the one just saved, in the app that opens it.
-    func openSaved() {
-        guard let saved else { return }
-        openFile(saved)
+    @discardableResult
+    func openSaved() -> Bool {
+        refreshSavedAvailability()
+        guard canOpenSaved, let saved else { return false }
+        if openFile(saved) {
+            savedFileState = .available
+            return true
+        }
+        savedFileState = fileIsAvailable(saved) ? .openingFailed : .unavailable
+        return false
     }
 
     /// A made-up one, at the bench, or none.

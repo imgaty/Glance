@@ -684,6 +684,7 @@ struct ExpandedRecordingView: View {
     var closedDrop: CGFloat = 0
     /// Review fixtures can show unavailable controls and use fake actions without system access.
     var controlPermissionOverride: Bool? = nil
+    var savedFileStateOverride: ScreenRecordingWatch.SavedFileState? = nil
     var stopAction: (() -> Void)? = nil
     var openAction: (() -> Void)? = nil
     @ObservedObject private var memoWatch = VoiceMemoWatch.shared
@@ -765,6 +766,8 @@ struct ExpandedRecordingView: View {
     private func screenRow(_ screen: ScreenRecording, h: CGFloat, grows: Bool, rise: CGFloat, spread: CGFloat) -> some View {
         let canControl = controlPermissionOverride ?? screenWatch.canControl
         let needsPermission = !canControl && !screen.isSaving && !screen.isSaved
+        let savedFileState = savedFileStateOverride ?? screenWatch.savedFileState
+        let title = ScreenRecordingButton.title(for: screen, needsPermission: needsPermission, savedFileState: savedFileState)
         let edge = PlayerLayout.padding
         let dot = NotchType.size * RecordingLook.openDot
         let closedDot = h * RecordingLook.dot
@@ -786,7 +789,7 @@ struct ExpandedRecordingView: View {
                     .modifier(IslandReveal(hidden: !revealed))
             }
             .modifier(RecordingBlink(recording: screen.isRecording, faded: !screen.isRecording && !screen.isSaved, shown: revealed))
-            Text(needsPermission ? String(localized: "Needs Accessibility") : screen.title)
+            Text(title)
                 .font(NotchType.title)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -802,7 +805,7 @@ struct ExpandedRecordingView: View {
         // Being saved, the spinner beside the camera grows into the ring around the square.
         let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
         ScreenRecordingButton(
-            screen: screen, h: h, revealed: revealed, canControl: canControl,
+            screen: screen, h: h, revealed: revealed, canControl: canControl, savedFileState: savedFileState,
             stopAction: { if let stopAction { stopAction() } else { screenWatch.stop() } },
             openAction: { if let openAction { openAction() } else { screenWatch.openSaved() } }
         )
@@ -935,6 +938,7 @@ struct ScreenRecordingButton: View {
     let h: CGFloat
     let revealed: Bool
     var canControl = true
+    var savedFileState = ScreenRecordingWatch.SavedFileState.available
     var stopAction: () -> Void = { ScreenRecordingWatch.shared.stop() }
     var openAction: () -> Void = { ScreenRecordingWatch.shared.openSaved() }
 
@@ -946,7 +950,13 @@ struct ScreenRecordingButton: View {
         let picture = saved ? side : square
         let corner = saved ? side * PlayerLayout.thumbnailCorner : square * RecordingLook.squareCorner
         let preview: NSImage? = { if case .saved(_, _, let preview) = screen { preview } else { nil } }()
-        let label = saved ? String(localized: "Open Recording") : String(localized: "Stop Recording")
+        let unavailable = saved && savedFileState == .unavailable
+        let enabled = !screen.isSaving && !unavailable
+        let label =
+            saved
+            ? (savedFileState == .openingFailed ? String(localized: "Try Again") : String(localized: "Open Recording"))
+            : String(localized: "Stop Recording")
+        let hint = unavailable ? String(localized: "Recording Unavailable") : canControl || saved || screen.isSaving ? "" : String(localized: "Needs Accessibility")
         Button(action: press) {
             ZStack {
                 Circle().strokeBorder(.white, lineWidth: line)
@@ -970,20 +980,34 @@ struct ScreenRecordingButton: View {
             .animation(.easeOut(duration: 0.3), value: screen.isSaving)
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
-        .opacity(canControl || saved || screen.isSaving ? 1 : 0.45)
-        .disabled(screen.isSaving)
-        .notchControl(enabled: !screen.isSaving)
+        .opacity(!unavailable && (canControl || saved || screen.isSaving) ? 1 : 0.45)
+        .disabled(!enabled)
+        .notchControl(enabled: enabled)
         .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: label, action: press)
         .accessibilityLabel(label)
-        .accessibilityHint(canControl || saved || screen.isSaving ? "" : String(localized: "Needs Accessibility"))
-        .help(canControl || saved || screen.isSaving ? label : String(localized: "Needs Accessibility"))
+        .accessibilityHint(hint)
+        .help(hint.isEmpty ? label : hint)
     }
 
     private func press() {
         switch screen {
         case .countdown, .recording: stopAction()
-        case .saved: openAction()
+        case .saved:
+            guard savedFileState != .unavailable else { return }
+            openAction()
         case .saving: break
         }
+    }
+
+    static func title(for screen: ScreenRecording, needsPermission: Bool, savedFileState: ScreenRecordingWatch.SavedFileState) -> String {
+        if needsPermission { return String(localized: "Needs Accessibility") }
+        if screen.isSaved {
+            switch savedFileState {
+            case .unavailable: return String(localized: "Recording Unavailable")
+            case .openingFailed: return String(localized: "Couldn’t Open Recording")
+            case .available: break
+            }
+        }
+        return screen.title
     }
 }

@@ -14,7 +14,7 @@ struct ScreenRecordingDetectionTests {
             readIndicator: { indicator.withLock { $0 } },
             isEnabled: { true }, captureIsRunning: { false },
             access: RecordingAccess(isGranted: { true }, request: { false }),
-            stopRecording: {}, findSavedFile: {}, openFile: { _ in }
+            stopRecording: {}, findSavedFile: {}, fileIsAvailable: { _ in false }, openFile: { _ in true }
         )
         watch.start()
         try await Task.sleep(for: .milliseconds(100))

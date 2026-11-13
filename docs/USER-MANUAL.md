@@ -689,6 +689,9 @@ as while its controls are open.
 If Accessibility access is lost, the activity keeps its last known recording
 and says `Needs Accessibility`. The dimmed Stop button requests access when
 pressed. Opening an already saved recording does not need that permission.
+If its file is missing or unreadable, the preview says `Recording Unavailable`
+and cannot be opened. If opening fails while the file is still available, the
+preview says `Couldn’t Open Recording`; press it again to retry.
 
 ### Voice Memos
 

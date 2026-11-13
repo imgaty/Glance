@@ -29,7 +29,7 @@ struct RecordingPermissionTests {
             },
             isEnabled: { true }, captureIsRunning: { true },
             access: RecordingAccess(isGranted: { granted }, request: { false }),
-            stopRecording: {}, findSavedFile: { fileLookups += 1 }, openFile: { _ in }
+            stopRecording: {}, findSavedFile: { fileLookups += 1 }, fileIsAvailable: { _ in false }, openFile: { _ in true }
         )
         watch.refresh()
         try await waitFor { watch.recording?.isRecording == true }
@@ -61,7 +61,7 @@ struct RecordingPermissionTests {
             },
             isEnabled: { true }, captureIsRunning: { true },
             access: RecordingAccess(isGranted: { false }, request: { false }),
-            stopRecording: {}, findSavedFile: { fileLookups += 1 }, openFile: { _ in }
+            stopRecording: {}, findSavedFile: { fileLookups += 1 }, fileIsAvailable: { _ in false }, openFile: { _ in true }
         )
         watch.refresh()
         #expect(watch.recording == nil)
@@ -84,7 +84,7 @@ struct RecordingPermissionTests {
             })
         let watch = ScreenRecordingWatch(
             readIndicator: { nil }, isEnabled: { true }, captureIsRunning: { false },
-            access: access, stopRecording: { stops += 1 }, findSavedFile: {}, openFile: { _ in }
+            access: access, stopRecording: { stops += 1 }, findSavedFile: {}, fileIsAvailable: { _ in false }, openFile: { _ in true }
         )
         watch.stop()
         #expect(requests == 1 && stops == 0 && !watch.canControl)
