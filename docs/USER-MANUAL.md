@@ -453,6 +453,9 @@ sliding under the notch as it folds:
 Nothing else is announced: not other makers' headphones and speakers, nor
 keyboards, mice, trackpads or game controllers.
 
+The caller's name responds to hover and press without shifting. When its app
+is available, the same source link is reachable from the keyboard.
+
 Glance knows of a FaceTime or phone call from macOS's own popup for it, and
 reads the caller, the time and where its buttons are from that popup's picture,
 so it needs `Screen & System Audio Recording`, which macOS asks for during your

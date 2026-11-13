@@ -2063,7 +2063,45 @@ final class CallBanners {
     }
 }
 
-/// A button that doesn't change as it's pressed.
+/// The caller responds without moving or sinking, so its name and time stay anchored.
 private struct StillPress: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View { configuration.label }
+    func makeBody(configuration: Configuration) -> some View {
+        CallSourcePressBody(label: configuration.label, pressed: configuration.isPressed)
+    }
+}
+
+private struct CallSourcePressBody<Label: View>: View {
+    let label: Label
+    let pressed: Bool
+    @State private var hovered = false
+    @State private var frame = CGRect.zero
+    @Environment(\.demoPointer) private var demoPointer
+
+    var body: some View {
+        CallSourceFeedback(label: label, pressed: pressed, hovered: hovered || frame.holds(demoPointer))
+            .onHover { hovered = $0 }
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .named(NotchView.bodySpace))
+            } action: {
+                frame = $0
+            }
+    }
+}
+
+/// The same stationary feedback for real button events and isolated state previews.
+struct CallSourceFeedback<Label: View>: View {
+    let label: Label
+    let pressed: Bool
+    let hovered: Bool
+    @Environment(\.isEnabled) private var enabled
+
+    var body: some View {
+        let down = enabled && pressed
+        let over = enabled && hovered
+        label
+            .brightness(down ? 0.08 : over ? 0.04 : 0)
+            .opacity(down ? 0.75 : over ? 0.9 : 1)
+            .animation(.easeOut(duration: 0.12), value: down)
+            .animation(.easeOut(duration: 0.12), value: over)
+    }
 }
