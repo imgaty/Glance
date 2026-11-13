@@ -25,6 +25,7 @@
   Completed transfers and those without a reachable control show progress alone.
   Incoming transfers keep their arrival order as progress changes.
   Outgoing progress no longer claims success before macOS confirms delivery.
+  With Reduce Motion, the progress ring updates without sweeping.
 - Added AirPlay destinations, with **Stop AirPlay** to return sound to its
   previous output.
 - Added screen recordings and Voice Memos, with elapsed time and a stop

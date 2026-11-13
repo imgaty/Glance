@@ -611,6 +611,7 @@ opens to a picture of the file, who it's from, and the ring around a button:
 click it to stop the transfer. If cancellation is unavailable or the transfer
 is complete, the ring shows progress without a stop button. Closing the system
 transfer window can make cancellation unavailable until it is opened again.
+With Reduce Motion, the ring updates without sweeping between positions.
 
 A file you send shows the same way, once it's accepted, the ring filling as it
 goes out. Opened, it says who it's going to while macOS's AirDrop window is

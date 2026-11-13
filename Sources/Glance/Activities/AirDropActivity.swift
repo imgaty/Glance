@@ -278,6 +278,7 @@ struct AirDropRing: View {
     let fraction: Double
     let diameter: CGFloat
     let line: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -286,7 +287,7 @@ struct AirDropRing: View {
                 .trim(from: 0, to: fraction)
                 .stroke(AirDropLayout.tint, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 0.15), value: fraction)
+                .animation(reduceMotion ? nil : .linear(duration: 0.15), value: fraction)
         }
         .frame(width: diameter - line, height: diameter - line)
         .frame(width: diameter, height: diameter)
