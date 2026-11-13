@@ -33351,6 +33351,214 @@
         }
       }
     },
+    "Hides activities from the menu bar, except screen recording so its indicator and Stop button stay available.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يخفي الأنشطة من شريط القوائم، باستثناء تسجيل الشاشة كي يظل مؤشره وزر الإيقاف متاحين."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amaga les activitats de la barra de menús, excepte la gravació de la pantalla, perquè el seu indicador i el botó Atura continuïn disponibles."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skryje aktivity v řádku nabídek kromě záznamu obrazovky, aby jeho indikátor a tlačítko Stop zůstaly dostupné."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skjuler aktiviteter i menulinjen undtagen skærmoptagelse, så dens indikator og knappen Stop fortsat er tilgængelige."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blendet Aktivitäten in der Menüleiste aus, außer Bildschirmaufnahmen, damit deren Anzeige und die Taste „Stopp“ verfügbar bleiben."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αποκρύπτει τις δραστηριότητες από τη γραμμή μενού, εκτός από την εγγραφή οθόνης, ώστε η ένδειξή της και το κουμπί Διακοπή να παραμένουν διαθέσιμα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta las actividades de la barra de menús, excepto la grabación de pantalla, para que su indicador y el botón Detener sigan disponibles."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piilottaa toiminnot valikkoriviltä näyttötallennusta lukuun ottamatta, jotta sen ilmaisin ja Seis-painike pysyvät käytettävissä."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masque les activités dans la barre des menus, sauf l’enregistrement de l’écran, pour que son indicateur et le bouton Arrêter restent disponibles."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסתיר פעילויות משורת התפריטים, למעט הקלטת המסך, כדי שהמחוון שלה וכפתור העצירה יישארו זמינים."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेनू बार से ऐक्टिविटी छिपाता है, लेकिन स्क्रीन रिकॉर्डिंग को नहीं, ताकि उसका संकेतक और रोकें बटन उपलब्ध रहें।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skriva aktivnosti iz trake s izbornicima, osim snimanja zaslona, tako da njegov pokazatelj i tipka Zaustavi ostanu dostupni."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elrejti a tevékenységeket a menüsorról, a képernyőfelvétel kivételével, hogy annak jelzője és a Leállítás gomb továbbra is elérhető legyen."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menyembunyikan aktivitas dari bar menu, kecuali perekaman layar agar indikatornya dan tombol Berhenti tetap tersedia."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nasconde le attività dalla barra dei menu, tranne la registrazione schermo, per mantenere disponibili il relativo indicatore e il pulsante Stop."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面収録以外のアクティビティをメニューバーから隠し、画面収録のインジケータと停止ボタンは引き続き利用できるようにします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대에서 화면 기록을 제외한 활동을 가려 화면 기록 표시와 중단 버튼을 계속 사용할 수 있도록 합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menyembunyikan aktiviti daripada bar menu, kecuali rakaman skrin supaya penunjuknya dan butang Henti kekal tersedia."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skjuler aktiviteter i menylinjen, unntatt skjermopptak, slik at indikatoren og Stopp-knappen fortsatt er tilgjengelige."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbergt activiteiten in de menubalk, behalve schermopnamen, zodat de indicator en de knop ‘Stop’ beschikbaar blijven."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ukrywa wydarzenia na pasku menu z wyjątkiem nagrywania ekranu, aby jego wskaźnik i przycisk Zatrzymaj pozostały dostępne."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta as atividades da barra de menus, exceto a gravação de tela, para manter o indicador e o botão Parar disponíveis."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta as atividades da barra de menus, exceto a gravação do ecrã, para manter disponíveis o indicador e o botão Parar."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascunde activitățile din bara de meniu, cu excepția înregistrării ecranului, astfel încât indicatorul acesteia și butonul Stop să rămână disponibile."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скрывает активности из строки меню, кроме записи экрана, чтобы ее индикатор и кнопка «Стоп» оставались доступны."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skryje aktivity v riadku ponúk okrem záznamu obrazovky, aby jeho indikátor a tlačidlo Stop zostali dostupné."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrije aktivnosti v menijski vrstici, razen snemanja zaslona, da njegov indikator in gumb Ustavi ostaneta na voljo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gömmer aktiviteter i menyraden, förutom skärminspelning, så att dess indikator och Stopp-knappen förblir tillgängliga."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ซ่อนกิจกรรมจากแถบเมนู ยกเว้นการบันทึกหน้าจอ เพื่อให้ตัวบ่งชี้และปุ่มหยุดยังคงพร้อมใช้งาน"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekran kaydı dışındaki etkinlikleri menü çubuğundan gizleyerek ekran kaydı göstergesinin ve Durdur düğmesinin kullanılabilir kalmasını sağlar."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приховує дії в смузі меню, крім запису екрана, щоб його індикатор і кнопка Зупинити залишалися доступними."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ẩn các hoạt động khỏi thanh menu, ngoại trừ ghi màn hình để chỉ báo và nút Dừng vẫn khả dụng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏菜单栏中的活动，但保留录屏活动，以便继续使用其指示器和“停止”按钮。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱藏選單列中的動態，但保留螢幕錄影動態，讓指示器和「停止」按鈕仍可使用。"
+          }
+        }
+      }
+    },
     "History": {
       "localizations": {
         "ar": {
