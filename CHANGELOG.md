@@ -49,6 +49,9 @@
 
 ### Player
 
+- Added hover feedback and help labels to player buttons. Disabled buttons
+  ignore hover and press feedback, and Reduce Motion keeps press feedback still.
+
 - Fixed the detached music bubble keeping the previous cover when the next
   track had no artwork.
 

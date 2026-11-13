@@ -97,7 +97,7 @@ struct SpokenAs: ViewModifier {
 
     func body(content: Content) -> some View {
         if let label {
-            content.accessibilityLabel(label).accessibilityValue(value ?? "")
+            content.accessibilityLabel(label).accessibilityValue(value ?? "").help(label)
         } else {
             content
         }
@@ -163,14 +163,54 @@ struct IslandPress: ButtonStyle {
     var contactSize: CGFloat? = NowPlayingView.hitbox
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.85 : 1)
-            .animation(NotchMotion.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+        IslandPressBody(label: configuration.label, pressed: configuration.isPressed, highlight: highlight, contactSize: contactSize)
+    }
+}
+
+private struct IslandPressBody<Label: View>: View {
+    let label: Label
+    let pressed: Bool
+    let highlight: Bool
+    let contactSize: CGFloat?
+    @State private var hovered = false
+    @State private var frame = CGRect.zero
+    @Environment(\.demoPointer) private var demoPointer
+
+    var body: some View {
+        IslandPressFeedback(label: label, pressed: pressed, hovered: hovered || frame.holds(demoPointer), highlight: highlight, contactSize: contactSize)
+            .onHover { hovered = $0 }
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .named(NotchView.bodySpace))
+            } action: {
+                frame = $0
+            }
+    }
+}
+
+/// The contact area stays fixed as the symbol responds. Shared by native button events and the
+/// isolated design previews, which can show each state without moving the real pointer.
+struct IslandPressFeedback<Label: View>: View {
+    let label: Label
+    let pressed: Bool
+    let hovered: Bool
+    var highlight = true
+    var contactSize: CGFloat? = NowPlayingView.hitbox
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let down = enabled && pressed
+        let over = enabled && hovered
+        label
+            .scaleEffect(down && !reduceMotion ? 0.85 : 1)
+            .opacity(down && !highlight ? 0.75 : 1)
+            .animation(reduceMotion ? nil : NotchMotion.spring(response: 0.3, dampingFraction: 0.7), value: down)
             .frame(width: contactSize, height: contactSize)
             .background {
                 Circle()
-                    .fill(.white.opacity(highlight && configuration.isPressed ? 0.14 : 0))
-                    .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+                    .fill(.white.opacity(highlight ? (down ? 0.14 : over ? 0.08 : 0) : 0))
+                    .animation(.easeOut(duration: 0.15), value: down)
+                    .animation(.easeOut(duration: 0.15), value: over)
             }
             .contentShape(Rectangle())
     }

@@ -170,6 +170,9 @@ fingers on the display are macOS's, as they are on the trackpad.
 Glance reads Music and Spotify only while they are already running; background
 updates do not reopen a player you quit.
 
+Player buttons highlight under the pointer and show their names after a short
+hover. Pressing gives immediate feedback; Reduce Motion keeps it still.
+
 The open notch shows the cover, the song's name and artist, a progress bar, and
 the controls. Drag the progress bar to move through the song. With
 **Show app icon on cover** on, the playing app's icon sits on the cover's
