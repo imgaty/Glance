@@ -50,6 +50,12 @@ struct CallShown: Equatable {
         if case .connected = phase { return true }
         return false
     }
+
+    /// A source link exists only when the call names an app the Mac can open.
+    @MainActor var sourceURL: URL? {
+        guard let app, !app.isEmpty else { return nil }
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: CallAudio.appBundle(of: app))
+    }
 }
 
 /// How a call looks, measured from screenshots of the user's own iPhone on a call: a bright green
@@ -572,6 +578,19 @@ struct IncomingCallView: View {
     }
 }
 
+/// The call's actions, replaceable with recorders in isolated previews without touching a real call.
+@MainActor
+struct CallActions {
+    var sourceAvailable: (CallShown) -> Bool = { $0.sourceURL != nil }
+    var openSource: () -> Void = { CallWatch.shared.goToApp() }
+    var accept: () -> Void = { CallWatch.shared.accept() }
+    var decline: () -> Void = { CallWatch.shared.decline() }
+    var end: () -> Void = { CallWatch.shared.end() }
+    var output: (CGPoint?) -> Void = { point in
+        AudioOutput.shared.showMenu(at: point, withVolume: false, outputsOnly: true)
+    }
+}
+
 /// Opened, a call shows as a phone shows it. Connected over FaceTime or Phone, laid out as the
 /// player, the same padding all around: the caller's photo or initial up in the corner beside the
 /// camera, their name and the call's time beside it; under them, spread end to end, the speaker,
@@ -589,10 +608,13 @@ struct ExpandedCallView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
+    var actions = CallActions()
+    @ObservedObject var microphone = CallMicrophone.shared
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.playerKeys) private var keys
     @Environment(\.colorSchemeContrast) private var contrast
-    @ObservedObject private var microphone = CallMicrophone.shared
+
+    private var sourceAvailable: Bool { actions.sourceAvailable(call) }
 
     var body: some View {
         Group {
@@ -629,11 +651,9 @@ struct ExpandedCallView: View {
             width: bubbleCenter.map { $0 + width / 2 - words - compactWidth / 2 + (fit.phone ? fit.size * (CallBubbleMark.phone + CallBubbleMark.gap) / 2 : 0) }
                 ?? (h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread),
             height: h / 2 + closedDrop - (timeBaseline - detail.capHeight / 2))
-        let count = CGFloat(3 + (microphone.available ? 1 : 0) + (call.canEnd ? 1 : 0))
+        let count = CGFloat(2 + (sourceAvailable ? 1 : 0) + (microphone.available ? 1 : 0) + (call.canEnd ? 1 : 0))
         return VStack(alignment: .leading, spacing: Self.rowGap(restingHeight: h)) {
-            Button {
-                CallWatch.shared.goToApp()
-            } label: {
+            sourceButton(keyboard: false) {
                 // The time's baseline on the circle's bottom edge, the name above it.
                 ZStack(alignment: .bottomLeading) {
                     CallAvatar(call: call, side: side)
@@ -662,12 +682,6 @@ struct ExpandedCallView: View {
                 .frame(height: side, alignment: .topLeading)
                 .contentShape(Rectangle())
             }
-            // Clicked, it goes to the app, and doesn't sink in as a button does.
-            .buttonStyle(StillPress())
-            .notchControl()
-            .help(String(localized: "Show in \(call.over)"))
-            .accessibilityLabel(String(localized: "\(call.name), on a call"))
-            .accessibilityHint(String(localized: "Show in \(call.over)"))
             // Spread from end to end, as the player's controls, at least as far apart as on a phone.
             HStack(spacing: max(side * CallLook.buttonSpacing, (width - edge * 2 - side * count) / max(count - 1, 1))) { buttons(h) }
                 .modifier(IslandReveal(hidden: !revealed))
@@ -681,9 +695,7 @@ struct ExpandedCallView: View {
     private var inline: some View {
         let h = restingHeight
         return HStack(spacing: CallLayout.wordsGap(h)) {
-            Button {
-                CallWatch.shared.goToApp()
-            } label: {
+            sourceButton {
                 Text(call.name)
                     .font(.system(size: TimerLayout.tallHeight(h) * CallLook.name, weight: .semibold))
                     .foregroundStyle(.white)
@@ -694,11 +706,6 @@ struct ExpandedCallView: View {
                     .contentShape(Rectangle())
                     .modifier(IslandReveal(hidden: !revealed))
             }
-            .buttonStyle(StillPress())
-            .notchControl()
-            .help(String(localized: "Show in \(call.over)"))
-            .accessibilityLabel(String(localized: "\(call.name), on a call"))
-            .accessibilityHint(String(localized: "Show in \(call.over)"))
             HStack(spacing: CallLayout.roundGap(h)) { inlineButtons(h) }
                 .modifier(IslandReveal(hidden: !revealed))
         }
@@ -711,13 +718,13 @@ struct ExpandedCallView: View {
         let side = CallLayout.round(h)
         IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
             let fromKeys = NSApp.currentEvent?.type == .keyDown
-            AudioOutput.shared.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil, withVolume: false, outputsOnly: true)
+            actions.output(fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil)
         } glyph: {
             glyph("speaker.wave.3.fill", CallLook.speakerGlyph, side)
         }
         if call.canEnd {
             IslandCircleButton(control: .activityFourth, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
-                CallWatch.shared.end()
+                actions.end()
             } glyph: {
                 glyph("xmark", CallLook.crossGlyph, side, weight: .heavy)
             }
@@ -733,9 +740,7 @@ struct ExpandedCallView: View {
         let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
         let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)
         return HStack(spacing: CallLayout.wordsGap(h)) {
-            Button {
-                CallWatch.shared.goToApp()
-            } label: {
+            sourceButton {
                 HStack(spacing: CallLayout.wordsGap(h)) {
                     if call.throughApple {
                         CallAvatar(call: call, side: side)
@@ -759,11 +764,6 @@ struct ExpandedCallView: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(StillPress())
-            .notchControl()
-            .help(String(localized: "Show in \(call.over)"))
-            .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
-            .accessibilityHint(String(localized: "Show in \(call.over)"))
             HStack(spacing: CallLayout.roundGap(h)) { buttons(h) }
                 .modifier(IslandReveal(hidden: !revealed))
         }
@@ -777,7 +777,7 @@ struct ExpandedCallView: View {
             IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
                 // From the keyboard the pointer can be anywhere: the menu opens under the button.
                 let fromKeys = NSApp.currentEvent?.type == .keyDown
-                AudioOutput.shared.showMenu(at: fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil, withVolume: false, outputsOnly: true)
+                actions.output(fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil)
             } glyph: {
                 glyph("speaker.wave.3.fill", CallLook.speakerSymbol, side, weight: .regular)
             }
@@ -803,14 +803,16 @@ struct ExpandedCallView: View {
                         .foregroundStyle(microphone.muted ? .white : .black)
                 }
             }
-            IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Show in \(call.over)"), fill: CallLook.speaker, side: side) {
-                CallWatch.shared.goToApp()
-            } glyph: {
-                glyph("ellipsis", CallLook.moreSymbol, side)
+            if sourceAvailable {
+                IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Show in \(call.over)"), fill: CallLook.speaker, side: side) {
+                    actions.openSource()
+                } glyph: {
+                    glyph("ellipsis", CallLook.moreSymbol, side)
+                }
             }
             if call.canEnd {
                 IslandCircleButton(control: .activityFourth, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
-                    CallWatch.shared.end()
+                    actions.end()
                 } glyph: {
                     glyph("phone.down.fill", CallLook.endSymbol, side, weight: .bold)
                 }
@@ -818,23 +820,61 @@ struct ExpandedCallView: View {
         } else if call.rings {
             if call.canDecline {
                 IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Decline"), fill: CallLook.decline, side: side) {
-                    CallWatch.shared.decline()
+                    actions.decline()
                 } glyph: {
                     glyph("phone.down.fill", CallLook.endGlyph, side)
                 }
             }
             IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Accept"), fill: CallLook.accept(contrast), side: side) {
-                CallWatch.shared.accept()
+                actions.accept()
             } glyph: {
                 glyph("phone.fill", CallLook.acceptGlyph, side)
             }
         } else if call.canEnd {
             IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
-                CallWatch.shared.end()
+                actions.end()
             } glyph: {
                 glyph("phone.down.fill", CallLook.endSymbol, side, weight: .bold)
             }
         }
+    }
+
+    /// The caller is a source link only when that source can be opened. In the single-row
+    /// layouts it is also the keyboard's source action; Apple's connected layout has More.
+    @ViewBuilder private func sourceButton<Label: View>(keyboard: Bool = true, @ViewBuilder label: () -> Label) -> some View {
+        if sourceAvailable {
+            let spoken = String(localized: "Show in \(call.over)")
+            let button = Button(action: actions.openSource, label: label)
+                .buttonStyle(StillPress())
+                .notchControl()
+                .help(spoken)
+                .accessibilityLabel(!call.rings ? String(localized: "\(call.name), on a call") : String(localized: "\(call.name), incoming call"))
+                .accessibilityHint(spoken)
+            if keyboard {
+                button.keyControl(.activityThird, in: RoundedRectangle(cornerRadius: CallLayout.round(restingHeight) / 2), spoken: spoken) {
+                    actions.openSource()
+                }
+            } else {
+                button
+            }
+        } else {
+            label()
+        }
+    }
+
+    /// The keyboard follows the same available actions as the visible call, including its source.
+    static func controls(for call: CallShown, microphoneAvailable: Bool, sourceAvailable: Bool) -> [PlayerControl] {
+        let source: [PlayerControl] = sourceAvailable ? [.activityThird] : []
+        if call.isConnected {
+            if call.throughApple {
+                return [.activityFirst] + (microphoneAvailable ? [.activitySecond] : []) + source + (call.canEnd ? [.activityFourth] : [])
+            }
+            return source + [.activityFirst] + (call.canEnd ? [.activityFourth] : [])
+        }
+        if call.rings {
+            return source + (call.canDecline ? [.activityFirst] : []) + [.activitySecond]
+        }
+        return source + (call.canEnd ? [.activityFirst] : [])
     }
 
     private func glyph(_ symbol: String, _ share: CGFloat, _ side: CGFloat, weight: Font.Weight = .semibold) -> some View {
@@ -849,7 +889,7 @@ struct ExpandedCallView: View {
     @MainActor
     static func connectedButtons(for call: CallShown) -> Int {
         guard call.throughApple else { return 1 + (call.canEnd ? 1 : 0) }
-        return 3 + (CallMicrophone.canMute ? 1 : 0) + (call.canEnd ? 1 : 0)
+        return 2 + (call.sourceURL != nil ? 1 : 0) + (CallMicrophone.canMute ? 1 : 0) + (call.canEnd ? 1 : 0)
     }
 
     /// Each side of the camera. Connected over FaceTime or Phone, as the player's: wide enough for the
@@ -1313,8 +1353,7 @@ final class CallWatch: ObservableObject {
     /// To the call, in its app.
     func goToApp() {
         guard ActivityBench.scene == nil else { return }
-        let bundle = CallAudio.appBundle(of: call?.app ?? CallAudio.faceTime)
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { return }
+        guard let url = call?.sourceURL else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 

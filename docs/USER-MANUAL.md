@@ -512,6 +512,7 @@ away before releasing to cancel. A new alert does not inherit an earlier click.
 The keyboard controls only the activity currently open. A hidden player or a
 preview does not respond to player commands. Controls that become
 unavailable leave the Tab order, and previews never control a real activity.
+In a call, Tab also reaches **Show in [app]** when the calling app can be opened.
 
 Right-click the notch and choose **Live Activities** to open an ongoing
 activity, including one waiting behind the first two. Its place in arrival

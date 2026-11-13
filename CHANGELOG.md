@@ -18,6 +18,8 @@
 
 - Added calls, with incoming-call controls, elapsed time, a voice waveform,
   sound output selection and controls for supported calling apps.
+  The caller's source app is reachable from the keyboard in each call layout;
+  unavailable source links are omitted.
 - Added Clock timers and the stopwatch, with their time beside the camera
   and controls in the opened notch. A ringing timer stops after ten seconds
   unless the pointer is on it. Repeat keeps the warning visible when
