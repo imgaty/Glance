@@ -79,7 +79,8 @@ final class NotchController {
     private let topY: CGFloat
 
     private var openTask: Task<Void, Never>?
-    /// Until when an announcement is folding away for the notch to open (see `foldAnnouncement`).
+    /// The pointer's intended target when a hover or hold began, before any temporary housing fold.
+    private var openingZone: CGRect?
     private var closeTask: Task<Void, Never>?
     private var pollTimer: Timer?
     /// After an explicit close, stay shut until the pointer leaves the notch.
@@ -284,7 +285,10 @@ final class NotchController {
             view.onMouseMoved = { [weak self] in self?.pointerMoved(to: NSEvent.mouseLocation) }
             view.onTap = { [weak self] p in self?.tapped(at: p) }
             view.onPan = { [weak self] pan in self?.panned(pan) }
-            view.contextMenu = { [weak self] in self?.contextMenu?() }
+            view.contextMenu = { [weak self] in
+                guard let self, !self.model.activityControlsHidden else { return nil }
+                return self.contextMenu?()
+            }
         }
         // Opened without the pointer, as VoiceOver opens a bubble: it stays open with the keyboard, as
         // when opened with a shortcut, until Escape, or the pointer has been on it and gone.
@@ -307,7 +311,7 @@ final class NotchController {
             self.takeKeys()
         }
         eventView.passesThrough = { [weak self] point in
-            guard let model = self?.model, model.state == .open, !model.activityFolded else { return false }
+            guard let model = self?.model, model.state == .open, !model.activityControlsHidden else { return false }
             // In the notch's own points, which start below the strip past the top.
             let inNotch = CGPoint(x: point.x, y: point.y - Layout.pastTop)
             return model.controlFrames.contains { $0.contains(inNotch) }
@@ -431,7 +435,7 @@ final class NotchController {
             }
         }
         menuWatches = [
-            model.$activityFolded.removeDuplicates().dropFirst().sink { [weak self] _ in
+            model.$activityFolded.combineLatest(model.$activityOpening).dropFirst().sink { [weak self] _ in
                 // Published sends before its value changes; hit regions follow the committed phase.
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated { self?.pointerMoved(to: NSEvent.mouseLocation) }
@@ -963,6 +967,12 @@ final class NotchController {
         if model.activityFolded {
             closeTask?.cancel()
             closeTask = nil
+            if let openingZone, !openingZone.contains(p) {
+                openTask?.cancel()
+                self.openingZone = nil
+                restPoint = nil
+            }
+            NotchSwipes.shared.set(nil, for: self)
             panel.ignoresMouseEvents = true
             return
         }
@@ -1027,7 +1037,7 @@ final class NotchController {
     /// The button of a timer that's done, or Low Battery's, in the closed notch, at a point on the
     /// screen.
     private func alertButton(at p: CGPoint) -> AlertButton? {
-        guard !model.activityFolded, model.alert?.tall == true, model.state != .open, let view = panel.contentView else { return nil }
+        guard !model.activityControlsHidden, model.alert?.tall == true, model.state != .open, let view = panel.contentView else { return nil }
         let local = view.convert(panel.convertPoint(fromScreen: p), from: nil)
         let inNotch = CGPoint(x: local.x, y: local.y - Layout.pastTop)
         return model.alertButtons.first { $0.value.contains(inNotch) }?.key
@@ -1043,7 +1053,7 @@ final class NotchController {
     /// swipe up. A tap in its window's margin, which takes them while a finger holds it open, closes
     /// it, as one anywhere else does.
     private func press(at p: CGPoint) {
-        guard !holds.contains(.sound) else { return }
+        guard !holds.contains(.sound), !model.activityControlsHidden else { return }
         // A done timer's buttons, in the closed notch, are buttons of their own.
         alertPress.begin(on: alertButton(at: p), alert: model.alert?.id)
         model.pressedAlertButton = alertPress.highlight(over: alertButton(at: p), alert: model.alert?.id)
@@ -1071,6 +1081,14 @@ final class NotchController {
     }
 
     private func release(at p: CGPoint) {
+        guard !model.activityControlsHidden else {
+            _ = alertPress.end(over: nil, alert: model.alert?.id)
+            model.pressedAlertButton = nil
+            model.bubblePressed = false
+            model.press(false)
+            pressBeganClosed = false
+            return
+        }
         if alertPress.isActive {
             let button = alertPress.end(over: alertButton(at: p), alert: model.alert?.id)
             model.pressedAlertButton = nil
@@ -1095,7 +1113,7 @@ final class NotchController {
 
     /// A done timer's button, or Low Battery's, in the closed notch, clicked or tapped.
     private func perform(_ button: AlertButton) {
-        guard !model.activityFolded else { return }
+        guard !model.activityControlsHidden else { return }
         switch button {
         case .again: ClockActivity.shared.repeatTimer()
         case .stop: ClockActivity.shared.dismissRing()
@@ -1116,7 +1134,7 @@ final class NotchController {
     /// or not, a finger having no other way to open it. A bubble opens to what it shows; a done
     /// timer's buttons are pressed; off the open notch, in its window's margin, it closes.
     private func tapped(at p: CGPoint) {
-        guard !model.activityFolded else { return }
+        guard !model.activityControlsHidden else { return }
         if let button = alertButton(at: p) { return perform(button) }
         guard model.state != .open else {
             if !openZone.contains(p) { close(holdUntilExit: false) }
@@ -1132,7 +1150,7 @@ final class NotchController {
     /// scrolls, gliding on as it's let go. Two fingers sideways on the open notch turn the page, as
     /// three do on the trackpad, where three on the display are the system's.
     private func panned(_ pan: NSPanGestureRecognizer) {
-        guard !model.activityFolded else { return }
+        guard !model.activityControlsHidden else { return }
         guard #available(macOS 27, *) else { return }
         // In the notch's flipped points: down is positive.
         let dragged = pan.translation(in: pan.view)
@@ -1169,7 +1187,7 @@ final class NotchController {
     /// the touches, while it's tucked away in full screen, and once it's taken down (see `tearDown`).
     private func placeTouchTarget() {
         guard let touchTarget else { return }
-        guard model.state != .open, !model.activityFolded, !tucked, touchWatch != nil else { return touchTarget.orderOut(nil) }
+        guard model.state != .open, !model.activityControlsHidden, !tucked, touchWatch != nil else { return touchTarget.orderOut(nil) }
         let zone = interactiveZone
         if touchTarget.frame != zone { touchTarget.setFrame(zone, display: false) }
         if !touchTarget.isVisible { touchTarget.orderFrontRegardless() }
@@ -1223,10 +1241,14 @@ final class NotchController {
 
     private func scheduleOpen(after delay: Double) {
         openTask?.cancel()
+        let target = model.activityFolded ? openZone : interactiveZone
+        openingZone = target
         openTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled else { return }
-            self?.open()
+            guard let self, !Task.isCancelled else { return }
+            self.openingZone = nil
+            guard target.contains(NSEvent.mouseLocation) else { return }
+            self.open()
         }
     }
 
@@ -1417,7 +1439,7 @@ final class NotchController {
             close(holdUntilExit: false)
             return true
         }
-        if model.activityFolded {
+        if model.activityControlsHidden {
             // Navigation can replace the destination; hidden controls cannot perform actions.
             if !command, flags.isDisjoint(with: [.control, .option]), model.page == .player {
                 if code == kVK_UpArrow { return showActivity(by: -1) }
@@ -1707,7 +1729,7 @@ final class NotchController {
     /// another app, the notch opens on the tray with its two places to drop: the tray, and
     /// AirDrop. Dragged out of the tray, it's on its way elsewhere: the notch takes nothing back.
     private func dragMoved(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> NSDragOperation {
-        guard Tray.isOn, !tucked, !own else { return [] }
+        guard Tray.isOn, !tucked, !own, !model.activityControlsHidden else { return [] }
         let onWell = isOnAirDrop(point)
         if model.airDropTargeted != onWell {
             withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = onWell }
@@ -1730,7 +1752,7 @@ final class NotchController {
     }
 
     private func isOnAirDrop(_ point: CGPoint) -> Bool {
-        guard model.state == .open, model.page == .tray, let well = model.airDropFrame else { return false }
+        guard model.state == .open, !model.activityControlsHidden, model.page == .tray, let well = model.airDropFrame else { return false }
         return well.insetBy(dx: -6, dy: -6).contains(CGPoint(x: point.x, y: point.y - Layout.pastTop))
     }
 
@@ -1743,7 +1765,7 @@ final class NotchController {
     /// Onto AirDrop's place: sent, as soon as a device is picked. Anywhere else on the notch: kept in
     /// the tray.
     private func dropped(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> Bool {
-        guard !own else { return false }
+        guard !own, !model.activityControlsHidden else { return false }
         let onWell = isOnAirDrop(point)
         withAnimation(.smooth(duration: 0.3)) {
             model.dropping = false
@@ -1772,7 +1794,7 @@ final class NotchController {
     // MARK: Scroll: pull down to open, push up to dismiss, swipe sideways to skip
 
     private func scrolled(_ event: NSEvent) {
-        guard !model.activityFolded else { return }
+        guard !model.activityControlsHidden else { return }
         // Positive means fingers (or wheel) moving down or right, whatever the natural-scrolling setting.
         let direction: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
         let down = event.scrollingDeltaY * direction
@@ -2047,14 +2069,14 @@ final class NotchController {
 
     /// Where three-finger swipes are the notch's: all of it, while it's open with the tray on.
     private var swipeZone: CGRect? {
-        guard model.state == .open, !model.activityFolded, Tray.isOn, UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch) else { return nil }
+        guard model.state == .open, !model.activityControlsHidden, Tray.isOn, UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch) else { return nil }
         return openZone
     }
 
     /// Three fingers on the open notch: the page follows them, and turns as a pull down opens the
     /// notch, past a point on the way; let go, it springs back into place.
     func swipe(_ motion: NotchSwipes.Motion) {
-        guard !model.activityFolded else { return }
+        guard !model.activityControlsHidden else { return }
         switch motion {
         case .began:
             swipeBegan()

@@ -136,6 +136,9 @@ final class NotchModel: ObservableObject {
     var bubbleSpan: CGFloat { closedSize.height * (1 + IslandBubble.gap) }
     /// A presentation change passes through the hardware housing before its new content opens.
     @Published var activityFolded = false
+    /// Geometry has begun opening, but its controls are still fading into view.
+    @Published var activityOpening = false
+    var activityControlsHidden: Bool { activityFolded || activityOpening }
     private(set) var activityTransitionID: UInt = 0
     var activityTransitionTask: Task<Void, Never>?
     /// A scene-local accessibility override for isolated previews and motion checks.
@@ -1065,9 +1068,9 @@ struct NotchView: View {
         .animation(.easeInOut(duration: 0.45), value: darkness)
         .animation(.easeInOut(duration: 0.45), value: followsSystem)
         .animation(.easeInOut(duration: 0.45), value: blur)
-        .disabled(model.activityFolded)
-        .allowsHitTesting(!model.activityFolded)
-        .accessibilityHidden(model.activityFolded)
+        .disabled(model.activityControlsHidden)
+        .allowsHitTesting(!model.activityControlsHidden)
+        .accessibilityHidden(model.activityControlsHidden)
     }
 
     /// How much what's in the notch stretches with it, sideways and down: part of the notch's own.

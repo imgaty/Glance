@@ -100,6 +100,9 @@ the cover settle straight where they're going, the star glows without swelling,
 the skip arrows stay where they are, and the welcome tour's pages fade rather
 than slide.
 
+Controls become available as they appear. Escape can close an opening activity,
+and the activity navigation keys can change its destination during the animation.
+
 | Gesture | Operation |
 | --- | --- |
 | Hover | Opens the notch, after the hover delay; with two activities showing, opens the notch or the bubble once the pointer stops on it |

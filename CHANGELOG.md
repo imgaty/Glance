@@ -14,6 +14,8 @@
   first, then spring into the next view, including detached activities and
   announcements. New input replaces an unfinished transition, and routine time
   and progress updates keep their place. Reduce Motion skips the bounce.
+  Controls become available as their content appears. Hover keeps its intended
+  target during a fold, and detached activities return after leaving full screen.
 
 - Added pressed feedback to timer, incoming-call and low-battery alert
   buttons. Dragging away cancels the click, and a new alert cannot inherit it.

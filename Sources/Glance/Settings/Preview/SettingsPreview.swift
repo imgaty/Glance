@@ -38,6 +38,16 @@ final class SettingsPreview: ObservableObject {
         model.lyricsWidth = 170
         model.openBubble = { [weak self] in self?.open(fromBubble: true) }
         model.openNotch = { [weak self] in self?.open(fromBubble: false) }
+        motionWatch = model.$activityFolded.combineLatest(model.$activityOpening).dropFirst().sink { [weak self] _ in
+            // Published sends before its value changes. Reuse the real pointer's last position
+            // after the phase commits, without treating the shrinking shape as a pointer exit.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self, let geometry = self.pointerGeometry else { return }
+                    self.pointer(at: self.pointerLocation, geometry)
+                }
+            }
+        }
     }
 
     /// The notch is the display's: as large.
@@ -72,6 +82,10 @@ final class SettingsPreview: ObservableObject {
     var holdsHoverOpening = false
     private var openTask: Task<Void, Never>?
     private var closeTask: Task<Void, Never>?
+    private var motionWatch: AnyCancellable?
+    private var pointerLocation: CGPoint?
+    private var pointerGeometry: Geometry?
+    private var openingZone: CGRect?
     private var pressBeganClosed = false
     private var pressOnBubble = false
     private var restPoint: CGPoint?
@@ -82,6 +96,9 @@ final class SettingsPreview: ObservableObject {
     func setInteractive(_ on: Bool, animated: Bool) {
         guard on != interactive || (!on && revealed && model.state != .open) else { return }
         model.cancelActivityTransition()
+        pointerLocation = nil
+        pointerGeometry = nil
+        openingZone = nil
         interactive = on
         restPoint = nil
         model.bubbleHovered = false
@@ -144,9 +161,24 @@ final class SettingsPreview: ObservableObject {
     /// nil when the pointer has left the preview. Over it, the notch answers the pointer as the real
     /// one does; once it leaves, the notch goes back to how it rests here.
     func pointer(at p: CGPoint?, _ g: Geometry) {
+        pointerLocation = p
+        pointerGeometry = g
+        if p != nil {
+            homeTask?.cancel()
+            homeTask = nil
+        }
+        if model.activityFolded {
+            closeTask?.cancel()
+            closeTask = nil
+            let leftTarget = p.map { point in openingZone.map { !$0.contains(point) } ?? false } ?? true
+            if leftTarget {
+                openTask?.cancel()
+                openingZone = nil
+                restPoint = nil
+            }
+            return
+        }
         guard let p else { return goHome(g) }
-        homeTask?.cancel()
-        homeTask = nil
         switch model.state {
         case .closed, .peek:
             let onBubble = g.bubble()?.contains(p) == true
@@ -238,7 +270,7 @@ final class SettingsPreview: ObservableObject {
     /// Whether it was the row's to take: with more in the row than fits, on the tray, open.
     func slide(_ event: NSEvent, count: Int) -> Bool {
         let reach = Shelf.reach(count: count, in: model.trayWidth)
-        guard model.state == .open, model.page == .tray, reach > 0 else { return false }
+        guard model.state == .open, !model.activityControlsHidden, model.page == .tray, reach > 0 else { return false }
         // A wheel, a notch at a time, gliding there.
         if event.phase.isEmpty, event.momentumPhase.isEmpty {
             let along = event.scrollingDeltaX != 0 ? event.scrollingDeltaX : event.scrollingDeltaY
@@ -258,6 +290,9 @@ final class SettingsPreview: ObservableObject {
 
     /// Pressing the closed notch squeezes it, and letting go opens it (or holding, with a hold time).
     func press(at p: CGPoint, _ g: Geometry) {
+        guard !model.activityControlsHidden else { return }
+        pointerLocation = p
+        pointerGeometry = g
         pressOnBubble = g.bubble()?.contains(p) == true
         pressBeganClosed = model.state != .open && (zone(g).contains(p) || pressOnBubble)
         guard pressBeganClosed else { return }
@@ -272,6 +307,7 @@ final class SettingsPreview: ObservableObject {
         pressBeganClosed = false
         model.press(false)
         model.bubblePressed = false
+        guard !model.activityControlsHidden else { return }
         let opening = Opening.current
         if opening.clickDelay > 0 {
             if model.state != .open { openTask?.cancel() }
@@ -304,10 +340,15 @@ final class SettingsPreview: ObservableObject {
 
     private func scheduleOpen(after delay: Double) {
         openTask?.cancel()
+        guard let geometry = pointerGeometry else { return }
+        let target = zone(geometry).union(geometry.bubble() ?? .null)
+        openingZone = target
         openTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled else { return }
-            self?.open()
+            guard let self, !Task.isCancelled else { return }
+            self.openingZone = nil
+            guard let point = self.pointerLocation, target.contains(point) else { return }
+            self.open()
         }
     }
 

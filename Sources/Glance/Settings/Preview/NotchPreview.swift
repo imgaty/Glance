@@ -54,7 +54,7 @@ struct NotchPreview: View {
                 let scale = model.showsLyrics && model.state == .open ? least : full
                 let geometry = SettingsPreview.Geometry(
                     rect: { state in
-                        let m = model.metrics(for: state)
+                        let m = model.metrics(for: state, housingPhase: state != .open)
                         return CGRect(
                             x: proxy.size.width / 2 - m.totalWidth * scale / 2, y: top.edge * scale,
                             width: m.totalWidth * scale, height: m.height * scale)
@@ -72,7 +72,7 @@ struct NotchPreview: View {
                 let sceneWidth = proxy.size.width / least
                 let sceneGeometry = SettingsPreview.Geometry(
                     rect: { state in
-                        let m = model.metrics(for: state)
+                        let m = model.metrics(for: state, housingPhase: state != .open)
                         return CGRect(x: sceneWidth / 2 - m.totalWidth / 2, y: top.edge, width: m.totalWidth, height: m.height)
                     }, scale: 1,
                     bubble: {

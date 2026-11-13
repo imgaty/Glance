@@ -7,6 +7,19 @@ import Testing
 @Suite("AppKit Sound menu", .serialized)
 @MainActor
 struct SoundOutputMenuTests {
+    /// Swift Testing's executor does not reliably service AppKit animation callbacks while asleep.
+    /// Drive only this process's run loop; the test window remains hidden and non-key.
+    private func advanceWindowAnimations() {
+        RunLoop.main.run(until: Date.now + 0.02)
+    }
+
+    private func waitForWindowAnimation(_ finished: () -> Bool) async throws {
+        for _ in 0..<80 {
+            if finished() { return }
+            advanceWindowAnimations()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+    }
     private let speakers = AudioOutput.Device(id: 10001, name: "MacBook Pro Speakers", symbol: "macbook.gen2", transport: kAudioDeviceTransportTypeBuiltIn)
     private let headphones = AudioOutput.Device(id: 10002, name: "AirPods Pro", symbol: "airpods.pro.gen1", transport: kAudioDeviceTransportTypeBluetooth)
 
@@ -172,6 +185,11 @@ struct SoundOutputMenuTests {
     @Test("Connecting and disconnecting devices preserves rows and animates their insertion")
     func deviceTransitions() async throws {
         _ = NSApplication.shared
+        // AppKit starts its animation services at launch. This isolated test process cannot
+        // activate, so completing that lifecycle does not take focus from the user's apps.
+        NSApp.setActivationPolicy(.prohibited)
+        NSApp.finishLaunching()
+        #expect(!NSApp.isActive)
         let menu = SoundOutputMenu(devices: [speakers], current: speakers.id, volume: nil, batteries: [:], choose: { _ in }, settings: {})
         let popover = SoundPopover(menu: menu, maximumHeight: 700)
         let screen = try #require(
@@ -207,7 +225,7 @@ struct SoundOutputMenuTests {
         menu.refresh(devices: [speakers, headphones], current: speakers.id, batteries: [:])
         popover.reload(animated: true)
         #expect(headphone.superview === inserted)
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForWindowAnimation { abs(window.frame.height - popover.contentSize.height) < 0.5 && inserted.layer?.filters?.isEmpty != false }
         #expect(inserted.alphaValue == 1)
         #expect(abs(window.frame.height - popover.contentSize.height) < 0.5)
         #expect(abs(window.frame.maxY - oldFrame.maxY) < 0.5)
@@ -217,7 +235,7 @@ struct SoundOutputMenuTests {
         menu.refresh(devices: [speakers], current: speakers.id, batteries: [:])
         popover.reload(animated: true)
         #expect(inserted.isRemoving)
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForWindowAnimation { inserted.superview == nil }
         #expect(inserted.superview == nil)
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight)
