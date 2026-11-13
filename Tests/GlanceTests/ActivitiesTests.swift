@@ -1636,13 +1636,13 @@ struct SystemBannersTests {
         #expect(otherMaker.model == nil)
         #expect(DeviceWatch.Battery(withModel) != nil)
         #expect(DeviceWatch.Battery(withoutModel) == nil)
-        // The banner goes for the device it names, or by what's connected if it names none.
+        // Only a positively named supported device can replace the native banner.
         let connected = ["sam\u{2019}s airpods pro": withModel, "airpods": withoutModel]
         #expect(MenuBarBanners.notchShows(["AirPods Pro", "88", "Connected"], connected: connected))
         #expect(!MenuBarBanners.notchShows(["AirPods", "88", "Connected"], connected: connected))
         #expect(!MenuBarBanners.notchShows(["Other Name", "88"], connected: connected))
-        #expect(MenuBarBanners.notchShows(["Other Name", "88"], connected: ["airpods pro": withModel]))
-        #expect(MenuBarBanners.notchShows(["Other Name", "88"], connected: [:]))
+        #expect(!MenuBarBanners.notchShows(["Other Name", "88"], connected: ["airpods pro": withModel]))
+        #expect(!MenuBarBanners.notchShows(["Other Name", "88"], connected: [:]))
     }
 
     @Test("AirPods connecting or running low show their level; a device's name or an offer doesn't count")

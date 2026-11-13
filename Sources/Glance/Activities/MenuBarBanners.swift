@@ -169,14 +169,12 @@ final class MenuBarBanners: @unchecked Sendable {
         return nil
     }
 
-    /// Whether the notch shows the device a banner names, by its name with or without its owner's.
-    /// Named by none that's connected, as the report and the banner may call it differently, it goes
-    /// by every connected device of Apple's or Beats'.
+    /// A banner is replaced only for devices it positively names, with or without their owner's
+    /// name. An unavailable or unrelated report cannot establish a replacement.
     static func notchShows(_ words: [String], connected: [String: DeviceWatch.BluetoothInfo]) -> Bool {
         let said = Set(words.map { DeviceWatch.shortName($0).lowercased() })
         let named = connected.filter { said.contains(DeviceWatch.shortName($0.key).lowercased()) }.values
-        if !named.isEmpty { return named.allSatisfy { $0.model != nil } }
-        return connected.values.filter(\.announced).allSatisfy { $0.model != nil }
+        return !named.isEmpty && named.allSatisfy { $0.model != nil }
     }
 
     /// AirPods connecting or running low show their level, which is what the notch says; offering

@@ -452,6 +452,8 @@ sliding under the notch as it folds:
 
 Nothing else is announced: not other makers' headphones and speakers, nor
 keyboards, mice, trackpads or game controllers.
+Their native banners stay visible. An empty or unrelated connected-device
+report also leaves the native banner in place.
 
 The caller's name responds to hover and press without shifting. When its app
 is available, the same source link is reachable from the keyboard.
