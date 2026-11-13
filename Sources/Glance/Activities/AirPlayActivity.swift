@@ -16,6 +16,16 @@ struct AirPlayRoute: Equatable {
     let symbol: String
     var outputID: AudioDeviceID? = nil
     var canStop = true
+    var stopFailed = false
+
+    var stopTitle: String {
+        if !canStop { return String(localized: "No Local Output") }
+        return stopFailed ? String(localized: "Try Again") : String(localized: "Stop AirPlay")
+    }
+
+    var stopSpoken: String {
+        stopFailed ? String(localized: "Couldn't change output. Try stopping AirPlay again.") : stopTitle
+    }
 
     /// What the device is: as macOS pictures its model, if it says which; otherwise, by its name,
     /// as the iPhone draws it: a MacBook, another Mac, a TV, a HomePod, or a speaker.
@@ -114,10 +124,13 @@ final class AirPlayWatch: ObservableObject {
         let device = available.first { $0.id == id }
         let airPlay = device.map { $0.transport == kAudioDeviceTransportTypeAirPlay } ?? false
         if !airPlay, device != nil { lastLocal = id }
+        let canStop = Self.returnOutput(in: available, previous: lastLocal) != nil
         let next =
             airPlay && enabled
             ? device.map {
-                AirPlayRoute(name: $0.name, symbol: routeSymbol($0), outputID: id, canStop: Self.returnOutput(in: available, previous: lastLocal) != nil)
+                AirPlayRoute(
+                    name: $0.name, symbol: routeSymbol($0), outputID: id, canStop: canStop,
+                    stopFailed: canStop && route?.outputID == id && route?.stopFailed == true)
             } : nil
         if next != route { route = next }
     }
@@ -146,6 +159,10 @@ final class AirPlayWatch: ObservableObject {
         }
         let succeeded = setOutput(target.id) == noErr
         refresh()
+        if var shown = route, shown.outputID == expected, shown.canStop, shown.stopFailed != !succeeded {
+            shown.stopFailed = !succeeded
+            route = shown
+        }
         return succeeded
     }
 
@@ -163,7 +180,8 @@ final class AirPlayWatch: ObservableObject {
 enum AirPlayLayout {
     static let tint = Color.p3(0x3B, 0x69, 0xB4)
     static let buttonFill = Color.p3(0x12, 0x20, 0x3B)
-    static let buttonWords = Color.p3(0x4B, 0x80, 0xF1)
+    /// At least 4.5:1 against the opaque hovered fill for the small button text.
+    static let buttonWords = Color.p3(0x50, 0x85, 0xF6)
     // Beside the camera: the symbol and the device, each as far in from its end.
     /// As tall in ink as every other activity's mark beside the camera.
     static let symbol: CGFloat = 0.585
@@ -240,7 +258,7 @@ struct ExpandedAirPlayView: View {
     var closedWidth: CGFloat? = nil
     /// How far below its middle at rest the closed notch's middle was, swollen under the pointer.
     var closedDrop: CGFloat = 0
-    var stop: (AudioDeviceID?) -> Void = { AirPlayWatch.shared.stop(expectedOutput: $0) }
+    var stop: (AudioDeviceID?) -> Bool = { AirPlayWatch.shared.stop(expectedOutput: $0) }
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @State private var hovering = false
     @Environment(\.trailingGrows) private var trailingGrows
@@ -287,20 +305,28 @@ struct ExpandedAirPlayView: View {
             Button {
                 performStop()
             } label: {
-                Text("Stop AirPlay")
-                    .font(NotchType.title)
-                    .foregroundStyle(AirPlayLayout.buttonWords)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: TimerLayout.content(h))
-                    .background(AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85), in: Capsule())
-                    .contentShape(Capsule())
+                VStack(spacing: 1) {
+                    Text(route.stopTitle)
+                        .font(NotchType.title)
+                    if route.stopFailed {
+                        Text("Couldn't change output")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .foregroundStyle(AirPlayLayout.buttonWords)
+                .frame(maxWidth: .infinity)
+                .frame(height: TimerLayout.content(h))
+                .background(AirPlayLayout.buttonFill.opacity(hovering ? 1 : 0.85), in: Capsule())
+                .contentShape(Capsule())
             }
             .disabled(!route.canStop)
             .opacity(route.canStop ? 1 : 0.45)
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
             .onHover { hovering = $0 && route.canStop }
             .notchControl()
-            .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirPlay")) { performStop() }
+            .accessibilityLabel(route.stopSpoken)
+            .keyControl(.activityFirst, in: Capsule(), outset: CGSize(width: 3, height: 3), spoken: route.stopSpoken) { performStop() }
             .padding(.horizontal, PlayerLayout.padding)
             .modifier(IslandReveal(hidden: !revealed))
         }
@@ -311,9 +337,10 @@ struct ExpandedAirPlayView: View {
         .accessibilityLabel("AirPlay, output: \(route.name)")
     }
 
-    func performStop() {
-        guard revealed, route.canStop else { return }
-        stop(route.outputID)
+    @discardableResult
+    func performStop() -> Bool {
+        guard revealed, route.canStop else { return false }
+        return stop(route.outputID)
     }
 
     /// As wide as the iPhone's, or as AirPlay and the device's name need.

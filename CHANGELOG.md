@@ -37,6 +37,7 @@
   previous output.
   Stop checks that the same AirPlay route is still selected and is unavailable
   when no local output can receive the sound.
+  A failed change keeps the destination visible and offers **Try Again**.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
   button. A saved screen recording opens from its preview and joins the tray.
 - Added charging and low-battery announcements on MacBooks. The low-battery

@@ -110,6 +110,28 @@ struct AirPlayControlTests {
         #expect(!fixture.watch.stop())
         #expect(fixture.writes == [Self.speakers.id])
         #expect(fixture.watch.route?.outputID == Self.remote.id)
+        #expect(fixture.watch.route?.stopFailed == true)
+        fixture.watch.refresh()
+        #expect(fixture.watch.route?.stopFailed == true)
+        fixture.status = noErr
+        #expect(fixture.watch.stop())
+        #expect(fixture.watch.route == nil)
+        fixture.current = Self.remote.id
+        fixture.watch.refresh()
+        #expect(fixture.watch.route?.stopFailed == false)
+    }
+
+    @Test("A failed Stop belongs only to the route it was attempted on")
+    func failureClearsWithRoute() {
+        let fixture = Fixture()
+        fixture.status = kAudioHardwareUnspecifiedError
+        fixture.watch.refresh()
+        #expect(!fixture.watch.stop())
+        #expect(fixture.watch.route?.stopFailed == true)
+        fixture.current = Self.otherRemote.id
+        fixture.watch.refresh()
+        #expect(fixture.watch.route?.stopFailed == false)
+        #expect(fixture.watch.route?.outputID == Self.otherRemote.id)
     }
 
     @Test("Disabling the activity clears its route and leaves audio untouched")
@@ -128,9 +150,21 @@ struct AirPlayControlTests {
         var actions: [AudioDeviceID?] = []
         for (revealed, canStop) in [(false, true), (true, false), (true, true)] {
             let route = AirPlayRoute(name: "Living Room", symbol: "homepod", outputID: Self.remote.id, canStop: canStop)
-            let view = ExpandedAirPlayView(route: route, restingHeight: 32, width: 400, revealed: revealed, stop: { actions.append($0) })
-            view.performStop()
+            let view = ExpandedAirPlayView(
+                route: route, restingHeight: 32, width: 400, revealed: revealed,
+                stop: {
+                    actions.append($0)
+                    return true
+                })
+            #expect(view.performStop() == (revealed && canStop))
         }
         #expect(actions == [Self.remote.id])
+    }
+
+    @Test("An isolated failed action remains failed at the view boundary")
+    func failedViewAction() {
+        let route = AirPlayRoute(name: "Living Room", symbol: "homepod", outputID: Self.remote.id)
+        let view = ExpandedAirPlayView(route: route, restingHeight: 32, width: 400, stop: { _ in false })
+        #expect(!view.performStop())
     }
 }
