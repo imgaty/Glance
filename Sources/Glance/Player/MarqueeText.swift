@@ -20,6 +20,8 @@ struct MarqueeText: View {
     var fills = true
     /// The explicit badge, right after the words and scrolling with them, as Apple Music shows it.
     var explicit = false
+    /// A preview can show the reduced-motion layout without changing the Mac's setting.
+    var reducedMotionOverride: Bool? = nil
 
     @State private var textWidth: CGFloat = 0
     @State private var boxWidth: CGFloat = 0
@@ -43,8 +45,9 @@ struct MarqueeText: View {
                 boxWidth = $0
             }
             .overlay(alignment: .leading) {
-                if overflows && reduceMotion {
-                    Text(text).font(font).lineLimit(1).truncationMode(.tail)
+                if overflows && (reducedMotionOverride ?? reduceMotion) {
+                    content(fixed: false)
+                        .truncationMode(.tail)
                         .frame(width: boxWidth, alignment: .leading)
                 } else {
                     scrolling(overflows: overflows)

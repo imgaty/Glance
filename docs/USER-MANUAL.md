@@ -172,6 +172,7 @@ updates do not reopen a player you quit.
 
 Player buttons highlight under the pointer and show their names after a short
 hover. Pressing gives immediate feedback; Reduce Motion keeps it still.
+Long titles keep their explicit-content badge when Reduce Motion stops scrolling.
 
 The open notch shows the cover, the song's name and artist, a progress bar, and
 the controls. Drag the progress bar to move through the song. With

@@ -51,6 +51,9 @@
 
 ### Player
 
+- Fixed the explicit-content badge disappearing from long titles with
+  Reduce Motion enabled.
+
 - Added hover feedback and help labels to player buttons. Disabled buttons
   ignore hover and press feedback, and Reduce Motion keeps press feedback still.
 
