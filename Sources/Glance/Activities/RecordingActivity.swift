@@ -682,6 +682,12 @@ struct ExpandedRecordingView: View {
     /// How wide the notch is closed, if it shows beside the camera there, and grows out of that.
     var closedWidth: CGFloat? = nil
     var closedDrop: CGFloat = 0
+    /// Review fixtures can show unavailable controls and use fake actions without system access.
+    var controlPermissionOverride: Bool? = nil
+    var stopAction: (() -> Void)? = nil
+    var openAction: (() -> Void)? = nil
+    @ObservedObject private var memoWatch = VoiceMemoWatch.shared
+    @ObservedObject private var screenWatch = ScreenRecordingWatch.shared
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
 
@@ -707,6 +713,7 @@ struct ExpandedRecordingView: View {
 
     @ViewBuilder
     private func memoRow(_ memo: VoiceMemo, h: CGFloat, tall: CGFloat, grows: Bool, rise: CGFloat, spread: CGFloat) -> some View {
+        let canControl = controlPermissionOverride ?? memoWatch.canControl
         let edge = PlayerLayout.padding
         let open = MemoBars.Spec(slots: RecordingLook.openBars, recorded: RecordingLook.openRecorded, height: tall * RecordingLook.openBarMost, scale: tall, open: true)
         let closed = MemoBars.Spec(slots: RecordingLook.bars, recorded: RecordingLook.bars, height: h * RecordingLook.barMost, scale: h, open: false)
@@ -716,9 +723,19 @@ struct ExpandedRecordingView: View {
         let text = LiveActivityView.textSize(for: h)
         let size = NotchType.size * RecordingLook.memoTime
         let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.memoTimeEdge(h), height: rise)
-        MemoWaveform(
-            slots: open.slots, recorded: open.recorded, height: open.height, scale: tall, open: true, live: memo.isRecording, futureShown: revealed, compactRecorded: bubbleCenter == nil ? nil : 5
-        )
+        Group {
+            if canControl {
+                MemoWaveform(
+                    slots: open.slots, recorded: open.recorded, height: open.height, scale: tall, open: true, live: memo.isRecording, futureShown: revealed,
+                    compactRecorded: bubbleCenter == nil ? nil : 5
+                )
+            } else {
+                Text("Needs Accessibility")
+                    .font(NotchType.title)
+                    .foregroundStyle(.white)
+                    .frame(width: open.width, height: open.height, alignment: .leading)
+            }
+        }
         .modifier(GrowsOut(out: grows, scale: closed.pitch / open.pitch, anchor: .leading, from: waveFrom))
         .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
         .padding(.leading, edge)
@@ -731,10 +748,12 @@ struct ExpandedRecordingView: View {
             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
             .padding(.trailing, Self.memoTimeEdge(h))
             .frame(maxWidth: .infinity, alignment: .trailing)
-        StopRecordingButton(memo: true, h: h) { VoiceMemoWatch.shared.stop() }
-            .modifier(IslandReveal(hidden: !revealed))
-            .padding(.trailing, TimerLayout.buttonEdge(h))
-            .frame(maxWidth: .infinity, alignment: .trailing)
+        StopRecordingButton(memo: true, h: h, canControl: canControl) {
+            if let stopAction { stopAction() } else { memoWatch.stop() }
+        }
+        .modifier(IslandReveal(hidden: !revealed))
+        .padding(.trailing, TimerLayout.buttonEdge(h))
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     /// From the right end to Voice Memos' time: past the button.
@@ -744,6 +763,8 @@ struct ExpandedRecordingView: View {
 
     @ViewBuilder
     private func screenRow(_ screen: ScreenRecording, h: CGFloat, grows: Bool, rise: CGFloat, spread: CGFloat) -> some View {
+        let canControl = controlPermissionOverride ?? screenWatch.canControl
+        let needsPermission = !canControl && !screen.isSaving && !screen.isSaved
         let edge = PlayerLayout.padding
         let dot = NotchType.size * RecordingLook.openDot
         let closedDot = h * RecordingLook.dot
@@ -765,7 +786,7 @@ struct ExpandedRecordingView: View {
                     .modifier(IslandReveal(hidden: !revealed))
             }
             .modifier(RecordingBlink(recording: screen.isRecording, faded: !screen.isRecording && !screen.isSaved, shown: revealed))
-            Text(screen.title)
+            Text(needsPermission ? String(localized: "Needs Accessibility") : screen.title)
                 .font(NotchType.title)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -780,15 +801,19 @@ struct ExpandedRecordingView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // Being saved, the spinner beside the camera grows into the ring around the square.
         let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
-        ScreenRecordingButton(screen: screen, h: h, revealed: revealed)
-            .modifier(
-                GrowsOut(
-                    out: grows || !screen.isSaving || !trailingGrows, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing,
-                    from: ringFrom)
-            )
-            .modifier(GrownFade(shown: revealed, grows: screen.isSaving && closedWidth != nil && trailingGrows))
-            .padding(.trailing, TimerLayout.buttonEdge(h))
-            .frame(maxWidth: .infinity, alignment: .trailing)
+        ScreenRecordingButton(
+            screen: screen, h: h, revealed: revealed, canControl: canControl,
+            stopAction: { if let stopAction { stopAction() } else { screenWatch.stop() } },
+            openAction: { if let openAction { openAction() } else { screenWatch.openSaved() } }
+        )
+        .modifier(
+            GrowsOut(
+                out: grows || !screen.isSaving || !trailingGrows, scale: h * TimerLayout.ring / TimerLayout.content(h), anchor: .trailing,
+                from: ringFrom)
+        )
+        .modifier(GrownFade(shown: revealed, grows: screen.isSaving && closedWidth != nil && trailingGrows))
+        .padding(.trailing, TimerLayout.buttonEdge(h))
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     /// How far above the open notch's middle the first line's middle is.
@@ -845,6 +870,7 @@ struct StopRecordingButton: View {
     /// Voice Memos', whose square is a little larger and ring heavier than the screen recording's.
     let memo: Bool
     let h: CGFloat
+    var canControl = true
     let action: () -> Void
 
     var body: some View {
@@ -862,9 +888,12 @@ struct StopRecordingButton: View {
             .contentShape(Circle())
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+        .opacity(canControl ? 1 : 0.45)
         .notchControl()
         .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop Recording"), action: action)
         .accessibilityLabel(String(localized: "Stop Recording"))
+        .accessibilityHint(canControl ? "" : String(localized: "Needs Accessibility"))
+        .help(canControl ? String(localized: "Stop Recording") : String(localized: "Needs Accessibility"))
     }
 }
 
@@ -905,6 +934,9 @@ struct ScreenRecordingButton: View {
     let screen: ScreenRecording
     let h: CGFloat
     let revealed: Bool
+    var canControl = true
+    var stopAction: () -> Void = { ScreenRecordingWatch.shared.stop() }
+    var openAction: () -> Void = { ScreenRecordingWatch.shared.openSaved() }
 
     var body: some View {
         let side = TimerLayout.content(h)
@@ -938,16 +970,19 @@ struct ScreenRecordingButton: View {
             .animation(.easeOut(duration: 0.3), value: screen.isSaving)
         }
         .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+        .opacity(canControl || saved || screen.isSaving ? 1 : 0.45)
         .disabled(screen.isSaving)
         .notchControl(enabled: !screen.isSaving)
         .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: label, action: press)
         .accessibilityLabel(label)
+        .accessibilityHint(canControl || saved || screen.isSaving ? "" : String(localized: "Needs Accessibility"))
+        .help(canControl || saved || screen.isSaving ? label : String(localized: "Needs Accessibility"))
     }
 
     private func press() {
         switch screen {
-        case .countdown, .recording: ScreenRecordingWatch.shared.stop()
-        case .saved: ScreenRecordingWatch.shared.openSaved()
+        case .countdown, .recording: stopAction()
+        case .saved: openAction()
         case .saving: break
         }
     }

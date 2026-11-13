@@ -680,6 +680,10 @@ for an instant as the recording stops. Turn it off, with voice memos, with
 Screen recordings are detected while Screenshot runs in the background as well
 as while its controls are open.
 
+If Accessibility access is lost, the activity keeps its last known recording
+and says `Needs Accessibility`. The dimmed Stop button requests access when
+pressed. Opening an already saved recording does not need that permission.
+
 ### Voice Memos
 
 While Voice Memos records, the notch shows it as the iPhone does: a red waveform
@@ -697,6 +701,10 @@ bars. Closing, the gray future dots blur and fade away; only the recorded bars
 move back beside the camera. It opens wide enough for the recorded bars to end beside the camera, as
 the iPhone's do, and only the dots pass beneath it. Turn it off, with screen
 recordings, with `Recordings` in **Settings > Live Activities**.
+
+If Accessibility access is lost, Glance keeps the last known memo and shows
+`Needs Accessibility`. It stops listening when Voice Memos releases the
+microphone, without assuming the memo finished. Press Stop to request access.
 
 <br>
 

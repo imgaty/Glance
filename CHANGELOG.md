@@ -41,6 +41,8 @@
   A failed change keeps the destination visible and offers **Try Again**.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
   button. A saved screen recording opens from its preview and joins the tray.
+  Losing Accessibility access keeps the last known recording visible and
+  explains the missing permission instead of claiming it finished.
 - Added charging and low-battery announcements on MacBooks. The low-battery
   alert includes a Low Power Mode button, using power control approved once
   in **Settings > General > Permissions**.

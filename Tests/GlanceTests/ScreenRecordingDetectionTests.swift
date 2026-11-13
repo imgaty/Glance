@@ -12,7 +12,9 @@ struct ScreenRecordingDetectionTests {
         let indicator = OSAllocatedUnfairLock(initialState: Optional<String>.none)
         let watch = ScreenRecordingWatch(
             readIndicator: { indicator.withLock { $0 } },
-            isEnabled: { true }, captureIsRunning: { false }
+            isEnabled: { true }, captureIsRunning: { false },
+            access: RecordingAccess(isGranted: { true }, request: { false }),
+            stopRecording: {}, findSavedFile: {}, openFile: { _ in }
         )
         watch.start()
         try await Task.sleep(for: .milliseconds(100))

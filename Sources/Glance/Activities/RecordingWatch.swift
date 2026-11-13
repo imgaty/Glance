@@ -8,6 +8,18 @@
 import AVFoundation
 import AppKit
 
+/// Permission checks are separate from user-requested authorization so review fixtures never
+/// need a system prompt or access to another app's interface.
+struct RecordingAccess {
+    var isGranted: () -> Bool
+    var request: () -> Bool
+
+    static let system = RecordingAccess(
+        isGranted: { AXIsProcessTrusted() },
+        request: { AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary) }
+    )
+}
+
 /// How loud the microphone is while a voice memo records, for its waveform: the loudest of each
 /// tenth of a second, newest last. Heard as the call's voice is (see `CallVoices`), once the
 /// microphone is allowed; nothing is recorded or kept. It runs only while a voice memo records.
@@ -131,6 +143,22 @@ final class RecordingLevels: ObservableObject {
 final class VoiceMemoWatch: ObservableObject {
     static let shared = VoiceMemoWatch()
 
+    @Published private(set) var canControl: Bool
+    private let access: RecordingAccess
+    private let finishRecording: () -> Void
+
+    init(access: RecordingAccess = .system, finishRecording: (() -> Void)? = nil) {
+        self.access = access
+        canControl = access.isGranted()
+        self.finishRecording =
+            finishRecording ?? {
+                guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundle).first,
+                    let done = Self.button(Self.done, in: app)
+                else { return }
+                AXUIElementPerformAction(done, kAXPressAction as CFString)
+            }
+    }
+
     @Published private(set) var memo: VoiceMemo? {
         didSet { follow(memo) }
     }
@@ -181,19 +209,30 @@ final class VoiceMemoWatch: ObservableObject {
     }
 
     private func heard(recording: Bool, app: NSRunningApplication) {
+        canControl = access.isGranted()
         // Its buttons are only looked for while one is going and the microphone has stopped.
-        let looks = !recording && memo != nil
+        let looks = canControl && !recording && memo != nil
         let resume = looks && Self.button(Self.resume, in: app) != nil
         let done = looks && !resume && Self.button(Self.done, in: app) != nil
-        let next = Self.next(after: memo, recording: recording, resume: resume, done: done, at: .now)
-        if next != memo { memo = next }
+        let next = Self.next(after: memo, recording: recording, resume: resume, done: done, at: .now, controlsAvailable: canControl)
+        if !recording && !canControl {
+            // Losing access cannot tell us whether it paused or finished. Keep the last known
+            // state, but don't keep listening to the microphone when Voice Memos isn't using it.
+            RecordingLevels.shared.pause()
+        }
+        if next != memo {
+            memo = next
+        } else if recording {
+            follow(memo)
+        }
     }
 
     /// The voice memo now, from whether Voice Memos is using the microphone and which of its
     /// buttons show: paused while its Resume button does, and going on, paused or about to record
     /// again, for as long as its Done button does. Resumed, Voice Memos swaps Resume for Pause a
     /// moment before the microphone comes back, and that's not the end of it.
-    nonisolated static func next(after memo: VoiceMemo?, recording: Bool, resume: Bool, done: Bool, at now: Date) -> VoiceMemo? {
+    nonisolated static func next(after memo: VoiceMemo?, recording: Bool, resume: Bool, done: Bool, at now: Date, controlsAvailable: Bool = true) -> VoiceMemo? {
+        if !recording && !controlsAvailable { return memo }
         switch (recording, memo) {
         case (true, .recording?):
             return memo
@@ -234,10 +273,9 @@ final class VoiceMemoWatch: ObservableObject {
     /// Stops it, as Voice Memos' own Done button does, which keeps it.
     func stop() {
         if benching { return ActivityBench.shared.stopped(.voiceMemo) }
-        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundle).first,
-            let done = Self.button(Self.done, in: app)
-        else { return }
-        AXUIElementPerformAction(done, kAXPressAction as CFString)
+        canControl = access.isGranted() || access.request()
+        guard canControl else { return }
+        finishRecording()
     }
 
     /// A made-up one, at the bench, or none.
@@ -268,6 +306,7 @@ final class ScreenRecordingWatch: ObservableObject {
     static let shared = ScreenRecordingWatch()
 
     @Published private(set) var recording: ScreenRecording?
+    @Published private(set) var canControl: Bool
     /// The last one saved, which the notch opens.
     private(set) var saved: URL?
     /// At the bench: made up.
@@ -281,15 +320,28 @@ final class ScreenRecordingWatch: ObservableObject {
     private let readIndicator: @Sendable () -> String?
     private let isEnabled: @MainActor () -> Bool
     private let captureIsRunning: @MainActor () -> Bool
+    private let access: RecordingAccess
+    private let stopRecording: () -> Void
+    private let findSavedFile: (() -> Void)?
+    private let openFile: (URL) -> Void
 
     init(
         readIndicator: (@Sendable () -> String?)? = nil,
         isEnabled: (@MainActor () -> Bool)? = nil,
-        captureIsRunning: (@MainActor () -> Bool)? = nil
+        captureIsRunning: (@MainActor () -> Bool)? = nil,
+        access: RecordingAccess = .system,
+        stopRecording: (() -> Void)? = nil,
+        findSavedFile: (() -> Void)? = nil,
+        openFile: ((URL) -> Void)? = nil
     ) {
         self.readIndicator = readIndicator ?? { Self.stopItem().map(Self.words) }
         self.isEnabled = isEnabled ?? { Self.enabled }
         self.captureIsRunning = captureIsRunning ?? { !NSRunningApplication.runningApplications(withBundleIdentifier: Self.capture).isEmpty }
+        self.access = access
+        canControl = access.isGranted()
+        self.stopRecording = stopRecording ?? { Self.pressStop() }
+        self.findSavedFile = findSavedFile
+        self.openFile = openFile ?? { NSWorkspace.shared.open($0) }
     }
 
     deinit { clock?.invalidate() }
@@ -303,12 +355,12 @@ final class ScreenRecordingWatch: ObservableObject {
     func start() {
         guard clock == nil, ActivityBench.scene == nil else { return }
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.look() }
+            MainActor.assumeIsolated { self?.refresh() }
         }
         timer.tolerance = 0.1
         RunLoop.main.add(timer, forMode: .common)
         clock = timer
-        look()
+        refresh()
     }
 
     private static var enabled: Bool {
@@ -316,12 +368,16 @@ final class ScreenRecordingWatch: ObservableObject {
         return defaults.bool(forKey: Preferences.activityScreenRecording) && defaults.bool(forKey: Preferences.notchEnabled)
     }
 
-    private func look() {
+    func refresh() {
         guard isEnabled() else {
             recording = nil
             return
         }
         guard !benching, !looking else { return }
+        canControl = access.isGranted()
+        // An unavailable AX tree isn't evidence that a recording stopped. Keep the last known
+        // state and explain the permission in its controls until observations are available again.
+        guard canControl else { return }
         let now = Date.now
         guard captureIsRunning() || recording != nil || now.timeIntervalSince(lastLook) >= 2 else { return }
         lastLook = now
@@ -332,6 +388,8 @@ final class ScreenRecordingWatch: ObservableObject {
             guard let self else { return }
             self.looking = false
             guard !self.benching, self.isEnabled() else { return }
+            self.canControl = self.access.isGranted()
+            guard self.canControl else { return }
             self.update(words: words, at: .now)
         }
     }
@@ -356,7 +414,7 @@ final class ScreenRecordingWatch: ObservableObject {
             // Stopped: saved once its file shows up.
             savingSince = now
             recording = .saving(length: now.timeIntervalSince(since))
-            findFile()
+            if let findSavedFile { findSavedFile() } else { findFile() }
         case (nil, .saving?):
             if now.timeIntervalSince(savingSince) > Self.savingLimit { done(nil) }
         case (nil, .saved?):
@@ -504,6 +562,12 @@ final class ScreenRecordingWatch: ObservableObject {
     /// is pressed as soon as it shows.
     func stop() {
         if benching { return ActivityBench.shared.stopped(.screenRecording) }
+        canControl = access.isGranted() || access.request()
+        guard canControl else { return }
+        stopRecording()
+    }
+
+    private static func pressStop() {
         if let button = Self.openedStopButton() {
             AXUIElementPerformAction(button, kAXPressAction as CFString)
             return
@@ -544,7 +608,7 @@ final class ScreenRecordingWatch: ObservableObject {
     /// Opens the one just saved, in the app that opens it.
     func openSaved() {
         guard let saved else { return }
-        NSWorkspace.shared.open(saved)
+        openFile(saved)
     }
 
     /// A made-up one, at the bench, or none.
