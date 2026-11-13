@@ -1026,7 +1026,7 @@ final class NotchController {
         Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
-    /// The pointer onto a bubble beside the notch, or off it: it swells a little, as the notch does.
+    /// The pointer onto a bubble beside the notch, or off it: highlight it without resizing.
     /// Only a click opens it, to what it shows.
     private func hoverBubble(_ on: Bool, at p: CGPoint) {
         if on, model.state == .peek { settle(at: p) }

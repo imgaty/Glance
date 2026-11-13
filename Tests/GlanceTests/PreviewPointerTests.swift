@@ -109,7 +109,7 @@ struct PreviewPointerTests {
         #expect(preview.model.state == .open)
     }
 
-    @Test("Closed, it swells as the pointer nears, and peeks under it")
+    @Test("Closed, it tracks pointer proximity and hover without resizing")
     func nearing() {
         let preview = SettingsPreview()
         preview.setInteractive(true, animated: false)

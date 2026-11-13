@@ -14,6 +14,7 @@
   then expand smoothly into the next view without a bounce.
   Both legs accelerate and slow to a stop, with the contents and detached bubble
   following the same motion. Hover and click feedback no longer add a rebound.
+  Hover keeps the compact footprint fixed, so opening begins with the collapse.
   Releasing a held click or swipe during opening keeps the final size steady.
   With `Haptic feedback` on, opening gives one tap at the housing before expanding.
   Canceling before the housing prevents the tap; automatic updates stay silent.

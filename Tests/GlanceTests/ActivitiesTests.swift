@@ -951,36 +951,31 @@ struct SystemBannersTests {
         #expect(CGFloat(circleRows.min() ?? 0) / 2 == PlayerLayout.padding)
     }
 
-    @Test("What grows out of the closed notch starts from it as swollen as the pointer had made it, and AirPlay's symbols from their frames")
+    @Test("Hover and proximity keep the compact footprint fixed before opening")
     @MainActor
-    func grownFromSwell() {
+    func fixedHoverFootprint() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
-        model.state = .peek
-        model.state = .open
-        #expect(model.grownSwell == NotchModel.peekSwell)
-        // Opened straight from rest, with the pointer near, by as much as it had swollen.
-        model.state = .closed
-        model.proximity = 0.5
-        model.state = .open
-        #expect(model.grownSwell == NotchModel.nearSwell * 0.5)
-        // The peek's swell is its metrics' own: wider at each end and taller by it.
-        model.state = .closed
-        model.proximity = 0
-        let rest = model.metrics(for: .closed), peek = model.metrics(for: .peek)
-        #expect(isClose(peek.bodyWidth - rest.bodyWidth, 2 * model.swell(in: .peek)) && isClose(peek.height - rest.height, model.swell(in: .peek)))
+        let rest = model.metrics
+        for proximity: CGFloat in [0, 0.5, 1] {
+            model.proximity = proximity
+            for state in [NotchState.closed, .peek] {
+                let target = model.metrics(for: state)
+                #expect(target.bodyWidth == rest.bodyWidth && target.height == rest.height)
+            }
+        }
     }
 
-    @Test("The pointer swells whatever shows beside the camera, a countdown with nothing to open to as well, but not what's as tall as the Alarm")
+    @Test("Pointer feedback preserves activity geometry and whether a recording can open")
     @MainActor
-    func swellsWithSomethingToOpen() {
+    func activityHoverFootprint() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.screenRecording = .countdown(from: 3, until: .now + 3)
         let rest = model.metrics(for: .closed)
         model.proximity = 1
-        // A countdown swells as Charging does, but opens to nothing.
-        #expect(model.opensToNothing && model.swells)
-        #expect(model.metrics(for: .closed).height > rest.height && model.metrics(for: .peek).height > rest.height)
+        // A countdown keeps its footprint and opens to nothing.
+        #expect(model.opensToNothing)
+        #expect(model.metrics(for: .closed).height == rest.height && model.metrics(for: .peek).height == rest.height)
         // In the bubble beside a timer, the same.
         model.timer = .running(until: .now + 300, total: 300)
         model.screenRecording = nil
@@ -990,12 +985,12 @@ struct SystemBannersTests {
         model.timer = nil
         // Recording, it has its opened view.
         model.screenRecording = .recording(since: .now)
-        #expect(!model.opensToNothing && model.swells)
-        #expect(model.metrics(for: .closed).height > model.restingHeight)
+        #expect(!model.opensToNothing)
+        #expect(model.metrics(for: .closed).height == model.restingHeight)
         // A rung timer is as tall as it gets.
         model.screenRecording = nil
         model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
-        #expect(model.restingTall && !model.swells)
+        #expect(model.restingTall)
         #expect(model.metrics(for: .closed).height == model.restingHeight)
     }
 

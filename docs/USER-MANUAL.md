@@ -91,7 +91,8 @@ notch closes when the pointer leaves it. It opens and closes the same way to
 whatever it shows: the player, the tray, the lyrics, a live activity, or an
 announcement as tall as the Alarm. Each activity opening, closing or switching
 first folds to the camera housing, then expands smoothly into its next view
-without a bounce. Both legs start gently, speed up, and slow to a stop. The
+without a bounce. Hover keeps the compact footprint fixed before this collapse.
+Both legs start gently, speed up, and slow to a stop. The
 contents and detached bubble follow the same motion, including when closing
 back to the compact live activity. This also applies to detached activities and
 device announcements. When the last activity
@@ -529,7 +530,7 @@ press its button or choose **Hide Low Battery**.
 What's connected when Glance starts isn't announced. What reconnects as the Mac
 wakes is announced only if macOS shows its own banner for it, and then in the
 banner's place. With the pointer on the notch, an announcement stays, and the
-notch swells a little around it, opening once it's over. A device extends
+notch opens once it's over. A device extends
 instead, as tall as a timer: the device and its ring grow with the notch, and
 its name and its level in numbers show. Sliding down on it, or clicking it if
 **Open with** allows that, puts it away and opens the notch at once. With the
@@ -691,8 +692,8 @@ with `Devices` in **Settings > Live Activities**.
 While you record the screen with macOS's Screenshot (Shift-Command-5), the notch
 shows it as the iPhone does: a red dot at its left end, pulsing faintly for as
 long as it records. Before that, while macOS counts down to the recording, the
-count shows in a ring; it has nothing to open to, so the notch swells under the
-pointer, as for Charging, but doesn't open. Once you stop, it opens by itself,
+count shows in a ring; it has nothing to open to, so hovering or clicking keeps
+it in place. Once you stop, it opens by itself,
 with `Saving Recording…` under the time and the ring around the button going
 round; then the square in the ring grows into the recording's first picture, and
 the notch says where it went, such as `Recording Saved to Desktop`. Click the

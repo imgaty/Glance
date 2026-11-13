@@ -10,7 +10,7 @@ import SwiftUI
 
 enum NotchState {
     case closed  // resting: exactly the size of the hardware notch
-    case peek  // pointer is on it: a small swell that says "I see you"
+    case peek  // pointer is on it; keep the compact footprint while waiting to open
     case open  // fully expanded
 }
 
@@ -54,8 +54,8 @@ enum GlassLook {
 }
 
 /// The notch's corners follow its height. Closed, it matches the hardware notch: small flares out
-/// into the screen's edge at the top, small rounded corners at the bottom, and swelling under the
-/// pointer it stays so. Opening, both grow to the player's radius, easing in and out, so all four
+/// into the screen's edge at the top and small rounded corners at the bottom.
+/// Opening, both grow to the player's radius, easing in and out, so all four
 /// corners match by the height of the shortest thing that opens.
 struct NotchCorners: Equatable {
     var restingHeight: CGFloat
@@ -63,6 +63,8 @@ struct NotchCorners: Equatable {
 
     static let restingFlare: CGFloat = 6
     private static let restingBottomRadius: CGFloat = 12
+    /// Preserve the camera corner profile through the first few points of growth.
+    private static let cornerGrowthInset: CGFloat = 7
     /// The height, by the notch's at rest, of the tray and the player, with their top corners the
     /// radius: what's shorter has them in proportion.
     private static let fullHeight: CGFloat = 4.625
@@ -74,7 +76,7 @@ struct NotchCorners: Equatable {
 
     /// With wings out, their ends are round, half the height across, as the Dynamic Island's are.
     func radii(forHeight height: CGFloat, wingEnds: CGFloat = 0) -> Radii {
-        let swollen = restingHeight + NotchModel.peekSwell
+        let swollen = restingHeight + Self.cornerGrowthInset
         let grown = min(max((height - swollen) / max(restingHeight * TimerLayout.tall - swollen, 1), 0), 1)
         let progress = grown * grown * (3 - 2 * grown)
         let bottom = Self.restingBottomRadius + (radius - Self.restingBottomRadius) * progress
@@ -112,17 +114,7 @@ final class NotchModel: ObservableObject {
     /// The widest a wing gets while a new song is announced; longer titles scroll.
     static let maxPopWing: CGFloat = 150
 
-    @Published var state: NotchState = .closed {
-        didSet {
-            // How far the closed notch had swollen under the pointer as it opened, for what grows out
-            // of it to start where it was (see `grownSwell`).
-            if state == .open, oldValue != .open { grownSwell = swell(in: oldValue) }
-            // Closing, it shrinks back to where it's closing to: swollen still under the pointer, or at
-            // rest, so what shrinks back lands where it shows beside the camera, with no jump as it
-            // hands over.
-            if oldValue == .open, state != .open { grownSwell = swell(in: state) }
-        }
-    }
+    @Published var state: NotchState = .closed
     /// Opened by a click on the detached bubble, so it opens out of the bubble, and closes back into it.
     @Published var openedFromBubble = false
     /// The bubble ran back into the notch's end as the notch opened from the notch, as the iPhone's
@@ -145,19 +137,6 @@ final class NotchModel: ObservableObject {
     var activityReducesMotion: Bool?
 
     func advanceActivityTransition() { activityTransitionID &+= 1 }
-    /// How much larger the closed notch was than at rest as it opened, at each end and at the bottom:
-    /// the pointer swells it, and what shows beside the camera rides with its ends.
-    private(set) var grownSwell: CGFloat = 0
-
-    /// How much the closed notch swells in a state, at each end and at the bottom.
-    func swell(in state: NotchState) -> CGFloat {
-        switch state {
-        case .closed: Self.nearSwell * proximity
-        case .peek where restingTall: 0
-        case .peek: Self.peekSwell
-        default: 0
-        }
-    }
     /// 0...1, how close the pointer is while the notch is closed.
     @Published var proximity: CGFloat = 0
     /// Rubber-band offset from scroll gestures, in points. Negative squashes the open notch.
@@ -428,9 +407,7 @@ final class NotchModel: ObservableObject {
         }
     }
 
-    /// What the notch or its bubble shows has nothing to open to, as the screen recording's
-    /// countdown hasn't, the iPhone's having no opened view of it: the pointer swells it, as it does
-    /// Charging, but neither resting on it nor a click opens it.
+    /// A recording countdown has no expanded view: neither resting on it nor a click opens it.
     func opensToNothing(fromBubble onBubble: Bool) -> Bool {
         guard alert == nil, (onBubble ? detached : nil) ?? activities.first == .screenRecording, case .countdown? = screenRecording else {
             return false
@@ -438,10 +415,6 @@ final class NotchModel: ObservableObject {
         return true
     }
     var opensToNothing: Bool { opensToNothing(fromBubble: false) }
-
-    /// The pointer swells it, as it does whatever shows beside the camera; not what's as tall as the
-    /// Alarm, which is as large as it gets already.
-    var swells: Bool { !restingTall }
 
     /// An activity's recording, if it's one.
     func recording(of activity: Activity) -> Recording? {
@@ -508,7 +481,7 @@ final class NotchModel: ObservableObject {
     }
     var camera: CGFloat { closedSize.width }
 
-    /// The pointer is on the detached activity, which swells a little, or pressing it, which squeezes.
+    /// The pointer highlights the detached activity; pressing it squeezes it.
     @Published var bubbleHovered = false
     @Published var bubblePressed = false
     /// Opens the detached activity, or the notch's own, as a click on it does, for VoiceOver (set by
@@ -572,11 +545,6 @@ final class NotchModel: ObservableObject {
 
     var metrics: NotchMetrics { metrics(for: state) }
 
-    /// How much the closed notch swells under the pointer, and as the pointer nears: as much at its
-    /// ends as at its bottom, so what its wings show keeps the same padding all round.
-    nonisolated static let peekSwell: CGFloat = 7
-    static let nearSwell: CGFloat = 3
-
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, short: Bool = false, housingPhase: Bool = true) -> NotchMetrics {
         if entering || (housingPhase && activityFolded) {
@@ -585,17 +553,10 @@ final class NotchModel: ObservableObject {
         let pull = max(stretch, 0)
         let across = abs(lean)
         let resting = short ? closedSize.height : restingHeight
-        let near = swells ? proximity : 0
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
-            case .closed:
-                (
-                    restingWidth + 2 * Self.nearSwell * near + pull * 0.4 + across,
-                    resting + Self.nearSwell * near + pull
-                )
-            // Tall already, it's as large as it gets under the pointer.
-            case .peek where !swells: (restingWidth + pull * 0.4 + across, resting + pull)
-            case .peek: (restingWidth + 2 * Self.peekSwell + pull * 0.4 + across, resting + Self.peekSwell + pull)
+            case .closed, .peek:
+                (restingWidth + pull * 0.4 + across, resting + pull)
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
@@ -791,8 +752,7 @@ extension NotchModel {
         withAnimation(NotchMotion.feedback) { pressed = down }
     }
 
-    /// The closed notch swells a little as the pointer comes near: `closeness` from 0, far, to 1,
-    /// on it.
+    /// Track pointer proximity without changing the compact footprint.
     func approach(_ closeness: CGFloat) {
         let value = Self.eased(closeness)
         guard abs(value - proximity) > 0.01 || (value == 0 && proximity != 0) else { return }
@@ -904,8 +864,7 @@ struct NotchView: View {
         // With Increase Contrast on, the colors stay, darker (see `contrastDim`).
         let lit = playerShown && nowPlaying.artwork != nil && background != .none
         let lyricsShown = heroOpen && model.showsLyrics
-        // The closed notch swells under the pointer, and the artwork and waveform with it, their
-        // padding too.
+        // Contents follow the shell during a press or drag.
         let swell = isOpen ? 1 : m.height / model.restingHeight
 
         ZStack(alignment: .top) {
@@ -1152,7 +1111,7 @@ struct NotchView: View {
 
     /// Keep each activity's closed pose mounted, so the notch's own transaction moves it.
     private func grownOrigin(_ activity: NotchModel.Activity) -> CGFloat? {
-        !model.openedFromBubble && model.activities.first == activity ? model.restingWidth + 2 * grownSwell : nil
+        !model.openedFromBubble && model.activities.first == activity ? model.restingWidth : nil
     }
 
     private func bubbleOrigin(_ activity: NotchModel.Activity) -> CGFloat? {
@@ -1167,9 +1126,7 @@ struct NotchView: View {
         activity.sharesBubbleSide
     }
 
-    private var grownSwell: CGFloat { model.state == .open ? model.grownSwell : model.swell(in: model.state) }
     private var grownFrom: CGFloat? { model.expanded.flatMap(grownOrigin) }
-    private var grownDrop: CGFloat { grownSwell / 2 }
 
     @ViewBuilder private func expandedTimer(shown: Bool) -> some View {
         ForEach([NotchModel.Activity.timer, .stopwatch], id: \.self) { activity in
@@ -1180,7 +1137,7 @@ struct NotchView: View {
                 let visible = shown && model.expanded == activity
                 ExpandedTimerView(
                     shown: clock, name: name, restingHeight: h, camera: model.camera, width: width,
-                    revealed: visible, closedWidth: grownOrigin(activity), closedDrop: grownDrop
+                    revealed: visible, closedWidth: grownOrigin(activity)
                 )
                 .frame(width: width, height: TimerLayout.tallHeight(h))
                 .environment(\.activityBubbleCenter, bubbleOrigin(activity))
@@ -1198,7 +1155,7 @@ struct NotchView: View {
             let visible = shown && model.expanded == .call
             ExpandedCallView(
                 call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width),
-                revealed: visible, closedWidth: grownOrigin(.call), closedDrop: grownDrop
+                revealed: visible, closedWidth: grownOrigin(.call)
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.call))
             .environment(\.notchControls, visible && !activityPreview)
@@ -1214,7 +1171,7 @@ struct NotchView: View {
             let visible = shown && model.expanded == .airplay
             ExpandedAirPlayView(
                 route: route, restingHeight: h, width: ExpandedAirPlayView.width(for: route, restingHeight: h),
-                revealed: visible, closedWidth: grownOrigin(.airplay), closedDrop: grownDrop
+                revealed: visible, closedWidth: grownOrigin(.airplay)
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.airplay))
             .environment(\.notchControls, visible && !activityPreview)
@@ -1230,7 +1187,7 @@ struct NotchView: View {
             let visible = shown && model.expanded == .airdrop
             ExpandedAirDropView(
                 shown: transfer, restingHeight: h, width: AirDropLayout.width(restingHeight: h, camera: model.camera),
-                revealed: visible, closedWidth: grownOrigin(.airdrop), closedDrop: grownDrop
+                revealed: visible, closedWidth: grownOrigin(.airdrop)
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.airdrop))
             .environment(\.notchControls, visible && !activityPreview)
@@ -1246,7 +1203,7 @@ struct NotchView: View {
                 let visible = shown && model.expanded == activity
                 ExpandedRecordingView(
                     recording: recording, restingHeight: model.closedSize.height, camera: model.camera, width: model.openWidth(of: recording),
-                    revealed: visible, closedWidth: grownOrigin(activity), closedDrop: grownDrop
+                    revealed: visible, closedWidth: grownOrigin(activity)
                 )
                 .environment(\.activityBubbleCenter, bubbleOrigin(activity))
                 .environment(\.notchControls, visible && !activityPreview)

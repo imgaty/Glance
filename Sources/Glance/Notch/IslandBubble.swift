@@ -83,6 +83,7 @@ struct IslandBubble: View {
             }
             ZStack {
                 Circle().fill(.black)
+                    .overlay { Circle().fill(.white.opacity(hovered && !pressed ? 0.08 : 0)) }
                 ZStack {
                     switch kept {
                     case .timer(let timer): TimerRing(state: timer, height: h)
@@ -168,7 +169,7 @@ struct IslandBubble: View {
                         .accessibilityAction(.default, open)
                 }
             }
-            .scaleEffect(reduceMotion ? 1 : pressed ? 0.94 : hovered ? 1.06 : 1)
+            .scaleEffect(reduceMotion || !pressed ? 1 : 0.94)
             .animation(.easeInOut(duration: 0.25)) { $0.opacity(reduceMotion && !shown ? 0 : 1) }
             .offset(x: h * (1 + Self.gap) * out)
             .animation(motion, value: out)
