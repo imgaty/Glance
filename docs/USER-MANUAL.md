@@ -91,8 +91,8 @@ notch closes when the pointer leaves it. It opens and closes the same way to
 whatever it shows: the player, the tray, the lyrics, a live activity, or an
 announcement as tall as the Alarm. Each activity opening, closing or switching
 first folds to the camera housing, then springs directly into its next view
-with a visible bounce. This also applies to detached activities and device
-announcements. When the last activity
+with a gentler, quicker bounce. This also applies to detached activities and
+device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a
 new action replaces an unfinished transition. Between the player and the tray,
 they slide and fade when no activity is showing. With

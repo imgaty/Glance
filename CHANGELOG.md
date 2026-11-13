@@ -11,8 +11,8 @@
 ### Live Activities
 
 - Changed activity opening, closing and switching to fold to the camera housing,
-  then spring directly into the next view with a visible bounce. Removed an
-  extra pulse and pause at the housing that made the movement stutter.
+  then spring directly into the next view with a gentler, quicker bounce.
+  Removed an extra pulse and pause at the housing that made the movement stutter.
   This includes detached activities and announcements.
   New input replaces an unfinished transition, and routine time
   and progress updates keep their place. Reduce Motion skips the bounce.

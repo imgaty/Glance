@@ -138,12 +138,12 @@ extension NotchModel {
         activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
-    static let activityControlDelay = 0.44
-    static let activityFoldDuration = 0.32
+    static let activityControlDelay = 0.38
+    static let activityFoldDuration = 0.28
     private static var activityClosingMotion: Animation {
         .easeInOut(duration: activityFoldDuration).paced
     }
     private static var activityOpeningSpring: Animation {
-        .spring(response: 0.78, dampingFraction: 0.54).paced
+        .spring(response: 0.68, dampingFraction: 0.60).paced
     }
 }
