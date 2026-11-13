@@ -875,10 +875,10 @@ final class NotchController {
     /// Back to the camera housing as a full-screen app comes, or out again as it goes.
     private func keepToCamera() {
         if fullScreen {
-            close(holdUntilExit: false)
-            model.cancelActivityTransition()
+            close(holdUntilExit: false, intoHousing: true)
+        } else {
+            withAnimation(IslandMotion.open) { model.collapsed = false }
         }
-        withAnimation(fullScreen ? IslandMotion.fold : IslandMotion.open) { model.collapsed = fullScreen }
         placeTouchTarget()
     }
 
@@ -1624,7 +1624,7 @@ final class NotchController {
         withAnimation(.smooth(duration: 0.3)) { model.trayScroll = scroll }
     }
 
-    private func close(holdUntilExit hold: Bool) {
+    private func close(holdUntilExit hold: Bool, intoHousing: Bool = false) {
         giveBackKeys()
         // A menu's hold lasts until the menu is gone (see `menuClosed`).
         holds.subtract([.keyboard, .touch, .drag])
@@ -1638,7 +1638,7 @@ final class NotchController {
         closeTask?.cancel()
         closeTask = nil
         holdUntilExit = hold
-        model.close()
+        model.close(intoHousing: intoHousing)
         stopPolling()
         pointerMoved(to: NSEvent.mouseLocation)
     }

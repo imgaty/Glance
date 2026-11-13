@@ -740,7 +740,26 @@ extension NotchModel {
         }
     }
 
-    func close() {
+    func close(intoHousing: Bool = false) {
+        if intoHousing {
+            // Full screen has one destination: the bare housing, without a pending reopening.
+            // Normalize the closed destination inside the same transaction as its geometry.
+            let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            withAnimation(reduced ? nil : IslandMotion.fold) {
+                state = .closed
+                collapsed = true
+                proximity = 0
+                pressed = false
+                stretch = 0
+                lean = 0
+                pageStretch = 0
+                alertExtended = false
+                bubbleHovered = false
+                bubblePressed = false
+                cancelActivityTransition()
+            }
+            return
+        }
         changeActivityPresentation(animation: IslandMotion.fold) {
             state = .closed
             stretch = 0

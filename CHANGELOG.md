@@ -17,6 +17,7 @@
   Controls become available as their content appears. Hover keeps its intended
   target during a fold, and detached activities return after leaving full screen.
   Releasing a hold early cancels its pending opening, including during a fold.
+  Entering full screen folds directly to the housing without briefly widening.
 
 - Added pressed feedback to timer, incoming-call and low-battery alert
   buttons. Dragging away cancels the click, and a new alert cannot inherit it.

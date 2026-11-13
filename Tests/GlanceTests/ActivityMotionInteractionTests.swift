@@ -80,8 +80,8 @@ struct ActivityMotionInteractionTests {
         #expect(model.metrics.bodyWidth > model.closedSize.width)
     }
 
-    @Test("Fullscreen cancellation restores the detached activity when the housing returns")
-    func fullscreenCancellation() async throws {
+    @Test("Fullscreen cancellation restores the detached activity when the housing returns", arguments: [false, true])
+    func fullscreenCancellation(_ duringTransition: Bool) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.activity = true
@@ -90,14 +90,22 @@ struct ActivityMotionInteractionTests {
         model.openedFromBubble = true
         model.open()
         let opening = try #require(model.activityTransitionTask)
-        await opening.value
+        if !duringTransition { await opening.value }
+        let order = model.activities
+        model.proximity = 1
+        model.pressed = true
+        model.stretch = 12
+        model.lean = 9
+        model.pageStretch = 7
 
-        // The actual keepToCamera route closes, cancels its deferred reveal, then collapses.
-        model.close()
-        #expect(model.bubbleMerged && model.activityControlsHidden)
-        model.cancelActivityTransition()
-        model.collapsed = true
+        // The real fullscreen route is atomic, including cancellation of an in-flight opening.
+        model.close(intoHousing: true)
+        #expect(model.state == .closed && model.collapsed)
         #expect(model.detached == nil)
+        #expect(model.metrics.bodyWidth == model.closedSize.width && model.metrics.height == model.closedSize.height)
+        #expect(!model.activityControlsHidden && model.activityTransitionTask == nil)
+        await opening.value
+        #expect(model.state == .closed && model.collapsed && model.activities == order)
         model.collapsed = false
         #expect(model.detached == .timer && !model.bubbleMerged)
         #expect(!model.openedFromBubble && model.bubbleReach == 0)
