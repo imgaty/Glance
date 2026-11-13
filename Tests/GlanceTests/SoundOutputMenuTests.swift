@@ -47,10 +47,14 @@ struct SoundOutputMenuTests {
         _ = NSApplication.shared
         let menu = SoundOutputMenu(devices: [speakers], current: speakers.id, volume: nil, batteries: [:], choose: { _ in }, settings: {})
         let slider = try #require(menu.items.compactMap { $0.view as? VolumeMenuSlider }.first)
+        let speakerRow = try #require(menu.items.first { $0.tag == Int(speakers.id) })
+        menu.highlight(speakerRow)
         menu.level.move(to: 0.73)
         menu.refresh(devices: [speakers, headphones], current: headphones.id, batteries: [:])
         #expect(menu.items.contains { $0.view === slider })
         #expect(menu.level.value == 0.73)
+        #expect(menu.items.first { $0.tag == Int(speakers.id) } === speakerRow)
+        #expect((speakerRow.view as? SoundMenuContentRow)?.highlighted == true)
         #expect(menu.items.first(where: { $0.tag == Int(headphones.id) })?.state == .on)
         menu.refresh(devices: [headphones], current: headphones.id, batteries: [:])
         #expect(!menu.items.contains { $0.tag == Int(speakers.id) })
@@ -140,5 +144,50 @@ struct SoundOutputMenuTests {
         let revision = menu.level.revision
         menu.level.show(0.2, since: revision - 1)
         #expect(menu.level.value == 0.73)
+    }
+
+    @Test("Connecting and disconnecting devices preserves rows and animates their insertion")
+    func deviceTransitions() async throws {
+        _ = NSApplication.shared
+        let menu = SoundOutputMenu(devices: [speakers], current: speakers.id, volume: nil, batteries: [:], choose: { _ in }, settings: {})
+        let popover = SoundPopover(menu: menu, maximumHeight: 700)
+        let screen = try #require(
+            NSScreen.screens.first {
+                guard let id = $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+                return CGDisplayIsBuiltin(id.uint32Value) != 0
+            })
+        let window = NSWindow(contentRect: CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 100, width: 308, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
+        window.ignoresMouseEvents = true
+        window.contentView = popover.contentView
+        window.orderFrontRegardless()
+        defer { window.orderOut(nil) }
+        let speaker = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view)
+        let holder = try #require(speaker.superview)
+        let oldHeight = popover.popover.contentSize.height
+        menu.refresh(devices: [speakers, headphones], current: headphones.id, batteries: [:])
+        popover.reload(animated: true)
+        let headphone = try #require(menu.items.first { $0.tag == Int(headphones.id) }?.view)
+        let inserted = try #require(headphone.superview as? SoundRowHolder)
+        #expect(speaker.superview === holder)
+        #expect(popover.popover.contentSize.height == oldHeight + headphone.frame.height)
+        #expect(!popover.popover.isShown)
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            #expect(inserted.layer?.animation(forKey: "soundReveal") != nil)
+        }
+        // A current-output refresh must not replace or restart the appearing row.
+        menu.refresh(devices: [speakers, headphones], current: speakers.id, batteries: [:])
+        popover.reload(animated: true)
+        #expect(headphone.superview === inserted)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(inserted.alphaValue == 1)
+        #expect(inserted.layer?.filters?.isEmpty != false)
+        menu.refresh(devices: [speakers], current: speakers.id, batteries: [:])
+        popover.reload(animated: true)
+        #expect(inserted.isRemoving)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(inserted.superview == nil)
+        #expect(speaker.superview === holder)
+        #expect(popover.popover.contentSize.height == oldHeight)
     }
 }

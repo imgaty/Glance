@@ -40,14 +40,13 @@
 
 ### Player
 
-- Rebuilt Sound as a glass popover anchored beneath its button, with a rounded
-  arrow, matching outer corners, system opening and closing animations,
-  live outputs, device pictures and headphone battery details. The selected
-  output follows the Mac's accent color. Its volume slider is white in dark
-  appearance and uses the accent color in light
-  appearance, with matching speaker heights and divider widths. Keyboard
-  activation opens it beneath the button. The slider stays visible but
-  disabled while idle; calls show outputs alone.
+- Rebuilt Sound with the system popover, anchored beneath its button, with
+  native glass and opening, closing and resizing animations. Newly connected
+  outputs fade in and become clear as the list expands. The selected output
+  follows the Mac's accent color. Its volume slider is white in dark appearance
+  and uses the accent color in light appearance, with matching speaker heights
+  and divider widths. The slider stays visible but disabled while idle; calls
+  show outputs alone.
 - Changed the speaker button's waves to follow the current volume without
   shifting the speaker.
 - Added Spotify DJ's current artwork and controls, including `Spotify DJ` in

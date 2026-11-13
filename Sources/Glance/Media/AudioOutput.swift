@@ -407,7 +407,7 @@ final class VolumeMenuSlider: NSView {
     }
 }
 
-/// One set of output items for the player and calls, presented in a glass popover.
+/// One set of output items for the player and calls, presented in a system popover.
 /// NSMenu holds the item actions and selected states; it is never opened for tracking.
 @MainActor
 final class SoundOutputMenu: NSMenu, NSMenuDelegate {
@@ -494,17 +494,30 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
         let ordered = devices.filter { $0.transport == kAudioDeviceTransportTypeBuiltIn } + devices.filter { $0.transport != kAudioDeviceTransportTypeBuiltIn }
         self.devices = ordered
         self.batteries = batteries
-        if deviceItems.map(\.tag) != ordered.map({ Int($0.id) }) {
-            for item in deviceItems { removeItem(item) }
-            deviceItems = ordered.enumerated().map { index, device in
-                let item = NSMenuItem(title: device.name, action: #selector(selectOutput(_:)), keyEquivalent: "")
+        let existing = Dictionary(uniqueKeysWithValues: deviceItems.map { ($0.tag, $0) })
+        let wanted = Set(ordered.map { Int($0.id) })
+        for item in deviceItems where !wanted.contains(item.tag) {
+            if focusedItem === item { highlight(nil) }
+            removeItem(item)
+        }
+        deviceItems = ordered.enumerated().map { offset, device in
+            let tag = Int(device.id)
+            let item: NSMenuItem
+            if let old = existing[tag] {
+                item = old
+            } else {
+                item = NSMenuItem(title: device.name, action: #selector(selectOutput(_:)), keyEquivalent: "")
                 item.target = self
-                item.tag = Int(device.id)
+                item.tag = tag
                 item.view = SoundMenuContentRow { outputLabel(device, playing: device.id == current) }
                 (item.view as? SoundMenuContentRow)?.item = item
-                insertItem(item, at: deviceStart + index)
-                return item
             }
+            let destination = deviceStart + offset
+            if index(of: item) != destination {
+                if item.menu === self { removeItem(item) }
+                insertItem(item, at: destination)
+            }
+            return item
         }
         for (item, device) in zip(deviceItems, ordered) {
             item.title = device.name
@@ -751,7 +764,6 @@ final class SoundMenuContentRow: NSView {
 /// frames and a capture of it on macOS 27.3: everything fourteen points in from the sides, the
 /// highlight five, each output thirty-two points tall with its picture in a circle of twenty-six.
 enum SoundLook {
-    static let radius: CGFloat = 16
     static let edge: CGFloat = 5
     static let width: CGFloat = 308
     static let inset: CGFloat = 14
