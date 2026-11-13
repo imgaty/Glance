@@ -56,9 +56,9 @@
   When there is no return destination, **No Local Output** stays readable.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
   button. A saved screen recording opens from its preview and joins the tray.
-  Hiding native Live Activities leaves screen recording available so its
-  indicator and Stop button keep working. If Glance previously turned it off,
-  it restores that setting; settings you turned off yourself stay unchanged.
+  Hiding native Live Activities no longer disables screen recording's native
+  indicator and Stop button. If Glance previously turned Screenshot off,
+  it restores that setting; settings Glance did not change stay unchanged.
   Losing Accessibility access keeps the last known recording visible and
   explains the missing permission instead of claiming it finished.
   Saved previews explain missing files and failed opening, with retry when

@@ -706,9 +706,9 @@ for an instant as the recording stops. Turn it off, with voice memos, with
 Screen recordings are detected while Screenshot runs in the background as well
 as while its controls are open. Keep Screenshot enabled in
 **System Settings > Menu Bar > Live Activities** so its recording indicator and
-Stop button are available. `Hide native Live Activities` leaves Screenshot
-enabled. If Glance previously disabled it, Glance restores that setting;
-a setting you disabled yourself stays unchanged.
+Stop button are available. `Hide native Live Activities` never disables
+Screenshot. If Glance previously disabled it, Glance restores that setting;
+a setting Glance did not change stays unchanged.
 
 If Accessibility access is lost, the activity keeps its last known recording
 and says `Needs Accessibility`. The dimmed Stop button requests access when
@@ -867,7 +867,7 @@ preview stays on what's playing.
 
 | Setting | Operation |
 | --- | --- |
-| `Hide native Live Activities` | From macOS 27.3, macOS shows its own Live Activities in the menu bar, such as Now Playing and a screen recording. While this is on (on at first, with `Accessibility` allowed), Glance turns them off with their switches in **System Settings > Menu Bar > Live Activities**, in a hidden System Settings of its own that closes afterward, leaving any you have open as it is. Screenshot is always left available so its recording indicator and Stop button keep working. If Glance previously disabled Screenshot, it restores that owned change and retries if needed; a setting you disabled yourself stays unchanged. Behind a full-screen app it can take a few more seconds, and if it doesn't work there, Glance tries again when you switch Spaces. Turned off, Glance turns back on the ones it turned off, verifies each change, and retries any that fail; each activity shows again the next time it starts. macOS's microphone and camera indicator can't be hidden: macOS has no switch for it, and keeps hiding it to itself |
+| `Hide native Live Activities` | From macOS 27.3, macOS shows its own Live Activities in the menu bar, such as Now Playing and a screen recording. While this is on (on at first, with `Accessibility` allowed), Glance turns them off with their switches in **System Settings > Menu Bar > Live Activities**, in a hidden System Settings of its own that closes afterward, leaving any you have open as it is. Glance never disables Screenshot, whose native indicator and Stop button are needed for screen recording. If Glance previously disabled Screenshot, it restores that owned change and retries if needed; a setting Glance did not change stays unchanged. Behind a full-screen app it can take a few more seconds, and if it doesn't work there, Glance tries again when you switch Spaces. Turned off, Glance turns back on the ones it turned off, verifies each change, and retries any that fail; each activity shows again the next time it starts. macOS's microphone and camera indicator can't be hidden: macOS has no switch for it, and keeps hiding it to itself |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect, and sound going to AirPlay |
