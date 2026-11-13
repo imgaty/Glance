@@ -1594,7 +1594,7 @@ final class NotchController {
     private func openActivity(_ activity: NotchModel.Activity) {
         guard !tucked, model.openableActivities.contains(activity) else { return }
         if model.state != .open { present(activity, for: nil) }
-        withAnimation(NotchMotion.expand) { model.selectActivity(activity) }
+        withAnimation(NotchMotion.expand) { _ = model.selectActivity(activity) }
         holds.remove(.presented)
         holds.insert(.keyboard)
         if let first = activityControls?.first { model.keys.focus(on: first) }
