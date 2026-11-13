@@ -485,6 +485,8 @@ other half needs `Audio from apps`. Turn all this off with `Calls` in
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 Compact accessory percentages stay at least 10 points tall, and the Low Power
 Mode instruction uses the notch's readable secondary text color.
+While a change is pending, the capsule ignores additional presses. A failed
+change keeps the actual mode visible and offers another try in the subtitle.
 Enable `Power control` in **Settings > General > Permissions** to use the Low
 Power Mode button. Choose **Request…**, then **Continue**, and approve Glance's
 helper in **System Settings > General > Login Items & Extensions**. This setup

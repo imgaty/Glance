@@ -13,33 +13,64 @@ import SwiftUI
 final class LowPowerMode: ObservableObject {
     static let shared = LowPowerMode()
 
-    @Published private(set) var isOn = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @Published private(set) var isOn: Bool
     @Published private(set) var isChanging = false
+    @Published private(set) var changeFailed = false
     private var watch: NSObjectProtocol?
+    private let readMode: @MainActor () -> Bool
+    private let setMode: @MainActor (Bool) async -> Bool
+    private let keepAlert: @MainActor (Double) -> Void
 
-    private init() {
-        watch = NotificationCenter.default.addObserver(forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main) {
-            [weak self] _ in
-            MainActor.assumeIsolated { self?.isOn = ProcessInfo.processInfo.isLowPowerModeEnabled }
+    init(
+        readMode: @escaping @MainActor () -> Bool = { ProcessInfo.processInfo.isLowPowerModeEnabled },
+        setMode: @escaping @MainActor (Bool) async -> Bool = { await PowerModeSettings.set($0) },
+        keepAlert: @escaping @MainActor (Double) -> Void = { Activities.shared.keep(.lowBattery, for: $0) },
+        observesChanges: Bool = true
+    ) {
+        self.readMode = readMode
+        self.setMode = setMode
+        self.keepAlert = keepAlert
+        isOn = readMode()
+        if observesChanges {
+            watch = NotificationCenter.default.addObserver(forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main) {
+                [weak self] _ in
+                MainActor.assumeIsolated { self?.refresh() }
+            }
+        }
+    }
+
+    func refresh() {
+        let actual = readMode()
+        if actual != isOn {
+            isOn = actual
+            changeFailed = false
         }
     }
 
     /// At the bench it's only said, and the Mac's stays as it is (see `ActivityBench`).
     func bench(_ on: Bool) {
         isOn = on
+        changeFailed = false
     }
 
-    func toggle() {
-        guard !ActivityBench.fakesPower else { return bench(!isOn) }
-        guard !isChanging else { return }
-        let on = !ProcessInfo.processInfo.isLowPowerModeEnabled
-        Activities.shared.keep(.lowBattery, for: 8)
+    @discardableResult
+    func toggle() -> Task<Void, Never>? {
+        guard !ActivityBench.fakesPower else {
+            bench(!isOn)
+            return nil
+        }
+        guard !isChanging else { return nil }
+        let on = !readMode()
+        keepAlert(8)
+        changeFailed = false
         isChanging = true
-        Task {
+        return Task {
             defer { isChanging = false }
-            _ = await PowerModeSettings.set(on)
-            isOn = ProcessInfo.processInfo.isLowPowerModeEnabled
-            Activities.shared.keep(.lowBattery, for: 5)
+            _ = await setMode(on)
+            // Actual power state is authoritative, including a late change after a helper timeout.
+            isOn = readMode()
+            changeFailed = isOn != on
+            keepAlert(5)
         }
     }
 
@@ -146,7 +177,7 @@ enum LowBatteryLayout {
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let right = capsule(h).width + PlayerLayout.padding
         let left = h * wordsEdge + width(LowBatteryView.title(percent))
-        let words = max(width(LowBatteryView.offer), width(LowBatteryView.done))
+        let words = [LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure].map { width($0) }.max() ?? 0
         return max(LiveActivityView.cameraGap + max(left, right), (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
     }
 }
@@ -161,7 +192,7 @@ struct LowBatteryView: View {
     let restingHeight: CGFloat
     /// The pointer is on the capsule.
     let hovered: Bool
-    @ObservedObject private var lowPower = LowPowerMode.shared
+    @ObservedObject var lowPower = LowPowerMode.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// When it showed, which its ripples count from.
     @State private var shownAt = Date.now
@@ -169,6 +200,8 @@ struct LowBatteryView: View {
     static func title(_ percent: Int) -> String { String(localized: "\(percent.formatted(.percent)) Battery") }
     static let offer = String(localized: "Click to turn on Low Power Mode")
     static let done = String(localized: "Low Power Mode enabled")
+    static let changing = String(localized: "Changing Low Power Mode…")
+    static let failure = String(localized: "Couldn't change mode. Try again.")
 
     var body: some View {
         let h = restingHeight
@@ -179,7 +212,11 @@ struct LowBatteryView: View {
                 Text(Self.title(percent))
                     .foregroundStyle(.white)
                 ZStack(alignment: .leading) {
-                    if on {
+                    if lowPower.isChanging {
+                        Text(Self.changing).foregroundStyle(layout.offerColor).transition(layout.change)
+                    } else if lowPower.changeFailed {
+                        Text(Self.failure).foregroundStyle(layout.offerColor).transition(layout.change)
+                    } else if on {
                         Text(Self.done).foregroundStyle(layout.doneColor).transition(layout.change)
                     } else {
                         Text(Self.offer).foregroundStyle(layout.offerColor).transition(layout.change)
@@ -201,7 +238,7 @@ struct LowBatteryView: View {
                 }
             }
             .reportsFrame(.lowPower)
-            .spokenButton(on ? String(localized: "Turn off Low Power Mode") : String(localized: "Turn on Low Power Mode")) { LowPowerMode.shared.toggle() }
+            .spokenButton(on ? String(localized: "Turn off Low Power Mode") : String(localized: "Turn on Low Power Mode")) { lowPower.toggle() }
             .disabled(lowPower.isChanging)
             .padding(.trailing, PlayerLayout.padding)
             .frame(maxWidth: .infinity, alignment: .trailing)
