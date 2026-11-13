@@ -74,6 +74,8 @@ final class PlayerKeys {
     /// A key typed on the player, or on an activity's own view with the buttons given. Moves the ring
     /// if it's Tab; what else it does is for the notch to carry out.
     func typed(key: Int, shift: Bool, hasMedia: Bool, activity: [PlayerControl]? = nil) -> Outcome {
+        let controls = activity ?? usable
+        if let focus, !controls.contains(focus) { self.focus = nil }
         switch key {
         case kVK_Tab:
             guard let next = Self.step(activity ?? usable, from: focus, backward: shift) else { return .none }
@@ -141,12 +143,19 @@ private struct KeyControl: ViewModifier {
     let spoken: String
     let action: () -> Void
     @Environment(\.playerKeys) private var keys
+    @Environment(\.notchControls) private var shown
+    @Environment(\.activityPreview) private var preview
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.notchOnScreen) private var onScreen
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: keys?.presses) { if keys?.focus == control { action() } }
+            .onChange(of: keys?.presses) {
+                guard shown, enabled, !preview, keys?.focus == control else { return }
+                action()
+            }
             .onChange(of: keys?.focus, initial: true) {
-                guard keys?.focus == control else { return }
+                guard shown, enabled, !preview, onScreen, keys?.focus == control else { return }
                 NSAccessibility.post(
                     element: NSApp as Any, notification: .announcementRequested,
                     userInfo: [.announcement: spoken, .priority: NSAccessibilityPriorityLevel.high.rawValue])
@@ -159,10 +168,13 @@ private struct KeyRing<RingShape: InsettableShape>: ViewModifier {
     let shape: RingShape
     let outset: CGSize
     @Environment(\.playerKeys) private var keys
+    @Environment(\.notchControls) private var shown
+    @Environment(\.activityPreview) private var preview
+    @Environment(\.isEnabled) private var enabled
 
     func body(content: Content) -> some View {
         content.overlay {
-            if keys?.focus == control {
+            if shown, enabled, !preview, keys?.focus == control {
                 shape
                     .strokeBorder(.white, lineWidth: 2)
                     .padding(.horizontal, -outset.width)

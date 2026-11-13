@@ -1122,6 +1122,7 @@ struct NotchView: View {
                 )
                 .frame(width: width, height: TimerLayout.tallHeight(h))
                 .environment(\.activityBubbleCenter, bubbleOrigin(activity))
+                .environment(\.notchControls, visible && !activityPreview)
                 .allowsHitTesting(places == nil && visible)
                 .accessibilityHidden(!visible)
                 .transition(IslandMotion.fade)
@@ -1138,6 +1139,7 @@ struct NotchView: View {
                 revealed: visible, closedWidth: grownOrigin(.call), closedDrop: grownDrop
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.call))
+            .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)
             .transition(IslandMotion.fade)
@@ -1153,6 +1155,7 @@ struct NotchView: View {
                 revealed: visible, closedWidth: grownOrigin(.airplay), closedDrop: grownDrop
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.airplay))
+            .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)
             .transition(IslandMotion.fade)
@@ -1168,6 +1171,7 @@ struct NotchView: View {
                 revealed: visible, closedWidth: grownOrigin(.airdrop), closedDrop: grownDrop
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.airdrop))
+            .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)
             .transition(IslandMotion.fade)
@@ -1183,6 +1187,7 @@ struct NotchView: View {
                     revealed: visible, closedWidth: grownOrigin(activity), closedDrop: grownDrop
                 )
                 .environment(\.activityBubbleCenter, bubbleOrigin(activity))
+                .environment(\.notchControls, visible && !activityPreview)
                 .allowsHitTesting(places == nil && visible)
                 .accessibilityHidden(!visible)
                 .transition(IslandMotion.fade)

@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed keyboard commands reaching controls in activities that were hidden
+  behind the opened one. Unavailable controls no longer keep keyboard focus.
+
 - Added calls, with incoming-call controls, elapsed time, a voice waveform,
   sound output selection and controls for supported calling apps.
 - Added Clock timers and the stopwatch, with their time beside the camera
