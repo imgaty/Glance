@@ -136,6 +136,8 @@ final class NotchModel: ObservableObject {
     var bubbleSpan: CGFloat { closedSize.height * (1 + IslandBubble.gap) }
     /// A presentation change passes through the hardware housing before its new content opens.
     @Published var activityFolded = false
+    /// A small outward rebound after landing on the camera housing, never inside its bounds.
+    @Published var activityHousingRebound: CGFloat = 0
     /// Geometry has begun opening, but its controls are still fading into view.
     @Published var activityOpening = false
     var activityControlsHidden: Bool { activityFolded || activityOpening }
@@ -580,7 +582,9 @@ final class NotchModel: ObservableObject {
     /// The notch's size in this state; `short`, as if what's announced weren't taller than it.
     func metrics(for state: NotchState, short: Bool = false, housingPhase: Bool = true) -> NotchMetrics {
         if entering || (housingPhase && activityFolded) {
-            return NotchMetrics(bodyWidth: closedSize.width, height: closedSize.height, flare: corners.radii(forHeight: closedSize.height).flare)
+            let rebound = entering ? 0 : min(max(activityHousingRebound, 0), 1)
+            let height = closedSize.height + Self.activityHousingLift * rebound
+            return NotchMetrics(bodyWidth: closedSize.width + Self.activityHousingSpread * rebound, height: height, flare: corners.radii(forHeight: height).flare)
         }
         let pull = max(stretch, 0)
         let across = abs(lean)

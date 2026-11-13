@@ -10,9 +10,10 @@
 
 ### Live Activities
 
-- Changed activity opening, closing and switching to fold to the camera housing
-  first, then spring into the next view, including detached activities and
-  announcements. New input replaces an unfinished transition, and routine time
+- Changed activity opening, closing and switching to fold to the camera housing,
+  rebound briefly, then spring into the next view at a slower pace with a more
+  visible bounce. This includes detached activities and announcements.
+  New input replaces an unfinished transition, and routine time
   and progress updates keep their place. Reduce Motion skips the bounce.
   Controls become available as their content appears. Hover keeps its intended
   target during a fold, and detached activities return after leaving full screen.

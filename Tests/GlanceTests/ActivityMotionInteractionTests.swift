@@ -80,6 +80,66 @@ struct ActivityMotionInteractionTests {
         #expect(model.metrics.bodyWidth > model.closedSize.width)
     }
 
+    @Test("The closing rebound stays outside the camera and keeps content inaccessible")
+    func housingRebound() async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        model.activity = true
+        model.open()
+        let transition = try #require(model.activityTransitionTask)
+        #expect(model.activityHousingRebound == 0)
+        #expect(model.metrics.bodyWidth == model.closedSize.width)
+
+        try #require(try await eventually { model.activityHousingRebound > 0 })
+        #expect(model.activityFolded && model.activityControlsHidden)
+        #expect(model.metrics.bodyWidth > model.closedSize.width)
+        #expect(model.metrics.bodyWidth <= model.closedSize.width + 12)
+        #expect(model.metrics.height > model.closedSize.height)
+        #expect(model.metrics.height <= model.closedSize.height + 3)
+        #expect(model.detached == nil && !model.expandedShown)
+
+        try #require(try await eventually { model.activityHousingRebound == 0 })
+        #expect(model.activityFolded)
+        #expect(model.metrics.bodyWidth == model.closedSize.width)
+        #expect(model.metrics.height == model.closedSize.height)
+        await transition.value
+        #expect(model.activityHousingRebound == 0 && !model.activityControlsHidden)
+    }
+
+    enum ReboundInterruption: CaseIterable { case teardown, reducedMotion, fullscreen, replacement }
+
+    @Test("Interrupting the rebound cannot leave a pulse or reopen an obsolete destination", arguments: ReboundInterruption.allCases)
+    func interruptedRebound(_ interruption: ReboundInterruption) async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        model.activity = true
+        model.timer = .paused(left: 75, total: 120)
+        model.open()
+        let first = try #require(model.activityTransitionTask)
+        try #require(try await eventually { model.activityHousingRebound > 0 })
+
+        switch interruption {
+        case .teardown: model.cancelActivityTransition()
+        case .reducedMotion:
+            model.activityReducesMotion = true
+            model.close()
+        case .fullscreen: model.close(intoHousing: true)
+        case .replacement: #expect(model.selectActivity(.timer))
+        }
+        #expect(model.activityHousingRebound == 0)
+        let current = model.activityTransitionTask
+        await first.value
+        await current?.value
+        #expect(model.activityHousingRebound == 0 && model.activityTransitionTask == nil)
+        #expect(!model.activityControlsHidden)
+        switch interruption {
+        case .teardown: #expect(model.state == .open)
+        case .reducedMotion: #expect(model.state == .closed && model.detached == .timer)
+        case .fullscreen: #expect(model.collapsed && model.metrics.bodyWidth == model.closedSize.width)
+        case .replacement: #expect(model.state == .open && model.expanded == .timer)
+        }
+    }
+
     @Test("Fullscreen cancellation restores the detached activity when the housing returns", arguments: [false, true])
     func fullscreenCancellation(_ duringTransition: Bool) async throws {
         let model = model()
