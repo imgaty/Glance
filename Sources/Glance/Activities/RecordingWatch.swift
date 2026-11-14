@@ -281,6 +281,7 @@ final class VoiceMemoWatch: ObservableObject {
     /// A made-up one, at the bench, or none.
     func bench(_ memo: VoiceMemo?) {
         benching = true
+        canControl = true
         RecordingLevels.shared.madeUp = true
         self.memo = memo
     }
@@ -687,6 +688,7 @@ final class ScreenRecordingWatch: ObservableObject {
     /// A made-up one, at the bench, or none.
     func bench(_ recording: ScreenRecording?) {
         benching = true
+        canControl = true
         savedDismissal?.cancel()
         savedDismissal = nil
         saved = nil

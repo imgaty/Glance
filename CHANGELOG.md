@@ -10,6 +10,12 @@
 
 ### Live Activities
 
+- Fixed test activity controls requesting Clock permission or answering real
+  timer alerts. Test calls now connect after answering a dismissed ringing
+  alert, and test recordings keep their controls available.
+- Fixed Shuffle and Repeat in the made-up player and kept its commands from
+  reaching a real playing app.
+
 - Changed activity opening, closing and switching to fold smoothly to the camera
   housing, then expand with a small bounce into the open or inline view.
   Only the expansion bounces. The contents and detached bubble follow the same

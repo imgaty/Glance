@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 13 November 2026`
+`Created: 11 October 2026` | `Last updated: 14 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -53,6 +53,12 @@ cd Glance && ./build.sh --run
 
 The app is built into `build/Glance.app`. See [Contributing](../CONTRIBUTING.md)
 for more.
+
+In builds made from source, right-click the notch and choose **Try a Live
+Activity** to try made-up activities. **Add a Second** places another beside
+the first. Choose **None** to return to your usual activities. Test timers,
+calls and recordings change only their made-up activity. **Sound Output**
+still shows your Mac's actual outputs.
 
 ### The welcome tour
 

@@ -332,18 +332,15 @@ final class ActivityBench {
             ended.remove(.call)
             callAnswered = false
             switch scene {
-            case .callRinging:
+            case .callRinging, .callSwiped:
                 watch.bench(Self.madeUpCall(.ringing))
+                if scene == .callSwiped { Activities.shared.dismiss(.incomingCall) }
                 let end = Date.now + length
                 while !ended.contains(.call), !callAnswered, Date.now < end, !Task.isCancelled { await wait(0.2) }
                 if callAnswered {
                     watch.bench(Self.madeUpCall(.connected(since: .now), canEnd: true))
                     await round(of: .call)
                 }
-            case .callSwiped:
-                watch.bench(Self.madeUpCall(.ringing))
-                Activities.shared.dismiss(.incomingCall)
-                await round(of: .call)
             case .callOutgoing:
                 watch.bench(Self.madeUpCall(.calling, canEnd: true))
                 await round(of: .call)

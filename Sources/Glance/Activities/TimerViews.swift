@@ -224,6 +224,19 @@ struct StopwatchReading: View {
     }
 }
 
+/// Clock's controls, replaceable in an isolated preview without changing a real timer or stopwatch.
+@MainActor
+struct ClockActions {
+    /// Nil follows Clock's observed permission; previews can show either state without a prompt.
+    var canControl: Bool? = nil
+    var toggleTimer: () -> Void = { ClockActivity.shared.toggleTimer() }
+    var cancelTimer: () -> Void = { ClockActivity.shared.cancelTimer() }
+    var repeatTimer: () -> Void = { ClockActivity.shared.repeatTimer() }
+    var dismissRing: () -> Void = { ClockActivity.shared.dismissRing() }
+    var startStopStopwatch: () -> Void = { ClockActivity.shared.startStopStopwatch() }
+    var resetStopwatch: () -> Void = { ClockActivity.shared.resetStopwatch() }
+}
+
 /// Opened to a timer, as the iPhone's Timer expands, as tall: round buttons to pause or go on and to
 /// cancel left of the camera, the time left, large, right of it, its name under the camera, as the
 /// player's title sits under it. Opened to the stopwatch, as the iPhone's: its buttons to stop it and
@@ -248,11 +261,13 @@ struct ExpandedTimerView: View {
     var closedDrop: CGFloat = 0
     /// A preview can exercise this appearance without changing the Mac's setting.
     var reduceMotionOverride: Bool? = nil
+    var actions = ClockActions()
     @ObservedObject private var clock = ClockActivity.shared
     @Environment(\.trailingGrows) private var trailingGrows
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var motionReduced: Bool { reduceMotionOverride ?? reduceMotion }
+    private var canControl: Bool { actions.canControl ?? clock.canControl }
 
     var body: some View {
         let h = restingHeight
@@ -293,7 +308,7 @@ struct ExpandedTimerView: View {
                 label: running ? (stopwatch ? String(localized: "Stop") : String(localized: "Pause")) : (stopwatch ? String(localized: "Start") : String(localized: "Resume")),
                 fill: stopwatch ? TimerLayout.stopwatchPauseFill : nil
             ) {
-                stopwatch ? clock.startStopStopwatch() : clock.toggleTimer()
+                stopwatch ? actions.startStopStopwatch() : actions.toggleTimer()
             } glyph: {
                 if running {
                     PauseGlyph(height: h, stopwatch: stopwatch)
@@ -307,7 +322,7 @@ struct ExpandedTimerView: View {
                 control: .activitySecond, height: h, tint: .white, label: stopwatch ? (running ? String(localized: "Restart") : String(localized: "Reset")) : String(localized: "Cancel"),
                 fill: stopwatch ? TimerLayout.stopwatchResetFill : nil
             ) {
-                stopwatch ? clock.resetStopwatch() : clock.cancelTimer()
+                stopwatch ? actions.resetStopwatch() : actions.cancelTimer()
             } glyph: {
                 // Running, it starts over: round again.
                 if stopwatch, running {
@@ -317,8 +332,8 @@ struct ExpandedTimerView: View {
                 }
             }
         }
-        .opacity(clock.canControl ? 1 : 0.45)
-        .accessibilityHint(clock.canControl ? "" : String(localized: "Needs Accessibility"))
+        .opacity(canControl ? 1 : 0.45)
+        .accessibilityHint(canControl ? "" : String(localized: "Needs Accessibility"))
     }
 
     /// The time, large, its name small before it, on one line: under the camera, beside it, as far
@@ -479,6 +494,7 @@ struct TimerDoneView: View {
     var wing: CGFloat = 0
     /// Which button the pointer is on.
     let hovered: AlertButton?
+    var actions = ClockActions()
 
     var body: some View {
         let h = restingHeight
@@ -502,12 +518,12 @@ struct TimerDoneView: View {
                         .foregroundStyle(TimerLayout.ink)
                 }
                 .reportsFrame(.again)
-                .spokenButton("Repeat") { ClockActivity.shared.repeatTimer() }
+                .spokenButton("Repeat", action: actions.repeatTimer)
                 IslandCircle(height: h, tint: .white, highlighted: hovered == .stop) {
                     CrossGlyph(height: h)
                 }
                 .reportsFrame(.stop)
-                .spokenButton("Stop") { ClockActivity.shared.dismissRing() }
+                .spokenButton("Stop", action: actions.dismissRing)
             }
             .padding(.trailing, TimerLayout.buttonEdge(h))
             .frame(maxWidth: .infinity, alignment: .trailing)

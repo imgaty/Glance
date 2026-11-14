@@ -88,11 +88,31 @@ final class NowPlaying: ObservableObject {
 
     /// Presentation fixtures can apply reports without polling real players or following their audio.
     private let followsPlayers: Bool
+    /// The same controls can be exercised against a made-up player without sending commands to apps.
+    enum DemoCommand: Equatable {
+        case playPause, previous, next, openSource, differentDJPicks
+        case seek(Double), shuffle(Bool), repeatMode(RepeatMode), favorite(Bool)
+    }
+    private let demoCommand: ((DemoCommand) -> Void)?
 
-    init(followsPlayers: Bool = true, lyrics: LyricsStore? = nil) {
+    init(followsPlayers: Bool = true, lyrics: LyricsStore? = nil, onDemoCommand: ((DemoCommand) -> Void)? = nil) {
         if let lyrics { lyricsStore = lyrics }
         self.followsPlayers = followsPlayers
         isDemo = !followsPlayers
+        demoCommand = followsPlayers ? nil : onDemoCommand
+    }
+
+    /// Seed only made-up players; a live player's options always come from its source app.
+    func setDemoOptions(_ options: PlaybackOptions) {
+        guard isDemo else { return }
+        self.options = options
+    }
+
+    /// Returns true when this request belongs to the demo and must not reach a real player.
+    private func recordDemo(_ command: DemoCommand) -> Bool {
+        guard isDemo else { return false }
+        demoCommand?(command)
+        return true
     }
 
     var hasMedia: Bool { !title.isEmpty }
@@ -131,7 +151,7 @@ final class NowPlaying: ObservableObject {
     }
 
     func togglePlayPause() {
-        command("toggle", script: "playpause")
+        if !recordDemo(.playPause) { command("toggle", script: "playpause") }
         // Answer the click at once; the helper's report confirms it a moment later.
         elapsed = position(at: .now)
         reportedAt = .now
@@ -146,7 +166,7 @@ final class NowPlaying: ObservableObject {
     /// (see `SpotifyDJ`). In a Spotify started without its accessibility switch, Spotify is started
     /// again with it, the first time. Without Accessibility, Spotify, where its button is.
     func differentDJPicks() {
-        guard !isDemo, !pickingDJ else { return }
+        guard !recordDemo(.differentDJPicks), !pickingDJ else { return }
         guard AXIsProcessTrusted() else {
             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: PlayerScripting.spotify) {
                 NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
@@ -163,8 +183,15 @@ final class NowPlaying: ObservableObject {
         }
     }
 
-    func next() { command("next", script: "next track") }
-    func previous() { command("previous", script: "previous track") }
+    func next() {
+        guard !recordDemo(.next) else { return }
+        command("next", script: "next track")
+    }
+
+    func previous() {
+        guard !recordDemo(.previous) else { return }
+        command("previous", script: "previous track")
+    }
 
     /// To the player shown: through the system's remote, or straight to Music or Spotify while
     /// they're followed directly (the system's remote would reach the app it reports instead).
@@ -255,6 +282,7 @@ final class NowPlaying: ObservableObject {
     func toggleShuffle() {
         guard let shuffle = options.shuffle, let app = appBundleID else { return }
         options.shuffle = !shuffle
+        guard !recordDemo(.shuffle(!shuffle)) else { return }
         readBack(after: PlayerScripting.setShuffle(!shuffle, app: app))
         send("shuffle \(shuffle ? 1 : 3)")
     }
@@ -262,6 +290,11 @@ final class NowPlaying: ObservableObject {
     func cycleRepeat() {
         guard let mode = options.repeatMode, let app = appBundleID else { return }
         let next = mode.next
+        if isDemo {
+            options.repeatMode = next
+            _ = recordDemo(.repeatMode(next))
+            return
+        }
         // Spotify's scripting only turns repeat on and off. From repeating all, one more press of
         // its own Repeat command (Playback menu) repeats the song, as its button does.
         if app == PlayerScripting.spotify, next == .one {
@@ -283,6 +316,7 @@ final class NowPlaying: ObservableObject {
     func toggleFavorite() {
         guard let favorite = options.favorite, let app = appBundleID else { return }
         options.favorite = !favorite
+        guard !recordDemo(.favorite(!favorite)) else { return }
         heldFavorite = (!favorite, track, .now + Self.favoriteHold)
         let pressed = Date.now
         favoritePressedAt = pressed
@@ -325,14 +359,14 @@ final class NowPlaying: ObservableObject {
     }
 
     func seek(to seconds: Double) {
-        command("seek \(seconds)", script: "set player position to \(seconds)")
+        if !recordDemo(.seek(seconds)) { command("seek \(seconds)", script: "set player position to \(seconds)") }
         elapsed = seconds
         reportedAt = .now
     }
 
     /// Where it plays from: its tab, its playlist, or else the app (see `PlayingSource`).
     func openSource() {
-        guard let appBundleID, !isDemo else { return }
+        guard let appBundleID, !recordDemo(.openSource) else { return }
         PlayingSource.open(app: appBundleID, title: title)
     }
 
@@ -344,10 +378,13 @@ final class NowPlaying: ObservableObject {
     /// A song for the welcome tour's pictures, always playing, round and round its first verse: the
     /// tour's song, whose cover and words come from Apple Music and LRCLIB as any song's do. If
     /// either can't be had, offline say, it becomes the made-up song.
-    static func demo(_ song: FeaturedSong) -> NowPlaying {
+    static func demo(_ song: FeaturedSong, looksUpSong: Bool = true) -> NowPlaying {
         let player = NowPlaying(followsPlayers: false)
         player.isSong = true
         player.isPlaying = true
+        // The pictured source and its options belong to the same made-up Music player. The
+        // controls require that identity, even though their requests never leave the demo.
+        player.appBundleID = PlayerScripting.music
         // At the bench nothing can be saved, so the star says so.
         player.options = PlaybackOptions(shuffle: false, repeatMode: .off, favorite: ActivityBench.scene == nil ? false : nil)
         player.appIcon = NSWorkspace.shared.icon(forApp: PlayerScripting.music)
@@ -356,6 +393,11 @@ final class NowPlaying: ObservableObject {
         player.album = song.album
         player.duration = song.length
         player.lyricsStore = LyricsStore()
+        // A local test scene can exercise the actual demo without fetching artwork or lyrics.
+        guard looksUpSong else {
+            player.playMadeUp()
+            return player
+        }
         player.loop(verse(from: song.firstLine))
         player.demoLookup = Task { [weak player] in
             guard let found = await song.lookUp() else {
@@ -425,6 +467,7 @@ final class NowPlaying: ObservableObject {
     // MARK: Helper
 
     func start() {
+        guard followsPlayers else { return }
         // Choosing which apps to show takes effect at once.
         if shownSources.isEmpty {
             shownSources = MusicApps.signature
@@ -496,12 +539,14 @@ final class NowPlaying: ObservableObject {
     }
 
     func apply(_ report: [String: Any]) {
-        // Every app that plays something is listed in Settings, to turn on or off.
-        if let app = report["app"] as? String, report["direct"] == nil { MusicApps.remember(app) }
-        // The system's Now Playing belongs to an app the user chose not to show: Music and Spotify,
-        // if chosen, are asked directly instead.
-        guard MusicApps.shows(report["app"] as? String) else { return followDirectly() }
-        if report["direct"] == nil { stopFollowingDirectly() }
+        if followsPlayers {
+            // Every app that plays something is listed in Settings, to turn on or off.
+            if let app = report["app"] as? String, report["direct"] == nil { MusicApps.remember(app) }
+            // The system's Now Playing belongs to an app the user chose not to show: Music and Spotify,
+            // if chosen, are asked directly instead.
+            guard MusicApps.shows(report["app"] as? String) else { return followDirectly() }
+            if report["direct"] == nil { stopFollowingDirectly() }
+        }
         lastShownApp = report["app"] as? String
         let shown = position(at: .now)
         let sameSong = title == report["title"] as? String ?? "" && artist == report["artist"] as? String ?? ""

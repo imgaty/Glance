@@ -34,9 +34,9 @@ final class ClockActivity: ObservableObject {
     /// Its alert stays out of sight for as long as the notch says it's rung, to be answered from there.
     @Published private(set) var rang: (length: TimeInterval, title: String?, date: Date)? {
         didSet {
-            if rang != nil, ActivityBench.scene == nil, UserDefaults.standard.bool(forKey: Preferences.notchEnabled) {
+            if rang != nil, !benched, UserDefaults.standard.bool(forKey: Preferences.notchEnabled) {
                 NotificationWindow.shared.hold(.timer)
-            } else if rang == nil {
+            } else if rang == nil, !benched {
                 NotificationWindow.shared.letGo(.timer)
             }
         }
@@ -48,7 +48,11 @@ final class ClockActivity: ObservableObject {
     /// Reads again the moment the timer showing ends, so its ring is caught as it starts.
     private var ringCheck: Task<Void, Never>?
     /// Whether Glance may press Clock's buttons, which macOS allows only with Accessibility.
-    @Published private(set) var canControl = AXIsProcessTrusted()
+    @Published private(set) var canControl = ActivityBench.scene != nil || AXIsProcessTrusted()
+
+    /// Seeded clocks only change their local state, including their ringing alert. They never ask
+    /// for Accessibility or answer a real Clock notification.
+    private var benched = ActivityBench.scene != nil
 
     private let activities: Activities
     private var poll: Timer?
@@ -77,7 +81,7 @@ final class ClockActivity: ObservableObject {
     }
 
     func start() {
-        guard poll == nil, ActivityBench.scene == nil else { return }
+        guard poll == nil, !benched else { return }
         // Every second while one shows; every three otherwise, which is soon enough to notice one start.
         let poll = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -92,6 +96,7 @@ final class ClockActivity: ObservableObject {
     }
 
     private func read() {
+        guard !benched else { return }
         lastRead = .now
         let defaults = UserDefaults.standard
         CFPreferencesAppSynchronize(Self.domain)
@@ -247,15 +252,21 @@ final class ClockActivity: ObservableObject {
     // MARK: At the bench (see `ActivityBench`)
 
     func bench(timer next: NotchTimer.State?) {
+        benched = true
+        canControl = true
         timer = next
     }
 
     func bench(stopwatch next: Stopwatch?) {
+        benched = true
+        canControl = true
         stopwatch = next
     }
 
     /// Rings as a timer does, with Clock's first sound.
     func benchRing(length: TimeInterval) {
+        benched = true
+        canControl = true
         timer = nil
         say(Rung(date: .now, length: length, title: nil, dismissed: false, tone: nil))
         chime.play(tone: nil)
@@ -311,7 +322,7 @@ final class ClockActivity: ObservableObject {
         chime.stop()
         activities.dismiss(.timerDone)
         expect(timer: .running(until: .now + rang.length, total: rang.length))
-        if Self.answerAlert(.again, title: rang.title) { return }
+        if !benched, Self.answerAlert(.again, title: rang.title) { return }
         control(.repeatTimer(length: rang.length, title: rang.title))
     }
 
@@ -322,7 +333,7 @@ final class ClockActivity: ObservableObject {
         self.rang = nil
         chime.stop()
         activities.dismiss(.timerDone)
-        if AXIsProcessTrusted() { _ = Self.answerAlert(.stop, title: rang.title) }
+        if !benched, AXIsProcessTrusted() { _ = Self.answerAlert(.stop, title: rang.title) }
     }
 
     /// Clock's alert for a timer that has rung, in Notification Center, answered as its own buttons
@@ -365,6 +376,7 @@ final class ClockActivity: ObservableObject {
     }
 
     private func allowed() -> Bool {
+        if benched { return true }
         let allowed = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary)
         if allowed != canControl { canControl = allowed }
         return allowed
@@ -403,7 +415,7 @@ final class ClockActivity: ObservableObject {
     /// other. If Glance opened it, it's kept open half a minute, so the next press is as quick, then
     /// quit.
     private func control(_ control: Control) {
-        guard ActivityBench.scene == nil else { return }
+        guard !benched else { return }
         let id = shownID
         let timerExpectation = expectedTimer?.until
         let stopwatchExpectation = expectedStopwatch?.until
