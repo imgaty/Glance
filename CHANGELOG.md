@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 13 November 2026`
+`Created: 11 October 2026` | `Last updated: 14 November 2026`
 
 <br>
 
@@ -146,6 +146,10 @@
   hover and press response.
 - Rebuilt the waveform with the cover's colors, settling into dots while
   paused and waiting for wireless audio so it moves with what is heard.
+  Fixed uneven readings and slow movement when playback resumes. The bars
+  follow fresh audio in order, with independent rounded ends, and delayed
+  readings no longer disturb the background's beat. Reduce Motion holds
+  the bars still while playing and shows dots while paused.
 - Changed the flowing artwork background and `Spotlight` to move in the
   cover's colors and hold still while paused. The background and progress
   bar share the same colors, which pulse on stronger beats.

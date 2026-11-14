@@ -289,27 +289,116 @@ struct ArtworkFlowTests {
     }
 }
 
-/// The bars in the notch on screen, as they move.
+/// The bars in the notch on screen, as they move. These views never enter a window or tap audio.
 @Suite("Live bars")
 @MainActor
 struct LiveBarsTests {
-    @Test("Paused, the bars settle into dots over 0.9 s, and what's still heard doesn't cut it short")
+    private func layers(_ view: LiveBarsView) throws -> [CALayer] {
+        let bars = try #require(view.layer?.sublayers?.first?.mask?.sublayers)
+        #expect(bars.count == 6)
+        return bars
+    }
+
+    @Test("Native fixed readings use independent continuous-corner layers")
+    func nativeGeometry() throws {
+        let view = LiveBarsView(frame: NSRect(x: 0, y: 0, width: 16, height: 16))
+        view.isPlaying = true
+        view.heard([0.15, 0.45, 0.8, 1, 0.6, 0.3])
+        let measuredWidths = [1.6966667, 1.7566667, 1.8266667, 1.8666667, 1.7866667, 1.7266667]
+        let measuredHeights = [2.4, 7.2, 12.8, 16, 9.6, 4.8]
+        for (index, bar) in try layers(view).enumerated() {
+            #expect(abs(bar.bounds.width - measuredWidths[index]) < 0.000001)
+            #expect(abs(bar.bounds.height - measuredHeights[index]) < 0.000001)
+            #expect(bar.cornerCurve == .continuous)
+            #expect(bar.cornerRadius == 1)
+            #expect(bar.position.y == 8)
+            let reading = try #require(bar.animation(forKey: "bounds") as? CABasicAnimation)
+            #expect(reading.duration == 0.08)
+            var point = [Float](repeating: 0, count: 2)
+            reading.timingFunction?.getControlPoint(at: 2, values: &point)
+            #expect(abs(point[0] - 0.58) < 0.000001 && point[1] == 1)
+        }
+    }
+
+    @Test("A low native reading retains the resting dot height at 16 and 21 points")
+    func minimumHeight() throws {
+        for side in [CGFloat(16), CGFloat(21)] {
+            let view = LiveBarsView(frame: NSRect(x: 0, y: 0, width: side, height: side))
+            view.isPlaying = true
+            view.heard(Array(repeating: 0.1, count: 6))
+            for bar in try layers(view) {
+                #expect(abs(bar.bounds.height - side * 5 / 48) < 0.000001)
+                #expect(bar.bounds.width > bar.bounds.height)
+                #expect(bar.cornerRadius == 1)
+            }
+        }
+    }
+
+    @Test("Paused, the bars settle into dots over 0.9 s, and trailing audio does not cut it short")
     func settling() throws {
         let bars = LiveBarsView(frame: NSRect(x: 0, y: 0, width: 21, height: 22))
         bars.isPlaying = true
         bars.heard([0.9, 0.7, 0.6, 0.5, 0.4, 0.3])
         bars.isPlaying = false
-        let settling = try #require(bars.layer?.sublayers?.first?.mask?.animation(forKey: "path") as? CABasicAnimation)
+        let first = try #require(try layers(bars).first)
+        let settling = try #require(first.animation(forKey: "bounds") as? CABasicAnimation)
         #expect(settling.duration == WaveformGlyph.settlingIn)
-        // The music still heard for a moment after it pauses.
+        var point = [Float](repeating: 0, count: 2)
+        settling.timingFunction?.getControlPoint(at: 1, values: &point)
+        #expect(abs(point[0] - 0.33) < 0.000001 && point[1] == 1)
+        // Audio can continue arriving after the media state has paused.
         bars.heard([0.5, 0.4, 0.3, 0.2, 0.1, 0.1])
         bars.heard([0.1, 0.1, 0, 0, 0, 0])
-        let after = try #require(bars.layer?.sublayers?.first?.mask?.animation(forKey: "path") as? CABasicAnimation)
+        bars.layout()
+        let after = try #require(first.animation(forKey: "bounds") as? CABasicAnimation)
         #expect(after.duration == WaveformGlyph.settlingIn)
-        // Playing again, each reading eases in.
+        #expect((after.fromValue as? NSValue)?.rectValue == (settling.fromValue as? NSValue)?.rectValue)
         bars.isPlaying = true
+        let resuming = try #require(first.animation(forKey: "bounds") as? CABasicAnimation)
+        #expect(resuming.duration == WaveformGlyph.readingIn)
+        resuming.timingFunction?.getControlPoint(at: 2, values: &point)
+        #expect(abs(point[0] - 0.58) < 0.000001 && point[1] == 1)
         bars.heard([0.8, 0.6, 0.5, 0.4, 0.3, 0.2])
-        let reading = try #require(bars.layer?.sublayers?.first?.mask?.animation(forKey: "path") as? CABasicAnimation)
+        let reading = try #require(first.animation(forKey: "bounds") as? CABasicAnimation)
         #expect(reading.duration == WaveformGlyph.readingIn)
+    }
+
+    @Test("Identical readings leave each in-flight animation intact")
+    func repeatedReading() throws {
+        let view = LiveBarsView(frame: NSRect(x: 0, y: 0, width: 21, height: 21))
+        view.isPlaying = true
+        let reading: [Float] = [0.1, 0.9, 0.2, 0.8, 0.3, 0.7]
+        view.heard(reading)
+        let bars = try layers(view)
+        let origins = bars.map { ($0.animation(forKey: "bounds") as? CABasicAnimation)?.fromValue as? NSValue }
+        view.heard(reading)
+        view.layout()
+        for (index, bar) in bars.enumerated() {
+            let animation = try #require(bar.animation(forKey: "bounds") as? CABasicAnimation)
+            #expect((animation.fromValue as? NSValue)?.rectValue == origins[index]?.rectValue)
+        }
+    }
+
+    @Test("Reduce Motion holds the native arch while playing and dots while paused")
+    func reducedMotion() throws {
+        let view = LiveBarsView(frame: NSRect(x: 0, y: 0, width: 16, height: 16))
+        view.isPlaying = true
+        view.heard(Array(repeating: 0.9, count: 6))
+        view.reduceMotion = true
+        view.heard([0.1, 1, 0.2, 0.9, 0.3, 0.8])
+        let arch: [CGFloat] = [4, 8, 12, 12, 8, 4]
+        for (index, bar) in try layers(view).enumerated() {
+            #expect(bar.bounds.height == arch[index])
+            #expect(bar.animationKeys()?.isEmpty != false)
+        }
+        view.isPlaying = false
+        for bar in try layers(view) {
+            #expect(abs(bar.bounds.height - 5.0 / 3) < 0.000001)
+            #expect(bar.animationKeys()?.isEmpty != false)
+        }
+        view.reduceMotion = false
+        view.isPlaying = true
+        let resumed = try layers(view)
+        #expect(abs(resumed[1].bounds.height - 16) < 0.000001)
     }
 }

@@ -1050,6 +1050,7 @@ final class CallVoices: ObservableObject {
         guard clock == nil else { return }
         if !madeUp, microphone, let pid, pid > 0, Permissions.audioCapture == .granted {
             pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
+                guard reading.levels == nil else { return }
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
                         // As loud as the waveform's bars, on average, once stood with this sound.

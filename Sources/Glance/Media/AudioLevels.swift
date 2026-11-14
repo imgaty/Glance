@@ -48,6 +48,7 @@ final class AudioLevels: ObservableObject {
     private var pipeline: TapPipeline?
     private var permissionProbe: TapPipeline?
     private var tappedPID: pid_t = 0
+    private var generation: UInt = 0
     private var stopTask: Task<Void, Never>?
     private var last: (pid: pid_t, playing: Bool) = (0, false)
 
@@ -88,14 +89,12 @@ final class AudioLevels: ObservableObject {
         stop()
         guard Permissions.audioCapture == .granted else { return }
         tappedPID = pid
+        let generation = generation
         pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    guard let self else { return }
-                    // Only a new reading moves the bars: each one is animated in.
-                    if let levels = reading.levels, levels != self.levels { self.levels = levels }
-                    self.beat = reading.beat
-                    self.pulse = Self.eased(self.pulse, toward: Self.shown(reading.beat, tallest: self.levels.max() ?? 0))
+                    guard let self, self.generation == generation else { return }
+                    self.receive(reading)
                 }
             }
         }
@@ -108,6 +107,7 @@ final class AudioLevels: ObservableObject {
     }
 
     private func stop() {
+        generation &+= 1
         stopTask = nil
         pipeline?.stop()
         pipeline = nil
@@ -115,6 +115,16 @@ final class AudioLevels: ObservableObject {
         levels = [Float](repeating: 0, count: Self.bands)
         beat = 0
         pulse = 0
+    }
+
+    /// Bars and beats have separate clocks. A delayed bar must not replay an older beat.
+    func receive(_ reading: AudioReading) {
+        if let levels = reading.levels {
+            if levels != self.levels { self.levels = levels }
+        } else {
+            beat = reading.beat
+            pulse = Self.eased(pulse, toward: Self.shown(reading.beat, tallest: levels.max() ?? 0))
+        }
     }
 }
 
@@ -153,17 +163,18 @@ final class TapPipeline: @unchecked Sendable {
     }
 
     private let queue = DispatchQueue(label: "Glance.AudioLevels")
-    private let ring = SampleRing(capacity: BinnedFFT.size * 2)
     private let publish: (AudioReading) -> Void
     /// The beat and the bars, each held back until it's heard.
     private var heard = HeardLater()
-    private var heardBars = HeardLater()
+    private var heardBars = WaveformDelivery()
+    private var active = false
     private var ticks = 0
     private var tapID = AudioObjectID(0)
     private var aggregateID = AudioObjectID(0)
     private var ioProc: AudioDeviceIOProcID?
     private var timer: DispatchSourceTimer?
     private var barsTimer: DispatchSourceTimer?
+    private var barsReady: DispatchSourceUserDataAdd?
     private var analyzer: Analyzer?
     private var binned: BinnedFFT?
 
@@ -215,13 +226,37 @@ final class TapPipeline: @unchecked Sendable {
         analyzer = Analyzer(sampleRate: rate)
         binned = BinnedFFT(sampleRate: rate)
 
-        let ring = ring
-        let created = AudioDeviceCreateIOProcIDWithBlock(&ioProc, aggregateID, nil) { _, input, _, output, _ in
+        let ring = SampleRing(capacity: BinnedFFT.size * 8, sampleRate: rate)
+        active = true
+        heard.delay = Self.heardAfter(aggregate: aggregateID, window: Analyzer.size)
+        heardBars.delay = Self.waveformDelay(sampleRate: rate)
+        let barsTimer = DispatchSource.makeTimerSource(queue: queue)
+        barsTimer.schedule(deadline: .distantFuture)
+        barsTimer.setEventHandler { [weak self] in self?.deliverBars() }
+        barsTimer.resume()
+        self.barsTimer = barsTimer
+        let barsReady = DispatchSource.makeUserDataAddSource(queue: queue)
+        barsReady.setEventHandler { [weak self] in
+            guard let self, active, let binned else { return }
+            // Snapshot a bounded batch so a busy producer cannot starve delivery or teardown.
+            for _ in 0..<ring.readyWindowCount {
+                guard let window = ring.nextWindow() else { break }
+                let reading = AudioReading(levels: binned.levels(window.samples), beat: 0, loudness: analyzer?.loudness ?? 0)
+                heardBars.append(reading, at: window.completedAt, generation: window.generation)
+            }
+            deliverBars()
+            if ring.readyWindowCount > 0 { self.barsReady?.add(data: 1) }
+        }
+        barsReady.resume()
+        self.barsReady = barsReady
+        let created = AudioDeviceCreateIOProcIDWithBlock(&ioProc, aggregateID, nil) { _, input, inputTime, output, _ in
             // The clock device plays whatever is in the output buffers, so keep them silent.
             for buffer in UnsafeMutableAudioBufferListPointer(output) {
                 if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) }
             }
-            ring.write(UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input)))
+            if ring.write(UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input)), timestamp: inputTime.pointee) {
+                barsReady.add(data: 1)
+            }
         }
         guard created == noErr, let ioProc, AudioDeviceStart(aggregateID, ioProc) == noErr else { return false }
 
@@ -233,7 +268,8 @@ final class TapPipeline: @unchecked Sendable {
             // read again every second.
             if ticks % 45 == 0 {
                 heard.delay = Self.heardAfter(aggregate: aggregateID, window: Analyzer.size)
-                heardBars.delay = Self.heardAfter(aggregate: aggregateID, window: BinnedFFT.size)
+                heardBars.delay = Self.waveformDelay(sampleRate: rate)
+                deliverBars()
             }
             ticks += 1
             let beat = analyzer.beat(samples)
@@ -242,25 +278,32 @@ final class TapPipeline: @unchecked Sendable {
         }
         timer.resume()
         self.timer = timer
-        // The bars, as Apple's own waveform reads them: each window of samples once, as it fills,
-        // about 12 times a second.
-        let barsTimer = DispatchSource.makeTimerSource(queue: queue)
-        barsTimer.schedule(deadline: .now(), repeating: Double(BinnedFFT.size) / rate)
-        barsTimer.setEventHandler { [weak self] in
-            guard let self, let binned, let samples = ring.latest(BinnedFFT.size) else { return }
-            let reading = AudioReading(levels: binned.levels(samples), beat: analyzer?.lastBeat ?? 0, loudness: analyzer?.loudness ?? 0)
-            if let due = heardBars.take(reading, at: ProcessInfo.processInfo.systemUptime) { publish(due) }
-        }
-        barsTimer.resume()
-        self.barsTimer = barsTimer
         return true
     }
 
+    /// Wake for the reading's own deadline, even if no further audio arrives. A stalled consumer
+    /// shows only the newest due reading instead of replaying a burst of old movement.
+    private func deliverBars() {
+        guard active else { return }
+        let now = Double(DispatchTime.now().uptimeNanoseconds) / 1_000_000_000
+        if let reading = heardBars.takeDue(at: now) { publish(reading) }
+        if let next = heardBars.nextDeadline {
+            // Recheck unusually distant driver times without overflowing Dispatch's nanoseconds.
+            barsTimer?.schedule(deadline: .now() + min(max(next - now, 0), 1), leeway: .nanoseconds(0))
+        } else {
+            barsTimer?.schedule(deadline: .distantFuture)
+        }
+    }
+
     private func tearDown() {
+        active = false
+        heardBars = WaveformDelivery()
         timer?.cancel()
         timer = nil
         barsTimer?.cancel()
         barsTimer = nil
+        barsReady?.cancel()
+        barsReady = nil
         if aggregateID != 0 {
             if let ioProc {
                 AudioDeviceStop(aggregateID, ioProc)
@@ -305,66 +348,19 @@ final class TapPipeline: @unchecked Sendable {
         return max(AudioProperty.outputLatency(of: output) - own, 0)
     }
 
+    /// Waveform timestamps already describe the samples, not the callback's arrival. Only the
+    /// window's age is deducted here; subtracting the aggregate buffer again would lead the sound.
+    private static func waveformDelay(sampleRate: Double) -> TimeInterval {
+        var output = AudioObjectID(0)
+        guard AudioProperty.read(system, kAudioHardwarePropertyDefaultOutputDevice, &output), output != 0 else { return 0 }
+        return AudioSampleWindow.outputDelay(latency: AudioProperty.outputLatency(of: output), sampleRate: sampleRate)
+    }
+
     private static func sampleRate(of device: AudioObjectID) -> Double {
         var rate: Float64 = 0
         return AudioProperty.read(device, kAudioDevicePropertyNominalSampleRate, &rate) && rate > 0 ? rate : 48_000
     }
 
-}
-
-/// Mono samples from the audio thread, newest last. The audio thread never waits: if the analysis
-/// holds the lock it skips that buffer.
-private final class SampleRing: @unchecked Sendable {
-    private let lock = UnsafeMutablePointer<os_unfair_lock>.allocate(capacity: 1)
-    private var samples: [Float]
-    private var mono: [Float]
-    private var head = 0
-    private var filled = 0
-
-    init(capacity: Int) {
-        samples = [Float](repeating: 0, count: capacity)
-        mono = [Float](repeating: 0, count: capacity)
-        lock.initialize(to: os_unfair_lock())
-    }
-
-    deinit { lock.deallocate() }
-
-    /// Runs on the audio thread, so it allocates nothing.
-    func write(_ buffers: UnsafeMutableAudioBufferListPointer) {
-        // Average every channel of every buffer into one mono frame.
-        var frames = Int.max
-        var channelTotal = 0
-        for buffer in buffers {
-            let channels = max(Int(buffer.mNumberChannels), 1)
-            channelTotal += channels
-            frames = min(frames, Int(buffer.mDataByteSize) / (MemoryLayout<Float>.size * channels))
-        }
-        let count = min(frames, mono.count)
-        guard channelTotal > 0, count > 0, os_unfair_lock_trylock(lock) else { return }
-        defer { os_unfair_lock_unlock(lock) }
-        let channels = Float(channelTotal)
-        for frame in 0..<count { mono[frame] = 0 }
-        for buffer in buffers {
-            guard let data = buffer.mData?.assumingMemoryBound(to: Float.self) else { continue }
-            let stride = max(Int(buffer.mNumberChannels), 1)
-            for frame in 0..<count {
-                for channel in 0..<stride { mono[frame] += data[frame * stride + channel] }
-            }
-        }
-        for frame in 0..<count {
-            samples[head] = mono[frame] / channels
-            head = (head + 1) % samples.count
-        }
-        filled = min(filled + count, samples.count)
-    }
-
-    /// The newest `count` samples in order, or nil until that many have arrived.
-    func latest(_ count: Int) -> [Float]? {
-        os_unfair_lock_lock(lock)
-        defer { os_unfair_lock_unlock(lock) }
-        guard filled >= count else { return nil }
-        return (0..<count).map { samples[(head - count + $0 + samples.count) % samples.count] }
-    }
 }
 
 /// The beat, which the colors behind the player pulse on, from 1024 samples at a time, 45 times a
