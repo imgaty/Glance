@@ -226,8 +226,9 @@
   pictures and hidden pages no longer expose playback actions.
 - Extended Reduce Motion throughout the notch, settings and welcome tour,
   and kept artwork colors readable with Increase Contrast.
-- Added a layered app icon for macOS appearance styles and matched the menu
-  bar icon's proportions to its neighbors.
+- Added a layered app icon for macOS appearance styles, a black glass pane
+  lit from a notch at its top, and matched the menu bar icon's proportions to
+  its neighbors.
 
 <br>
 
