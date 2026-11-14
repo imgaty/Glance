@@ -15,6 +15,7 @@
 
 - Fixed hidden player, lyrics and tray controls remaining available to
   VoiceOver behind another activity.
+  Closed music exposes one action to open the player.
 
 - Fixed test activity controls requesting Clock permission or answering real
   timer alerts. Test calls now connect after answering a dismissed ringing

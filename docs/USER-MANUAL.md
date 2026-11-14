@@ -552,6 +552,7 @@ preview does not respond to player commands. Controls that become
 unavailable leave the Tab order, and previews never control a real activity.
 VoiceOver lists the visible page's controls without the player, lyrics or
 tray controls hidden behind it.
+On compact music, activate **Open Player** to reach its playback controls.
 In a call, Tab also reaches **Show in [app]** when the calling app can be opened.
 
 Right-click the notch and choose **Live Activities** to open an ongoing

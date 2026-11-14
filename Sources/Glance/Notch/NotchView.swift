@@ -891,6 +891,13 @@ struct NotchView: View {
                 .atNotchStep(width: m.bodyWidth, height: m.height)
                 .allowsHitTesting(places == nil)
                 .islandFade(liveShown)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(nowPlaying.hasMedia ? "\(nowPlaying.title), \(nowPlaying.artist)" : String(localized: "Music"))
+                .accessibilityValue(nowPlaying.isPlaying ? String(localized: "Playing") : String(localized: "Paused"))
+                .accessibilityHint(String(localized: "Open Player"))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default) { model.openNotch() }
+                .accessibilityHidden(true, isEnabled: !liveShown)
             // What the Mac announces, and a timer, in the same wings.
             SystemActivityView(
                 restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.folded ? nil : model.alert,
@@ -954,7 +961,8 @@ struct NotchView: View {
                 .animation(Self.fade(in: model.showsLyrics)) { $0.opacity(model.showsLyrics ? 1 : 0).blur(radius: model.showsLyrics ? 0 : 4) }
                 .modifier(IslandReveal(hidden: !heroOpen))
                 .allowsHitTesting(places == nil && lyricsShown)
-                .accessibilityHidden(!lyricsShown)
+                .accessibilityElement(children: lyricsShown ? .contain : .ignore)
+                .accessibilityHidden(true, isEnabled: !lyricsShown)
             // The player and the tray side by side, as pages are: going to the tray, the player
             // slides off to the left as the tray comes in from the right, and back. The tray stays
             // here turned off, to slide away: not showing, it costs nothing (see `TrayView`).
@@ -974,7 +982,8 @@ struct NotchView: View {
                 // The visual fade keeps the page mounted for motion; only its visible controls
                 // belong in the hit-test and accessibility trees.
                 .allowsHitTesting(places == nil && playerShown)
-                .accessibilityHidden(!playerShown)
+                .accessibilityElement(children: playerShown ? .contain : .ignore)
+                .accessibilityHidden(true, isEnabled: !playerShown)
             TrayView(
                 tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
                 airDropTargeted: model.airDropTargeted
@@ -985,7 +994,8 @@ struct NotchView: View {
             .modifier(PageFade(hidden: !onTray))
             .modifier(IslandReveal(hidden: !heroOpen))
             .allowsHitTesting(places == nil && trayShown)
-            .accessibilityHidden(!trayShown)
+            .accessibilityElement(children: trayShown ? .contain : .ignore)
+            .accessibilityHidden(true, isEnabled: !trayShown)
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
             HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset * 2) * swell)
@@ -995,9 +1005,10 @@ struct NotchView: View {
                 // Dynamic Island's activities do, as everything in the notch does.
                 .islandFade(heroOpen || artworkShown && !expandedShown)
                 .modifier(PageFade(hidden: heroOpen && onTray))
-                .environment(\.notchControls, !trayShown)
-                .allowsHitTesting(places == nil && !trayShown)
-                .accessibilityHidden(!playerShown)
+                .environment(\.notchControls, playerShown)
+                .allowsHitTesting(places == nil && playerShown)
+                .accessibilityElement(children: playerShown ? .contain : .ignore)
+                .accessibilityHidden(true, isEnabled: !playerShown)
             HeroWaveform(
                 isOpen: heroOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
                 toggleLyrics: toggleLyrics
@@ -1007,9 +1018,10 @@ struct NotchView: View {
             // song's artist takes its place, coming and going as the Dynamic Island's activities do.
             .islandFade(heroOpen || waveformShown && !expandedShown)
             .modifier(PageFade(hidden: heroOpen && onTray))
-            .environment(\.notchControls, !trayShown)
-            .allowsHitTesting(places == nil && !trayShown)
-            .accessibilityHidden(!playerShown)
+            .environment(\.notchControls, playerShown)
+            .allowsHitTesting(places == nil && playerShown)
+            .accessibilityElement(children: playerShown ? .contain : .ignore)
+            .accessibilityHidden(true, isEnabled: !playerShown)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)
@@ -1088,7 +1100,7 @@ struct NotchView: View {
         .environment(\.islandExpansionMotion, model.activityRevealMotion)
         .disabled(model.activityControlsHidden)
         .allowsHitTesting(!model.activityControlsHidden)
-        .accessibilityHidden(model.activityControlsHidden)
+        .accessibilityHidden(true, isEnabled: model.activityControlsHidden)
     }
 
     /// How much what's in the notch stretches with it, sideways and down: part of the notch's own.
