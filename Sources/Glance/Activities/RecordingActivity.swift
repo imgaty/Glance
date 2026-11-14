@@ -726,6 +726,22 @@ struct ExpandedRecordingView: View {
     @Environment(\.trailingGrows) private var trailingGrows
 
     var body: some View {
+        TimelineView(.periodic(from: readingStart, by: 1)) { context in
+            drawing
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(recording.spoken(at: context.date))
+        }
+    }
+
+    private var readingStart: Date {
+        switch recording {
+        case .voiceMemo(.recording(let since)), .screen(.recording(let since)): since
+        case .screen(.countdown(let from, let until)): until - Double(from)
+        default: .now
+        }
+    }
+
+    @ViewBuilder private var drawing: some View {
         let h = restingHeight
         let tall = TimerLayout.tallHeight(h)
         let out = revealed
@@ -741,8 +757,6 @@ struct ExpandedRecordingView: View {
             }
         }
         .frame(width: width, height: tall)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(recording.spoken())
     }
 
     @ViewBuilder

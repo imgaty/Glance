@@ -11,7 +11,8 @@
 ### Live Activities
 
 - Fixed compact recording countdowns and elapsed times keeping an old
-  VoiceOver label as their visible clocks advanced.
+  VoiceOver label as their visible clocks advanced. Expanded recording
+  descriptions now keep their elapsed times current too.
 
 - Fixed VoiceOver repeating scrolling song titles and artist names.
 
