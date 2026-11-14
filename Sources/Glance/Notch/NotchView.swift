@@ -130,6 +130,8 @@ final class NotchModel: ObservableObject {
     @Published var activityFolded = false
     /// Geometry has begun opening, but its controls are still fading into view.
     @Published var activityOpening = false
+    /// Only an expanded activity returning to compact uses the quieter settling spring.
+    @Published var activityReturnsInline = false
     var activityControlsHidden: Bool { activityFolded || activityOpening }
     private(set) var activityTransitionID: UInt = 0
     var activityTransitionTask: Task<Void, Never>?
@@ -631,6 +633,15 @@ extension NotchMotion {
         return .spring(response: 0.45, dampingFraction: 0.7).paced
     }
 
+    /// A compact return travels only a little beyond its endpoint; expanded openings keep their
+    /// own spring. This never applies to the inward journey to the hardware housing.
+    static var inlineReturn: Animation {
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            return eased(duration: expandDuration)
+        }
+        return .spring(response: 0.42, dampingFraction: 0.78).paced
+    }
+
     static var fold: Animation { eased(duration: foldDuration) }
     static var feedback: Animation { eased(duration: 0.18) }
 
@@ -1066,6 +1077,7 @@ struct NotchView: View {
         .animation(.easeInOut(duration: 0.45), value: darkness)
         .animation(.easeInOut(duration: 0.45), value: followsSystem)
         .animation(.easeInOut(duration: 0.45), value: blur)
+        .environment(\.islandExpansionMotion, model.activityRevealMotion)
         .disabled(model.activityControlsHidden)
         .allowsHitTesting(!model.activityControlsHidden)
         .accessibilityHidden(model.activityControlsHidden)

@@ -420,6 +420,7 @@ struct GrowsOut: ViewModifier {
 struct IslandReveal: ViewModifier {
     let hidden: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.islandExpansionMotion) private var expansionMotion
 
     /// How large it starts, by its size.
     static let start: CGFloat = 0.86
@@ -427,7 +428,7 @@ struct IslandReveal: ViewModifier {
     func body(content: Content) -> some View {
         content
             .islandFade(!hidden)
-            .animation(hidden ? IslandMotion.fold : NotchMotion.expand) { $0.scaleEffect(hidden && !reduceMotion ? Self.start : 1) }
+            .animation(hidden ? IslandMotion.fold : expansionMotion) { $0.scaleEffect(hidden && !reduceMotion ? Self.start : 1) }
     }
 }
 

@@ -71,11 +71,17 @@ extension NotchModel {
             activityTransitionTask?.cancel()
             activityTransitionTask = nil
             advanceActivityTransition()
+            if case .expanded = before, case .compact = activityPresentation {
+                activityReturnsInline = true
+            } else {
+                activityReturnsInline = false
+            }
 
             // Reduced motion keeps final geometry and controls available without an excursion.
             guard !reduced, animation != nil, !collapsed, !entering else {
                 activityFolded = false
                 activityOpening = false
+                activityReturnsInline = false
                 restoreActivityDestination()
                 return
             }
@@ -106,7 +112,7 @@ extension NotchModel {
                 // Read the destination afresh; a source may have ended while the shell was closing.
                 let reduced = self.activityMotionReduced
                 revealStarted = clock.now
-                withAnimation(reduced ? nil : Self.activityExpansionMotion) {
+                withAnimation(reduced ? nil : self.activityRevealMotion) {
                     self.activityOpening = !reduced && self.activityPresentation != .hardware
                     self.activityFolded = false
                     self.restoreActivityDestination()
@@ -136,6 +142,7 @@ extension NotchModel {
         advanceActivityTransition()
         activityFolded = false
         activityOpening = false
+        activityReturnsInline = false
         restoreActivityDestination()
     }
 
@@ -143,8 +150,26 @@ extension NotchModel {
         activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
+    /// Kept after the reveal so content that explicitly animates its return shares the shell's
+    /// curve. The next presentation change chooses anew; ordinary progress leaves it alone.
+    var activityRevealMotion: Animation {
+        if activityReturnsInline, case .compact = activityPresentation { return NotchMotion.inlineReturn }
+        return Self.activityExpansionMotion
+    }
+
     static let activityControlDelay = NotchMotion.expandDuration
     static let activityFoldDuration = NotchMotion.foldDuration
     private static var activityClosingMotion: Animation { NotchMotion.fold }
     static var activityExpansionMotion: Animation { NotchMotion.expand }
+}
+
+private struct IslandExpansionMotionKey: EnvironmentKey {
+    static var defaultValue: Animation { NotchMotion.expand }
+}
+
+extension EnvironmentValues {
+    var islandExpansionMotion: Animation {
+        get { self[IslandExpansionMotionKey.self] }
+        set { self[IslandExpansionMotionKey.self] = newValue }
+    }
 }

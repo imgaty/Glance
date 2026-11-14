@@ -14,6 +14,7 @@
   housing, then expand with a small bounce into the open or inline view.
   Only the expansion bounces. The contents and detached bubble follow the same
   motion. Hover and click feedback do not add a separate rebound.
+  Returning to the inline activity has a much smaller rebound than opening.
   Hover keeps the compact footprint fixed, so opening begins with the collapse.
   Releasing a held click or swipe during opening keeps the final size steady.
   Fixed a downward bulge and a detached activity stepping sideways at the start

@@ -64,6 +64,7 @@ struct ActivityMotionTests {
         model.open()
         expectHardware(model)
         #expect(model.state == .open)
+        #expect(!model.activityReturnsInline)
         let opening = model.activityTransitionID
         model.pressed = false
         model.stretch = 0
@@ -79,11 +80,34 @@ struct ActivityMotionTests {
         model.close()
         expectHardware(model)
         #expect(model.state == .closed)
+        #expect(model.activityReturnsInline)
         #expect(model.activityTransitionID > opening)
         try await finishFold(model)
         #expect(!model.activityFolded)
         #expect(model.metrics.bodyWidth > model.closedSize.width)
         #expect(model.activities == order)
+    }
+
+    @Test("The compact return spring cannot leak into arrivals, replacements or a reversed opening")
+    func compactReturnScope() {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        model.changeActivityPresentation { model.activity = true }
+        #expect(!model.activityReturnsInline)
+        model.open()
+        model.close()
+        #expect(model.activityReturnsInline)
+        model.open()
+        #expect(!model.activityReturnsInline)
+        model.close()
+        #expect(model.activityReturnsInline)
+        model.changeActivityPresentation { model.timer = .paused(left: 75, total: 120) }
+        #expect(!model.activityReturnsInline)
+        model.open()
+        model.close()
+        #expect(model.activityReturnsInline)
+        model.cancelActivityTransition()
+        #expect(!model.activityReturnsInline)
     }
 
     @Test("Primary and detached origins share the midpoint and restore the second activity", arguments: [false, true])
@@ -274,6 +298,7 @@ struct ActivityMotionTests {
         #expect(model.metrics.height > model.closedSize.height)
         model.close()
         #expect(!model.activityFolded && model.activityTransitionTask == nil)
+        #expect(!model.activityReturnsInline)
         #expect(model.state == .closed)
         #expect(model.metrics.bodyWidth > model.closedSize.width)
     }
