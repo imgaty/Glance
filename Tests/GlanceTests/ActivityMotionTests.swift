@@ -52,7 +52,7 @@ struct ActivityMotionTests {
         await transition.value
     }
 
-    @Test("Every activity opens and closes through the hardware target", arguments: NotchModel.Activity.allCases)
+    @Test("The player opens directly while other activities keep their hardware midpoint", arguments: NotchModel.Activity.allCases)
     func familyOpenClose(_ activity: NotchModel.Activity) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
@@ -68,7 +68,13 @@ struct ActivityMotionTests {
         model.lean = 9
         model.pageStretch = 7
         model.open()
-        expectHardware(model)
+        if activity == .music {
+            #expect(!model.activityFolded && model.activityOpening)
+            #expect(model.metrics.bodyWidth == model.openSize.width)
+            #expect(model.metrics.height == model.openSize.height)
+        } else {
+            expectHardware(model)
+        }
         #expect(model.state == .open)
         #expect(!model.activityReturnsInline)
         let opening = model.activityTransitionID
@@ -94,6 +100,37 @@ struct ActivityMotionTests {
         #expect(model.activities == order)
     }
 
+    @Test("Detached music opens directly and supersedes an unfinished closing")
+    func detachedPlayerReopening() async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        install(.timer, in: model)
+        install(.music, in: model)
+        model.openedFromBubble = true
+        let order = model.activities
+        #expect(model.detached == .music)
+        var taps = 0
+        model.open { taps += 1 }
+        #expect(taps == 1)
+        #expect(!model.activityFolded && model.activityOpening)
+        #expect(model.openedFromBubble && model.bubbleMerged)
+        let first = try #require(model.activityTransitionTask)
+        model.close()
+        expectHardware(model)
+        let closing = try #require(model.activityTransitionTask)
+        model.open { taps += 1 }
+        let reopened = try #require(model.activityTransitionTask)
+        #expect(taps == 2)
+        #expect(!model.activityFolded && model.activityOpening)
+        #expect(model.metrics.height == model.openSize.height)
+        await first.value
+        await closing.value
+        await reopened.value
+        #expect(model.state == .open && model.expanded == nil)
+        #expect(!model.activityControlsHidden && model.activityTransitionTask == nil)
+        #expect(model.activities == order && model.openedFromBubble)
+    }
+
     @Test("The compact return spring cannot leak into arrivals, replacements or a reversed opening")
     func compactReturnScope() {
         let model = model()
@@ -116,7 +153,7 @@ struct ActivityMotionTests {
         #expect(!model.activityReturnsInline)
     }
 
-    @Test("Primary and detached origins share the midpoint and restore the second activity", arguments: [false, true])
+    @Test("Primary player opening and detached activity opening restore the same activity order", arguments: [false, true])
     func detachedOrigins(_ fromBubble: Bool) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
@@ -129,7 +166,12 @@ struct ActivityMotionTests {
         let order = model.activities
 
         model.open()
-        expectHardware(model)
+        if fromBubble {
+            expectHardware(model)
+        } else {
+            #expect(!model.activityFolded && model.activityOpening)
+            #expect(model.metrics.height == model.openSize.height)
+        }
         #expect(model.bubbleMerged)
         try await finishFold(model)
         #expect(model.state == .open && !model.activityFolded)
@@ -358,7 +400,8 @@ struct ActivityMotionTests {
     func reducedMotionDuringFold() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
-        install(.music, in: model)
+        install(.timer, in: model)
+        model.expanded = .timer
         model.open()
         expectHardware(model)
         model.activityReducesMotion = true

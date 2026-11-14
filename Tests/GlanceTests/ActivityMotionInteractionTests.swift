@@ -19,7 +19,8 @@ struct ActivityMotionInteractionTests {
         preview.feelsOpening = false
         preview.model.activityReducesMotion = false
         preview.setInteractive(true, animated: false)
-        preview.model.activity = true
+        preview.model.activity = false
+        preview.model.timer = .paused(left: 75, total: 120)
         return preview
     }
 
@@ -44,7 +45,8 @@ struct ActivityMotionInteractionTests {
     func controlPhases() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
-        model.activity = true
+        model.timer = .paused(left: 75, total: 120)
+        model.expanded = .timer
         var phases: [(folded: Bool, opening: Bool)] = []
         let watch = model.$activityFolded.combineLatest(model.$activityOpening).dropFirst().sink {
             phases.append((folded: $0.0, opening: $0.1))
@@ -84,7 +86,8 @@ struct ActivityMotionInteractionTests {
     func singleHousingReversal() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
-        model.activity = true
+        model.timer = .paused(left: 75, total: 120)
+        model.expanded = .timer
         model.open()
         let transition = try #require(model.activityTransitionTask)
         var samples = 0
@@ -163,6 +166,8 @@ struct ActivityMotionInteractionTests {
         defer { model.cancelActivityTransition() }
         model.activity = true
         model.timer = .paused(left: 75, total: 120)
+        model.voiceMemo = .recording(since: .now)
+        model.expanded = .voiceMemo
         model.open()
         let first = try #require(model.activityTransitionTask)
         if duringReveal {
@@ -244,8 +249,8 @@ struct ActivityMotionInteractionTests {
         let model = preview.model
         defer { model.cancelActivityTransition() }
         let geometry = geometry(model)
-        let point = CGPoint(x: 0, y: model.openSize.height * 0.7)
         model.openNotch()
+        let point = CGPoint(x: 0, y: geometry.rect(.open).midY)
         #expect(model.activityFolded)
         #expect(point.y > model.metrics.height)
         #expect(geometry.rect(.open).contains(point))
@@ -263,7 +268,7 @@ struct ActivityMotionInteractionTests {
         defer { model.cancelActivityTransition() }
         let geometry = geometry(model)
         model.openNotch()
-        preview.pointer(at: CGPoint(x: 0, y: model.openSize.height * 0.7), geometry)
+        preview.pointer(at: CGPoint(x: 0, y: geometry.rect(.open).midY), geometry)
         preview.pointer(at: nil, geometry)
         #expect(model.state == .open && model.activityFolded)
         #expect(try await eventually { model.state == .closed })

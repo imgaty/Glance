@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Restored the player's direct opening spring and the original spring when
+  switching between the tray and player. Other activity animations stay the same.
+
 - Shortened alarm panels while leaving room for wrapped status and errors.
 - Added bounded cleanup for temporary shortcut results while preserving
   results you changed or moved elsewhere.

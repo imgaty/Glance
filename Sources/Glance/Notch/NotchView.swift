@@ -662,6 +662,7 @@ enum NotchMotion {
 
     static let foldDuration = 0.16
     static let expandDuration = 0.28
+    static let playerResponse = 0.5
 }
 
 extension Animation {
@@ -670,6 +671,13 @@ extension Animation {
 }
 
 extension NotchMotion {
+    /// The player's original direct opening and tray-page spring.
+    static var player: Animation {
+        (NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? Animation.spring(response: 0.42, dampingFraction: 1)
+            : .spring(response: playerResponse, dampingFraction: 0.68)).paced
+    }
+
     static var expand: Animation {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: expandDuration)
@@ -710,7 +718,7 @@ extension NotchModel {
         // The tray and player are pages of the same open surface, not separate arrivals.
         // Interrupt a pending activity reveal without taking navigation through the housing.
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        var transaction = Transaction(animation: animated && !reduced ? .smooth(duration: 0.22).paced : nil)
+        var transaction = Transaction(animation: animated && !reduced ? NotchMotion.player : nil)
         transaction.disablesAnimations = !animated || reduced
         withTransaction(transaction) {
             if state == .open { cancelActivityTransition() }
@@ -743,10 +751,10 @@ extension NotchModel {
         }
     }
 
-    /// Collapses smoothly to the housing, then expands with a small settling bounce.
+    /// The player opens directly; other activities first collapse to the housing.
     func open(onCollapse: (() -> Void)? = nil) {
         guard !entering else { return }
-        changeActivityPresentation(animation: Self.activityExpansionMotion, onCollapse: onCollapse) {
+        changeActivityPresentation(animation: Self.activityExpansionMotion, openingPlayer: page == .player && expanded == nil, onCollapse: onCollapse) {
             state = .open
             pressed = false
             bubblePressed = false

@@ -93,19 +93,20 @@ song. Times and percentages use the digits of your language and region.
 
 Hover over the notch or click it, depending on
 **Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
-notch closes when the pointer leaves it. It opens and closes the same way to
-whatever it shows: the player, the tray, the lyrics, a live activity, or an
-announcement as tall as the Alarm. Each activity opening, closing or switching
-first folds smoothly to the camera housing, then expands into its next view with
-a small bounce. Only the expansion bounces, both into the open view and back to
+notch closes when the pointer leaves it. The player opens directly with its
+original spring, including when music is in the detached bubble. Other activity
+openings, closings and switches first fold smoothly to the camera housing, then
+expand into the next view with a small bounce. Closing the player also keeps
+this motion. Only the expansion bounces, both into the open view and back to
 the compact live activity. Hover keeps the compact footprint fixed before the
 collapse. The contents and detached bubble follow the same motion.
 This also applies to detached activities and
 device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a
-new action replaces an unfinished transition. Opening and closing take less than
-half a second at the default speed. Moving between the player and the tray keeps
-the notch open, including while music or another activity is showing. With
+new action replaces an unfinished transition. The two-stage activity motion takes
+less than half a second at the default speed. Moving between the player and the
+tray uses the player's original spring and keeps the notch open, including while
+the pointer remains over the wider tray. With
 Reduce Motion on, they only fade, and nothing bounces: the notch, the bubbles and
 the cover settle straight where they're going, the star glows without swelling,
 the skip arrows stay where they are, and the welcome tour's pages fade rather
@@ -114,9 +115,9 @@ than slide.
 Controls become available as they appear. Escape can close an opening activity,
 and the activity navigation keys can change its destination during the animation.
 With `Haptic feedback` on in **Settings > Opening**, opening gives one light tap
-when the notch reaches the housing, just before expanding. Canceling before that
-point prevents the tap; automatic activity updates stay silent. Reduce Motion
-gives the tap immediately.
+when the notch reaches the housing, just before expanding. The player gives its
+tap as it starts opening directly. Canceling before a delayed tap prevents it;
+automatic activity updates stay silent. Reduce Motion gives the tap immediately.
 Releasing a hold before its delay ends cancels opening, even during a fold.
 The next visible AirDrop transfer uses the same transition; the current transfer's
 progress updates without restarting it.

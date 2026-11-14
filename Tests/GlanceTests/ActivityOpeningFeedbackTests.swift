@@ -17,7 +17,8 @@ struct ActivityOpeningFeedbackTests {
     func collapseBeat() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
-        model.activity = true
+        model.timer = .paused(left: 75, total: 120)
+        model.expanded = .timer
         var taps = 0
         model.open {
             taps += 1
@@ -44,6 +45,8 @@ struct ActivityOpeningFeedbackTests {
         defer { model.cancelActivityTransition() }
         model.activity = true
         model.timer = .paused(left: 75, total: 120)
+        model.voiceMemo = .recording(since: .now)
+        model.expanded = .voiceMemo
         var taps = 0
         model.open { taps += 1 }
         let first = try #require(model.activityTransitionTask)
@@ -85,7 +88,8 @@ struct ActivityOpeningFeedbackTests {
         preview.feelsOpening = scenario != .demonstration
         preview.model.activityReducesMotion = false
         preview.setInteractive(true, animated: false)
-        preview.model.activity = true
+        preview.model.activity = false
+        preview.model.timer = .paused(left: 75, total: 120)
         defer { preview.model.cancelActivityTransition() }
         preview.model.openNotch()
         let task = try #require(preview.model.activityTransitionTask)

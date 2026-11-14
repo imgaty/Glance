@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-/// One sequence for opening, closing and replacing an activity, independent of its payload.
+/// The shared activity sequence, with a direct spring for opening the player.
 extension NotchModel {
     private enum Presentation: Equatable {
         case hardware
@@ -44,12 +44,15 @@ extension NotchModel {
 
     /// Payload updates remain immediate, so a later input always acts on the latest state. Only a
     /// change of presentation folds the shell; elapsed time, progress and button feedback do not.
-    func changeActivityPresentation(animation: Animation? = IslandMotion.open, onCollapse: (() -> Void)? = nil, _ changes: () -> Void) {
+    func changeActivityPresentation(
+        animation: Animation? = IslandMotion.open, openingPlayer: Bool = false,
+        onCollapse: (() -> Void)? = nil, _ changes: () -> Void
+    ) {
         let before = activityPresentation
         let atHousing = before == .hardware && metrics.bodyWidth == closedSize.width && metrics.height == closedSize.height && bubbleReach == 0
         let hadActivity = !activities.isEmpty || alert != nil || expanded != nil
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let folds = !atHousing || activityFolded
+        let folds = !openingPlayer && (!atHousing || activityFolded)
         let clock = ContinuousClock()
         let pace = max(NotchMotion.pace, 0.01)
         let started = clock.now
@@ -59,7 +62,7 @@ extension NotchModel {
 
         // State and its first geometry phase must share one transaction. Publishing the open
         // destination before its fold starts a competing expansion, even within one run-loop turn.
-        let firstMotion = folds ? Self.activityClosingMotion : Self.activityExpansionMotion
+        let firstMotion = openingPlayer ? NotchMotion.player : folds ? Self.activityClosingMotion : Self.activityExpansionMotion
         var transaction = Transaction(animation: reduced ? nil : animation.map { _ in firstMotion })
         transaction.disablesAnimations = reduced || animation == nil
         withTransaction(transaction) {
@@ -121,7 +124,8 @@ extension NotchModel {
             // A target change is not yet a visible button. Keep input out until the reveal has
             // reached its readable part, while Escape and destination navigation remain available.
             if self?.activityOpening == true {
-                do { try await clock.sleep(until: revealStarted + .seconds(Self.activityControlDelay / pace), tolerance: .zero) } catch { return }
+                let delay = openingPlayer ? NotchMotion.playerResponse : Self.activityControlDelay
+                do { try await clock.sleep(until: revealStarted + .seconds(delay / pace), tolerance: .zero) } catch { return }
             }
             guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
             self.activityOpening = false
@@ -153,6 +157,7 @@ extension NotchModel {
     /// Kept after the reveal so content that explicitly animates its return shares the shell's
     /// curve. The next presentation change chooses anew; ordinary progress leaves it alone.
     var activityRevealMotion: Animation {
+        if state == .open, page == .player, expanded == nil { return NotchMotion.player }
         if activityReturnsInline, case .compact = activityPresentation { return NotchMotion.inlineReturn }
         return Self.activityExpansionMotion
     }
