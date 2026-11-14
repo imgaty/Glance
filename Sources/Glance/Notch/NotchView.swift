@@ -953,7 +953,8 @@ struct NotchView: View {
                 // as every opened view does.
                 .animation(Self.fade(in: model.showsLyrics)) { $0.opacity(model.showsLyrics ? 1 : 0).blur(radius: model.showsLyrics ? 0 : 4) }
                 .modifier(IslandReveal(hidden: !heroOpen))
-                .allowsHitTesting(places == nil)
+                .allowsHitTesting(places == nil && lyricsShown)
+                .accessibilityHidden(!lyricsShown)
             // The player and the tray side by side, as pages are: going to the tray, the player
             // slides off to the left as the tray comes in from the right, and back. The tray stays
             // here turned off, to slide away: not showing, it costs nothing (see `TrayView`).
@@ -970,6 +971,10 @@ struct NotchView: View {
                 // opened view does, the Dynamic Island's expanded activities' way.
                 .modifier(PageFade(hidden: onTray))
                 .modifier(IslandReveal(hidden: !heroOpen))
+                // The visual fade keeps the page mounted for motion; only its visible controls
+                // belong in the hit-test and accessibility trees.
+                .allowsHitTesting(places == nil && playerShown)
+                .accessibilityHidden(!playerShown)
             TrayView(
                 tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
                 airDropTargeted: model.airDropTargeted
@@ -980,6 +985,7 @@ struct NotchView: View {
             .modifier(PageFade(hidden: !onTray))
             .modifier(IslandReveal(hidden: !heroOpen))
             .allowsHitTesting(places == nil && trayShown)
+            .accessibilityHidden(!trayShown)
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
             HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset * 2) * swell)
@@ -991,6 +997,7 @@ struct NotchView: View {
                 .modifier(PageFade(hidden: heroOpen && onTray))
                 .environment(\.notchControls, !trayShown)
                 .allowsHitTesting(places == nil && !trayShown)
+                .accessibilityHidden(!playerShown)
             HeroWaveform(
                 isOpen: heroOpen, lyricsShown: model.showsLyrics, lyricsAvailable: model.songPlaying && lyricsOn,
                 toggleLyrics: toggleLyrics
@@ -1002,6 +1009,7 @@ struct NotchView: View {
             .modifier(PageFade(hidden: heroOpen && onTray))
             .environment(\.notchControls, !trayShown)
             .allowsHitTesting(places == nil && !trayShown)
+            .accessibilityHidden(!playerShown)
         }
         .environment(\.closedNotch, closed)
         .environment(\.playerLayout, model.layout)

@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed hidden player, lyrics and tray controls remaining available to
+  VoiceOver behind another activity.
+
 - Fixed test activity controls requesting Clock permission or answering real
   timer alerts. Test calls now connect after answering a dismissed ringing
   alert, and test recordings keep their controls available.
