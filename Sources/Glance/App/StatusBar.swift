@@ -22,11 +22,8 @@ enum BuildInfo {
     }
 }
 
-/// The menu bar button. Clicked, it opens a menu made as Control Center's are (the Wi-Fi menu's
-/// among them): "Glance" with a switch that turns the notch off on every display (to get it out of
-/// the way for a while), then Check for Updates…, Settings and Quit, with Rebuild in builds made
-/// from source. The icon gets a slash while the notch is off. Right-clicking the notch shows the
-/// same choices as an ordinary menu.
+/// A standard menu shared by the menu bar button and the notch's context menu.
+/// AppKit owns its placement, highlighting, keyboard navigation and dismissal.
 @MainActor
 final class StatusBarController: NSObject {
     /// For the notch's right-click.
@@ -46,25 +43,14 @@ final class StatusBarController: NSObject {
     private var canCheckWatch: AnyCancellable?
     private var buildProcess: Process?
     private var enabledWatch: NSKeyValueObservation?
-    private var pressWatch: Any?
     private var icon: StatusIcon?
-    private let panel = StatusPanel()
-    private let state = StatusMenuState()
+    private let enabledItem = NSMenuItem(title: String(localized: "Enable Glance"), action: #selector(toggleEnabled), keyEquivalent: "")
 
     override init() {
         super.init()
         statusItem.button?.toolTip = "Glance"
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(clicked)
+        statusItem.menu = menu
         if let button = statusItem.button { icon = StatusIcon(button: button, symbol: Self.notchIcon) }
-        // Opened on the press, as a menu opens, and the press goes no further: held down, the button
-        // would light up in a gray pill of its own.
-        pressWatch = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self, event.window === statusItem.button?.window else { return event }
-            MainActor.assumeIsolated { self.clicked() }
-            return nil
-        }
-
         let settings = NSMenuItem(title: String(localized: "Glance Settings…"), action: #selector(settingsFromMenu), keyEquivalent: "")
         settings.target = self
         updatesItem.target = self
@@ -72,9 +58,11 @@ final class StatusBarController: NSObject {
         let quit = NSMenuItem(title: String(localized: "Quit Glance"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu.autoenablesItems = false
         menu.delegate = self
+        enabledItem.target = self
+        menu.addItem(enabledItem)
+        menu.addItem(.separator())
         menu.addItem(updatesItem)
-        state.canRebuild = BuildInfo.sourceDirectory != nil
-        if state.canRebuild {
+        if BuildInfo.sourceDirectory != nil {
             menu.addItem(rebuildItem)
             menu.addItem(benchItem())
         }
@@ -86,80 +74,20 @@ final class StatusBarController: NSObject {
         }
 
         canCheckWatch = Updater.shared.$canCheck.sink { [weak self] can in self?.updatesItem.isEnabled = can }
-        panel.onClose = { [weak self] window in self?.statusItem.endPresenting(window) }
 
         // A slash across the icon while the notch is off.
         enabledWatch = UserDefaults.standard.observe(\.notchEnabled, options: [.initial]) { [weak self] defaults, _ in
             let on = defaults.notchEnabled
-            Task { @MainActor in self?.icon?.setSlashed(!on) }
+            Task { @MainActor in
+                self?.icon?.setSlashed(!on)
+                self?.enabledItem.state = on ? .on : .off
+            }
         }
     }
 
-    @objc private func clicked() {
-        guard let button = statusItem.button else { return }
-        if panel.isShown { return panel.close() }
-        state.lit = nil
-        panel.show(
-            below: button,
-            content: StatusMenu(state: state) { [weak self] in self?.perform($0) },
-            onKey: { [weak self] in self?.key($0) ?? false })
-        if let window = panel.window {
-            statusItem.beginPresenting(window) { [weak self] in self?.panel.close() }
-        }
-    }
-
-    /// A row chosen. The switch flips and the menu stays, as Control Center's do; anything else
-    /// closes it first.
-    private func perform(_ action: StatusMenu.Action) {
-        if action == .toggle {
-            UserDefaults.standard.set(!UserDefaults.standard.notchEnabled, forKey: Preferences.notchEnabled)
-            return
-        }
-        panel.close()
-        switch action {
-        case .toggle: break
-        case .checkForUpdates: Updater.shared.checkForUpdates()
-        case .rebuild: rebuild()
-        case .settings: onOpenSettings?()
-        case .quit: NSApp.terminate(nil)
-        }
-    }
-
-    /// The keys, as a menu takes them: the up and down arrows go from row to row, Return, Enter or
-    /// Space chooses the row lit, and a letter goes to the next row starting with it. Escape is the
-    /// panel's own; with no row lit, Space is the switch's, if it has the focus.
-    private func key(_ event: NSEvent) -> Bool {
-        guard event.modifierFlags.isDisjoint(with: [.command, .control, .option]) else { return false }
-        let rows = StatusMenu.rows(state, canCheck: Updater.shared.canCheck)
-        let next: StatusMenu.Action?
-        switch event.specialKey {
-        case .downArrow?: next = StatusMenu.step(rows, from: state.lit, by: 1)
-        case .upArrow?: next = StatusMenu.step(rows, from: state.lit, by: -1)
-        case .carriageReturn?, .enter?:
-            guard let lit = state.lit else { return true }
-            perform(lit)
-            return true
-        case nil where event.charactersIgnoringModifiers == " ":
-            guard let lit = state.lit else { return false }
-            perform(lit)
-            return true
-        case nil:
-            guard let letter = event.charactersIgnoringModifiers, letter.count == 1, letter.first?.isLetter == true,
-                let found = StatusMenu.typed(letter, in: rows, from: state.lit)
-            else { return false }
-            next = found
-        default:
-            return false
-        }
-        guard let next else { return true }
-        state.lit = next
-        // VoiceOver says where the keys went, as it does in a menu.
-        let row = rows.first { $0.action == next }
-        let words = next == .toggle ? (UserDefaults.standard.notchEnabled ? String(localized: "Glance, on") : String(localized: "Glance, off")) : row?.title ?? ""
-        NSAccessibility.post(
-            element: NSApp as Any, notification: .announcementRequested,
-            userInfo: [.announcement: words, .priority: NSAccessibilityPriorityLevel.high.rawValue])
-        return true
+    @objc private func toggleEnabled() {
+        UserDefaults.standard.set(!UserDefaults.standard.notchEnabled, forKey: Preferences.notchEnabled)
+        enabledItem.state = UserDefaults.standard.notchEnabled ? .on : .off
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
@@ -285,7 +213,6 @@ final class StatusBarController: NSObject {
     }
 
     private func setBuilding(_ building: Bool) {
-        state.rebuilding = building
         rebuildItem.title = building ? "Rebuilding…" : "Rebuild"
         rebuildItem.isEnabled = !building
         icon?.setSymbol(building ? Self.hammerIcon : Self.notchIcon)
@@ -380,25 +307,6 @@ extension StatusBarController: NSMenuDelegate {
 
     /// Marks the timer's items in the menu, to take them out before it's made again.
     private static let timerItem = 7_000
-}
-
-extension NSStatusItem {
-    private static let willPresent = NSSelectorFromString("_willPresentContent:cancellationHandler:")
-    private static let didPresent = NSSelectorFromString("_didPresentContent:")
-
-    /// Lights the icon with macOS's own pill for a window that isn't a menu or a popover, which macOS
-    /// only draws for what it knows the item is showing, and keeps the menu bar up meanwhile.
-    /// Private AppKit hooks. `cancelled` is macOS asking for the window to go.
-    func beginPresenting(_ window: NSWindow, cancelled: @escaping @MainActor () -> Void) {
-        guard responds(to: Self.willPresent), responds(to: Self.didPresent) else { return }
-        let handler: @convention(block) () -> Void = { MainActor.assumeIsolated { cancelled() } }
-        perform(Self.willPresent, with: window, with: unsafeBitCast(handler, to: AnyObject.self))
-    }
-
-    func endPresenting(_ window: NSWindow) {
-        guard responds(to: Self.didPresent) else { return }
-        perform(Self.didPresent, with: window)
-    }
 }
 
 /// The menu bar icon, drawn a frame at a time so macOS still colors it as it does every menu bar
@@ -503,342 +411,4 @@ final class StatusIcon {
     }
 
     private static func ease(_ t: CGFloat) -> CGFloat { t * t * (3 - 2 * t) }
-}
-
-/// What the menu shows that changes while it's open.
-@MainActor
-@Observable
-final class StatusMenuState {
-    var canRebuild = false
-    var rebuilding = false
-    /// The row lit, by the pointer or by the arrow keys: one at a time, as in a menu.
-    var lit: StatusMenu.Action?
-}
-
-/// The menu itself, as Control Center lays out its menus: the same padding all around, rows 22
-/// points tall one after another, lit under the pointer with corners as much rounder than the
-/// menu's as they're inset, and a real switch at the top. The keys work it as they do a menu (see
-/// `StatusMenu.step` and `StatusMenu.typed`).
-struct StatusMenu: View {
-    enum Action {
-        /// The switch at the top.
-        case toggle
-        case checkForUpdates, rebuild, settings, quit
-    }
-
-    /// A row, as the keys go through them: the switch first, then the rest in order.
-    struct Row: Equatable {
-        let action: Action
-        let title: String
-        var enabled = true
-    }
-
-    let state: StatusMenuState
-    let perform: (Action) -> Void
-    @ObservedObject private var updater = Updater.shared
-    @AppStorage(Preferences.notchEnabled) private var enabled = true
-    @Environment(\.colorScheme) private var scheme
-
-    static let inset: CGFloat = 7
-    static let radius: CGFloat = 16
-    /// Room around the menu, in its window, for its shadow.
-    static let shadowRoom: CGFloat = 40
-
-    /// Every row, the switch's among them, with whether it can be chosen now. Rebuild is only in
-    /// builds made from source, which know where it is.
-    static func rows(_ state: StatusMenuState, canCheck: Bool) -> [Row] {
-        var rows = [Row(action: .toggle, title: "Glance"), Row(action: .checkForUpdates, title: String(localized: "Check for Updates…"), enabled: canCheck)]
-        if state.canRebuild {
-            rows.append(Row(action: .rebuild, title: state.rebuilding ? "Rebuilding…" : "Rebuild", enabled: !state.rebuilding))
-        }
-        return rows + [Row(action: .settings, title: String(localized: "Glance Settings…")), Row(action: .quit, title: String(localized: "Quit Glance"))]
-    }
-
-    /// Where an arrow key goes from the row lit: a row down or up, past dimmed ones, and round from
-    /// one end to the other, as in a menu. With none lit, down goes to the first and up to the last.
-    static func step(_ rows: [Row], from lit: Action?, by step: Int) -> Action? {
-        let usable = rows.filter(\.enabled)
-        guard !usable.isEmpty else { return nil }
-        guard let lit, let index = usable.firstIndex(where: { $0.action == lit }) else {
-            return (step > 0 ? usable.first : usable.last)?.action
-        }
-        return usable[((index + step) % usable.count + usable.count) % usable.count].action
-    }
-
-    /// Where typing a letter goes, as in a menu: the next row after the one lit whose name starts
-    /// with it, round from the end; nowhere if none does.
-    static func typed(_ letter: String, in rows: [Row], from lit: Action?) -> Action? {
-        let usable = rows.filter(\.enabled)
-        guard !letter.isEmpty, !usable.isEmpty else { return nil }
-        let start = lit.flatMap { lit in usable.firstIndex { $0.action == lit } }.map { $0 + 1 } ?? 0
-        return (0..<usable.count).map { usable[(start + $0) % usable.count] }
-            .first { $0.title.lowercased().hasPrefix(letter.lowercased()) }?.action
-    }
-
-    var body: some View {
-        let rows = Self.rows(state, canCheck: updater.canCheck)
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Glance")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 24)
-                Toggle("Glance", isOn: $enabled)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-            }
-            .padding(.horizontal, 9)
-            .frame(height: 36)
-            // Lit only from the keys: the pointer goes to the switch itself.
-            .background { StatusMenuLight(lit: state.lit == .toggle) }
-            .onHover { if $0 { state.lit = nil } }
-            separator
-            ForEach(rows.filter { $0.action != .toggle }, id: \.action) { row in
-                StatusMenuRow(row: row, state: state) { perform(row.action) }
-                if row.action == .settings { separator }
-            }
-        }
-        .padding(Self.inset)
-        .frame(width: 280)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
-        .background { shadow }
-    }
-
-    /// Wide and faint, as the Wi-Fi menu's, and only outside the menu, so none of it darkens the
-    /// glass. The glass's rim, over it, draws the thin gray line the Wi-Fi menu has around it.
-    /// (macOS's own window shadow is tighter, and its line blurry.)
-    @ViewBuilder private var shadow: some View {
-        let shape = RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
-        shape
-            .fill(.black)
-            .shadow(color: .black.opacity(0.07), radius: 22, y: 8)
-            .mask {
-                Rectangle()
-                    .padding(-Self.shadowRoom)
-                    .overlay { shape.blendMode(.destinationOut) }
-                    .compositingGroup()
-            }
-    }
-
-    private var separator: some View {
-        // A plain color, as the highlight: the glass makes a vibrant one fainter. Measured against
-        // the Wi-Fi menu's.
-        Rectangle()
-            .fill(scheme == .dark ? Color.white.opacity(0.13) : Color.black.opacity(0.1))
-            .frame(height: 1)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-    }
-}
-
-private struct StatusMenuRow: View {
-    let row: StatusMenu.Row
-    let state: StatusMenuState
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(row.title)
-                .font(.system(size: 13))
-                .foregroundStyle(row.enabled ? .primary : .tertiary)
-                .padding(.horizontal, 9)
-                .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
-                .background { StatusMenuLight(lit: row.enabled && state.lit == row.action) }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!row.enabled)
-        // The pointer and the arrow keys light the same one, as in a menu.
-        .onHover { inside in
-            if inside, row.enabled {
-                state.lit = row.action
-            } else if !inside, state.lit == row.action {
-                state.lit = nil
-            }
-        }
-    }
-}
-
-/// A row's light, under the pointer or the arrow keys.
-private struct StatusMenuLight: View {
-    let lit: Bool
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        // A plain color: the glass would make a vibrant one fainter. Measured against the Wi-Fi
-        // menu's.
-        RoundedRectangle(cornerRadius: StatusMenu.radius - StatusMenu.inset, style: .continuous)
-            .fill(scheme == .dark ? Color.white : Color.black)
-            .opacity(lit ? (scheme == .dark ? 0.1 : 0.055) : 0)
-    }
-}
-
-/// The window the menu shows in: a panel under the menu bar icon, kept in front without taking the
-/// focus from the app in use, and drawn as a window in front, so its switch is in the accent color
-/// and its glass is whole. It goes away on a click anywhere else, on Escape, or on the icon again.
-@MainActor
-final class StatusPanel {
-    /// With the window it was, now fading.
-    var onClose: ((NSWindow) -> Void)?
-    private var panel: MenuPanel?
-    private var placement: (anchor: CGRect, visible: CGRect)?
-    private var monitors: [Any] = []
-    /// Glance's window that had the keys before the menu took them (Settings, say), given them back.
-    private weak var previousKey: NSWindow?
-    /// A menu that has faded while one of Glance's windows is in front, kept until another app is.
-    private var lingering: MenuPanel?
-    private var resignWatch: NSObjectProtocol?
-
-    var isShown: Bool { panel?.isVisible == true }
-    var window: NSWindow? { panel }
-
-    func show(below button: NSStatusBarButton, content: some View, onKey: @escaping (NSEvent) -> Bool) {
-        guard let window = button.window, let screen = window.screen else { return }
-        let icon = window.convertToScreen(button.convert(button.bounds, to: nil))
-        show(anchor: icon, screen: screen, keepingClicksIn: window, content: content, onKey: onKey)
-    }
-
-    /// The same native glass panel from a control in the notch, with no popover arrow.
-    func show(at point: CGPoint, content: some View) {
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main else { return }
-        show(anchor: CGRect(origin: point, size: .zero), screen: screen, keepingClicksIn: nil, content: content, onKey: { _ in false })
-    }
-
-    static func origin(for menu: CGSize, anchor: CGRect, visible: CGRect) -> CGPoint {
-        let preferredX = anchor.minX + menu.width <= visible.maxX ? anchor.minX : anchor.maxX - menu.width
-        return CGPoint(
-            x: min(max(preferredX, visible.minX), max(visible.minX, visible.maxX - menu.width)),
-            y: max(visible.minY, min(anchor.minY - 6 - menu.height, visible.maxY - menu.height)))
-    }
-
-    private func show(anchor: CGRect, screen: NSScreen, keepingClicksIn anchorWindow: NSWindow?, content: some View, onKey: @escaping (NSEvent) -> Bool) {
-        close()
-        letLingeringGo()
-        previousKey = NSApp.keyWindow
-        let room = StatusMenu.shadowRoom
-        let host = NotchHostingView(rootView: AnyView(content.fixedSize().padding(room)))
-        let size = host.fittingSize
-        host.frame = NSRect(origin: .zero, size: size)
-        let menu = CGSize(width: size.width - room * 2, height: size.height - room * 2)
-        let panel = MenuPanel(
-            contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered, defer: false)
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        // The menu draws its own shadow.
-        panel.hasShadow = false
-        panel.level = .popUpMenu
-        panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
-        panel.contentView = host
-        panel.onCancel = { [weak self] in self?.close() }
-        panel.onKey = onKey
-        // Under the icon, as menus open from the menu bar: its left edge under the icon's left edge,
-        // or, if it wouldn't fit on the screen that way, its right edge under the icon's right edge.
-        let origin = Self.origin(for: menu, anchor: anchor, visible: screen.visibleFrame)
-        panel.setFrameOrigin(NSPoint(x: origin.x - room, y: origin.y - room))
-        panel.makeKeyAndOrderFront(nil)
-        self.panel = panel
-        placement = (anchor, screen.visibleFrame)
-        let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
-        monitors = [
-            NSEvent.addGlobalMonitorForEvents(matching: clicks) { [weak self] _ in
-                MainActor.assumeIsolated { self?.close() }
-            },
-            NSEvent.addLocalMonitorForEvents(matching: clicks) { [weak self] event in
-                MainActor.assumeIsolated {
-                    // A click in the menu is the menu's; on the icon, the icon closes it.
-                    guard let self, event.window !== self.panel, event.window !== anchorWindow else { return }
-                    self.close()
-                }
-                return event
-            },
-        ].compactMap { $0 }
-    }
-
-    /// A disclosure in Sound changes the menu's height while keeping its anchor fixed.
-    func resize(contentHeight: CGFloat) {
-        guard let panel, let placement, contentHeight.isFinite, contentHeight > 0 else { return }
-        let room = StatusMenu.shadowRoom
-        let size = CGSize(width: panel.frame.width, height: contentHeight + room * 2)
-        guard abs(size.height - panel.frame.height) > 0.5 else { return }
-        let content = CGSize(width: size.width - room * 2, height: contentHeight)
-        let origin = Self.origin(for: content, anchor: placement.anchor, visible: placement.visible)
-        panel.setFrame(CGRect(x: origin.x - room, y: origin.y - room, width: size.width, height: size.height), display: true)
-        panel.contentView?.setFrameSize(size)
-    }
-
-    func close() {
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
-        guard let panel else { return }
-        self.panel = nil
-        let previous = previousKey
-        // Fading, it lets clicks through to what's under it.
-        panel.ignoresMouseEvents = true
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.15
-            panel.animator().alphaValue = 0
-        } completionHandler: {
-            MainActor.assumeIsolated {
-                // With one of Glance's windows in front, as Settings chosen in the menu, the menu stays,
-                // unseen, until another app is in use: the menu never made Glance the app in use, and
-                // taking it away now, macOS would hand the front back to the app that was, leaving
-                // the window behind it, drawn gray.
-                if NSApp.isActive, let key = NSApp.keyWindow, key !== panel, !(key is NSPanel) {
-                    self.linger(panel)
-                    return
-                }
-                panel.orderOut(nil)
-                // Still the app in use, with nothing else in front: the keys go back where they were.
-                if NSApp.isActive, NSApp.keyWindow == nil || NSApp.keyWindow === panel, let previous, previous.isVisible {
-                    previous.makeKey()
-                }
-            }
-        }
-        onClose?(panel)
-    }
-}
-
-extension StatusPanel {
-    /// Kept on the screen, unseen, until Glance is no longer the app in use; never taking the keys
-    /// meanwhile, as when the window in front closes.
-    private func linger(_ panel: MenuPanel) {
-        letLingeringGo()
-        panel.lingers = true
-        lingering = panel
-        resignWatch = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.letLingeringGo() }
-        }
-    }
-
-    private func letLingeringGo() {
-        if let resignWatch { NotificationCenter.default.removeObserver(resignWatch) }
-        resignWatch = nil
-        lingering?.orderOut(nil)
-        lingering = nil
-    }
-}
-
-/// Takes the focus for the keys, without making Glance the app in use, and looks like a window in
-/// front.
-private final class MenuPanel: NSPanel {
-    var onCancel: (() -> Void)?
-    /// A key pressed, before anything in the menu sees it: whether the menu took it.
-    var onKey: ((NSEvent) -> Bool)?
-    /// Gone from sight, kept only until another app is in use (see `StatusPanel.linger`).
-    var lingers = false
-
-    override var canBecomeKey: Bool { !lingers }
-    override func cancelOperation(_ sender: Any?) { onCancel?() }
-
-    override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, onKey?(event) == true { return }
-        super.sendEvent(event)
-    }
-
-    /// Private AppKit hooks: drawn as a window in front, so the switch has its color and the glass
-    /// isn't the flat look of a window behind.
-    @objc func _hasActiveAppearance() -> Bool { true }
-    @objc func _hasActiveAppearanceIgnoringKeyFocus() -> Bool { true }
 }

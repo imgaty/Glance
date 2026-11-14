@@ -55,29 +55,6 @@ struct SoundOutputMenuTests {
         #expect(menu.level.value == before)
     }
 
-    @Test("A row press can leave and re-enter, and releasing outside cancels it")
-    func pressTracking() throws {
-        _ = NSApplication.shared
-        var selections = 0
-        let menu = SoundOutputMenu(devices: [speakers], current: speakers.id, volume: nil, batteries: [:], choose: { _ in selections += 1 }, settings: {})
-        let row = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view as? SoundMenuContentRow)
-        let inside = NSPoint(x: row.bounds.midX, y: row.bounds.midY)
-        let outside = NSPoint(x: -10, y: -10)
-        row.beginPress(at: inside)
-        #expect(row.pressed)
-        row.movePress(to: outside)
-        #expect(!row.pressed)
-        row.endPress(at: outside)
-        #expect(selections == 0)
-        row.beginPress(at: inside)
-        row.movePress(to: outside)
-        row.movePress(to: inside)
-        #expect(row.pressed)
-        row.endPress(at: inside)
-        #expect(!row.pressed)
-        #expect(selections == 1)
-    }
-
     @Test("Device updates preserve a slider edit and update the selected row")
     func updatesKeepSlider() throws {
         _ = NSApplication.shared
@@ -90,7 +67,7 @@ struct SoundOutputMenuTests {
         #expect(menu.items.contains { $0.view === slider })
         #expect(menu.level.value == 0.73)
         #expect(menu.items.first { $0.tag == Int(speakers.id) } === speakerRow)
-        #expect((speakerRow.view as? SoundMenuContentRow)?.highlighted == true)
+        #expect((speakerRow.view as? SoundMenuContentRow)?.rowHighlighted == true)
         #expect(menu.items.first(where: { $0.tag == Int(headphones.id) })?.state == .on)
         menu.refresh(devices: [headphones], current: headphones.id, batteries: [:])
         #expect(!menu.items.contains { $0.tag == Int(speakers.id) })
@@ -166,9 +143,9 @@ struct SoundOutputMenuTests {
         let center = row.convert(NSPoint(x: row.bounds.midX, y: row.bounds.midY), to: surface)
         #expect(surface.hitTest(center) === row)
         menu.highlight(item)
-        #expect(row.highlighted)
+        #expect(row.rowHighlighted)
         menu.highlight(nil)
-        #expect(!row.highlighted)
+        #expect(!row.rowHighlighted)
         #expect(row.accessibilityLabel() == speakers.name)
         #expect(row.accessibilityPerformPress())
         #expect(selected == speakers.id)

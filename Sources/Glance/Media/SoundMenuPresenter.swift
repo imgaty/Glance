@@ -224,7 +224,12 @@ final class SoundPopover: NSObject, NSPopoverDelegate {
         contentView.onCancel = nil
         if NSApp.isActive {
             if NSApp.keyWindow == nil, let previousKey, previousKey.isVisible, previousKey.canBecomeKey { previousKey.makeKey() }
-            if let previousApp, !previousApp.isTerminated { previousApp.activate(options: []) }
+            // A deliberate click in another Glance window keeps that window in front.
+            if NSApp.keyWindow == nil || NSApp.keyWindow === previousKey,
+                let previousApp, !previousApp.isTerminated
+            {
+                previousApp.activate(options: [])
+            }
         }
         previousKey = nil
         previousApp = nil

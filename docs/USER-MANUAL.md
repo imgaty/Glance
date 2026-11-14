@@ -304,7 +304,7 @@ highlighted row.
 
 Connected speakers and headphones appear under **Output**, with a circle in your
 Mac's accent color for the current output and battery details when available.
-The selected output's circle becomes lighter while pressed.
+macOS draws the row's hover, focus and pressed feedback.
 Long output names wrap above their battery details. The list expands as outputs
 connect, with new rows fading in. Existing rows move into
 place and disconnected outputs fade away. Reduce Motion removes these
@@ -313,8 +313,7 @@ appear only in macOS. Selecting an output closes Sound.
 
 **Sound Settings…** opens **System Settings > Sound**. Headphone listening modes
 and other headphone options are managed in macOS. Output rows and settings
-use the same rounded highlight under the pointer. The settings row stays
-compact.
+use native buttons. The settings row stays compact.
 
 When the laptop speakers are selected, the button shows muted, low, medium
 or high volume as the app or speaker volume changes. The speaker stays in
@@ -792,15 +791,15 @@ Glance's icon in the menu bar opens a menu:
 
 | Item | Operation |
 | --- | --- |
-| `Glance` switch | Turns the notch off on every display, until it's turned back on |
+| `Enable Glance` | The checkmark means the notch is enabled on every configured display; choose it to turn the notch off or back on |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
 | `Quit Glance` | Closes the notch away, then quits Glance, as any other way of quitting it does but `Force Quit` |
 
 The menu works from the keyboard too: the up and down arrows go from row to
-row, the switch among them, **Return** or **Space** chooses the one lit, a
-letter goes to the next row starting with it, and **Escape** closes it.
+row, **Return** chooses the highlighted item, typing finds a matching command,
+and **Escape** closes it. macOS draws and operates the menu.
 Unavailable actions are disabled for VoiceOver as well as the pointer.
 
 <br>

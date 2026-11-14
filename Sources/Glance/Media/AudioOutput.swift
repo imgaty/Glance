@@ -570,7 +570,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
     func highlight(_ item: NSMenuItem?) {
         focusedItem = item
         for candidate in items {
-            (candidate.view as? SoundMenuContentRow)?.highlighted = item != nil && candidate === item
+            (candidate.view as? SoundMenuContentRow)?.rowHighlighted = item != nil && candidate === item
         }
     }
 
@@ -671,33 +671,29 @@ struct NativeSoundSlider: NSViewRepresentable {
     }
 }
 
-/// The popover handles selection and keyboard navigation; this view draws the rich row, and
-/// its highlight a little way in from the menu's sides, as tall as the row.
-final class SoundMenuContentRow: NSView {
-    // Reparenting a menu item's view into a panel clears NSView.enclosingMenuItem.
-    // Keep the action's identity explicitly; the menu owns both the item and this view.
-    weak var item: NSMenuItem?
+/// A native recessed button containing the output's rich label. AppKit owns its bezel,
+/// pressed tracking, focus ring and cancellation when a drag ends outside the button.
+final class SoundMenuContentRow: NSButton {
+    weak var item: NSMenuItem? { didSet { isEnabled = item?.isEnabled ?? true } }
     private var hover: NSTrackingArea?
     private let host: NSHostingView<AnyView>
     private var content: AnyView
-    private var trackingPress = false
-    private(set) var pressed = false {
-        didSet {
-            guard pressed != oldValue else { return }
-            host.rootView = Self.root(content, width: bounds.width, pressed: pressed)
-        }
-    }
-    var highlighted = false { didSet { needsDisplay = true } }
+    var rowHighlighted = false { didSet { highlight(rowHighlighted) } }
 
     init<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
         host = NSHostingView(rootView: Self.root(self.content, width: SoundLook.width))
         super.init(frame: NSRect(x: 0, y: 0, width: SoundLook.width, height: ceil(host.fittingSize.height)))
+        title = ""
+        setButtonType(.momentaryPushIn)
+        bezelStyle = .recessed
+        isBordered = true
+        showsBorderOnlyWhileMouseInside = true
+        target = self
+        action = #selector(chooseOutput)
         autoresizingMask = [.width]
         addSubview(host)
         layoutHost()
-        setAccessibilityElement(true)
-        setAccessibilityRole(.button)
     }
 
     required init?(coder: NSCoder) { nil }
@@ -707,103 +703,63 @@ final class SoundMenuContentRow: NSView {
 
     func replace<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
-        host.rootView = Self.root(self.content, width: bounds.width, pressed: pressed)
+        host.rootView = Self.root(self.content, width: bounds.width)
         setFrameSize(NSSize(width: bounds.width, height: ceil(host.fittingSize.height)))
-        needsDisplay = true
+        isEnabled = item?.isEnabled ?? true
     }
 
     override func setFrameSize(_ newSize: NSSize) {
         let widthChanged = newSize.width != frame.width
         super.setFrameSize(newSize)
         if widthChanged {
-            // AppKit can widen custom menu items; a long name then wraps at the new width.
-            host.rootView = Self.root(content, width: newSize.width, pressed: pressed)
+            host.rootView = Self.root(content, width: newSize.width)
             super.setFrameSize(NSSize(width: newSize.width, height: ceil(host.fittingSize.height)))
         }
         layoutHost()
     }
 
-    private func layoutHost() {
-        host.frame = bounds.insetBy(dx: SoundLook.highlightInset, dy: 0)
-    }
+    private func layoutHost() { host.frame = bounds.insetBy(dx: SoundLook.highlightInset, dy: 0) }
 
-    private static func root(_ view: AnyView, width: CGFloat, pressed: Bool = false) -> AnyView {
-        AnyView(
-            view.frame(width: width - SoundLook.highlightInset * 2)
-                .environment(\.controlActiveState, .key).environment(\.soundMenuPressed, pressed).accessibilityHidden(true))
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        guard highlighted else { return }
-        let shape = RoundedRectangle(cornerRadius: SoundLook.highlightRadius, style: .continuous)
-        SoundMenu.highlightColor.setFill()
-        NSBezierPath(cgPath: shape.path(in: host.frame).cgPath).fill()
+    private static func root(_ view: AnyView, width: CGFloat) -> AnyView {
+        AnyView(view.frame(width: width - SoundLook.highlightInset * 2).accessibilityHidden(true))
     }
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let hover { removeTrackingArea(hover) }
-        let area = NSTrackingArea(rect: host.frame, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
+        let area = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
         hover = area
         addTrackingArea(area)
     }
 
-    override func mouseEntered(with event: NSEvent) { (item?.menu as? SoundOutputMenu)?.highlight(item) }
+    override func mouseEntered(with event: NSEvent) {
+        super.mouseEntered(with: event)
+        (item?.menu as? SoundOutputMenu)?.highlight(item)
+    }
     override func mouseExited(with event: NSEvent) {
-        if highlighted { (item?.menu as? SoundOutputMenu)?.highlight(nil) }
+        super.mouseExited(with: event)
+        if rowHighlighted { (item?.menu as? SoundOutputMenu)?.highlight(nil) }
     }
 
     override func accessibilityLabel() -> String? { item?.title }
     override func accessibilityValue() -> Any? { item?.state == .on ? String(localized: "Selected") : nil }
     override func accessibilityPerformPress() -> Bool {
-        guard let item, let menu = item.menu as? SoundOutputMenu, item.isEnabled else { return false }
+        guard isEnabled else { return false }
+        return sendAction(action, to: target)
+    }
+
+    @objc private func chooseOutput() {
+        guard let item, let menu = item.menu as? SoundOutputMenu, item.isEnabled else { return }
         menu.activate(item)
-        return true
-    }
-
-    func beginPress(at point: NSPoint) {
-        trackingPress = item?.isEnabled == true && host.frame.contains(point)
-        pressed = trackingPress
-    }
-
-    func movePress(to point: NSPoint) {
-        pressed = trackingPress && host.frame.contains(point)
-    }
-
-    func endPress(at point: NSPoint) {
-        let activate = trackingPress && host.frame.contains(point)
-        trackingPress = false
-        pressed = false
-        if activate { _ = accessibilityPerformPress() }
-    }
-
-    override func mouseDown(with event: NSEvent) { beginPress(at: convert(event.locationInWindow, from: nil)) }
-    override func mouseDragged(with event: NSEvent) { movePress(to: convert(event.locationInWindow, from: nil)) }
-    override func mouseUp(with event: NSEvent) { endPress(at: convert(event.locationInWindow, from: nil)) }
-}
-
-private struct SoundMenuPressedKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    fileprivate var soundMenuPressed: Bool {
-        get { self[SoundMenuPressedKey.self] }
-        set { self[SoundMenuPressedKey.self] = newValue }
     }
 }
 
-/// The player's Sound menu as the Mac's own Sound menu measures, read from its Accessibility
-/// frames and a capture of it on macOS 27.3: everything fourteen points in from the sides, the
-/// highlight five, each output thirty-two points tall with its picture in a circle of twenty-six.
 enum SoundLook {
     static let edge: CGFloat = highlightInset
     static let width: CGFloat = 308
     static let inset: CGFloat = 14
     static let highlightInset: CGFloat = 5
-    static let highlightRadius: CGFloat = 11
     // Nested corners share a center when the outer radius includes the inset.
-    static let outerRadius = highlightRadius + highlightInset
     /// Sound, its words' frame so far below the menu's first row.
     static let titleHeight: CGFloat = 26.5
     static let titleTop: CGFloat = 8
@@ -822,44 +778,21 @@ enum SoundLook {
     static let actionHeight: CGFloat = 22
 }
 
-/// Measured on the built-in display, with the desktop behind the glass and in window captures.
-/// Fills, headings and symbols add light in dark appearance and subtract it in light appearance;
-/// primary and secondary text use ordinary alpha blending.
+/// Semantic system colors follow appearance, contrast and the user's accent choice.
 enum SoundInk {
     case primary, secondary, heading, symbol, speaker, fill
-
-    func color(dark: Bool) -> Color {
-        switch (self, dark) {
-        case (.primary, true): Color(.sRGB, white: 1, opacity: 0.905)
-        case (.primary, false): Color(.sRGB, white: 0, opacity: 0.85)
-        case (.secondary, true): Color(.sRGB, white: 1, opacity: 0.47)
-        case (.secondary, false): Color(white: 0, opacity: 0.45)
-        case (.heading, true): Color(.sRGB, white: 77.0 / 255, opacity: 1)
-        case (.symbol, true): Color(.sRGB, white: 76.0 / 255, opacity: 1)
-        case (.heading, false): Color(.sRGB, white: 148.0 / 255, opacity: 1)
-        case (.symbol, false): Color(.sRGB, white: 142.0 / 255, opacity: 1)
-        case (.speaker, false): Color(.sRGB, white: 123.0 / 255, opacity: 1)
-        case (.speaker, true): Color(.sRGB, white: 124.0 / 255, opacity: 1)
-        case (.fill, true): Color(.sRGB, white: 20.0 / 255, opacity: 1)
-        case (.fill, false): Color(.sRGB, white: 235.0 / 255, opacity: 1)
-        }
-    }
-
-    func blend(dark: Bool) -> BlendMode {
+    var color: Color {
         switch self {
-        case .primary, .secondary: .normal
-        case .heading, .symbol, .speaker, .fill: dark ? .plusLighter : .plusDarker
+        case .primary, .speaker: .primary
+        case .secondary, .heading, .symbol: .secondary
+        case .fill: Color(nsColor: .quaternaryLabelColor)
         }
     }
 }
 
 private struct SoundInkStyle: ViewModifier {
     let ink: SoundInk
-    @Environment(\.colorScheme) private var scheme
-
-    func body(content: Content) -> some View {
-        content.foregroundStyle(ink.color(dark: scheme == .dark)).blendMode(ink.blend(dark: scheme == .dark))
-    }
+    func body(content: Content) -> some View { content.foregroundStyle(ink.color) }
 }
 
 extension View {
@@ -880,7 +813,7 @@ private enum SoundMenuPiece {
     /// The line a point tall, in the middle of `height`, as far in as the headings.
     @MainActor static func divider(height: CGFloat, inset: CGFloat = SoundLook.inset) -> NSView {
         view(height: height) {
-            Rectangle().soundInk(.fill).frame(height: 1)
+            Divider()
                 .padding(.horizontal, inset).padding(.top, (height - 1) / 2)
         }
     }
@@ -891,15 +824,12 @@ private struct SoundOutputLabel: View {
     let playing: Bool
     let levels: DeviceWatch.Levels?
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.soundMenuPressed) private var pressed
 
     var body: some View {
         HStack(spacing: SoundLook.gap) {
             ZStack {
                 if playing {
                     Circle().fill(Color(nsColor: .controlAccentColor))
-                        // Measured from the normal and pressed Sound circles, in their embedded profile.
-                        .overlay { Circle().fill(.white.opacity(pressed ? 0.1 : 0)) }
                 } else {
                     Circle().soundInk(.fill)
                 }
@@ -945,13 +875,7 @@ private struct SoundBatteryLabel: NSViewRepresentable {
 }
 
 private enum SoundMenu {
-    private static func shade(dark: CGFloat, light: CGFloat) -> NSColor {
-        NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 1, alpha: dark) : NSColor(white: 0, alpha: light)
-        }
-    }
-    static let highlightColor = shade(dark: 0.1, light: 0.055)
-    static let batteryGray = shade(dark: 0.45, light: 0.45)
+    static let batteryGray = NSColor.secondaryLabelColor
 }
 
 private enum SoundBatteryText {

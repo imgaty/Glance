@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Changed the menu-bar menu and Sound output rows to system controls, with
+  native highlighting, pressed feedback and keyboard behavior.
+- Fixed closing Sound taking focus away from another Glance window.
+
 - Changed Sound to the system dropdown, with native corners, arrow, placement
   and animation. It opens from the same button anchor for every input method.
 
