@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Fixed Repeat failing to find Clock's timer editor. Pending repeats now show
+  their progress, and failed repeats stay available
+  with a message so they can be retried or stopped.
+
 - Fixed Repeat briefly showing a countdown when Clock hadn't restarted the
   timer. Repeat now checks Clock's running state, retries through its editor
   when needed, and keeps the timer's name.

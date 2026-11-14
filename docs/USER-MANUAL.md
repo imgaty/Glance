@@ -636,11 +636,15 @@ and rings with the timer's sound, as chosen in Clock, in place of macOS's own
 alert, which it takes away. Click **Repeat** to start the same length again, or
 **✕** to stop it; both leave the notch closed. Opening the notch stops it too.
 Repeat keeps the timer's name and waits for Clock to confirm that it restarted.
+While it waits, it shows **Restarting…** and keeps **✕** available to stop the
+request. Repeated clicks don't start extra timers.
 If Clock's old notification doesn't restart it, Glance tries Clock's timer
-editor. If neither starts it, the done timer stays available to retry or stop
-instead of showing a countdown that isn't running in Clock.
+editor. If neither starts it, **Couldn't restart** stays beside the timer's
+name, with **Repeat** available to try again and **✕** to stop it. No countdown
+appears unless Clock has actually started the timer.
 Left alone, it goes by itself after ten seconds and stops ringing, as **✕**
-would, though not while the pointer is on it.
+would, though not while the pointer is on it or after a repeat request is
+waiting or has failed.
 
 If **Repeat** needs `Accessibility` permission, the warning stays visible
 until permission is available or you stop it.

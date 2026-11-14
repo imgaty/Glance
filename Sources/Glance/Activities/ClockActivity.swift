@@ -31,10 +31,24 @@ final class ClockActivity: ObservableObject {
     /// Its label, as named in Clock; none if it wasn't given one.
     @Published private(set) var timerTitle: String?
     @Published private(set) var stopwatch: Stopwatch?
+    /// A restart stays beside its Stop control until Clock confirms it, or the person retries.
+    enum RepeatState {
+        case idle, pending, failed
+
+        var status: String? {
+            switch self {
+            case .idle: nil
+            case .pending: String(localized: "Restarting…")
+            case .failed: String(localized: "Couldn't restart")
+            }
+        }
+    }
+    @Published private(set) var repeatState = RepeatState.idle
     /// The timer that rang last, while it says so, to start it again, and when it rang.
     /// Its alert stays out of sight for as long as the notch says it's rung, to be answered from there.
     @Published private(set) var rang: (length: TimeInterval, title: String?, date: Date)? {
         didSet {
+            if rang == nil { repeatState = .idle }
             if rang != nil, !benched, UserDefaults.standard.bool(forKey: Preferences.notchEnabled) {
                 NotificationWindow.shared.hold(.timer)
             } else if rang == nil, !benched {
@@ -58,6 +72,8 @@ final class ClockActivity: ObservableObject {
     private var benched = ActivityBench.scene != nil
 
     private let activities: Activities
+    /// An isolated preview can supply a delayed or failed restart without touching Clock.
+    private let repeatAction: (@MainActor (TimeInterval, String?) async -> Found?)?
     private var poll: Timer?
     private var lastRead = Date.distantPast
     /// What a press makes of the timer and the stopwatch, shown at once, until macOS's own says so,
@@ -79,8 +95,13 @@ final class ClockActivity: ObservableObject {
     /// The menu bar's own name for its timer.
     static let menuExtra = "com.apple.menuextra.timer"
 
-    init(activities: Activities? = nil) {
+    init(activities: Activities? = nil, repeatAction: (@MainActor (TimeInterval, String?) async -> Found?)? = nil) {
         self.activities = activities ?? .shared
+        self.repeatAction = repeatAction
+        if repeatAction != nil {
+            benched = true
+            canControl = true
+        }
     }
 
     func start() {
@@ -225,7 +246,7 @@ final class ClockActivity: ObservableObject {
         defer { lastRing = rung.date }
         // Stopped or repeated in macOS's own alert: no longer said here either; unless it was Glance
         // that stopped it, to ring in its place.
-        if let rang, rung.date == rang.date, rung.dismissed, silenced != rung.date, repeatRequest == nil {
+        if let rang, rung.date == rang.date, rung.dismissed, silenced != rung.date, repeatState == .idle {
             self.rang = nil
             chime.stop()
             activities.dismiss(.timerDone)
@@ -241,15 +262,24 @@ final class ClockActivity: ObservableObject {
             repeatTask?.cancel()
             repeatTask = nil
             repeatRequest = nil
+            repeatState = .idle
         }
         rang = (rung.length, rung.title, rung.date)
         let name = rung.title ?? String(localized: "Timer")
         var alert = NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: String(localized: "\(name) done"), stays: true)
         // Rung and said, it goes by itself, its chime with it, as Stop would put it away.
         alert.expires = Self.ringsFor
+        let alertID = alert.id
         alert.expired = { [weak self] in
-            self?.dismissRing()
-            Activities.shared.dismiss(.timerDone)
+            guard let self else { return }
+            guard rang?.date == rung.date else {
+                activities.dismiss(id: alertID)
+                return
+            }
+            // An accepted command owns its lifetime. Neither a slow reply nor a failed restart
+            // takes away the person's chance to stop or retry it when the old deadline arrives.
+            guard repeatState == .idle else { return }
+            dismissRing()
         }
         activities.post(alert)
     }
@@ -273,11 +303,11 @@ final class ClockActivity: ObservableObject {
     }
 
     /// Rings as a timer does, with Clock's first sound.
-    func benchRing(length: TimeInterval) {
+    func benchRing(length: TimeInterval, title: String? = nil) {
         benched = true
         canControl = true
         timer = nil
-        say(Rung(date: .now, length: length, title: nil, dismissed: false, tone: nil))
+        say(Rung(date: .now, length: length, title: title, dismissed: false, tone: nil))
         chime.play(tone: nil)
     }
 
@@ -325,8 +355,12 @@ final class ClockActivity: ObservableObject {
     /// Repeat is complete only when Clock reports a new running timer. An acknowledged press on
     /// an old notification is not enough; retry through Clock's editor if it didn't start anything.
     func repeatTimer() {
-        guard let rang, repeatRequest == nil, allowed() else { return }
-        if benched {
+        guard let rang, repeatRequest == nil else { return }
+        guard allowed() else {
+            setRepeatState(.failed)
+            return
+        }
+        if benched, repeatAction == nil {
             self.rang = nil
             chime.stop()
             activities.dismiss(.timerDone)
@@ -336,8 +370,7 @@ final class ClockActivity: ObservableObject {
         }
         let request = UUID()
         repeatRequest = request
-        CFPreferencesAppSynchronize(Self.domain)
-        let before = Self.kept("MTTimers")
+        setRepeatState(.pending)
         repeatTask = Task { @MainActor in
             defer {
                 if repeatRequest == request {
@@ -345,13 +378,25 @@ final class ClockActivity: ObservableObject {
                     repeatRequest = nil
                 }
             }
-            let started = await Self.performTimerRepeat(
-                notification: { Self.answerAlert(.again, title: rang.title) },
-                editor: { await self.performControl(.repeatTimer(length: rang.length, title: rang.title), timer: nil) },
-                readBack: { wait in
-                    await Self.waitForRepeatedTimer(length: rang.length, title: rang.title, before: before, wait: wait)
-                })
-            guard !Task.isCancelled, repeatRequest == request, self.rang?.date == rang.date, let started else { return }
+            guard !Task.isCancelled else { return }
+            let started: Found?
+            if let repeatAction {
+                started = await repeatAction(rang.length, rang.title)
+            } else {
+                CFPreferencesAppSynchronize(Self.domain)
+                let before = Self.kept("MTTimers")
+                started = await Self.performTimerRepeat(
+                    notification: { Self.answerAlert(.again, title: rang.title) },
+                    editor: { await self.performControl(.repeatTimer(length: rang.length, title: rang.title), timer: nil) },
+                    readBack: { wait in
+                        await Self.waitForRepeatedTimer(length: rang.length, title: rang.title, before: before, wait: wait)
+                    })
+            }
+            guard !Task.isCancelled, repeatRequest == request, self.rang?.date == rang.date else { return }
+            guard let started else {
+                setRepeatState(.failed)
+                return
+            }
             self.rang = nil
             chime.stop()
             activities.dismiss(.timerDone)
@@ -360,6 +405,15 @@ final class ClockActivity: ObservableObject {
             timerTitle = started.title
             timer = started.state
         }
+    }
+
+    private func setRepeatState(_ state: RepeatState) {
+        repeatState = state
+        guard !benched, let status = state.status else { return }
+        let spoken = state == .failed ? String(localized: "Couldn't restart the timer. Try Repeat again or open Clock.") : status
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: spoken, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
     }
 
     /// The timer that rang, no longer said, and its chime stopped: macOS's own alert for it, or the
@@ -588,10 +642,23 @@ final class ClockActivity: ObservableObject {
         return true
     }
 
+    /// Clock's picker is an AXGroup. Its buttons can have a wrapper group with the same identifier,
+    /// which must not be mistaken for the actionable element.
+    enum ControlTarget {
+        case timerPicker, button(String)
+
+        func matches(identifier: String?, role: String?) -> Bool {
+            switch self {
+            case .timerPicker: identifier == "TimePicker" && role == kAXGroupRole
+            case .button(let target): identifier == target && role != nil && role != kAXGroupRole
+            }
+        }
+    }
+
     private static func press(_ control: Control, timer id: String?, in window: AXUIElement) async -> Bool {
         guard !Task.isCancelled else { return false }
-        func identified(_ identifier: String) -> (AXUIElement) -> Bool {
-            { value($0, kAXIdentifierAttribute) as? String == identifier && value($0, kAXRoleAttribute) as? String != kAXGroupRole }
+        func identified(_ target: ControlTarget) -> (AXUIElement) -> Bool {
+            { target.matches(identifier: value($0, kAXIdentifierAttribute) as? String, role: value($0, kAXRoleAttribute) as? String) }
         }
         switch control {
         case .toggleTimer, .cancelTimer:
@@ -615,7 +682,7 @@ final class ClockActivity: ObservableObject {
             }
         case .repeatTimer(let length, let title):
             // Clock keeps the length last started; its Start beside it starts it again.
-            guard let picker = await onAnyPage(in: window, find: identified("TimePicker")),
+            guard let picker = await onAnyPage(in: window, find: identified(.timerPicker)),
                 (value(picker, kAXValueAttribute) as? String).flatMap(seconds) == length,
                 let parent = value(picker, kAXParentAttribute)
             else { return false }
@@ -632,7 +699,7 @@ final class ClockActivity: ObservableObject {
                 }
             }
             guard !Task.isCancelled,
-                let freshPicker = find(in: window, where: identified("TimePicker")),
+                let freshPicker = find(in: window, where: identified(.timerPicker)),
                 (value(freshPicker, kAXValueAttribute) as? String).flatMap(seconds) == length,
                 let freshParent = value(freshPicker, kAXParentAttribute)
             else { return false }
@@ -644,13 +711,13 @@ final class ClockActivity: ObservableObject {
             } else if title != nil {
                 return false
             }
-            guard let start = find(in: freshGroup, where: identified("PauseResumeButton")) else { return false }
+            guard let start = find(in: freshGroup, where: identified(.button("PauseResumeButton"))) else { return false }
             return AXUIElementPerformAction(start, kAXPressAction as CFString) == .success
         case .stopwatch(let identifiers):
             return await performStopwatchCommands(identifiers) { identifier, index in
                 // Each found again once Clock has answered the last: it makes its buttons anew.
                 if index > 0 { try? await Task.sleep(for: .milliseconds(150)) }
-                guard let button = await onAnyPage(in: window, find: identified(identifier)) else { return .noValue }
+                guard let button = await onAnyPage(in: window, find: identified(.button(identifier))) else { return .noValue }
                 return AXUIElementPerformAction(button, kAXPressAction as CFString)
             }
         }

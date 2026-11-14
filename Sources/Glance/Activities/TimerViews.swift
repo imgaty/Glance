@@ -229,6 +229,8 @@ struct StopwatchReading: View {
 struct ClockActions {
     /// Nil follows Clock's observed permission; previews can show either state without a prompt.
     var canControl: Bool? = nil
+    /// Nil follows Clock; an isolated view can show a pending or failed repeat.
+    var repeatState: ClockActivity.RepeatState? = nil
     var toggleTimer: () -> Void = { ClockActivity.shared.toggleTimer() }
     var cancelTimer: () -> Void = { ClockActivity.shared.cancelTimer() }
     var repeatTimer: () -> Void = { ClockActivity.shared.repeatTimer() }
@@ -495,6 +497,12 @@ struct TimerDoneView: View {
     /// Which button the pointer is on.
     let hovered: AlertButton?
     var actions = ClockActions()
+    @ObservedObject private var clock = ClockActivity.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var repeatState: ClockActivity.RepeatState { actions.repeatState ?? clock.repeatState }
+    static let statusSize: CGFloat = 11
+    static let retryHint = String(localized: "Try Repeat again or open Clock to restart the timer.")
 
     var body: some View {
         let h = restingHeight
@@ -502,9 +510,16 @@ struct TimerDoneView: View {
         let nameEdge = Self.nameEdge(h)
         // Each from its end, as far as from the top and bottom; to spare, beside the camera.
         ZStack {
-            Text(name)
-                .font(NotchType.title)
-                .foregroundStyle(TimerLayout.ink)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name)
+                    .font(NotchType.title)
+                    .foregroundStyle(TimerLayout.ink)
+                if let status = repeatState.status {
+                    Text(status)
+                        .font(.system(size: Self.statusSize, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+            }
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: max(wing - nameEdge - gap, 0), alignment: .leading)
@@ -512,13 +527,23 @@ struct TimerDoneView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityHidden(true)
             HStack(spacing: h * TimerLayout.buttonGap) {
-                IslandCircle(height: h, tint: TimerLayout.ink, highlighted: hovered == .again) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: h * 0.58, weight: .semibold))
-                        .foregroundStyle(TimerLayout.ink)
+                IslandCircle(height: h, tint: TimerLayout.ink, highlighted: hovered == .again && repeatState != .pending) {
+                    if repeatState == .pending, !reduceMotion {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(TimerLayout.ink)
+                    } else {
+                        Image(systemName: repeatState == .pending ? "ellipsis" : "arrow.clockwise")
+                            .font(.system(size: h * 0.58, weight: .semibold))
+                            .foregroundStyle(TimerLayout.ink)
+                    }
                 }
                 .reportsFrame(.again)
                 .spokenButton("Repeat", action: actions.repeatTimer)
+                .accessibilityValue(repeatState.status ?? "")
+                .accessibilityHint(repeatState == .failed ? Self.retryHint : "")
+                .help(repeatState == .failed ? Self.retryHint : String(localized: "Repeat"))
+                .disabled(repeatState == .pending)
                 IslandCircle(height: h, tint: .white, highlighted: hovered == .stop) {
                     CrossGlyph(height: h)
                 }
@@ -535,9 +560,15 @@ struct TimerDoneView: View {
     /// label is cut short at its limit.
     static func wing(length: TimeInterval, name: String = String(localized: "Timer"), restingHeight h: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let words = min(
+        let titleWidth = min(
             ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 2,
             h * TimerLayout.titleLimit)
+        // Reserve the status line before the command begins so a delayed reply doesn't change
+        // the notch's width or push the Stop button away from the pointer.
+        let statusWidth = [ClockActivity.RepeatState.pending, .failed].compactMap(\.status).map {
+            ceil(($0 as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: statusSize, weight: .medium)]).width) + 2
+        }.max() ?? 0
+        let words = max(titleWidth, statusWidth)
         let left = nameEdge(h) + words + gap
         let right = gap + TimerLayout.content(h) * 2 + h * TimerLayout.buttonGap + TimerLayout.buttonEdge(h)
         return max(left, right)
