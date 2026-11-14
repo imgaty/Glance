@@ -563,7 +563,9 @@ Right-click the notch and choose **Live Activities** to open an ongoing
 activity, including one waiting behind the first two. An announcement waiting
 behind an already-open page does not block the menu or keyboard navigation.
 The **Hide** command names the activity currently open. Hiding it closes the
-notch and puts that activity away without stopping it.
+notch and puts that activity away without stopping it. If the activity ends or
+changes while the menu is open, the old command leaves its replacement alone.
+Reopen the menu to hide the replacement.
 The selected activity keeps its place in arrival order. Screen-recording
 countdowns have no expanded view and are skipped; completed or hidden
 activities leave the menu.

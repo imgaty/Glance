@@ -170,6 +170,13 @@ final class Activities: ObservableObject {
         next()
     }
 
+    /// A menu names one announcement. A later one of the same kind keeps its place.
+    func dismiss(id: NotchAlert.ID) {
+        waiting.removeAll { $0.id == id }
+        guard alert?.id == id else { return }
+        next()
+    }
+
     private func show(_ alert: NotchAlert) {
         self.alert = alert
         // Said to VoiceOver too, which can't see the notch change.

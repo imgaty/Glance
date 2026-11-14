@@ -32,8 +32,9 @@ final class StatusBarController: NSObject {
     /// For the notch's right-click.
     let menu = NSMenu()
     var onOpenSettings: (() -> Void)?
-    /// What the notch under the pointer would put away if swiped up, and putting it away.
-    var putAway: (title: () -> String?, action: () -> Void)?
+    /// A named command captured from the notch under the pointer when the menu opens.
+    var putAway: (() -> (title: String, action: () -> Void)?)?
+    private var offeredPutAway: (() -> Void)?
     var activityChoices: (() -> [(title: String, action: () -> Void)])?
     private var offeredActivities: [(title: String, action: () -> Void)] = []
 
@@ -334,7 +335,9 @@ extension StatusBarController: NSMenuDelegate {
             item.target = self
             items.append(item)
         }
-        if let title = putAway?.title() { add(title, #selector(putAwayActivity)) }
+        let hide = putAway?()
+        offeredPutAway = hide?.action
+        if let hide { add(hide.title, #selector(putAwayActivity)) }
         offeredActivities = activityChoices?() ?? []
         if !offeredActivities.isEmpty {
             let item = NSMenuItem(title: String(localized: "Live Activities"), action: nil, keyEquivalent: "")
@@ -368,7 +371,7 @@ extension StatusBarController: NSMenuDelegate {
         }
     }
 
-    @objc private func putAwayActivity() { putAway?.action() }
+    @objc private func putAwayActivity() { offeredPutAway?() }
 
     @objc private func openActivityFromMenu(_ item: NSMenuItem) {
         guard offeredActivities.indices.contains(item.tag) else { return }

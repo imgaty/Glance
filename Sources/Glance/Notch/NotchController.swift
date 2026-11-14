@@ -1984,13 +1984,16 @@ final class NotchController {
 
     /// From the menu, asked by name: what's announced folds away, or the notch's activity steps away
     /// for a moment, whatever it is, and an opened notch closes first.
-    private func hideFirst() {
-        guard let target = putAwayTarget else { return }
+    private func putAway(_ target: PutAwayTarget) {
         let wasOpen = model.state == .open
         if wasOpen { close(holdUntilExit: true) }
         switch target {
         case .alert(let kind):
-            if kind == .timerDone { ClockActivity.shared.dismissRing() } else { Activities.shared.dismiss(kind) }
+            if kind == .timerDone {
+                ClockActivity.shared.dismissRing()
+            } else if let alert = model.alert, alert.kind == kind {
+                Activities.shared.dismiss(id: alert.id)
+            }
         case .activity(let activity):
             dismiss(activity)
         }
@@ -2002,12 +2005,6 @@ final class NotchController {
     enum PutAwayTarget: Equatable {
         case alert(NotchAlert.Kind)
         case activity(NotchModel.Activity)
-    }
-
-    private var putAwayTarget: PutAwayTarget? {
-        Self.putAwayTarget(
-            state: model.state, page: model.page, expanded: model.expanded,
-            alert: model.alert?.kind, first: model.activities.first, hasMedia: nowPlaying.hasMedia)
     }
 
     nonisolated static func putAwayTarget(
@@ -2026,12 +2023,76 @@ final class NotchController {
     /// What the right-click menu offers to put away, as a swipe up on the notch would: its live
     /// activity, a call coming in, or Low Battery. None while there's nothing, or for a timer that's
     /// rung, which the menu stops itself.
-    var putAwayTitle: String? {
-        switch putAwayTarget {
-        case .alert(let kind): Self.putAwayTitle(alert: kind, first: nil)
-        case .activity(let activity): Self.putAwayTitle(alert: nil, first: activity)
-        case nil: nil
+    var putAwayCommand: (title: String, action: () -> Void)? {
+        Self.putAwayCommand(model: model, nowPlaying: nowPlaying) { [weak self] in self?.putAway($0) }
+    }
+
+    /// Menu tracking doesn't stop source updates. Keep the display and the particular item the
+    /// title named; if it ended or was replaced, the old command must not hide its successor.
+    static func putAwayCommand(
+        model: NotchModel, nowPlaying: NowPlaying, hide: @escaping (PutAwayTarget) -> Void
+    ) -> (title: String, action: () -> Void)? {
+        guard
+            let target = putAwayTarget(
+                state: model.state, page: model.page, expanded: model.expanded,
+                alert: model.alert?.kind, first: model.activities.first, hasMedia: nowPlaying.hasMedia),
+            let identity = putAwayIdentity(target, model: model, nowPlaying: nowPlaying)
+        else { return nil }
+        let title: String?
+        switch target {
+        case .alert(let kind): title = putAwayTitle(alert: kind, first: nil)
+        case .activity(let activity): title = putAwayTitle(alert: nil, first: activity)
         }
+        guard let title else { return nil }
+        return (
+            title,
+            {
+                guard putAwayIdentity(target, model: model, nowPlaying: nowPlaying) == identity else { return }
+                hide(target)
+            }
+        )
+    }
+
+    private struct PutAwayIdentity: Equatable {
+        enum Content: Equatable {
+            case alert(UUID)
+            case call(CallShown)
+            case screenRecording(ScreenRecording)
+            case voiceMemo(VoiceMemo)
+            case music(app: String?, title: String, artist: String, album: String)
+            case airdrop(String)
+            case timer(NotchTimer.State)
+            case stopwatch(Stopwatch)
+            case airplay(output: UInt32?, name: String)
+        }
+        let arrival: Int?
+        let content: Content
+    }
+
+    private static func putAwayIdentity(_ target: PutAwayTarget, model: NotchModel, nowPlaying: NowPlaying) -> PutAwayIdentity? {
+        let content: PutAwayIdentity.Content?
+        let arrival: Int?
+        switch target {
+        case .alert(let kind):
+            guard let alert = model.alert, alert.kind == kind else { return nil }
+            return PutAwayIdentity(arrival: nil, content: .alert(alert.id))
+        case .activity(let activity):
+            arrival = model.arrival(of: activity)
+            switch activity {
+            case .call: content = model.call.map(PutAwayIdentity.Content.call)
+            case .screenRecording: content = model.screenRecording.map(PutAwayIdentity.Content.screenRecording)
+            case .voiceMemo: content = model.voiceMemo.map(PutAwayIdentity.Content.voiceMemo)
+            case .music:
+                content =
+                    nowPlaying.hasMedia
+                    ? .music(app: nowPlaying.appBundleID, title: nowPlaying.title, artist: nowPlaying.artist, album: nowPlaying.album) : nil
+            case .airdrop: content = model.airdrop.map { .airdrop($0.id) }
+            case .timer: content = model.timer.map(PutAwayIdentity.Content.timer)
+            case .stopwatch: content = model.stopwatch.map(PutAwayIdentity.Content.stopwatch)
+            case .airplay: content = model.airplay.map { .airplay(output: $0.outputID, name: $0.name) }
+            }
+        }
+        return content.map { PutAwayIdentity(arrival: arrival, content: $0) }
     }
 
     nonisolated static func putAwayTitle(alert: NotchAlert.Kind?, first: NotchModel.Activity?) -> String? {
@@ -2054,9 +2115,6 @@ final class NotchController {
         case nil: return nil
         }
     }
-
-    /// From the menu, by name, for anyone who can't swipe (see `hideFirst`).
-    func putAway() { hideFirst() }
 
     /// The pointer's on an announcement, which waits for it while it has a button.
     var holdsAlert: Bool {

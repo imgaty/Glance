@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed an open Hide menu applying to a replacement activity or a different
+  display. Later queued announcements now stay in place.
+
 - Fixed long recording destination names overlapping the button that opens
   the saved file.
 

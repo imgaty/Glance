@@ -296,6 +296,9 @@ final class NotchModel: ObservableObject {
     private var arrivals: [Activity: Int] = [:]
     private var arrivalCount = 0
 
+    /// Distinguishes an activity that ended and returned while a menu was tracking.
+    func arrival(of activity: Activity) -> Int? { arrivals[activity] }
+
     /// The order they started in is kept for when Glance opens again, or the notch is made again: one
     /// still going takes its place back as it's found, if that's soon after (see `keepsOrder`). Only
     /// the notch on the screen keeps it, not Settings' pictures of it or a test's.
