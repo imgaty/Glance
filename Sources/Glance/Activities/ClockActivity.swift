@@ -7,6 +7,7 @@
 
 import AppKit
 import ApplicationServices
+import os
 
 /// macOS's own timer and stopwatch, from the Clock app, Control Center or Siri, which count beside
 /// the camera as the iPhone's do in the Dynamic Island. macOS shares them with no other app, but
@@ -47,6 +48,8 @@ final class ClockActivity: ObservableObject {
     private var silenced: Date?
     /// Reads again the moment the timer showing ends, so its ring is caught as it starts.
     private var ringCheck: Task<Void, Never>?
+    private var repeatTask: Task<Void, Never>?
+    private var repeatRequest: UUID?
     /// Whether Glance may press Clock's buttons, which macOS allows only with Accessibility.
     @Published private(set) var canControl = ActivityBench.scene != nil || AXIsProcessTrusted()
 
@@ -100,10 +103,7 @@ final class ClockActivity: ObservableObject {
         lastRead = .now
         let defaults = UserDefaults.standard
         CFPreferencesAppSynchronize(Self.domain)
-        func kept(_ key: String) -> [[String: Any]] {
-            (CFPreferencesCopyAppValue(key as CFString, Self.domain) as? [String: Any])?[key] as? [[String: Any]] ?? []
-        }
-        let timers = defaults.bool(forKey: Preferences.activityClockTimers) ? kept("MTTimers") : []
+        let timers = defaults.bool(forKey: Preferences.activityClockTimers) ? Self.kept("MTTimers") : []
         let current = Self.timer(in: timers)
         var nextTimer = current?.state
         shownID = current?.id
@@ -129,7 +129,7 @@ final class ClockActivity: ObservableObject {
             }
         }
 
-        var nextStopwatch = defaults.bool(forKey: Preferences.activityStopwatch) ? Stopwatch.current(in: kept("MTStopwatches")) : nil
+        var nextStopwatch = defaults.bool(forKey: Preferences.activityStopwatch) ? Stopwatch.current(in: Self.kept("MTStopwatches")) : nil
         if let expected = expectedStopwatch {
             if Date.now < expected.until, !Stopwatch.alike(nextStopwatch, expected.state) {
                 nextStopwatch = expected.state
@@ -145,6 +145,10 @@ final class ClockActivity: ObservableObject {
             nextHide = .now + 3
             Self.hideMenuBarTimer()
         }
+    }
+
+    private static func kept(_ key: String) -> [[String: Any]] {
+        (CFPreferencesCopyAppValue(key as CFString, domain) as? [String: Any])?[key] as? [[String: Any]] ?? []
     }
 
     /// A timer macOS keeps: how it stands, the id Clock knows it by, and its label.
@@ -221,7 +225,7 @@ final class ClockActivity: ObservableObject {
         defer { lastRing = rung.date }
         // Stopped or repeated in macOS's own alert: no longer said here either; unless it was Glance
         // that stopped it, to ring in its place.
-        if let rang, rung.date == rang.date, rung.dismissed, silenced != rung.date {
+        if let rang, rung.date == rang.date, rung.dismissed, silenced != rung.date, repeatRequest == nil {
             self.rang = nil
             chime.stop()
             activities.dismiss(.timerDone)
@@ -233,6 +237,11 @@ final class ClockActivity: ObservableObject {
     }
 
     private func say(_ rung: Rung) {
+        if rang?.date != rung.date {
+            repeatTask?.cancel()
+            repeatTask = nil
+            repeatRequest = nil
+        }
         rang = (rung.length, rung.title, rung.date)
         let name = rung.title ?? String(localized: "Timer")
         var alert = NotchAlert(kind: .timerDone, content: .timerDone(length: rung.length, name: name), spoken: String(localized: "\(name) done"), stays: true)
@@ -313,23 +322,53 @@ final class ClockActivity: ObservableObject {
         control(.cancelTimer)
     }
 
-    /// The timer that rang, started again, as the Timer's Repeat does: with macOS's own alert's
-    /// Repeat, which stops its chime too; once that's gone, the length Clock is set to starts again,
-    /// with its label, if it's that one's; otherwise Clock comes forward on its timers.
+    /// Repeat is complete only when Clock reports a new running timer. An acknowledged press on
+    /// an old notification is not enough; retry through Clock's editor if it didn't start anything.
     func repeatTimer() {
-        guard let rang, allowed() else { return }
-        self.rang = nil
-        chime.stop()
-        activities.dismiss(.timerDone)
-        expect(timer: .running(until: .now + rang.length, total: rang.length))
-        if !benched, Self.answerAlert(.again, title: rang.title) { return }
-        control(.repeatTimer(length: rang.length, title: rang.title))
+        guard let rang, repeatRequest == nil, allowed() else { return }
+        if benched {
+            self.rang = nil
+            chime.stop()
+            activities.dismiss(.timerDone)
+            timerTitle = rang.title
+            expect(timer: .running(until: .now + rang.length, total: rang.length))
+            return
+        }
+        let request = UUID()
+        repeatRequest = request
+        CFPreferencesAppSynchronize(Self.domain)
+        let before = Self.kept("MTTimers")
+        repeatTask = Task { @MainActor in
+            defer {
+                if repeatRequest == request {
+                    repeatTask = nil
+                    repeatRequest = nil
+                }
+            }
+            let started = await Self.performTimerRepeat(
+                notification: { Self.answerAlert(.again, title: rang.title) },
+                editor: { await self.performControl(.repeatTimer(length: rang.length, title: rang.title), timer: nil) },
+                readBack: { wait in
+                    await Self.waitForRepeatedTimer(length: rang.length, title: rang.title, before: before, wait: wait)
+                })
+            guard !Task.isCancelled, repeatRequest == request, self.rang?.date == rang.date, let started else { return }
+            self.rang = nil
+            chime.stop()
+            activities.dismiss(.timerDone)
+            expectedTimer = nil
+            shownID = started.id
+            timerTitle = started.title
+            timer = started.state
+        }
     }
 
     /// The timer that rang, no longer said, and its chime stopped: macOS's own alert for it, or the
     /// notch's in its place.
     func dismissRing() {
         guard let rang else { return }
+        repeatTask?.cancel()
+        repeatTask = nil
+        repeatRequest = nil
         self.rang = nil
         chime.stop()
         activities.dismiss(.timerDone)
@@ -409,6 +448,7 @@ final class ClockActivity: ObservableObject {
 
     private static let clock = URL(fileURLWithPath: "/System/Applications/Clock.app")
     private static let clockID = "com.apple.clock"
+    private static let repeatLog = Logger(subsystem: "dev.vibe.Glance", category: "clockRepeat")
 
     /// Clock is opened, hidden, if it isn't already, and shown for a moment, without coming forward,
     /// as its buttons answer only then; then hidden again. Its window comes and goes behind every
@@ -419,26 +459,8 @@ final class ClockActivity: ObservableObject {
         let id = shownID
         let timerExpectation = expectedTimer?.until
         let stopwatchExpectation = expectedStopwatch?.until
-        quitClock?.cancel()
         Task { @MainActor in
-            if NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).isEmpty {
-                let config = NSWorkspace.OpenConfiguration()
-                config.activates = false
-                config.hides = true
-                config.addsToRecentItems = false
-                _ = try? await NSWorkspace.shared.openApplication(at: Self.clock, configuration: config)
-                openedClock = true
-            }
-            var pressed = false
-            if let clock = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).first {
-                pressed = await Self.press(control, timer: id, in: clock)
-                // Set to another length, Clock is brought forward on its timers, to start it there.
-                if !pressed, case .repeatTimer = control {
-                    openedClock = false
-                    clock.unhide()
-                    clock.activate()
-                }
-            }
+            let pressed = await performControl(control, timer: id)
             if !pressed {
                 // A failed older request must not discard a newer button press's prediction.
                 switch control {
@@ -449,7 +471,31 @@ final class ClockActivity: ObservableObject {
                 }
             }
             read()
-            guard openedClock else { return }
+        }
+    }
+
+    private func performControl(_ control: Control, timer id: String?) async -> Bool {
+        guard !Task.isCancelled else { return false }
+        quitClock?.cancel()
+        if NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).isEmpty {
+            let config = NSWorkspace.OpenConfiguration()
+            config.activates = false
+            config.hides = true
+            config.addsToRecentItems = false
+            _ = try? await NSWorkspace.shared.openApplication(at: Self.clock, configuration: config)
+            openedClock = true
+        }
+        var pressed = false
+        if !Task.isCancelled, let clock = NSRunningApplication.runningApplications(withBundleIdentifier: Self.clockID).first {
+            pressed = await Self.press(control, timer: id, in: clock)
+            // A different editor length or unavailable action is left for the person to resolve.
+            if !Task.isCancelled, !pressed, case .repeatTimer = control {
+                openedClock = false
+                clock.unhide()
+                clock.activate()
+            }
+        }
+        if openedClock {
             quitClock?.cancel()
             quitClock = Task { @MainActor in
                 try? await Task.sleep(for: .seconds(30))
@@ -460,6 +506,51 @@ final class ClockActivity: ObservableObject {
                 if clock?.isHidden == true { clock?.terminate() }
             }
         }
+        return pressed
+    }
+
+    /// Read-back is authoritative even when AX accepted a command. An unchanged timer that was
+    /// already running before Repeat isn't confirmation of another one being started.
+    static func repeatedTimer(in kept: [[String: Any]], before: [[String: Any]], length: TimeInterval, title: String?, at now: Date = .now) -> Found? {
+        let previous = before.compactMap { timer(in: [$0], at: now) }
+        return kept.compactMap { timer(in: [$0], at: now) }.first { candidate in
+            guard case .running(let until, let total) = candidate.state, total == length, candidate.title == title else { return false }
+            return !previous.contains { old in
+                guard case .running(let oldUntil, _) = old.state else { return false }
+                return old.id == candidate.id && oldUntil == until
+            }
+        }
+    }
+
+    static func performTimerRepeat(
+        notification: () -> Bool, editor: () async -> Bool, readBack: (_ wait: Bool) async -> Found?
+    ) async -> Found? {
+        guard !Task.isCancelled else { return nil }
+        let accepted = notification()
+        repeatLog.info("Notification Repeat acknowledged: \(accepted)")
+        let notified = await readBack(accepted)
+        guard !Task.isCancelled else { return nil }
+        if let notified {
+            repeatLog.info("Notification Repeat confirmed by Clock")
+            return notified
+        }
+        let editorAccepted = await editor()
+        repeatLog.info("Editor Start acknowledged: \(editorAccepted)")
+        guard !Task.isCancelled else { return nil }
+        let started = await readBack(true)
+        guard !Task.isCancelled else { return nil }
+        repeatLog.info("Editor restart confirmed by Clock: \(started != nil)")
+        return started
+    }
+
+    private static func waitForRepeatedTimer(length: TimeInterval, title: String?, before: [[String: Any]], wait: Bool) async -> Found? {
+        for attempt in 0..<(wait ? 20 : 1) {
+            guard !Task.isCancelled else { return nil }
+            CFPreferencesAppSynchronize(domain)
+            if let started = repeatedTimer(in: kept("MTTimers"), before: before, length: length, title: title) { return started }
+            if attempt < 19, wait { try? await Task.sleep(for: .milliseconds(100)) }
+        }
+        return nil
     }
 
     /// Presses the button in Clock, with Clock shown for the moment it takes. Whether it succeeded.
@@ -469,11 +560,12 @@ final class ClockActivity: ObservableObject {
         // Its window, once it's open.
         var window: AXUIElement?
         for _ in 0..<30 {
+            guard !Task.isCancelled else { return false }
             window = (value(app, kAXWindowsAttribute) as? [AXUIElement])?.first
             if window != nil { break }
             try? await Task.sleep(for: .milliseconds(100))
         }
-        guard let window else { return false }
+        guard let window, !Task.isCancelled else { return false }
         let hidden = clock.isHidden
         if hidden {
             AXUIElementSetAttributeValue(app, kAXHiddenAttribute as CFString, kCFBooleanFalse)
@@ -497,6 +589,7 @@ final class ClockActivity: ObservableObject {
     }
 
     private static func press(_ control: Control, timer id: String?, in window: AXUIElement) async -> Bool {
+        guard !Task.isCancelled else { return false }
         func identified(_ identifier: String) -> (AXUIElement) -> Bool {
             { value($0, kAXIdentifierAttribute) as? String == identifier && value($0, kAXRoleAttribute) as? String != kAXGroupRole }
         }
@@ -527,10 +620,31 @@ final class ClockActivity: ObservableObject {
                 let parent = value(picker, kAXParentAttribute)
             else { return false }
             let group = parent as! AXUIElement
-            guard let start = find(in: group, where: identified("PauseResumeButton")) else { return false }
+            guard !Task.isCancelled else { return false }
             if let label = find(in: group, where: { value($0, kAXRoleAttribute) as? String == kAXTextFieldRole }) {
-                guard AXUIElementSetAttributeValue(label, kAXValueAttribute as CFString, (title ?? "") as CFString) == .success else { return false }
+                let current = (value(label, kAXValueAttribute) as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                if current != (title ?? "") {
+                    let result = AXUIElementSetAttributeValue(label, kAXValueAttribute as CFString, (title ?? "") as CFString)
+                    repeatLog.info("Editor label write AX result: \(result.rawValue)")
+                    guard result == .success else { return false }
+                    // Changing the label rebuilds Clock's SwiftUI controls; don't press the old Start.
+                    try? await Task.sleep(for: .milliseconds(150))
+                }
             }
+            guard !Task.isCancelled,
+                let freshPicker = find(in: window, where: identified("TimePicker")),
+                (value(freshPicker, kAXValueAttribute) as? String).flatMap(seconds) == length,
+                let freshParent = value(freshPicker, kAXParentAttribute)
+            else { return false }
+            let freshGroup = freshParent as! AXUIElement
+            if let label = find(in: freshGroup, where: { value($0, kAXRoleAttribute) as? String == kAXTextFieldRole }) {
+                let actual = (value(label, kAXValueAttribute) as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                repeatLog.info("Editor label read-back matches: \(actual == (title ?? ""))")
+                guard actual == (title ?? "") else { return false }
+            } else if title != nil {
+                return false
+            }
+            guard let start = find(in: freshGroup, where: identified("PauseResumeButton")) else { return false }
             return AXUIElementPerformAction(start, kAXPressAction as CFString) == .success
         case .stopwatch(let identifiers):
             return await performStopwatchCommands(identifiers) { identifier, index in
@@ -555,6 +669,7 @@ final class ClockActivity: ObservableObject {
         // Its pages are the toolbar's choices.
         let pages = findAll(in: window) { value($0, kAXRoleAttribute) as? String == kAXRadioButtonRole }
         for page in pages {
+            guard !Task.isCancelled else { return nil }
             guard AXUIElementPerformAction(page, kAXPressAction as CFString) == .success else { continue }
             try? await Task.sleep(for: .milliseconds(200))
             if let found = find(in: window, where: match) { return found }

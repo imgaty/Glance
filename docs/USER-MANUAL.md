@@ -635,6 +635,10 @@ When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
 and rings with the timer's sound, as chosen in Clock, in place of macOS's own
 alert, which it takes away. Click **Repeat** to start the same length again, or
 **✕** to stop it; both leave the notch closed. Opening the notch stops it too.
+Repeat keeps the timer's name and waits for Clock to confirm that it restarted.
+If Clock's old notification doesn't restart it, Glance tries Clock's timer
+editor. If neither starts it, the done timer stays available to retry or stop
+instead of showing a countdown that isn't running in Clock.
 Left alone, it goes by itself after ten seconds and stops ringing, as **✕**
 would, though not while the pointer is on it.
 

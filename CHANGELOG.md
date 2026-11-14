@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Fixed Repeat briefly showing a countdown when Clock hadn't restarted the
+  timer. Repeat now checks Clock's running state, retries through its editor
+  when needed, and keeps the timer's name.
+
 - Fixed compact recording countdowns and elapsed times keeping an old
   VoiceOver label as their visible clocks advanced. Expanded recording
   descriptions now keep their elapsed times current too.
