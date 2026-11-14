@@ -281,6 +281,24 @@ struct RecordingMark: View {
     var leadingOnly = false
 
     var body: some View {
+        // The visible countdown and elapsed time update inside their own timelines. Keep the
+        // enclosing spoken status on the same seconds without replacing those visual views.
+        TimelineView(.periodic(from: readingStart, by: 1)) { context in
+            drawing
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(recording.spoken(at: context.date))
+        }
+    }
+
+    private var readingStart: Date {
+        switch recording {
+        case .voiceMemo(.recording(let since)), .screen(.recording(let since)): since
+        case .screen(.countdown(let from, let until)): until - Double(from)
+        default: .now
+        }
+    }
+
+    @ViewBuilder private var drawing: some View {
         let h = restingHeight
         let text = LiveActivityView.textSize(for: h)
         ZStack {
@@ -332,8 +350,6 @@ struct RecordingMark: View {
             }
         }
         .frame(maxHeight: .infinity)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(recording.spoken())
     }
 }
 

@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed compact recording countdowns and elapsed times keeping an old
+  VoiceOver label as their visible clocks advanced.
+
 - Fixed VoiceOver repeating scrolling song titles and artist names.
 
 - Fixed an open Hide menu applying to a replacement activity or a different

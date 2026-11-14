@@ -712,7 +712,9 @@ While you record the screen with macOS's Screenshot (Shift-Command-5), the notch
 shows it as the iPhone does: a red dot at its left end, pulsing faintly for as
 long as it records. Before that, while macOS counts down to the recording, the
 count shows in a ring; it has nothing to open to, so hovering or clicking keeps
-it in place. VoiceOver reads it as status, not as a button. Once you stop,
+it in place. VoiceOver reads it as status, not as a button, and its count stays
+current as the visible number changes. Compact recording and memo labels also
+keep their elapsed times current. Once you stop,
 it opens by itself,
 with `Saving Recording…` under the time and the ring around the button going
 round; then the square in the ring grows into the recording's first picture, and
