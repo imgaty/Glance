@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Shortened opening and closing, keeping a small bounce only as the notch
+  expands. Moving between the tray and player now keeps the notch open,
+  including when the pointer remains over the wider tray.
+
 - Fixed a later timer ringing behind an earlier failed repeat, which could
   leave the earlier timer's name above the later timer's controls.
 

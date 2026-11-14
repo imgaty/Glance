@@ -87,6 +87,8 @@ final class NotchController {
     private var openTask: Task<Void, Never>?
     /// The pointer's intended target when a hover or hold began, before any temporary housing fold.
     private var openingZone: CGRect?
+    /// A narrower destination must not interpret the page-changing pointer as a departure.
+    private var pageTurnZone: CGRect?
     private var closeTask: Task<Void, Never>?
     private var pollTimer: Timer?
     /// After an explicit close, stay shut until the pointer leaves the notch.
@@ -1006,10 +1008,11 @@ final class NotchController {
                 if model.state == .peek { settle(at: p) } else { model.approach(closeness(to: p)) }
             }
         case .open:
+            pageTurnZone = pageTurnZone.flatMap { Self.pageNavigationZone(from: $0, to: openZone, pointer: p) }
             // Once the pointer has been on it, it closes as usual when the pointer leaves.
             if openZone.contains(p) { holds.subtract([.keyboard, .touch, .presented]) }
             // Share's picker over it holds it open too, as a menu from it does.
-            if !holds.isEmpty || Tray.shared.sharing || openZone.contains(p) {
+            if !holds.isEmpty || Tray.shared.sharing || openZone.contains(p) || pageTurnZone != nil {
                 closeTask?.cancel()
                 closeTask = nil
             } else if closeTask == nil {
@@ -1636,6 +1639,7 @@ final class NotchController {
     }
 
     private func close(holdUntilExit hold: Bool, intoHousing: Bool = false) {
+        pageTurnZone = nil
         giveBackKeys()
         // A menu's hold lasts until the menu is gone (see `menuClosed`).
         holds.subtract([.keyboard, .touch, .drag])
@@ -2173,7 +2177,7 @@ final class NotchController {
     /// Where three-finger swipes are the notch's: all of it, while it's open with the tray on.
     private var swipeZone: CGRect? {
         guard model.state == .open, !model.activityControlsHidden, Tray.isOn, UserDefaults.standard.bool(forKey: Preferences.swipeToSwitch) else { return nil }
-        return openZone
+        return pageTurnZone ?? openZone
     }
 
     /// Three fingers on the open notch: the page follows them, and turns as a pull down opens the
@@ -2235,9 +2239,21 @@ final class NotchController {
         (swipe >= 0 ? 1 : -1) * 20 * (1 - 1 / (abs(swipe) * 0.012 + 1))
     }
 
-    /// To the other page, folding to the housing before easing into the new page's width.
+    /// Keep the same open surface while its page and width change.
     private func turn(to page: NotchPage) {
+        let previousZone = pageTurnZone ?? openZone
+        closeTask?.cancel()
+        closeTask = nil
         model.turn(to: page)
+        if model.state == .open {
+            pageTurnZone = Self.pageNavigationZone(from: previousZone, to: openZone, pointer: NSEvent.mouseLocation)
+        }
+    }
+
+    /// Preserve the old footprint until the pointer enters the new page or leaves both pages.
+    nonisolated static func pageNavigationZone(from original: CGRect, to destination: CGRect, pointer: CGPoint) -> CGRect? {
+        guard !destination.contains(pointer), original.contains(pointer) else { return nil }
+        return original.union(destination)
     }
 
     private func scrollTray(by delta: CGFloat) {

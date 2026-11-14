@@ -103,8 +103,9 @@ collapse. The contents and detached bubble follow the same motion.
 This also applies to detached activities and
 device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a
-new action replaces an unfinished transition. Between the player and the tray,
-they slide and fade when no activity is showing. With
+new action replaces an unfinished transition. Opening and closing take less than
+half a second at the default speed. Moving between the player and the tray keeps
+the notch open, including while music or another activity is showing. With
 Reduce Motion on, they only fade, and nothing bounces: the notch, the bubbles and
 the cover settle straight where they're going, the star glows without swelling,
 the skip arrows stay where they are, and the welcome tour's pages fade rather

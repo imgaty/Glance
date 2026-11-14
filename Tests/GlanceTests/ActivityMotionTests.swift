@@ -222,6 +222,51 @@ struct ActivityMotionTests {
         #expect(model.airdrop?.fraction == 0.8)
     }
 
+    @Test("Tray and player navigation stays open without folding or hiding controls")
+    func pageNavigationStaysOpen() async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        install(.music, in: model)
+        model.open()
+        try await finishFold(model)
+        for page in [NotchPage.tray, .player, .tray, .player] {
+            model.turn(to: page)
+            #expect(model.state == .open)
+            #expect(model.page == page)
+            #expect(!model.activityFolded && !model.activityOpening)
+            #expect(!model.activityControlsHidden)
+            #expect(model.activityTransitionTask == nil)
+            #expect(model.metrics.height > model.closedSize.height)
+        }
+    }
+
+    @Test("Navigating during opening cancels the old deferred presentation")
+    func pageNavigationDuringOpening() async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        install(.timer, in: model)
+        model.expanded = .timer
+        model.open()
+        let oldOpening = try #require(model.activityTransitionTask)
+        model.turn(to: .tray)
+        await oldOpening.value
+        #expect(model.state == .open && model.page == .tray)
+        #expect(model.expanded == nil)
+        #expect(!model.activityControlsHidden && !model.activityFolded)
+        #expect(model.activityTransitionTask == nil)
+    }
+
+    @Test("A tray-to-player swipe preserves the pointer's old footprint until it leaves or enters the player")
+    func pageNavigationPointer() {
+        let tray = CGRect(x: 100, y: 0, width: 700, height: 180)
+        let player = CGRect(x: 200, y: 0, width: 500, height: 160)
+        let retained = NotchController.pageNavigationZone(from: tray, to: player, pointer: CGPoint(x: 750, y: 100))
+        #expect(retained == tray)
+        #expect(NotchController.pageNavigationZone(from: tray, to: player, pointer: CGPoint(x: 500, y: 100)) == nil)
+        #expect(NotchController.pageNavigationZone(from: tray, to: player, pointer: CGPoint(x: 850, y: 100)) == nil)
+        #expect(NotchController.pageNavigationZone(from: tray, to: player, pointer: CGPoint(x: 750, y: 220)) == nil)
+    }
+
     @Test("Rapid reversal and queued selections settle on the latest target without reordering")
     func latestSelectionWins() async throws {
         let model = model()

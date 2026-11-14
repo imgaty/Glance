@@ -619,8 +619,8 @@ enum NotchMotion {
     /// at a time.
     nonisolated(unsafe) static var pace: Double = 1
 
-    static let foldDuration = 0.28
-    static let expandDuration = 0.48
+    static let foldDuration = 0.16
+    static let expandDuration = 0.28
 }
 
 extension Animation {
@@ -633,7 +633,7 @@ extension NotchMotion {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: expandDuration)
         }
-        return .spring(response: 0.45, dampingFraction: 0.7).paced
+        return .spring(duration: expandDuration, bounce: 0.15).paced
     }
 
     /// A compact return travels only a little beyond its endpoint; expanded openings keep their
@@ -642,7 +642,7 @@ extension NotchMotion {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: expandDuration)
         }
-        return .spring(response: 0.42, dampingFraction: 0.78).paced
+        return .spring(duration: expandDuration, bounce: 0.05).paced
     }
 
     static var fold: Animation { eased(duration: foldDuration) }
@@ -650,7 +650,7 @@ extension NotchMotion {
 
     /// Starts and stops at rest, with one speed peak and no travel beyond either endpoint.
     private static func eased(duration: Double) -> Animation {
-        .timingCurve(0.42, 0, 0.58, 1, duration: duration).paced
+        .easeInOut(duration: duration).paced
     }
 
     /// A spring that bounces, or with Reduce Motion on, that settles straight where it's going.
@@ -666,7 +666,13 @@ extension NotchModel {
     /// The page turn used by gestures, shortcuts and Settings, including Tray's switch.
     func turn(to page: NotchPage, animated: Bool = true) {
         guard self.page != page || expanded != nil else { return }
-        changeActivityPresentation(animation: animated ? NotchMotion.expand : nil) {
+        // The tray and player are pages of the same open surface, not separate arrivals.
+        // Interrupt a pending activity reveal without taking navigation through the housing.
+        let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        var transaction = Transaction(animation: animated && !reduced ? .smooth(duration: 0.22).paced : nil)
+        transaction.disablesAnimations = !animated || reduced
+        withTransaction(transaction) {
+            if state == .open { cancelActivityTransition() }
             expanded = nil
             self.page = page
             stretch = 0
