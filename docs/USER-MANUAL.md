@@ -667,8 +667,10 @@ as Repeat and Stop.
 
 ### Alarms
 
-When Clock presents an identifiable ringing alarm notification, Glance shows
-its name beside the camera. Open it to use **Snooze** or **Stop**, when the
+When Clock presents an identifiable ringing alarm, Glance shows its time or
+name beside the camera. The menu-bar alarm currently offers **Open Clock**;
+Glance does not invent actions that its source cannot expose. For a ringing
+notification with advertised controls, open it to use **Snooze** or **Stop**, when the
 native alert offers those actions, or **Open Clock**. Actions always target the
 alarm you opened. While an action is pending, its controls are disabled;
 Glance waits for the native alert to disappear before clearing it. A failed
@@ -694,8 +696,10 @@ sends an audio signature to Shazam. **Cancel** ends listening; a match, no-match
 or failure stays visible until **Done**. A match can open its Music link.
 Opening or closing the notch never starts a recognition session by itself.
 
-Recognition needs a network connection and ShazamKit availability for this
-build. Sessions started in Control Center remain separate.
+Recognition needs a network connection and ShazamKit authorization for this
+build. If that authorization is missing, Glance explains that recognition is
+unavailable in the build and offers **Done**. Sessions started in Control
+Center remain separate.
 
 ### Running shortcuts
 
@@ -707,7 +711,9 @@ view a saved result after completion. **Done** dismisses a finished run.
 Glance tracks its own launched processes, not runs started elsewhere. **Stop**
 is an interruption request, and the activity keeps showing that request until
 the process ends. Turning this activity off hides it without interrupting a
-running shortcut. Shortcuts may ask for their own permissions or input.
+running shortcut. Existing runs keep their **Stop**, **Show Result** and
+**Done** commands in the menu even when their display is off. Shortcuts may
+ask for their own permissions or input.
 
 ### Focus
 

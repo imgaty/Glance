@@ -291,7 +291,9 @@ extension StatusBarController: NSMenuDelegate {
         recognize.isEnabled = canLaunchActivity?() == true && UserDefaults.standard.bool(forKey: Preferences.activityRecognition)
         items.append(recognize)
         let shortcuts = NSMenuItem(title: String(localized: "Run Shortcut"), action: nil, keyEquivalent: "")
-        shortcuts.isEnabled = canLaunchActivity?() == true && UserDefaults.standard.bool(forKey: Preferences.activityShortcuts)
+        // Existing invocations stay manageable when their display or the notch is disabled.
+        // The submenu revalidates availability only for launching a new shortcut.
+        shortcuts.isEnabled = true
         shortcuts.submenu = ShortcutActivity.shared.makeRunMenu(
             canRun: { [weak self] in self?.canLaunchActivity?() == true },
             open: { [weak self] id in self?.onOpenShortcut?(id) }

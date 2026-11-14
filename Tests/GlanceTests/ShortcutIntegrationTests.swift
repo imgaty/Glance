@@ -24,7 +24,7 @@ struct ShortcutIntegrationTests {
         model.open()
         #expect(model.expanded == .shortcut)
         #expect(!model.expandedGone)
-        #expect(model.metrics.height == ShortcutRunView.height(restingHeight: model.closedSize.height))
+        #expect(model.metrics.height == ShortcutRunView.height(restingHeight: model.closedSize.height, shown: model.shortcut))
         #expect(model.activities == [.music, .shortcut])
         model.close()
         #expect(model.detached == .shortcut)

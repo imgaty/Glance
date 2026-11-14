@@ -618,7 +618,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded == .printing:
                 (PrintJobView.width(camera: camera) + pull * 0.35 + across, PrintJobView.height(restingHeight: closedSize.height) + pull)
             case .open where expanded == .shortcut:
-                (ShortcutRunView.width(camera: camera) + pull * 0.35 + across, ShortcutRunView.height(restingHeight: closedSize.height) + pull)
+                (ShortcutRunView.width(camera: camera) + pull * 0.35 + across, ShortcutRunView.height(restingHeight: closedSize.height, shown: shortcut) + pull)
             case .open where expanded == .recognition:
                 (MusicRecognitionActivityView.width(camera: camera) + pull * 0.35 + across, MusicRecognitionActivityView.height(restingHeight: closedSize.height) + pull)
             case .open where expanded.flatMap(recording(of:)) != nil:
@@ -1329,7 +1329,7 @@ struct NotchView: View {
                 showResult: { if !activityPreview { ShortcutActivity.shared.showResult(shortcut.run.id) } }
             )
             .padding(.top, model.closedSize.height + LiveActivityView.cameraGap)
-            .frame(width: ShortcutRunView.width(camera: model.camera), height: ShortcutRunView.height(restingHeight: model.closedSize.height), alignment: .top)
+            .frame(width: ShortcutRunView.width(camera: model.camera), height: ShortcutRunView.height(restingHeight: model.closedSize.height, shown: shortcut), alignment: .top)
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)

@@ -436,9 +436,29 @@ private final class ShortcutRunMenu: NSMenu, NSMenuDelegate {
         if let runs = activity?.runs, !runs.isEmpty {
             disabled(String(localized: "Runs Started in Glance"))
             for run in runs {
-                let item = NSMenuItem(title: "\(run.shortcut.name) — \(run.state.title)", action: #selector(selectRun(_:)), keyEquivalent: "")
-                item.target = self
+                let item = NSMenuItem(title: "\(run.shortcut.name) — \(run.state.title)", action: nil, keyEquivalent: "")
                 item.representedObject = run.id
+                let controls = NSMenu(title: run.shortcut.name)
+                controls.autoenablesItems = false
+                func command(_ title: String, _ action: Selector, id: String, enabled: Bool = true) {
+                    let command = NSMenuItem(title: title, action: action, keyEquivalent: "")
+                    command.target = self
+                    command.representedObject = run.id
+                    command.identifier = NSUserInterfaceItemIdentifier(id)
+                    command.isEnabled = enabled
+                    controls.addItem(command)
+                }
+                command(String(localized: "Show Activity"), #selector(selectRun(_:)), id: "show-shortcut-activity", enabled: canRun())
+                if run.exit?.output != nil {
+                    command(String(localized: "Show Result"), #selector(showResult(_:)), id: "show-shortcut-result")
+                }
+                if run.state.active {
+                    let title = run.state == .stopDelayed ? String(localized: "Try Stopping Again") : String(localized: "Stop")
+                    command(title, #selector(stopRun(_:)), id: "stop-shortcut", enabled: run.canStop)
+                } else {
+                    command(String(localized: "Done"), #selector(dismissRun(_:)), id: "dismiss-shortcut")
+                }
+                item.submenu = controls
                 addItem(item)
             }
             addItem(.separator())
@@ -469,9 +489,21 @@ private final class ShortcutRunMenu: NSMenu, NSMenuDelegate {
         addItem(item)
     }
     @objc private func selectRun(_ item: NSMenuItem) {
-        guard let id = item.representedObject as? UUID, let activity else { return }
+        guard canRun(), let id = item.representedObject as? UUID, let activity else { return }
         activity.select(id)
         open(id)
+    }
+    @objc private func stopRun(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? UUID else { return }
+        activity?.stop(id)
+    }
+    @objc private func dismissRun(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? UUID else { return }
+        activity?.dismiss(id)
+    }
+    @objc private func showResult(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? UUID else { return }
+        activity?.showResult(id)
     }
     @objc private func runShortcut(_ item: NSMenuItem) {
         guard canRun(), let shortcut = item.representedObject as? ShortcutDefinition, let activity else { return }

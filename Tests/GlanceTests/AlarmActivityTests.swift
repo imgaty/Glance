@@ -36,6 +36,82 @@ struct AlarmActivityTests {
         #expect(identified("Clock, Alarm", actions: ["AXPress", "AXCancel"]) == nil)
     }
 
+    @Test("Only the observed ClockAngel alarm pill is a read-only alarm source")
+    func menuPillContract() {
+        var snapshot = AlarmPillSnapshot(identifier: AlarmPillSnapshot.identifier, symbols: ["alarm.fill"], texts: ["16:05"])
+        #expect(snapshot.title == "16:05")
+        snapshot.identifier = "live-activity-pill-com.example.Clock"
+        #expect(snapshot.title == nil)
+        snapshot.identifier = AlarmPillSnapshot.identifier
+        snapshot.symbols = ["timer"]
+        #expect(snapshot.title == nil)
+        snapshot.symbols = ["stopwatch.fill"]
+        #expect(snapshot.title == nil)
+        snapshot.symbols = ["alarm.fill", "zzz"]
+        #expect(snapshot.title == nil)
+        snapshot.symbols = ["alarm.fill"]
+        snapshot.texts = [" "]
+        #expect(snapshot.title == nil)
+        snapshot.texts = ["16:05", "Unverified extra state"]
+        #expect(snapshot.title == nil)
+    }
+
+    @Test("Pill identity survives a failed read but not disappearance or changed native content")
+    func menuPillIdentity() throws {
+        var ledger = AlarmPillLedger<String>()
+        let snapshot = AlarmPillSnapshot(identifier: AlarmPillSnapshot.identifier, symbols: ["alarm.fill"], texts: ["16:05"])
+        func first(_ reading: AlarmActivity.Reading) throws -> AlarmActivity.Alarm {
+            guard case .available(let alarms, _) = reading else { throw WaitError.timeout }
+            return try #require(alarms.first)
+        }
+        let initial = try first(ledger.read([("pid:element", snapshot)]))
+        #expect(initial.actions.isEmpty)
+        #expect(try first(ledger.read([("pid:element", snapshot)])) == initial)
+        #expect(ledger.read(nil) == .unavailable)
+        #expect(try first(ledger.read([("pid:element", snapshot)])) == initial)
+        var changed = snapshot
+        changed.texts = ["16:15"]
+        #expect(try first(ledger.read([("pid:element", changed)])).id != initial.id)
+        #expect(ledger.read([]) == .available([], observedIDs: []))
+        let returned = try first(ledger.read([("pid:element", snapshot)]))
+        #expect(returned.id != initial.id)
+        #expect(try first(ledger.read([("different-pid:element", snapshot)])).id != returned.id)
+    }
+
+    @Test("An observed menu alarm displays and recovers without inventing Stop or Snooze")
+    func readOnlyMenuAlarmRecovery() async throws {
+        var ledger = AlarmPillLedger<String>()
+        let snapshot = AlarmPillSnapshot(identifier: AlarmPillSnapshot.identifier, symbols: ["alarm.fill"], texts: ["16:05"])
+        guard case .available(let alarms, _) = ledger.read([("pid:element", snapshot)]) else { throw WaitError.timeout }
+        let source = Source(alarms)
+        let activity = AlarmActivity(backend: source.backend)
+        activity.refresh()
+        try await settle { !activity.isRefreshing }
+        let shown = try #require(activity.shown)
+        #expect(shown.alarm.title == "16:05")
+        #expect(AlarmActivityView.controls(for: shown) == [.activityThird])
+        activity.perform(.stop, expectedID: shown.alarm.id)
+        activity.perform(.snooze, expectedID: shown.alarm.id)
+        #expect(source.commands.isEmpty)
+        source.available = false
+        activity.refresh()
+        try await settle { !activity.isRefreshing }
+        #expect(activity.shown?.sourceAvailable == false)
+        #expect(activity.shown?.alarm.id == shown.alarm.id)
+        source.available = true
+        activity.refresh()
+        try await settle { !activity.isRefreshing }
+        #expect(activity.shown?.sourceAvailable == true)
+        #expect(!activity.canPerform(.stop) && !activity.canPerform(.snooze))
+        activity.openClock()
+        #expect(source.openCount == 1)
+        source.alarms = []
+        activity.refresh()
+        try await settle { !activity.isRefreshing }
+        #expect(activity.shown == nil)
+        activity.stop()
+    }
+
     @Test("A changed or replaced alert is revalidated before sending its command")
     func staleTarget() async throws {
         let source = Source([alarm])

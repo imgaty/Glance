@@ -13,6 +13,12 @@
 - Fixed native music restoration waiting behind failed hiding, and stale
   hiding commands running after the display or preference changed.
 
+- Fixed alarm discovery on the menu bar, missing state changes in compact
+  activities, and shortcuts losing their menu controls when their display was
+  turned off.
+- Fixed recognition repeatedly offering retry when this build lacks service
+  authorization.
+
 - Added ringing Clock alarms, local print jobs, Focus announcements, music
   recognition and shortcuts started from Glance, with native controls and
   settings for each activity. Existing system activities stay available.

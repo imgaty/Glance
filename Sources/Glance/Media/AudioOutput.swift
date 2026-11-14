@@ -785,7 +785,7 @@ enum SoundInk {
         switch self {
         case .primary, .speaker: .primary
         case .secondary, .heading, .symbol: .secondary
-        case .fill: Color(nsColor: .quaternaryLabelColor)
+        case .fill: Color(nsColor: .controlColor)
         }
     }
 }

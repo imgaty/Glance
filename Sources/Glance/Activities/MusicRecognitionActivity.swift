@@ -49,12 +49,13 @@ final class MusicRecognitionActivity: ObservableObject {
     }
 
     enum Failure: Equatable, Sendable {
-        case connection, recognition
+        case connection, recognition, configuration
 
         var title: String {
             switch self {
             case .connection: String(localized: "Connection Problem")
             case .recognition: String(localized: "Couldn’t Recognize Music")
+            case .configuration: String(localized: "Music Recognition Unavailable")
             }
         }
 
@@ -62,6 +63,7 @@ final class MusicRecognitionActivity: ObservableObject {
             switch self {
             case .connection: String(localized: "Check your internet connection, then try again.")
             case .recognition: String(localized: "Music recognition is unavailable right now. Try again.")
+            case .configuration: String(localized: "Music recognition isn’t available in this build of Glance.")
             }
         }
     }
@@ -301,6 +303,15 @@ final class MusicRecognitionActivity: ObservableObject {
     static func failure(for error: Error) -> Failure {
         var current = error as NSError
         for _ in 0..<8 {
+            // 202 alone is a general match failure, not proof of a signing problem. Only
+            // the explicitly observed framework diagnostic supports this nonretryable state.
+            if current.domain == SHError.errorDomain, current.code == SHError.Code.matchAttemptFailed.rawValue {
+                let messages = [NSLocalizedDescriptionKey, NSLocalizedFailureReasonErrorKey, NSDebugDescriptionErrorKey]
+                    .compactMap { current.userInfo[$0] as? String }
+                if messages.contains(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare("Missing entitlements") == .orderedSame }) {
+                    return .configuration
+                }
+            }
             if current.domain == NSURLErrorDomain,
                 [
                     NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost, NSURLErrorCannotConnectToHost,

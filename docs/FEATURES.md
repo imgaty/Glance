@@ -96,8 +96,10 @@ podcast plays, the buttons show dimmed.
 **Copies from other devices.** What you copy on an iPhone or iPad, through
 Universal Clipboard, isn't kept in the tray.
 
-**Clock's alarms.** Glance observes identifiable ringing notifications through
-Accessibility. It cannot read the scheduled alarm list or infer a snoozed
+**Clock's alarms.** Glance observes identifiable ringing notifications and the
+menu-bar alarm through Accessibility. Menu-bar alarms offer Open Clock; only
+notifications with advertised actions offer Stop or Snooze. Glance cannot
+read the scheduled alarm list or infer a snoozed
 countdown. Native Clock alerts remain available when observation or controls
 are unavailable.
 

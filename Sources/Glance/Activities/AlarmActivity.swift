@@ -23,6 +23,47 @@ struct AlarmShown: Equatable {
     }
 }
 
+/// The compact contract observed through MenuBarAgent on macOS 27. A Clock provider can also
+/// display a timer or stopwatch, so its provider identifier alone is not an alarm capability.
+struct AlarmPillSnapshot: Equatable, Sendable {
+    static let identifier = "live-activity-pill-com.apple.ClockAngel"
+    var identifier: String
+    var symbols: [String]
+    var texts: [String]
+
+    var title: String? {
+        guard identifier == Self.identifier, symbols == ["alarm.fill"], texts.count == 1 else { return nil }
+        let title = texts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? nil : title
+    }
+}
+
+/// A successful absence or changed native content starts a new presentation identity. A failed
+/// read does neither. This is an observation identity, never an invented Clock alarm UUID.
+struct AlarmPillLedger<Key: Hashable> {
+    private var known: [Key: AlarmActivity.Alarm] = [:]
+
+    mutating func read(_ snapshots: [(Key, AlarmPillSnapshot)]?) -> AlarmActivity.Reading {
+        guard let snapshots else { return .unavailable }
+        var next: [Key: AlarmActivity.Alarm] = [:]
+        var alarms: [AlarmActivity.Alarm] = []
+        for (key, snapshot) in snapshots {
+            guard let title = snapshot.title, next[key] == nil else { continue }
+            let alarm: AlarmActivity.Alarm
+            if let previous = known[key], previous.title == title {
+                alarm = previous
+            } else {
+                // No Stop/Snooze was observed on this compact element. Open Clock remains useful.
+                alarm = .init(id: "menu-alarm:\(UUID())", title: title, actions: [])
+            }
+            next[key] = alarm
+            alarms.append(alarm)
+        }
+        known = next
+        return .available(alarms, observedIDs: Set(alarms.map(\.id)))
+    }
+}
+
 /// Clock's currently displayed alarm alerts. Native notifications remain visible and own their
 /// sound and lifetime; an acknowledged button press never invents a snoozed countdown.
 @MainActor
@@ -332,6 +373,9 @@ final class AlarmActivity: ObservableObject {
         private lazy var stopNames = names(["Stop", "stop", "stop.button"])
         private lazy var repeatNames = names(["Repeat", "repeat"])
         private lazy var alarmNames = names(["Alarm", "alarm.image"])
+        private var pills = AlarmPillLedger<String>()
+        private enum Source { case menu, notification }
+        private var lastSource: Source?
 
         private enum Unavailable: Error { case cancelled, timeout, limit, attribute }
 
@@ -371,7 +415,117 @@ final class AlarmActivity: ObservableObject {
         func read() -> Reading { snapshot().reading }
 
         private func snapshot() -> Readback {
-            do { return try collect() } catch { return Readback(reading: .unavailable) }
+            guard AXIsProcessTrusted(), !Task.isCancelled else { return Readback(reading: .unavailable) }
+            let menu: Reading
+            do { menu = pills.read(try collectPills()) } catch { menu = pills.read(nil) }
+            if case .available(let alarms, _) = menu, !alarms.isEmpty {
+                lastSource = .menu
+                return Readback(reading: menu)
+            }
+            if lastSource == .menu {
+                // Only the same complete source can confirm that a known pill disappeared.
+                if case .available = menu { lastSource = nil }
+                return Readback(reading: menu)
+            }
+            do {
+                let notices = try collect()
+                if case .available(let alarms, _) = notices.reading {
+                    lastSource = alarms.isEmpty ? nil : .notification
+                    return notices
+                }
+            } catch {}
+            // An unreadable NotificationCenter cannot erase a known notification, but must not
+            // prevent a successfully read MenuBarAgent source from beginning its observation.
+            return Readback(reading: lastSource == .notification ? .unavailable : menu)
+        }
+
+        private func collectPills() throws -> [(String, AlarmPillSnapshot)] {
+            let budget = Budget()
+            try budget.check()
+            guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return [] }
+            let app = AXUIElementCreateApplication(agent.processIdentifier)
+            // The observed alarm pill is a direct application child, not a NotificationCenter
+            // window. Also include the menu extras tree used by other display arrangements.
+            var roots = [app]
+            var incomplete = false
+            do {
+                if let windows = try value(app, kAXWindowsAttribute, budget: budget) {
+                    guard let windows = windows as? [AXUIElement], windows.count <= 32 else { throw Unavailable.attribute }
+                    roots += windows
+                }
+            } catch { incomplete = true }
+            do {
+                if let extras = try value(app, kAXExtrasMenuBarAttribute, budget: budget) {
+                    guard CFGetTypeID(extras) == AXUIElementGetTypeID() else { throw Unavailable.attribute }
+                    roots.append(extras as! AXUIElement)
+                }
+            } catch { incomplete = true }
+            var pending = roots.reversed().map { ($0, 0) }
+            var seen = Set<AXUIElement>()
+            var found: [(String, AlarmPillSnapshot)] = []
+            while let (element, depth) = pending.popLast() {
+                try budget.check()
+                guard seen.insert(element).inserted else { continue }
+                guard seen.count <= 512 else { throw Unavailable.limit }
+                var owner: pid_t = 0
+                guard AXUIElementGetPid(element, &owner) == .success else { throw Unavailable.attribute }
+                if owner == getpid() { continue }
+                if let identifier = try value(element, kAXIdentifierAttribute, budget: budget) as? String,
+                    identifier.hasPrefix("live-activity-pill-")
+                {
+                    if identifier == AlarmPillSnapshot.identifier {
+                        let snapshot = try pillSnapshot(element, identifier: identifier, budget: budget)
+                        found.append(("\(agent.processIdentifier):\(CFHash(element))", snapshot))
+                    }
+                    // Other apps' rich live activity subtrees are unrelated to an alarm.
+                    continue
+                }
+                let children = try children(element, budget: budget)
+                guard children.isEmpty || depth < 12, seen.count + pending.count + children.count <= 1024 else { throw Unavailable.limit }
+                pending += children.reversed().map { ($0, depth + 1) }
+            }
+            try budget.check()
+            // An optional tree failing cannot hide the alarm found in the observed app root.
+            // Without a found pill, however, that failure is not proof of source disappearance.
+            if incomplete && found.isEmpty { throw Unavailable.attribute }
+            return found
+        }
+
+        private func children(_ element: AXUIElement, budget: Budget) throws -> [AXUIElement] {
+            guard let children = try value(element, kAXChildrenAttribute, budget: budget) else { return [] }
+            guard let children = children as? [AXUIElement] else { throw Unavailable.attribute }
+            return children
+        }
+
+        private func pillSnapshot(_ pill: AXUIElement, identifier: String, budget: Budget) throws -> AlarmPillSnapshot {
+            var symbols: [String] = [], texts: [String] = []
+            var pending = [(pill, 0)]
+            var seen = Set<AXUIElement>()
+            while let (element, depth) = pending.popLast() {
+                try budget.check()
+                guard seen.insert(element).inserted else { continue }
+                guard seen.count <= 64 else { throw Unavailable.limit }
+                var owner: pid_t = 0
+                guard AXUIElementGetPid(element, &owner) == .success else { throw Unavailable.attribute }
+                if owner == getpid() { continue }
+                switch try value(element, kAXRoleAttribute, budget: budget) as? String {
+                case kAXImageRole:
+                    // The native Expanded image has no symbol ID; it advertises no command here.
+                    if let symbol = try value(element, kAXIdentifierAttribute, budget: budget) as? String { symbols.append(symbol) }
+                case kAXStaticTextRole:
+                    guard let text = try value(element, kAXValueAttribute, budget: budget) as? String else { throw Unavailable.attribute }
+                    texts.append(text)
+                default: break
+                }
+                let children = try children(element, budget: budget)
+                guard children.isEmpty || depth < 6 else { throw Unavailable.limit }
+                pending += children.reversed().map { ($0, depth + 1) }
+            }
+            if symbols.contains("alarm.fill"), texts.count != 1 || texts[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                // An incompletely constructed alarm is not evidence that the previous one ended.
+                throw Unavailable.attribute
+            }
+            return AlarmPillSnapshot(identifier: identifier, symbols: symbols, texts: texts)
         }
 
         private func value(_ element: AXUIElement, _ attribute: String, budget: Budget) throws -> CFTypeRef? {

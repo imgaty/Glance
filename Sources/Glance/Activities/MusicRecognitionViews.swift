@@ -17,14 +17,14 @@ struct MusicRecognitionCompactView: View {
     var body: some View {
         Group {
             if minimal {
-                Image(systemName: "music.note")
+                MusicRecognitionGlyph(state: state, minimal: true)
             } else {
                 ZStack {
-                    Image(systemName: "music.note")
+                    MusicRecognitionGlyph(state: state)
                         .frame(width: max(restingHeight - LiveActivityView.inset * 2, 0))
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if !leadingOnly {
-                        Text(state.title)
+                        Text(MusicRecognitionGlyph.caption(for: state))
                             .lineLimit(1)
                             .frame(width: Self.wing - LiveActivityView.inset * 2, alignment: .trailing)
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -37,6 +37,53 @@ struct MusicRecognitionCompactView: View {
         .foregroundStyle(.primary)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "Music recognition, \(state.title)"))
+    }
+}
+
+/// A native state cue stays meaningful when the activity loses its text wing.
+struct MusicRecognitionGlyph: View {
+    let state: MusicRecognitionActivity.State
+    var minimal = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static func symbol(for state: MusicRecognitionActivity.State) -> String {
+        switch state {
+        case .idle: "music.note"
+        case .requestingPermission: "mic"
+        case .recognizing: "waveform"
+        case .match: "checkmark.circle.fill"
+        case .noMatch: "questionmark.circle"
+        case .denied, .restricted: "mic.slash"
+        case .failure: "exclamationmark.triangle.fill"
+        case .cancelled: "stop.circle.fill"
+        }
+    }
+
+    static func caption(for state: MusicRecognitionActivity.State) -> String {
+        switch state {
+        case .idle: String(localized: "Recognize")
+        case .requestingPermission: String(localized: "Microphone")
+        case .recognizing: String(localized: "Listening…")
+        case .match: String(localized: "Song Found")
+        case .noMatch: String(localized: "No Match")
+        case .denied: String(localized: "Mic Off")
+        case .restricted: String(localized: "Restricted")
+        case .failure: String(localized: "Unavailable")
+        case .cancelled: String(localized: "Stopped")
+        }
+    }
+
+    var body: some View {
+        Group {
+            if state == .recognizing, !minimal, !reduceMotion {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: Self.symbol(for: state))
+            }
+        }
+        .font(.body)
+        .foregroundStyle(.primary)
+        .accessibilityHidden(true)
     }
 }
 
@@ -63,7 +110,7 @@ struct MusicRecognitionActivityView: View {
         case .idle: return [.recognize]
         case .match(let song): return song.musicURL != nil || song.webURL != nil ? [.openSong, .done] : [.done]
         case .denied: return [.settings, .recognize, .done]
-        case .restricted: return [.done]
+        case .restricted, .failure(.configuration): return [.done]
         default: return [.recognize, .done]
         }
     }

@@ -207,6 +207,49 @@ struct ShortcutActivityTests {
         source.finish(0)
     }
 
+    @Test("Existing runs can be stopped and dismissed through their native menu while their display is disabled")
+    func hiddenRunMenuControls() throws {
+        let source = Source()
+        var enabled = true
+        let activity = ShortcutActivity(source: source, isEnabled: { enabled })
+        let first = activity.run(definition)
+        let second = activity.run(definition)
+        enabled = false
+        activity.settingsChanged()
+        #expect(activity.shown == nil)
+        let menu = activity.makeRunMenu(canRun: { false })
+        let group = try #require(menu.items.first { ($0.representedObject as? UUID) == first }?.submenu)
+        #expect(group.items.first { $0.identifier?.rawValue == "show-shortcut-activity" }?.isEnabled == false)
+        let stop = try #require(group.items.firstIndex { $0.identifier?.rawValue == "stop-shortcut" })
+        #expect(group.items[stop].isEnabled)
+        group.performActionForItem(at: stop)
+        #expect(source.handles[0].interrupts == 1)
+        #expect(source.handles[1].interrupts == 0)
+        source.finish(0, status: SIGINT, reason: .signal)
+        group.performActionForItem(at: stop)
+        #expect(source.handles[0].interrupts == 1)
+        let refreshed = activity.makeRunMenu(canRun: { false })
+        let ended = try #require(refreshed.items.first { ($0.representedObject as? UUID) == first }?.submenu)
+        let done = try #require(ended.items.firstIndex { $0.identifier?.rawValue == "dismiss-shortcut" })
+        ended.performActionForItem(at: done)
+        #expect(activity.runs.map(\.id) == [second])
+        source.finish(1)
+    }
+
+    @Test("The native result action targets its captured completed run without a visible notch")
+    func hiddenResultMenuControl() throws {
+        let activity = ShortcutActivity(source: Source(), isEnabled: { false })
+        let first = ShortcutRun.fixture(state: .completed, withOutput: true)
+        let second = ShortcutRun.fixture(state: .completed, ordinal: 1, withOutput: true)
+        activity.bench([first, second], selected: second.id)
+        let menu = activity.makeRunMenu(canRun: { false })
+        let group = try #require(menu.items.first { ($0.representedObject as? UUID) == first.id }?.submenu)
+        let result = try #require(group.items.firstIndex { $0.identifier?.rawValue == "show-shortcut-result" })
+        group.performActionForItem(at: result)
+        #expect(activity.benchActions == ["showResult:\(first.id.uuidString)"])
+        #expect(activity.shown?.run.id == second.id)
+    }
+
     @Test("Keyboard controls match visible enabled controls in their visual order")
     func controlStates() {
         func shown(_ state: ShortcutRun.State, output: Bool = false) -> ShortcutShown {

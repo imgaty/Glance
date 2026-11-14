@@ -124,15 +124,10 @@ struct IslandBubble: View {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if let keptAlarm {
                             AlarmCompactView(shown: keptAlarm, minimal: true)
-                        } else if keptPrint != nil {
-                            Image(systemName: "printer.fill")
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                        } else if keptShortcut != nil {
-                            Image(nsImage: NSWorkspace.shared.icon(forFile: "/System/Applications/Shortcuts.app"))
-                                .resizable().scaledToFit()
-                                .frame(width: max(0, h - LiveActivityView.inset * 2), height: max(0, h - LiveActivityView.inset * 2))
-                                .accessibilityHidden(true)
+                        } else if let keptPrint {
+                            PrintJobGlyph(shown: keptPrint, minimal: true)
+                        } else if let keptShortcut {
+                            ShortcutRunGlyph(state: keptShortcut.run.state, minimal: true)
                         } else if let keptRecognition {
                             MusicRecognitionCompactView(state: keptRecognition, minimal: true)
                         } else if keptRoute != nil {

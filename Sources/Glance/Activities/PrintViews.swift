@@ -16,12 +16,11 @@ struct PrintJobMark: View {
 
     var body: some View {
         ZStack {
-            Image(systemName: "printer.fill")
-                .accessibilityHidden(true)
+            PrintJobGlyph(shown: shown)
                 .frame(width: max(restingHeight - LiveActivityView.inset * 2, 0))
                 .frame(maxWidth: .infinity, alignment: .leading)
             if !leadingOnly {
-                Text(shown.job.displayPrinter)
+                Text(PrintJobGlyph.caption(for: shown))
                     .lineLimit(1)
                     .frame(width: Self.wing - LiveActivityView.inset * 2, alignment: .trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -31,6 +30,65 @@ struct PrintJobMark: View {
         .font(.body)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(shown.spoken)
+        .help(shown.spoken)
+    }
+}
+
+/// Native symbols distinguish interrupted work even when its text wing is detached.
+struct PrintJobGlyph: View {
+    let shown: PrintShown
+    var minimal = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static func symbol(for shown: PrintShown) -> String {
+        if !shown.sourceAvailable { return "questionmark.circle" }
+        if shown.cancellation == .pending { return "stop.circle" }
+        if shown.cancellation == .failed || shown.openFailed { return "exclamationmark.triangle.fill" }
+        switch shown.job.state {
+        case .queued: return "clock"
+        case .held: return "pause.circle.fill"
+        case .printing: return "printer.fill"
+        case .stopped: return "stop.circle.fill"
+        case .canceled: return "minus.circle"
+        case .failed: return "xmark.circle.fill"
+        case .completed: return "checkmark.circle.fill"
+        }
+    }
+
+    static func caption(for shown: PrintShown) -> String {
+        if !shown.sourceAvailable { return String(localized: "Unavailable") }
+        if shown.cancellation == .pending { return String(localized: "Canceling…") }
+        if shown.cancellation == .failed { return String(localized: "Cancel Failed") }
+        if shown.openFailed { return String(localized: "Open Failed") }
+        switch shown.job.state {
+        case .queued: return String(localized: "Waiting")
+        case .held: return String(localized: "On Hold")
+        case .printing: return String(localized: "Printing")
+        case .stopped: return String(localized: "Stopped")
+        case .canceled: return String(localized: "Canceled")
+        case .failed: return String(localized: "Failed")
+        case .completed: return String(localized: "Complete")
+        }
+    }
+
+    var body: some View {
+        Group {
+            if !minimal, shown.sourceAvailable, shown.cancellation == .idle, !shown.openFailed, shown.job.state == .printing {
+                if let progress = shown.job.progress {
+                    Text(progress.fraction, format: .percent.precision(.fractionLength(0)))
+                        .font(.caption.weight(.medium)).monospacedDigit()
+                } else if !reduceMotion {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: Self.symbol(for: shown))
+                }
+            } else {
+                Image(systemName: Self.symbol(for: shown))
+            }
+        }
+        .font(.body)
+        .foregroundStyle(.primary)
+        .accessibilityHidden(true)
     }
 }
 

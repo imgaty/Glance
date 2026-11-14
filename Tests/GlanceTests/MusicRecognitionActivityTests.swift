@@ -188,6 +188,17 @@ struct MusicRecognitionActivityTests {
         #expect(MusicRecognitionActivity.failure(for: underlying) == .connection)
     }
 
+    @Test("Only the explicit Shazam missing-entitlements diagnostic becomes a nonretryable build failure")
+    func configurationFailure() {
+        let missing = NSError(domain: "com.apple.ShazamKit", code: 202, userInfo: [NSDebugDescriptionErrorKey: "Missing entitlements"])
+        #expect(MusicRecognitionActivity.failure(for: missing) == .configuration)
+        #expect(MusicRecognitionActivity.failure(for: NSError(domain: "com.apple.ShazamKit", code: 202)) == .recognition)
+        #expect(MusicRecognitionActivity.failure(for: NSError(domain: "AnotherService", code: 202, userInfo: [NSDebugDescriptionErrorKey: "Missing entitlements"])) == .recognition)
+        #expect(MusicRecognitionActivity.failure(for: NSError(domain: "com.apple.ShazamKit", code: 202, userInfo: [NSDebugDescriptionErrorKey: "Catalog unavailable"])) == .recognition)
+        #expect(MusicRecognitionActivityView.actions(for: .failure(.configuration)) == [.done])
+        #expect(MusicRecognitionActivityView.controls(for: .failure(.configuration)) == [.activityFirst])
+    }
+
     @Test("Missing match metadata stays optional and non-web actions are discarded")
     func optionalMetadata() {
         let partial = MusicRecognitionActivity.Song(
