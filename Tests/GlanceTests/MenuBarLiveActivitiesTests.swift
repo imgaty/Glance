@@ -60,7 +60,7 @@ struct MenuBarLiveActivitiesTests {
 
     @Test("Screenshot's existing authorization is untouched when Glance doesn't own it", arguments: [false, true])
     func preserveScreenshot(hiding: Bool) {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: hiding, hidden: [], screenshot: "Screenshot")
+        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: hiding, hidden: [], screenshot: "Screenshot", eligible: ["Now Playing"])
         // Nil means no AX read or press is requested for either an enabled or disabled switch.
         #expect(policy.target(for: "Screenshot") == nil)
         #expect(policy.target(for: "Now Playing") == (hiding ? false : nil))
@@ -69,7 +69,7 @@ struct MenuBarLiveActivitiesTests {
 
     @Test("An owned Screenshot change is restored while other activities remain hidden", arguments: [false, true])
     func migrateScreenshot(alreadyEnabled: Bool) {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Screenshot"], screenshot: "Screenshot")
+        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Screenshot"], screenshot: "Screenshot", eligible: ["Now Playing"])
         var switches = ["Screenshot": alreadyEnabled, "Now Playing": true, "Already off": false]
         var result = MenuBarLiveActivities.SwitchResult(hidden: policy.hidden)
         for name in ["Screenshot", "Now Playing", "Already off"] {
@@ -81,13 +81,13 @@ struct MenuBarLiveActivitiesTests {
         #expect(switches == ["Screenshot": true, "Now Playing": false, "Already off": false])
         #expect(result.hidden == ["Now Playing"])
         #expect(policy.isComplete(result))
-        let next = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: result.hidden, screenshot: "Screenshot")
+        let next = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: result.hidden, screenshot: "Screenshot", eligible: ["Now Playing"])
         #expect(next.target(for: "Screenshot") == nil)
     }
 
     @Test("Missing or unconfirmed Screenshot restoration remains pending")
     func retryScreenshotMigration() {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Screenshot", "Now Playing"], screenshot: "Screenshot")
+        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Screenshot", "Now Playing"], screenshot: "Screenshot", eligible: ["Now Playing"])
         var missing = MenuBarLiveActivities.SwitchResult(hidden: policy.hidden)
         missing.record(name: "Now Playing", off: true, changed: false, confirmed: true)
         #expect(!policy.isComplete(missing))
@@ -101,7 +101,7 @@ struct MenuBarLiveActivitiesTests {
 
     @Test("Turning hiding off restores only owned changes")
     func restoreOwnedSwitches() {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: false, hidden: ["Now Playing"], screenshot: "Screenshot")
+        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: false, hidden: ["Now Playing"], screenshot: "Screenshot", eligible: ["Now Playing"])
         #expect(policy.target(for: "Now Playing") == true)
         #expect(policy.target(for: "Screenshot") == nil)
         #expect(policy.target(for: "Other app") == nil)
@@ -118,4 +118,18 @@ struct MenuBarLiveActivitiesTests {
         #expect(owned.target(for: name) == true)
         #expect(!owned.isComplete(.init(hidden: [name])))
     }
+    @Test("Unsupported and different-session activities stay native, restoring only owned changes")
+    func preserveUnsupported() {
+        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Clock", "Shortcuts"], screenshot: "Screenshot", eligible: ["Now Playing"])
+        #expect(policy.target(for: "Clock") == true)
+        #expect(policy.target(for: "Shortcuts") == true)
+        #expect(policy.target(for: "Journal") == nil)
+        #expect(policy.target(for: "Music Recognition") == nil)
+        #expect(!policy.isComplete(.init(hidden: ["Clock"])))
+        #expect(policy.isComplete(.init(hidden: ["Now Playing"])))
+        let absent = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Now Playing"], screenshot: "Screenshot")
+        #expect(absent.target(for: "Now Playing") == true)
+        #expect(!absent.isComplete(.init(hidden: ["Now Playing"])))
+    }
+
 }

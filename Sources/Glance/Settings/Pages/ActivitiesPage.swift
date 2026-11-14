@@ -62,7 +62,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $hidesSystemActivities) {
                     Text("Hide native Live Activities")
-                    Text("Hides activities from the menu bar, except screen recording so its indicator and Stop button stay available.")
+                    Text("Hides native Now Playing while its replacement is visible in Glance. Other activities keep their native controls.")
                 }
                 // Said only when it's in the way.
                 if hidesSystemActivities, !accessibilityAllowed {

@@ -2120,6 +2120,15 @@ final class NotchController {
         }
     }
 
+    /// Only a visible player or compact music activity replaces native Now Playing.
+    var replacesNativeMusic: Bool {
+        guard panel.isVisible, !tucked, !model.collapsed, model.alert == nil,
+            nowPlaying.hasMedia, nowPlaying.isPlaying
+        else { return false }
+        if model.state == .open { return model.page == .player && model.expanded == nil }
+        return model.activities.prefix(2).contains(.music)
+    }
+
     /// The pointer's on an announcement, which waits for it while it has a button.
     var holdsAlert: Bool {
         model.alert != nil && (model.hoveredButton != nil || interactiveZone.contains(NSEvent.mouseLocation))

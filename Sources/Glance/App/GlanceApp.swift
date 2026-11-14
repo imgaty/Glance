@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar.putAway = { [notches] in notches.putAwayCommand }
         statusBar.activityChoices = { [notches] in notches.activityChoices }
         notches.start()
+        MenuBarLiveActivities.shared.replacements = { [notches] in notches.nativeActivityReplacements }
         Tray.shared.start()
         NSApp.servicesProvider = trayService
         NSUpdateDynamicServices()
@@ -735,6 +736,9 @@ final class NotchManager {
     /// What the menu offers to put away on that notch, and putting it away.
     var putAwayCommand: (title: String, action: () -> Void)? { pointed?.putAwayCommand }
     var activityChoices: [(title: String, action: () -> Void)] { pointed?.activityChoices ?? [] }
+    var nativeActivityReplacements: Set<String> {
+        controllers.contains(where: \.replacesNativeMusic) ? [MenuBarLiveActivities.nowPlayingName] : []
+    }
 
     func perform(_ action: Shortcuts.Action) {
         let location = NSEvent.mouseLocation

@@ -8,24 +8,19 @@
 import AppKit
 import ApplicationServices
 
-/// macOS's own Live Activities in the menu bar, from macOS 27.3, which say what the notch says: Now
-/// Playing, a screen recording and the like. The only switches macOS honors for them are System
-/// Settings' own, under Menu Bar > Live Activities, one for each app (the private call behind them
-/// takes Apple's entitlement, and a pill takes no Accessibility action but Press). So while Hide
-/// macOS's Live Activities is on, Glance turns those switches off as soon as a pill shows, pressing
-/// them through Accessibility in a System Settings of its own, opened in the background beside any
-/// the user has open and quit after. Turned back off, it turns on again the ones it turned off.
-/// Screenshot is always left alone: its authorization also supplies the recording indicator
-/// Glance follows, and macOS doesn't reliably replace a denied Live Activity with a legacy stop
-/// item. If an older Glance version turned Screenshot off, only that owned change is restored.
-/// Behind a full-screen app, that System Settings' window opens on another Space, where
-/// Accessibility can take many seconds to see it; if it never does, Glance waits for the Space to
-/// change, or a minute, before trying again, rather than opening System Settings over and over.
-/// macOS's microphone and camera indicator isn't one of these: it has no switch, and hiding it is
-/// kept to Apple's own processes.
+/// Hide a native activity only while its verified replacement is visible in Glance.
+/// App-wide switches cannot distinguish individual Clock alarms, Shortcuts runs or recording
+/// sessions, so those remain native. Previously owned changes are restored and verified.
 @MainActor
 final class MenuBarLiveActivities {
     static let shared = MenuBarLiveActivities()
+    var replacements: () -> Set<String> = { [] }
+    private var previousReplacements: Set<String> = []
+
+    static var nowPlayingName: String {
+        let bundle = Bundle(path: "/System/Library/ExtensionKit/Extensions/ControlCenterSettings.appex")
+        return bundle?.localizedString(forKey: "Now Playing", value: "Now Playing", table: "Localizable") ?? "Now Playing"
+    }
 
     private static let pane = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!
     private static let settingsApp = "com.apple.systempreferences"
@@ -42,7 +37,7 @@ final class MenuBarLiveActivities {
     private nonisolated static let patience: Duration = .seconds(20)
     private static let retryDelay: TimeInterval = 60
     private var wasOn = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
-    /// Every eligible switch is to be turned off, not only those whose pill shows.
+    /// The visible replacement set needs reconciliation even before a native pill appears.
     private var allPending = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
 
     /// Screenshot's pill's app.
@@ -66,7 +61,7 @@ final class MenuBarLiveActivities {
                 let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
                 guard on != MenuBarLiveActivities.shared.wasOn else { return }
                 MenuBarLiveActivities.shared.wasOn = on
-                // Turned on, every eligible switch goes off at once.
+                // Reconcile the currently visible replacements when this setting changes.
                 MenuBarLiveActivities.shared.allPending = on
                 MenuBarLiveActivities.shared.retryAfter = .distantPast
                 MenuBarLiveActivities.shared.check()
@@ -88,6 +83,11 @@ final class MenuBarLiveActivities {
         guard !working, Date.now >= retryAfter, AXIsProcessTrusted() else { return }
         let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
+        let eligible = replacements().subtracting([Self.screenshotName])
+        if eligible != previousReplacements {
+            previousReplacements = eligible
+            allPending = true
+        }
         guard on || !hidden.isEmpty else { return }
         working = true
         Task {
@@ -105,11 +105,11 @@ final class MenuBarLiveActivities {
             var reached = true
             // Also migrate an owned Screenshot change when no pill can appear because its
             // authorization was disabled. A user-disabled, unowned switch is never enabled.
-            if on, showing || allPending || hidden.contains(Self.screenshotName) {
-                reached = await switchApps(off: true)
+            if on, showing || allPending || hidden.contains(where: { !eligible.contains($0) }) {
+                reached = await switchApps(off: true, eligible: eligible)
                 if reached { allPending = false }
             } else if !on {
-                reached = await switchApps(off: false)
+                reached = await switchApps(off: false, eligible: [])
             }
             if !reached { retryAfter = .now + Self.retryDelay }
         }
@@ -147,9 +147,8 @@ final class MenuBarLiveActivities {
         return bundle?.localizedString(forKey: "Live Activities", value: "Live Activities", table: "Localizable") ?? "Live Activities"
     }
 
-    /// Reconciles eligible switches in a background System Settings of Glance's own. Screenshot is
-    /// only restored if Glance disabled it; other apps follow the hide preference and owned list.
-    private func switchApps(off: Bool) async -> Bool {
+    /// Reconciles verified replacements, restoring unsupported switches Glance previously changed.
+    private func switchApps(off: Bool, eligible: Set<String>) async -> Bool {
         guard let settings = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.settingsApp) else { return false }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
@@ -172,7 +171,7 @@ final class MenuBarLiveActivities {
         }.value
         guard !rows.isEmpty else { return false }
         let hidden = UserDefaults.standard.stringArray(forKey: Self.turnedOffKey) ?? []
-        let policy = SwitchPolicy(hiding: off, hidden: hidden, screenshot: Self.screenshotName)
+        let policy = SwitchPolicy(hiding: off, hidden: hidden, screenshot: Self.screenshotName, eligible: eligible.intersection(replacements()))
         let result = await Task.detached { () -> SwitchResult in
             var result = SwitchResult(hidden: hidden)
             for row in rows {
@@ -206,16 +205,17 @@ final class MenuBarLiveActivities {
         let hiding: Bool
         let hidden: [String]
         let screenshot: String
+        var eligible: Set<String> = []
 
         /// Nil leaves the user's current setting untouched, including a disabled Screenshot.
         func target(for name: String) -> Bool? {
             if name == screenshot { return hidden.contains(name) ? true : nil }
-            if hiding { return false }
+            if hiding, eligible.contains(name) { return false }
             return hidden.contains(name) ? true : nil
         }
 
         func isComplete(_ result: SwitchResult) -> Bool {
-            !result.failed && (hiding ? !result.hidden.contains(screenshot) : result.hidden.isEmpty)
+            !result.failed && (hiding ? result.hidden.allSatisfy { $0 != screenshot && eligible.contains($0) } : result.hidden.isEmpty)
         }
     }
 
