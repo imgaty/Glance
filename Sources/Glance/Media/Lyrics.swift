@@ -154,9 +154,14 @@ final class LyricsStore: ObservableObject {
 
     init() {}
 
-    init(demo lyrics: TimedLyrics, credits: Credits) {
+    convenience init(demo lyrics: TimedLyrics, credits: Credits) {
+        self.init(demoContent: .timed(lyrics), credits: credits)
+    }
+
+    /// An isolated presentation of any lyric state, without looking up a song or its credits.
+    init(demoContent content: Content, credits: Credits = Credits()) {
         isDemo = true
-        content = .timed(lyrics)
+        self.content = content
         self.credits = credits
     }
 

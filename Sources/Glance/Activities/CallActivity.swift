@@ -952,9 +952,9 @@ final class CallMicrophone: ObservableObject {
     /// At the bench and in tests, the real microphone is never touched.
     private let fakes: Bool
 
-    init(fakes: Bool) {
+    init(fakes: Bool, fakeAvailable: Bool = true) {
         self.fakes = fakes
-        if fakes { available = true }
+        if fakes { available = fakeAvailable }
     }
 
     private static var muteAddress: AudioObjectPropertyAddress {

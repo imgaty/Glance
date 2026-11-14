@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Added isolated previews for unavailable call controls and lyric loading and
+  error states.
+
 - Fixed the Hide command naming a different activity from the one it hid,
   and fixed Hide Music only closing the expanded player.
 

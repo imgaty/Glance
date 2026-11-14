@@ -486,6 +486,8 @@ moment it appears.
 The caller's name responds to hover and press without shifting. When its app
 is available, the same source link is reachable from the keyboard. Its focus
 ring stays outside the text when the call has no avatar.
+The microphone button appears only when muting is available. Other call
+controls remain reachable when it is unavailable.
 
 Glance knows of a FaceTime or phone call from macOS's own popup for it, and
 reads the caller, the time and where its buttons are from that popup's picture,
