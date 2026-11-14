@@ -13,7 +13,7 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall
+        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus
 
         /// A device or its case running low: its ring red.
         var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
@@ -120,6 +120,17 @@ final class Activities: ObservableObject {
         ScreenRecordingWatch.shared.start()
         MenuBarLiveActivities.shared.start()
         VoiceMemoWatch.shared.start()
+        PrintActivity.shared.start()
+        AlarmActivity.shared.start()
+        MusicRecognitionActivity.shared.start()
+        ShortcutActivity.shared.start()
+        FocusWatch.shared.start { [weak self] change in
+            guard ActivityBench.scene == nil,
+                UserDefaults.standard.bool(forKey: Preferences.notchEnabled),
+                UserDefaults.standard.bool(forKey: Preferences.activityFocus)
+            else { return }
+            self?.post(change.alert(kind: .focus))
+        }
     }
 
     /// Just woken, things reconnecting are expected, not announced.

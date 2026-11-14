@@ -121,6 +121,10 @@ final class NotchController {
     private var savedRecordingWatch: AnyCancellable?
     private var recordingRefit: Task<Void, Never>?
     private var airDropWatch: AnyCancellable?
+    private var printWatch: AnyCancellable?
+    private var alarmWatch: AnyCancellable?
+    private var recognitionWatch: AnyCancellable?
+    private var shortcutWatch: AnyCancellable?
     /// Songs reported in the first moments are what was already playing, not new ones.
     private let createdAt = Date.now
     /// A trackpad gesture's direction, settled by its first movement.
@@ -212,6 +216,12 @@ final class NotchController {
     private let restingOrigin: CGPoint
 
     var screenFrame: CGRect { screen.frame }
+    /// An explicit activity command must have a visible destination before starting any work.
+    var canLaunchActivity: Bool {
+        UserDefaults.standard.bool(forKey: Preferences.notchEnabled)
+            && panel.isVisible && !tucked && !model.collapsed
+            && (model.alert == nil || model.state == .open)
+    }
     var screenID: String { screen.notchID }
     var hidesInFullScreen: Bool { Preferences.hidesInFullScreen(screen.notchID, builtIn: screen.isBuiltIn) }
 
@@ -418,6 +428,24 @@ final class NotchController {
             MainActor.assumeIsolated { self?.show(airdrop: transfer) }
         }
 
+        alarmWatch = AlarmActivity.shared.$shown.removeDuplicates().sink { [weak self] shown in
+            MainActor.assumeIsolated { self?.show(alarm: shown) }
+        }
+
+        printWatch = PrintActivity.shared.$shown.removeDuplicates().sink { [weak self] shown in
+            MainActor.assumeIsolated { self?.show(printing: shown) }
+        }
+
+        shortcutWatch = ShortcutActivity.shared.$shown.removeDuplicates().sink { [weak self] shown in
+            MainActor.assumeIsolated { self?.show(shortcut: shown) }
+        }
+
+        recognitionWatch = MusicRecognitionActivity.shared.$state.combineLatest(MusicRecognitionActivity.shared.$identity)
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak self] state, identity in
+                MainActor.assumeIsolated { self?.show(recognition: state, identity: identity) }
+            }
+
         // The live activity and the song announcements follow their settings as they change.
         playingWatch = nowPlaying.$isPlaying.removeDuplicates().sink { [weak self] playing in
             MainActor.assumeIsolated {
@@ -537,7 +565,7 @@ final class NotchController {
         [
             playingWatch, titleWatch, settingsWatch, songWatch, alertWatch, timerWatch,
             clockNameWatch, airPlayWatch, callWatch, callMinutes, recordingWatch, savedRecordingWatch,
-            airDropWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
+            airDropWatch, printWatch, alarmWatch, recognitionWatch, shortcutWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
         ].forEach { $0?.cancel() }
         stopPolling()
         touchWatch = nil
@@ -717,6 +745,83 @@ final class NotchController {
             model.airdrop = transfer
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+    }
+
+    private func show(recognition state: MusicRecognitionActivity.State, identity: UUID?) {
+        let shown = state == .idle ? nil : state
+        let wasPresent = model.recognition != nil
+        if (shown != nil) == wasPresent {
+            if identity != model.recognitionIdentity { model.dismissed.remove(.recognition) }
+            model.recognitionIdentity = identity
+            model.recognition = shown
+        } else {
+            model.changeActivityPresentation(animation: shown == nil ? IslandMotion.fold : IslandMotion.open) {
+                model.dismissed.remove(.recognition)
+                model.recognitionIdentity = identity
+                model.recognition = shown
+            }
+        }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+        if model.expanded == .recognition, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
+    }
+
+    /// Called only by an explicit Recognize Music command; opening an existing activity is inert.
+    func recognizeMusic() {
+        guard !tucked else { return }
+        MusicRecognitionActivity.shared.recognize()
+        guard MusicRecognitionActivity.shared.isPresented else { return }
+        show(recognition: MusicRecognitionActivity.shared.state, identity: MusicRecognitionActivity.shared.identity)
+        model.dismissed.remove(.recognition)
+        openActivity(.recognition)
+    }
+
+    private func show(shortcut shown: ShortcutShown?) {
+        if shown?.run.id == model.shortcut?.run.id {
+            model.shortcut = shown
+        } else {
+            model.changeActivityPresentation(animation: shown == nil ? IslandMotion.fold : IslandMotion.open) {
+                model.dismissed.remove(.shortcut)
+                model.shortcut = shown
+            }
+        }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+        if model.expanded == .shortcut, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
+    }
+
+    /// Selecting an existing run never starts another invocation.
+    func openShortcut(runID: UUID) {
+        guard canLaunchActivity, ShortcutActivity.shared.runs.contains(where: { $0.id == runID }) else { return }
+        ShortcutActivity.shared.select(runID)
+        guard let shown = ShortcutActivity.shared.shown, shown.run.id == runID else { return }
+        show(shortcut: shown)
+        model.dismissed.remove(.shortcut)
+        openActivity(.shortcut)
+    }
+
+    private func show(alarm shown: AlarmShown?) {
+        if shown?.alarm.id == model.alarm?.alarm.id {
+            model.alarm = shown
+        } else {
+            model.changeActivityPresentation(animation: shown == nil ? IslandMotion.fold : IslandMotion.open) {
+                model.dismissed.remove(.alarm)
+                model.alarm = shown
+            }
+        }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+        if model.expanded == .alarm, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
+    }
+
+    private func show(printing shown: PrintShown?) {
+        if shown?.job.id == model.printing?.job.id {
+            model.printing = shown
+        } else {
+            model.changeActivityPresentation(animation: shown == nil ? IslandMotion.fold : IslandMotion.open) {
+                model.dismissed.remove(.printing)
+                model.printing = shown
+            }
+        }
+        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+        if model.expanded == .printing, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
     }
 
     /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it
@@ -1521,6 +1626,10 @@ final class NotchController {
             model.call.map { ExpandedCallView.controls(for: $0, microphoneAvailable: CallMicrophone.canMute, sourceAvailable: $0.sourceURL != nil) } ?? []
         case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
         case .airplay: model.airplay?.canStop == true ? [.activityFirst] : []
+        case .alarm: model.alarm.map(AlarmActivityView.controls(for:)) ?? []
+        case .printing: model.printing.map(PrintJobView.controls(for:)) ?? []
+        case .recognition: model.recognition.map(MusicRecognitionActivityView.controls(for:)) ?? []
+        case .shortcut: model.shortcut.map(ShortcutRunView.controls(for:)) ?? []
         case .voiceMemo: [.activityFirst]
         // Saving and unavailable saved files have no action to focus.
         case .screenRecording:
@@ -1983,7 +2092,7 @@ final class NotchController {
 
     /// Whether a swipe up on the closed notch puts it away for a moment: not a call or a recording.
     nonisolated static func stepsAway(_ activity: NotchModel.Activity) -> Bool {
-        ![.call, .screenRecording, .voiceMemo].contains(activity)
+        ![.call, .screenRecording, .voiceMemo, .recognition, .alarm].contains(activity)
     }
 
     /// From the menu, asked by name: what's announced folds away, or the notch's activity steps away
@@ -2068,6 +2177,10 @@ final class NotchController {
             case timer(NotchTimer.State)
             case stopwatch(Stopwatch)
             case airplay(output: UInt32?, name: String)
+            case printing(PrintJob.ID)
+            case alarm(String)
+            case recognition(UUID)
+            case shortcut(UUID)
         }
         let arrival: Int?
         let content: Content
@@ -2094,6 +2207,10 @@ final class NotchController {
             case .timer: content = model.timer.map(PutAwayIdentity.Content.timer)
             case .stopwatch: content = model.stopwatch.map(PutAwayIdentity.Content.stopwatch)
             case .airplay: content = model.airplay.map { .airplay(output: $0.outputID, name: $0.name) }
+            case .alarm: content = model.alarm.map { .alarm($0.alarm.id) }
+            case .printing: content = model.printing.map { .printing($0.job.id) }
+            case .recognition: content = model.recognition == nil ? nil : model.recognitionIdentity.map(PutAwayIdentity.Content.recognition)
+            case .shortcut: content = model.shortcut.map { .shortcut($0.run.id) }
             }
         }
         return content.map { PutAwayIdentity(arrival: arrival, content: $0) }
@@ -2116,6 +2233,10 @@ final class NotchController {
         case .timer: return String(localized: "Hide Timer")
         case .stopwatch: return String(localized: "Hide Stopwatch")
         case .airplay: return String(localized: "Hide AirPlay")
+        case .alarm: return String(localized: "Hide Alarm")
+        case .printing: return String(localized: "Hide Printing")
+        case .recognition: return String(localized: "Hide Music Recognition")
+        case .shortcut: return String(localized: "Hide Shortcut")
         case nil: return nil
         }
     }
@@ -2152,6 +2273,10 @@ final class NotchController {
             }
         }
         returns[activity]?.cancel()
+        if activity == .alarm {
+            returns[activity] = nil
+            return
+        }
         returns[activity] = Task { [weak self] in
             try? await Task.sleep(for: Self.swipedAway)
             guard let self, !Task.isCancelled else { return }

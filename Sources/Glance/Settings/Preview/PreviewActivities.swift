@@ -11,7 +11,7 @@ import SwiftUI
 /// What the picture on the Live Activities page shows besides what's playing, in the order of the
 /// page's switches: each turned on there, made up, one after another.
 enum PreviewActivity: CaseIterable {
-    case announcement, charging, lowBattery, device, airplay, call, airDrop, screenRecording, voiceMemo, timer, stopwatch
+    case announcement, charging, lowBattery, device, airplay, call, airDrop, screenRecording, voiceMemo, timer, stopwatch, alarm, printing, focus, recognition, shortcut
 
     private var key: String {
         switch self {
@@ -25,6 +25,11 @@ enum PreviewActivity: CaseIterable {
         case .stopwatch: Preferences.activityStopwatch
         case .screenRecording: Preferences.activityScreenRecording
         case .voiceMemo: Preferences.activityVoiceMemos
+        case .alarm: Preferences.activityAlarms
+        case .printing: Preferences.activityPrint
+        case .focus: Preferences.activityFocus
+        case .recognition: Preferences.activityRecognition
+        case .shortcut: Preferences.activityShortcuts
         }
     }
 
@@ -36,7 +41,7 @@ enum PreviewActivity: CaseIterable {
             switch activity {
             case .announcement: on(activity.key) && on(Preferences.liveActivity)
             case .charging, .lowBattery: on(activity.key) && hasBattery
-            case .device, .airplay, .call, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo: on(activity.key)
+            case .device, .airplay, .call, .airDrop, .timer, .stopwatch, .screenRecording, .voiceMemo, .alarm, .printing, .focus, .recognition, .shortcut: on(activity.key)
             }
         }
     }
@@ -76,7 +81,7 @@ extension SettingsPreview {
         guard
             model.alert != nil || model.pop || model.airdrop != nil
                 || model.timer != nil || model.stopwatch != nil || model.screenRecording != nil || model.voiceMemo != nil
-                || model.call != nil || model.airplay != nil
+                || model.call != nil || model.airplay != nil || model.printing != nil || model.recognition != nil || model.alarm != nil || model.shortcut != nil
         else { return }
         model.changeActivityPresentation(animation: IslandMotion.fold) {
             model.alert = nil
@@ -88,6 +93,11 @@ extension SettingsPreview {
             model.stopwatch = nil
             model.screenRecording = nil
             model.voiceMemo = nil
+            model.printing = nil
+            model.alarm = nil
+            model.recognition = nil
+            model.recognitionIdentity = nil
+            model.shortcut = nil
         }
     }
 
@@ -97,6 +107,8 @@ extension SettingsPreview {
 
     private func show(_ activity: PreviewActivity, song: NowPlaying) async {
         switch activity {
+        case .focus:
+            await say(ActivityBench.focus())
         case .announcement:
             await announce(song)
         case .charging:
@@ -124,6 +136,15 @@ extension SettingsPreview {
             await hold(\.stopwatch, stopwatch)
         case .screenRecording:
             await hold(\.screenRecording, ScreenRecording.recording(since: .now))
+        case .shortcut:
+            await hold(\.shortcut, ShortcutShown(run: .fixture()))
+        case .recognition:
+            model.recognitionIdentity = UUID()
+            await hold(\.recognition, MusicRecognitionActivity.State.recognizing)
+        case .alarm:
+            await hold(\.alarm, ActivityBench.alarmFixture())
+        case .printing:
+            await hold(\.printing, ActivityBench.printFixture())
         case .voiceMemo:
             // Its sound made up, unless a real one is being recorded.
             let madeUp = VoiceMemoWatch.shared.memo == nil

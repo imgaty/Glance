@@ -26,6 +26,10 @@ struct IslandBubble: View {
     /// Or AirPlay, by its symbol alone, in its blue; or AirDrop, by its ring.
     var route: AirPlayRoute? = nil
     var airdrop: AirDropShown? = nil
+    var printing: PrintShown? = nil
+    var alarm: AlarmShown? = nil
+    var recognition: MusicRecognitionActivity.State? = nil
+    var shortcut: ShortcutShown? = nil
     /// Or a recording: the screen's dot, or Voice Memos' waveform.
     var recording: Recording? = nil
     /// Or a call, by its time.
@@ -57,12 +61,16 @@ struct IslandBubble: View {
     @State private var kept: ClockShown?
     @State private var keptRoute: AirPlayRoute?
     @State private var keptAirDrop: AirDropShown?
+    @State private var keptPrint: PrintShown?
+    @State private var keptAlarm: AlarmShown?
+    @State private var keptRecognition: MusicRecognitionActivity.State?
+    @State private var keptShortcut: ShortcutShown?
     @State private var keptRecording: Recording?
     @State private var keptCall: CallShown?
     @State private var keptMusic = false
     @State private var keptArtwork: NSImage?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0, call: 0)
+    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0, call: 0, printing: 0, recognition: 0, alarm: 0, shortcut: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -114,6 +122,19 @@ struct IslandBubble: View {
                             RecordingBubbleGlyph(recording: keptRecording, restingHeight: h)
                         } else if let keptAirDrop {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
+                        } else if let keptAlarm {
+                            AlarmCompactView(shown: keptAlarm, minimal: true)
+                        } else if keptPrint != nil {
+                            Image(systemName: "printer.fill")
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                        } else if keptShortcut != nil {
+                            Image(nsImage: NSWorkspace.shared.icon(forFile: "/System/Applications/Shortcuts.app"))
+                                .resizable().scaledToFit()
+                                .frame(width: max(0, h - LiveActivityView.inset * 2), height: max(0, h - LiveActivityView.inset * 2))
+                                .accessibilityHidden(true)
+                        } else if let keptRecognition {
+                            MusicRecognitionCompactView(state: keptRecognition, minimal: true)
                         } else if keptRoute != nil {
                             Image(systemName: "airplay.audio")
                                 .font(.system(size: h * 0.5, weight: .semibold))
@@ -155,6 +176,30 @@ struct IslandBubble: View {
                         .accessibilityLabel(ExpandedAirDropView.spoken(airdrop))
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
+                } else if shown, !hidden, let alarm {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel(alarm.spoken)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
+                } else if shown, !hidden, let printing {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel(printing.spoken)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
+                } else if shown, !hidden, let shortcut {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel(shortcut.spoken)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
+                } else if shown, !hidden, let recognition {
+                    Color.clear
+                        .accessibilityElement()
+                        .accessibilityLabel(String(localized: "Music recognition, \(recognition.title)"))
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction(.default, open)
                 } else if shown, !hidden, music {
                     Color.clear
                         .accessibilityElement()
@@ -185,7 +230,11 @@ struct IslandBubble: View {
             $0.opacity(hidden ? 0 : 1)
         }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
-        .animation(.linear(duration: 0.01)) { $0.opacity(shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptMusic ? 1 : 0) }
+        .animation(.linear(duration: 0.01)) {
+            $0.opacity(
+                shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptPrint != nil || keptAlarm != nil || keptRecognition != nil || keptMusic
+                    ? 1 : 0)
+        }
         .allowsHitTesting(false)
         .onChange(of: clock, initial: true) { _, new in
             changes.clock += 1
@@ -242,6 +291,42 @@ struct IslandBubble: View {
             Task { @MainActor in
                 try? await Task.sleep(for: SystemActivityView.folding)
                 if changes.call == change { keptCall = nil }
+            }
+        }
+        .onChange(of: printing, initial: true) { _, new in
+            changes.printing += 1
+            if let new { return keptPrint = new }
+            let change = changes.printing
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.printing == change { keptPrint = nil }
+            }
+        }
+        .onChange(of: alarm, initial: true) { _, new in
+            changes.alarm += 1
+            if let new { return keptAlarm = new }
+            let change = changes.alarm
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.alarm == change { keptAlarm = nil }
+            }
+        }
+        .onChange(of: shortcut, initial: true) { _, new in
+            changes.shortcut += 1
+            if let new { return keptShortcut = new }
+            let change = changes.shortcut
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.shortcut == change { keptShortcut = nil }
+            }
+        }
+        .onChange(of: recognition, initial: true) { _, new in
+            changes.recognition += 1
+            if let new { return keptRecognition = new }
+            let change = changes.recognition
+            Task { @MainActor in
+                try? await Task.sleep(for: SystemActivityView.folding)
+                if changes.recognition == change { keptRecognition = nil }
             }
         }
         .onChange(of: route, initial: true) { _, new in

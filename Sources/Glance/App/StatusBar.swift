@@ -29,6 +29,9 @@ final class StatusBarController: NSObject {
     /// For the notch's right-click.
     let menu = NSMenu()
     var onOpenSettings: (() -> Void)?
+    var canLaunchActivity: (() -> Bool)?
+    var onRecognizeMusic: (() -> Void)?
+    var onOpenShortcut: ((UUID) -> Void)?
     /// A named command captured from the notch under the pointer when the menu opens.
     var putAway: (() -> (title: String, action: () -> Void)?)?
     private var offeredPutAway: (() -> Void)?
@@ -91,6 +94,10 @@ final class StatusBarController: NSObject {
     }
 
     @objc private func updatesFromMenu() { Updater.shared.checkForUpdates() }
+    @objc private func recognizeMusicFromMenu() {
+        guard canLaunchActivity?() == true, UserDefaults.standard.bool(forKey: Preferences.activityRecognition) else { return }
+        onRecognizeMusic?()
+    }
     @objc private func pauseOrResumeTimer() { ClockActivity.shared.toggleTimer() }
     @objc private func cancelTimer() { ClockActivity.shared.cancelTimer() }
     @objc private func repeatTimer() { ClockActivity.shared.repeatTimer() }
@@ -279,6 +286,17 @@ extension StatusBarController: NSMenuDelegate {
             item.submenu = choices
             items.append(item)
         }
+        let recognize = NSMenuItem(title: String(localized: "Recognize Music"), action: #selector(recognizeMusicFromMenu), keyEquivalent: "")
+        recognize.target = self
+        recognize.isEnabled = canLaunchActivity?() == true && UserDefaults.standard.bool(forKey: Preferences.activityRecognition)
+        items.append(recognize)
+        let shortcuts = NSMenuItem(title: String(localized: "Run Shortcut"), action: nil, keyEquivalent: "")
+        shortcuts.isEnabled = canLaunchActivity?() == true && UserDefaults.standard.bool(forKey: Preferences.activityShortcuts)
+        shortcuts.submenu = ShortcutActivity.shared.makeRunMenu(
+            canRun: { [weak self] in self?.canLaunchActivity?() == true },
+            open: { [weak self] id in self?.onOpenShortcut?(id) }
+        )
+        items.append(shortcuts)
         if let timer = clock.timer {
             add(timer.isRunning ? String(localized: "Pause Timer") : String(localized: "Resume Timer"), #selector(pauseOrResumeTimer))
             add(String(localized: "Cancel Timer"), #selector(cancelTimer))

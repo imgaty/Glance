@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 8 November 2026`
+`Created: 11 October 2026` | `Last updated: 14 November 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -55,6 +55,11 @@ down and its stopwatch up, with their buttons, and shows the screen or a voice
 memo being recorded, with a button to stop it. With several at once, the first
 keeps the left of the notch and the second goes in a bubble of its own off the
 right, as on the iPhone.
+Clock alarms appear when an identifiable ringing alert is available, with the
+actions that alert actually offers. Printing shows your active local print
+jobs. Focus changes appear as short announcements. Choose **Recognize Music**
+from Glance's menu to start a ShazamKit session, or **Run Shortcut** to run a
+shortcut and keep its state and result beside the camera.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
@@ -91,8 +96,26 @@ podcast plays, the buttons show dimmed.
 **Copies from other devices.** What you copy on an iPhone or iPad, through
 Universal Clipboard, isn't kept in the tray.
 
-**Clock's alarms.** They don't show in the notch: macOS keeps them where other
-apps can't read them. Clock's timer and stopwatch do.
+**Clock's alarms.** Glance observes identifiable ringing notifications through
+Accessibility. It cannot read the scheduled alarm list or infer a snoozed
+countdown. Native Clock alerts remain available when observation or controls
+are unavailable.
+
+**Printing.** Only your active jobs reported by the local CUPS spooler appear.
+Page progress depends on what the printer reports; no percentage is invented.
+
+**Music recognition.** Recognition starts only when requested and requires
+microphone permission, a network connection and ShazamKit service availability.
+It does not observe sessions started in Control Center.
+
+**Running shortcuts.** Glance tracks only shortcuts started from its own menu.
+It cannot observe runs started elsewhere. Stopping requests interruption; the
+activity waits for the process to finish before reporting its outcome.
+
+**Other system activities.** SharePlay, Screen Sharing, Journal recording,
+automatic AirPods routing offers and forwarded iPhone activities remain with
+macOS. Their cross-app state or actions are not available through a verified
+integration. Glance does not hide them.
 
 <br>
 

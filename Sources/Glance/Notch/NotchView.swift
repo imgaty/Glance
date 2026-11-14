@@ -208,6 +208,23 @@ final class NotchModel: ObservableObject {
     @Published var airdrop: AirDropShown? {
         didSet { arrived(.airdrop, airdrop != nil) }
     }
+    /// Active jobs in this user’s local print queues.
+    @Published var printing: PrintShown? {
+        didSet { arrived(.printing, printing != nil) }
+    }
+    /// Clock’s exact firing alert, including temporarily unavailable controls.
+    @Published var alarm: AlarmShown? {
+        didSet { arrived(.alarm, alarm != nil) }
+    }
+    /// The shared user-started recognition request, including its result until Done.
+    @Published var recognition: MusicRecognitionActivity.State? {
+        didSet { arrived(.recognition, recognition != nil) }
+    }
+    var recognitionIdentity: UUID?
+    /// The selected invocation started from Glance, identified separately from its shortcut.
+    @Published var shortcut: ShortcutShown? {
+        didSet { arrived(.shortcut, shortcut != nil) }
+    }
     /// The lyrics are wanted: the open notch widens to show them beside the player, while a song plays.
     @Published var lyrics = false
     /// What's playing is a song, which can have lyrics.
@@ -288,7 +305,7 @@ final class NotchModel: ObservableObject {
     /// What can show at once: a call, the screen being recorded, a voice memo being recorded, music, a
     /// file coming in over AirDrop, Clock's timer, its stopwatch, AirPlay.
     enum Activity: String, Hashable, CaseIterable {
-        case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay
+        case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay, printing, recognition, alarm, shortcut
     }
 
     /// When each one going on started, in turn: as on the iPhone, they take the notch first come,
@@ -365,6 +382,10 @@ final class NotchModel: ObservableObject {
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
         if airplay != nil { shown.append(.airplay) }
+        if printing != nil { shown.append(.printing) }
+        if alarm != nil { shown.append(.alarm) }
+        if recognition != nil { shown.append(.recognition) }
+        if shortcut != nil { shown.append(.shortcut) }
         return shown.filter { !dismissed.contains($0) }.enumerated()
             .sorted { (arrivals[$0.element] ?? .max, $0.offset) < (arrivals[$1.element] ?? .max, $1.offset) }.map(\.element)
     }
@@ -397,7 +418,7 @@ final class NotchModel: ObservableObject {
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
         switch activity {
-        case .call, .screenRecording, .voiceMemo, .music, .airdrop, .airplay: nil
+        case .call, .screenRecording, .voiceMemo, .music, .airdrop, .airplay, .printing, .recognition, .alarm, .shortcut: nil
         case .timer: timer.map(ClockShown.timer)
         case .stopwatch: stopwatch.map(ClockShown.stopwatch)
         }
@@ -463,6 +484,10 @@ final class NotchModel: ObservableObject {
         switch expanded {
         case .timer, .stopwatch: expandedClock == nil
         case .airplay: airplay == nil
+        case .alarm: alarm == nil
+        case .printing: printing == nil
+        case .recognition: recognition == nil
+        case .shortcut: shortcut == nil
         case .call: call == nil
         case .screenRecording: screenRecording == nil
         case .voiceMemo: voiceMemo == nil
@@ -482,6 +507,10 @@ final class NotchModel: ObservableObject {
         case .stopwatch: String(localized: "Stopwatch")
         case .airplay: "AirPlay"
         case .airdrop: "AirDrop"
+        case .alarm: alarm?.alarm.title ?? String(localized: "Alarm")
+        case .printing: String(localized: "Printing")
+        case .recognition: String(localized: "Music Recognition")
+        case .shortcut: shortcut?.run.shortcut.name ?? String(localized: "Shortcuts")
         }
     }
     var camera: CGFloat { closedSize.width }
@@ -532,6 +561,10 @@ final class NotchModel: ObservableObject {
         if activity, pop { return max(popWing, resting) }
         // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares.
         if notchClock != nil { return max(timerWing, resting) }
+        if activities.first == .alarm { return max(AlarmCompactView.wing, resting) }
+        if activities.first == .printing { return max(PrintJobMark.wing, resting) }
+        if activities.first == .recognition { return max(MusicRecognitionCompactView.wing, resting) }
+        if activities.first == .shortcut { return max(ShortcutRunMark.wing, resting) }
         return activities.isEmpty ? 0 : resting
     }
 
@@ -580,6 +613,14 @@ final class NotchModel: ObservableObject {
                         + pull * 0.35 + across,
                     AirPlayLayout.height(closedSize.height) + pull
                 )
+            case .open where expanded == .alarm:
+                (AlarmActivityView.width(camera: camera) + pull * 0.35 + across, AlarmActivityView.height(restingHeight: closedSize.height) + pull)
+            case .open where expanded == .printing:
+                (PrintJobView.width(camera: camera) + pull * 0.35 + across, PrintJobView.height(restingHeight: closedSize.height) + pull)
+            case .open where expanded == .shortcut:
+                (ShortcutRunView.width(camera: camera) + pull * 0.35 + across, ShortcutRunView.height(restingHeight: closedSize.height) + pull)
+            case .open where expanded == .recognition:
+                (MusicRecognitionActivityView.width(camera: camera) + pull * 0.35 + across, MusicRecognitionActivityView.height(restingHeight: closedSize.height) + pull)
             case .open where expanded.flatMap(recording(of:)) != nil:
                 (
                     expanded.flatMap(recording(of:)).map(openWidth(of:)).map { $0 + pull * 0.35 + across } ?? 0,
@@ -913,6 +954,10 @@ struct NotchView: View {
                 clock: model.musicShown || model.folded ? nil : model.notchClock,
                 route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
+                printing: model.activities.first == .printing && !model.folded ? model.printing : nil,
+                alarm: model.activities.first == .alarm && !model.folded ? model.alarm : nil,
+                recognition: model.activities.first == .recognition && !model.folded ? model.recognition : nil,
+                shortcut: model.activities.first == .shortcut && !model.folded ? model.shortcut : nil,
                 call: model.activities.first == .call && !model.folded ? model.call : nil,
                 recording: model.folded ? nil : model.activities.first.flatMap(model.recording(of:)),
                 timerName: model.activities.first.map(model.name(of:)) ?? String(localized: "Timer"),
@@ -947,6 +992,10 @@ struct NotchView: View {
                 expandedCall(shown: expandedShown)
                 expandedAirDrop(shown: expandedShown)
                 expandedRecording(shown: expandedShown)
+                expandedPrinting(shown: expandedShown)
+                expandedAlarm(shown: expandedShown)
+                expandedRecognition(shown: expandedShown)
+                expandedShortcut(shown: expandedShown)
             }
             // With another detached, the trailing side showed nothing beside the camera.
             .environment(\.trailingGrows, model.second == nil)
@@ -1142,6 +1191,10 @@ struct NotchView: View {
             shown: activity != nil && !model.bubbleMerged && !model.activityFolded, clock: activity.flatMap(model.clock(of:)),
             route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
+            printing: activity == .printing ? model.printing : nil,
+            alarm: activity == .alarm ? model.alarm : nil,
+            recognition: activity == .recognition ? model.recognition : nil,
+            shortcut: activity == .shortcut ? model.shortcut : nil,
             recording: activity.flatMap(model.recording(of:)),
             call: activity == .call ? model.call : nil,
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
@@ -1237,6 +1290,83 @@ struct NotchView: View {
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)
+            .transition(IslandMotion.fade)
+        }
+    }
+
+    @ViewBuilder private func expandedAlarm(shown: Bool) -> some View {
+        if let alarm = model.alarm {
+            let visible = shown && model.expanded == .alarm
+            AlarmActivityView(
+                shown: alarm,
+                perform: { action, id in
+                    guard !activityPreview else { return }
+                    AlarmActivity.shared.perform(action, expectedID: id)
+                },
+                openClock: {
+                    guard !activityPreview else { return }
+                    AlarmActivity.shared.openClock()
+                }
+            )
+            .padding(.top, model.closedSize.height + LiveActivityView.cameraGap)
+            .frame(width: AlarmActivityView.width(camera: model.camera), height: AlarmActivityView.height(restingHeight: model.closedSize.height), alignment: .top)
+            .environment(\.notchControls, visible && !activityPreview)
+            .allowsHitTesting(places == nil && visible)
+            .accessibilityHidden(!visible)
+            .islandFade(visible)
+            .transition(IslandMotion.fade)
+        }
+    }
+
+    @ViewBuilder private func expandedShortcut(shown: Bool) -> some View {
+        if let shortcut = model.shortcut {
+            let visible = shown && model.expanded == .shortcut
+            ShortcutRunView(
+                shown: shortcut,
+                stop: { if !activityPreview { ShortcutActivity.shared.stop(shortcut.run.id) } },
+                dismiss: { if !activityPreview { ShortcutActivity.shared.dismiss(shortcut.run.id) } },
+                openShortcuts: { if !activityPreview { ShortcutActivity.shared.openShortcuts() } },
+                showResult: { if !activityPreview { ShortcutActivity.shared.showResult(shortcut.run.id) } }
+            )
+            .padding(.top, model.closedSize.height + LiveActivityView.cameraGap)
+            .frame(width: ShortcutRunView.width(camera: model.camera), height: ShortcutRunView.height(restingHeight: model.closedSize.height), alignment: .top)
+            .environment(\.notchControls, visible && !activityPreview)
+            .allowsHitTesting(places == nil && visible)
+            .accessibilityHidden(!visible)
+            .islandFade(visible)
+            .transition(IslandMotion.fade)
+        }
+    }
+
+    @ViewBuilder private func expandedRecognition(shown: Bool) -> some View {
+        if let state = model.recognition {
+            let visible = shown && model.expanded == .recognition
+            MusicRecognitionActivityView(stateOverride: activityPreview ? state : nil)
+                .padding(.top, model.closedSize.height + LiveActivityView.cameraGap)
+                .frame(width: MusicRecognitionActivityView.width(camera: model.camera), height: MusicRecognitionActivityView.height(restingHeight: model.closedSize.height), alignment: .top)
+                .environment(\.notchControls, visible && !activityPreview)
+                .allowsHitTesting(places == nil && visible)
+                .accessibilityHidden(!visible)
+                .islandFade(visible)
+                .transition(IslandMotion.fade)
+        }
+    }
+
+    @ViewBuilder private func expandedPrinting(shown: Bool) -> some View {
+        if let printing = model.printing {
+            let visible = shown && model.expanded == .printing
+            PrintJobView(
+                shown: printing,
+                cancel: { Task { await PrintActivity.shared.cancel(expectedID: printing.job.id) } },
+                openPrintCenter: { Task { await PrintActivity.shared.openPrintCenter() } },
+                refresh: { Task { await PrintActivity.shared.refresh() } }
+            )
+            .padding(.top, model.closedSize.height + LiveActivityView.cameraGap)
+            .frame(width: PrintJobView.width(camera: model.camera), height: PrintJobView.height(restingHeight: model.closedSize.height), alignment: .top)
+            .environment(\.notchControls, visible && !activityPreview)
+            .allowsHitTesting(places == nil && visible)
+            .accessibilityHidden(!visible)
+            .islandFade(visible)
             .transition(IslandMotion.fade)
         }
     }

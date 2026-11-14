@@ -383,7 +383,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .activities:
             String(
                 localized:
-                    "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop timer timers countdown clock stopwatch menu bar"
+                    "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop alarm alarms snooze focus printing printer print jobs print center recognize recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar"
             )
         case .opening: String(localized: "hover click delay hold haptic feedback gestures swipe slide tool tools scrolling trackpad keyboard shortcut hotkey")
         case .displays: String(localized: "monitor external virtual notch full screen menu bar")

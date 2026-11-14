@@ -73,7 +73,7 @@
 	<key>NSContactsUsageDescription</key>
 	<string>Glance looks up who&apos;s calling in your contacts during FaceTime and phone calls only, to show their photo. Nothing leaves your Mac.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Glance listens to your microphone during a call only, to show your side of the call's waveform. Nothing is recorded or leaves your Mac.</string>
+	<string>Glance uses your microphone for the call waveform and, when you choose Recognize Music, to identify songs. For music recognition, ShazamKit sends an audio signature to Shazam.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSServices</key>

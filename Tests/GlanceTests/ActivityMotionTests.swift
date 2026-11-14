@@ -26,6 +26,12 @@ struct ActivityMotionTests {
         case .call: model.call = CallShown(name: "Alex", over: "Phone", phase: .connected(since: start))
         case .screenRecording: model.screenRecording = .recording(since: start)
         case .voiceMemo: model.voiceMemo = .recording(since: start)
+        case .alarm: model.alarm = ActivityBench.alarmFixture()
+        case .printing: model.printing = ActivityBench.printFixture()
+        case .shortcut: model.shortcut = .init(run: .fixture())
+        case .recognition:
+            model.recognitionIdentity = UUID()
+            model.recognition = .recognizing
         }
     }
 

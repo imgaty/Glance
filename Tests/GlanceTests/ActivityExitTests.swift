@@ -16,9 +16,10 @@ struct ActivityExitTests {
         model.open()
         model.close()
         #expect(model.openedFromBubble)
-        try await Task.sleep(for: .milliseconds(100))
+        let closing = model.activityTransitionTask
         model.open()
-        try await Task.sleep(for: .milliseconds(400))
+        await closing?.value
+        await model.activityTransitionTask?.value
         #expect(model.state == .open)
         #expect(model.openedFromBubble)
         #expect(model.bubbleReach == 0)

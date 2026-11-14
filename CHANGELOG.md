@@ -10,6 +10,12 @@
 
 ### Live Activities
 
+- Added ringing Clock alarms, local print jobs, Focus announcements, music
+  recognition and shortcuts started from Glance, with native controls and
+  settings for each activity. Existing system activities stay available.
+- Added isolated cases for pending actions, missing permissions, unavailable
+  sources, failures and completed results.
+
 - Fixed native activities being hidden without a visible replacement. Other
   apps keep their controls, and Glance restores settings it previously changed.
 

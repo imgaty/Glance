@@ -27,6 +27,13 @@ struct ActivityMenuSnapshotTests {
         case .timer: model.timer = .running(until: start + 300 + offset, total: 300)
         case .stopwatch: model.stopwatch = .running(since: start + offset)
         case .airplay: model.airplay = AirPlayRoute(name: "Speaker \(variant)", symbol: "homepod", outputID: UInt32(variant + 1))
+        case .recognition:
+            model.recognitionIdentity = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", variant + 1))
+            model.recognition = .recognizing
+        case .alarm: model.alarm = ActivityBench.alarmFixture(id: "alarm-\(variant)")
+        case .shortcut: model.shortcut = .init(run: .fixture(ordinal: variant))
+        case .printing:
+            model.printing = PrintShown(job: PrintJob(id: .init(printer: "Fixture", number: Int32(variant + 1), created: 100), title: "Job", owner: "fixture", state: .printing))
         }
     }
 
@@ -42,6 +49,12 @@ struct ActivityMenuSnapshotTests {
         case .timer: model.timer = nil
         case .stopwatch: model.stopwatch = nil
         case .airplay: model.airplay = nil
+        case .alarm: model.alarm = nil
+        case .printing: model.printing = nil
+        case .shortcut: model.shortcut = nil
+        case .recognition:
+            model.recognition = nil
+            model.recognitionIdentity = nil
         }
     }
 

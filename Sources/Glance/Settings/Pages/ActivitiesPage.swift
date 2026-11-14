@@ -21,6 +21,11 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityDevices) private var devices = true
     @AppStorage(Preferences.activityCalls) private var calls = true
     @AppStorage(Preferences.activityAirDrop) private var airDrop = true
+    @AppStorage(Preferences.activityFocus) private var focus = true
+    @AppStorage(Preferences.activityPrint) private var printing = true
+    @AppStorage(Preferences.activityAlarms) private var alarms = true
+    @AppStorage(Preferences.activityRecognition) private var recognition = true
+    @AppStorage(Preferences.activityShortcuts) private var shortcuts = true
     @AppStorage(Preferences.activityClockTimers) private var timers = true
     @AppStorage(Preferences.activityStopwatch) private var stopwatch = true
     @AppStorage(Preferences.activityScreenRecording) private var screenRecording = true
@@ -38,6 +43,8 @@ struct ActivitiesPage: View {
         (Preferences.activityCalls, .call), (Preferences.activityAirDrop, .airDrop),
         (Preferences.activityScreenRecording, .screenRecording), (Preferences.activityVoiceMemos, .voiceMemo),
         (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
+        (Preferences.activityAlarms, .alarm), (Preferences.activityPrint, .printing), (Preferences.activityFocus, .focus), (Preferences.activityRecognition, .recognition),
+        (Preferences.activityShortcuts, .shortcut),
     ]
 
     /// One switch for a kind of activity: on while any of its own is, turning them all on or off.
@@ -147,6 +154,36 @@ struct ActivitiesPage: View {
                                 "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
                         ))) ?? ""
                 )
+            }
+            Section {
+                Toggle(isOn: $alarms) {
+                    Text("Alarms")
+                    Text("Shows Clock’s firing alarms with their available Snooze and Stop controls. Requires Accessibility; Clock’s alert remains available.")
+                }
+            }
+            Section {
+                Toggle(isOn: $printing) {
+                    Text("Printing")
+                    Text("Shows your active print jobs, with controls to cancel a job or open Print Center.")
+                }
+            }
+            Section {
+                Toggle(isOn: $focus) {
+                    Text("Focus Changes")
+                    Text("Briefly shows the Focus name and state when macOS announces a change. Requires Accessibility.")
+                }
+            }
+            Section {
+                Toggle(isOn: $recognition) {
+                    Text("Music Recognition")
+                    Text("Choose Recognize Music in Glance’s menu to identify a song with your microphone. Enabling this does not start listening.")
+                }
+            }
+            Section {
+                Toggle(isOn: $shortcuts) {
+                    Text("Shortcuts")
+                    Text("Shows shortcuts you run from Glance’s menu, with a control to stop each run.")
+                }
             }
         }
         // Turned on, the picture shows what it does.

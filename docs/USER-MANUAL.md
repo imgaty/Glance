@@ -665,8 +665,56 @@ it's paused, and the stopwatch as its time. It reads each, in the notch or a
 bubble, as a button, which opens it, and the rung timer's **Repeat** and **✕**
 as Repeat and Stop.
 
-Glance doesn't show Clock's alarms: macOS keeps them where other apps can't
-read them.
+### Alarms
+
+When Clock presents an identifiable ringing alarm notification, Glance shows
+its name beside the camera. Open it to use **Snooze** or **Stop**, when the
+native alert offers those actions, or **Open Clock**. Actions always target the
+alarm you opened. While an action is pending, its controls are disabled;
+Glance waits for the native alert to disappear before clearing it. A failed
+action stays visible so you can retry or use Clock.
+
+This needs Accessibility permission. Glance does not read scheduled alarms or
+invent a countdown after snoozing, and leaves Clock's native alert available.
+**Hide Alarm** only hides that alert in Glance; it does not stop the alarm.
+
+### Printing
+
+Your active local print jobs appear beside the camera. Open one to see its
+printer, status and page count, when the printer reports one. **Cancel Job**
+requests cancellation of that exact job and waits for the spooler to confirm
+it has gone. **Print Center** opens Apple's queue. If the queue cannot be read,
+Glance keeps the last status, disables cancellation and offers **Try Again**.
+
+### Music recognition
+
+Choose **Recognize Music** from Glance's menu. Glance requests microphone
+permission at that point and uses ShazamKit to identify the song. ShazamKit
+sends an audio signature to Shazam. **Cancel** ends listening; a match, no-match
+or failure stays visible until **Done**. A match can open its Music link.
+Opening or closing the notch never starts a recognition session by itself.
+
+Recognition needs a network connection and ShazamKit availability for this
+build. Sessions started in Control Center remain separate.
+
+### Running shortcuts
+
+Choose **Run Shortcut** from Glance's menu, then a shortcut. The native submenu
+also lists runs already started in Glance; choosing one opens that run without
+starting it again. Open the activity to request **Stop**, open Shortcuts or
+view a saved result after completion. **Done** dismisses a finished run.
+
+Glance tracks its own launched processes, not runs started elsewhere. **Stop**
+is an interruption request, and the activity keeps showing that request until
+the process ends. Turning this activity off hides it without interrupting a
+running shortcut. Shortcuts may ask for their own permissions or input.
+
+### Focus
+
+A confirmed Focus change appears briefly with its name and whether it turned
+on or off. Glance observes the system's actual announcement; it does not infer
+Focus from preferences or show a persistent state that may be out of date.
+macOS keeps its own Focus controls.
 
 ### AirDrop
 
@@ -792,6 +840,8 @@ Glance's icon in the menu bar opens a menu:
 | Item | Operation |
 | --- | --- |
 | `Enable Glance` | The checkmark means the notch is enabled on every configured display; choose it to turn the notch off or back on |
+| `Recognize Music` | Starts an explicit music recognition session when its activity and the notch are enabled |
+| `Run Shortcut` | Lists your shortcuts and runs already started in Glance |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
@@ -822,6 +872,8 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 | --- | --- |
 | `Open at login` | Starts Glance when you log in |
 | `Permissions` | Shows each permission, why it's asked and whether it's allowed, over the Settings window |
+| `Recognize Music` | Starts an explicit music recognition session when its activity and the notch are enabled |
+| `Run Shortcut` | Lists your shortcuts and runs already started in Glance |
 | `Check for Updates…` | Looks for a new version now |
 | `Update automatically` | Looks for, downloads and installs new versions on its own |
 
@@ -913,6 +965,11 @@ preview stays on what's playing.
 | `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
 | `Recordings` | Shows the screen being recorded with macOS's Screenshot, until it's saved, and a voice memo being recorded, with its sound, each with a button to stop it |
 | `Clock` | Shows Clock's timers counting down beside the camera, saying when one rings, and its stopwatch counting up. Start them in the Clock app, in Control Center or with Siri |
+| `Alarms` | Shows identifiable ringing Clock alerts with their available actions |
+| `Printing` | Shows your active local print jobs |
+| `Focus Changes` | Announces confirmed Focus changes |
+| `Music Recognition` | Enables recognition started from Glance's menu |
+| `Shortcuts` | Shows runs started from Glance's menu; turning this off does not interrupt them |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed (off at first). macOS keeps it out even after this is off; **Menu Bar settings**, under it, opens **System Settings > Menu Bar** to bring it back |
 
 ### Opening

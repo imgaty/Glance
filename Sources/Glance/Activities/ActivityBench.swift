@@ -19,6 +19,7 @@ final class ActivityBench {
     static let shared = ActivityBench()
 
     enum Scene: String, CaseIterable {
+        case focus
         case music, airdrop, airdropSend, timer, stopwatch, airplay, call, charging, lowBattery, headphones, deviceBattery, caseBattery
         /// A call in one state, held for the round: coming in, swiped away while it rings, going out,
         /// going on, with someone whose name is too long and for over an hour, with a number, in an app
@@ -29,17 +30,24 @@ final class ActivityBench {
         case screenRecording, screenCountdown, screenSaving, screenSaved
         /// A voice memo recorded until it's stopped, and one paused.
         case voiceMemo, voiceMemoPaused
+        /// Print Center states, with no connection to a printer or the local queue.
+        case printing, printUnknown, printHeld, printStopped, printUnavailable, printCancelFailed, printOpenFailed
+        case alarm, alarmNoSnooze, alarmUnavailable, alarmPending, alarmFailed
+        /// Local invocation snapshots only; these scenarios never execute a user shortcut.
+        case shortcut, shortcutStarting, shortcutStopping, shortcutStopDelayed, shortcutComplete, shortcutStopped, shortcutEndedAfterStop, shortcutFailed, shortcutConcurrent
+        case recognition, recognitionPermission, recognitionMatch, recognitionNoMatch, recognitionDenied, recognitionRestricted, recognitionOffline, recognitionFailed, recognitionCancelled
         /// AirDrop alone, nothing made up: for real files, coming in or going out.
         case airdropReal
         /// Low Battery made up, its button the real one: it changes the Mac's Low Power Mode.
         case lowBatteryReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery, .focus].contains(self) }
 
         /// How the menu names it, in English, as the menu is only in builds made from source.
         var title: String {
             switch self {
+            case .focus: "Focus Change"
             case .music: "Music"
             case .call: "Whole Call"
             case .callRinging: "Ringing"
@@ -62,6 +70,36 @@ final class ActivityBench {
             case .timer: "Timer"
             case .stopwatch: "Stopwatch"
             case .airplay: "AirPlay"
+            case .shortcut: "Running Shortcut"
+            case .shortcutStarting: "Starting Shortcut"
+            case .shortcutStopping: "Stopping Shortcut"
+            case .shortcutStopDelayed: "Shortcut Still Running"
+            case .shortcutComplete: "Shortcut Result"
+            case .shortcutStopped: "Shortcut Stopped"
+            case .shortcutEndedAfterStop: "Shortcut Ended After Stop"
+            case .shortcutFailed: "Shortcut Failed"
+            case .shortcutConcurrent: "Concurrent Shortcuts"
+            case .recognition: "Recognizing Music"
+            case .recognitionPermission: "Recognition Permission"
+            case .recognitionMatch: "Recognized Song"
+            case .recognitionNoMatch: "No Song Found"
+            case .recognitionDenied: "Microphone Denied"
+            case .recognitionRestricted: "Microphone Restricted"
+            case .recognitionOffline: "Recognition Offline"
+            case .recognitionFailed: "Recognition Failed"
+            case .recognitionCancelled: "Recognition Cancelled"
+            case .alarm: "Alarm"
+            case .alarmNoSnooze: "Alarm Without Snooze"
+            case .alarmUnavailable: "Alarm Status Unavailable"
+            case .alarmPending: "Alarm Action Pending"
+            case .alarmFailed: "Alarm Action Failed"
+            case .printing: "Printing"
+            case .printUnknown: "Printing, Unknown Progress"
+            case .printHeld: "Print Job on Hold"
+            case .printStopped: "Printing Stopped"
+            case .printUnavailable: "Print Status Unavailable"
+            case .printCancelFailed: "Cancel Failed"
+            case .printOpenFailed: "Print Center Unavailable"
             case .charging: "Charging"
             case .lowBattery: "Low Battery"
             case .lowBatteryReal: "Low Battery, Real Button"
@@ -77,9 +115,18 @@ final class ActivityBench {
             ("Recording", [.screenRecording, .screenCountdown, .screenSaving, .screenSaved, .voiceMemo, .voiceMemoPaused]),
             ("Music", [.music]),
             ("AirDrop", [.airdrop, .airdropSend, .airdropReal]),
-            ("Clock", [.timer, .stopwatch]),
+            ("Clock", [.timer, .stopwatch, .alarm, .alarmNoSnooze, .alarmUnavailable, .alarmPending, .alarmFailed]),
             ("AirPlay", [.airplay]),
-            ("Announced", [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
+            (
+                "Music Recognition",
+                [
+                    .recognition, .recognitionPermission, .recognitionMatch, .recognitionNoMatch, .recognitionDenied, .recognitionRestricted, .recognitionOffline, .recognitionFailed,
+                    .recognitionCancelled,
+                ]
+            ),
+            ("Printing", [.printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printOpenFailed]),
+            ("Shortcuts", [.shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent]),
+            ("Announced", [.focus, .charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
         ]
 
         /// What can be tried beside another: all but those that touch something real.
@@ -126,11 +173,16 @@ final class ActivityBench {
         var off: [String: Any] = [:]
         for key in [
             Preferences.liveActivity, Preferences.musicTrackPop, Preferences.lyrics, Preferences.tray, Preferences.swipeToSkip,
-            Preferences.activityCharging, Preferences.activityLowBattery, Preferences.activityDevices, Preferences.activityAirDrop,
-            Preferences.activityClockTimers, Preferences.activityStopwatch, Preferences.activityScreenRecording, Preferences.activityVoiceMemos,
+            Preferences.activityAlarms, Preferences.activityFocus, Preferences.activityCharging, Preferences.activityLowBattery, Preferences.activityDevices, Preferences.activityAirDrop,
+            Preferences.activityClockTimers, Preferences.activityStopwatch, Preferences.activityScreenRecording, Preferences.activityVoiceMemos, Preferences.activityPrint,
+            Preferences.activityRecognition, Preferences.activityShortcuts,
         ] { off[key] = false }
         if Self.scenes.contains(.airdropReal) { off[Preferences.activityAirDrop] = true }
         if Self.scenes.contains(.music) { off[Preferences.liveActivity] = true }
+        let shortcutScenes: Set<Scene> = [
+            .shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent,
+        ]
+        if Self.scenes.contains(where: shortcutScenes.contains) { off[Preferences.activityShortcuts] = true }
         Self.keep(off)
     }
 
@@ -173,6 +225,12 @@ final class ActivityBench {
         case .timer: await timer()
         case .stopwatch: await stopwatch()
         case .airplay: await airPlay()
+        case .recognition, .recognitionPermission, .recognitionMatch, .recognitionNoMatch, .recognitionDenied, .recognitionRestricted, .recognitionOffline, .recognitionFailed, .recognitionCancelled:
+            await recognition(scene)
+        case .shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent:
+            await shortcuts(scene)
+        case .alarm, .alarmNoSnooze, .alarmUnavailable, .alarmPending, .alarmFailed: await alarm(scene)
+        case .printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printOpenFailed: await printing(scene)
         case .call: await call()
         case .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread: await callState(scene)
         case .screenRecording: await screenRecording()
@@ -180,12 +238,17 @@ final class ActivityBench {
         case .screenSaved: await screenState(scene)
         case .voiceMemo: await voiceMemo(paused: false)
         case .voiceMemoPaused: await voiceMemo(paused: true)
+        case .focus: await announce([{ Self.focus() }], every: 6)
         case .charging: await announce(Self.charging(), every: 6)
         case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
         case .deviceBattery: await announce(Self.deviceBatteries(), every: 6)
         case .caseBattery: await announce(Self.caseBatteries(), every: 6)
         }
+    }
+
+    static func focus() -> NotchAlert {
+        FocusChange(name: String(localized: "Work"), symbol: "person.lanyardcard.fill", state: .on, stateText: String(localized: "On")).alert(kind: .focus)
     }
 
     private func wait(_ seconds: Double) async {
@@ -384,6 +447,104 @@ final class ActivityBench {
             await round(of: .airplay)
             watch.bench(nil)
             index += 1
+            await wait(Self.rest)
+        }
+    }
+
+    private func recognition(_ scene: Scene) async {
+        let activity = MusicRecognitionActivity.shared
+        let state: MusicRecognitionActivity.State =
+            switch scene {
+            case .recognitionPermission: .requestingPermission
+            case .recognitionMatch: .match(.init(title: "Example Song", artist: "Example Artist", musicURL: URL(string: "https://music.apple.com/")))
+            case .recognitionNoMatch: .noMatch
+            case .recognitionDenied: .denied
+            case .recognitionRestricted: .restricted
+            case .recognitionOffline: .failure(.connection)
+            case .recognitionFailed: .failure(.recognition)
+            case .recognitionCancelled: .cancelled
+            default: .recognizing
+            }
+        while !Task.isCancelled {
+            activity.bench(state)
+            await round(of: .recognition)
+            activity.bench(.idle)
+            await wait(Self.rest)
+        }
+    }
+
+    private func shortcuts(_ scene: Scene) async {
+        let activity = ShortcutActivity.shared
+        let state: ShortcutRun.State =
+            switch scene {
+            case .shortcutStarting: .starting
+            case .shortcutStopping: .stopping
+            case .shortcutStopDelayed: .stopDelayed
+            case .shortcutComplete: .completed
+            case .shortcutStopped: .stopped
+            case .shortcutEndedAfterStop: .endedAfterStop
+            case .shortcutFailed: .failed
+            default: .running
+            }
+        while !Task.isCancelled {
+            var runs = [ShortcutRun.fixture(state: state, withOutput: state == .completed)]
+            if scene == .shortcutConcurrent { runs.append(.fixture(ordinal: 1)) }
+            activity.bench(runs, onDismiss: { [weak self] in self?.stopped(.shortcut) })
+            await round(of: .shortcut)
+            activity.bench([])
+            await wait(Self.rest)
+        }
+    }
+
+    static func alarmFixture(id: String = "preview-alarm") -> AlarmShown {
+        AlarmShown(alarm: .init(id: id, title: String(localized: "Morning"), actions: [.snooze, .stop]))
+    }
+
+    private func alarm(_ scene: Scene) async {
+        let watch = AlarmActivity.shared
+        while !Task.isCancelled {
+            var shown = Self.alarmFixture(id: UUID().uuidString)
+            switch scene {
+            case .alarmNoSnooze: shown.alarm = .init(id: shown.alarm.id, title: shown.alarm.title, actions: [.stop])
+            case .alarmUnavailable: shown.sourceAvailable = false
+            case .alarmPending: shown.pending = .snooze
+            case .alarmFailed: shown.failure = String(localized: "Clock hasn’t confirmed the change. Try again or open Clock.")
+            default: break
+            }
+            watch.bench(shown)
+            await round(of: .alarm)
+            watch.bench(nil)
+            await wait(Self.rest)
+        }
+    }
+
+    static func printFixture() -> PrintShown {
+        PrintShown(
+            job: PrintJob(
+                id: .init(printer: "Studio", number: 42, created: 1_000), title: String(localized: "Project Notes"), owner: "preview", state: .printing,
+                progress: .init(completed: 2, total: 6)), additionalJobs: 1)
+    }
+
+    private func printing(_ scene: Scene) async {
+        let watch = PrintActivity.shared
+        while !Task.isCancelled {
+            var shown = Self.printFixture()
+            switch scene {
+            case .printUnknown: shown.job.progress = nil
+            case .printHeld:
+                shown.job.state = .held
+                shown.job.progress = nil
+            case .printStopped:
+                shown.job.state = .stopped
+                shown.job.progress = nil
+            case .printUnavailable: shown.sourceAvailable = false
+            case .printCancelFailed: shown.cancellation = .failed
+            case .printOpenFailed: shown.openFailed = true
+            default: break
+            }
+            watch.bench(shown)
+            await round(of: .printing)
+            watch.bench(nil)
             await wait(Self.rest)
         }
     }

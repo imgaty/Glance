@@ -49,6 +49,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Permissions.shared.start()
         let statusBar = StatusBarController()
         statusBar.onOpenSettings = { [settings] in settings.show() }
+        statusBar.canLaunchActivity = { [notches] in notches.canLaunchActivity }
+        statusBar.onRecognizeMusic = { [notches] in notches.recognizeMusic() }
+        statusBar.onOpenShortcut = { [notches] id in notches.openShortcut(runID: id) }
         settings.nowPlaying = nowPlaying
         notches.contextMenu = statusBar.menu
         statusBar.putAway = { [notches] in notches.putAwayCommand }
@@ -79,6 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// or Terminal), the notch closes away first, as it does when it's turned off, and Glance quits
     /// once it has.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        MusicRecognitionActivity.shared.dismiss()
+        AlarmActivity.shared.stop()
         guard !closingAway else { return .terminateNow }
         let time = notches.closeAway()
         guard time > 0 else { return .terminateNow }
@@ -331,6 +336,11 @@ enum Preferences {
             activityDevices: true,
             activityCalls: true,
             activityAirDrop: true,
+            activityPrint: true,
+            activityAlarms: true,
+            activityRecognition: true,
+            activityShortcuts: true,
+            activityFocus: true,
             activityClockTimers: true,
             // Off: macOS keeps its timer out of the menu bar once it's taken out, after Glance is gone.
             clockTimerHidesMenuBar: false,
@@ -437,6 +447,11 @@ enum Preferences {
     static let activityDevices = "activityDevices"
     static let activityCalls = "activityCalls"
     static let activityAirDrop = "activityAirDrop"
+    static let activityPrint = "activityPrint"
+    static let activityAlarms = "activityAlarms"
+    static let activityRecognition = "activityRecognition"
+    static let activityShortcuts = "activityShortcuts"
+    static let activityFocus = "activityFocus"
     /// Clock's timers show (see ClockActivity), and while one does, the menu bar's own is taken out;
     /// and Clock's stopwatch shows.
     static let activityClockTimers = "activityClockTimers"
@@ -736,6 +751,11 @@ final class NotchManager {
     /// What the menu offers to put away on that notch, and putting it away.
     var putAwayCommand: (title: String, action: () -> Void)? { pointed?.putAwayCommand }
     var activityChoices: [(title: String, action: () -> Void)] { pointed?.activityChoices ?? [] }
+
+    /// Explicit menu entry point; no available notch means no microphone session is started.
+    func recognizeMusic() { pointed?.recognizeMusic() }
+    func openShortcut(runID: UUID) { pointed?.openShortcut(runID: runID) }
+    var canLaunchActivity: Bool { pointed?.canLaunchActivity == true }
     var nativeActivityReplacements: Set<String> {
         controllers.contains(where: \.replacesNativeMusic) ? [MenuBarLiveActivities.nowPlayingName] : []
     }
