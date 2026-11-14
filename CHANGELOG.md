@@ -10,6 +10,8 @@
 
 ### Live Activities
 
+- Fixed VoiceOver repeating scrolling song titles and artist names.
+
 - Fixed an open Hide menu applying to a replacement activity or a different
   display. Later queued announcements now stay in place.
 

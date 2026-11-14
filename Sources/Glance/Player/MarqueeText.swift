@@ -62,6 +62,10 @@ struct MarqueeText: View {
                 }
             )
             .onChange(of: text) { start = .now }
+            // The repeated labels make one seamless visual line, not two spoken copies. Keep
+            // the complete words available even when the visible line scrolls or truncates.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(explicit ? Text("\(text), Explicit") : Text(text))
     }
 
     private func scrolling(overflows: Bool) -> some View {
