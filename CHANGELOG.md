@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed the call's Sound Output menu relying on the pointer position to open.
+  It now opens from its button for mouse, keyboard and accessibility actions.
+
 - Fixed the recording countdown being announced as a button even though it
   has no controls to open.
 

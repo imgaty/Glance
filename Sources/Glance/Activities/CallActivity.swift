@@ -586,9 +586,8 @@ struct CallActions {
     var accept: () -> Void = { CallWatch.shared.accept() }
     var decline: () -> Void = { CallWatch.shared.decline() }
     var end: () -> Void = { CallWatch.shared.end() }
-    var output: (CGPoint?) -> Void = { point in
-        AudioOutput.shared.showMenu(at: point, withVolume: false, outputsOnly: true)
-    }
+    /// A fixture can observe the request; the live view presents from its own button anchor.
+    var output: ((CGPoint?) -> Void)? = nil
 }
 
 /// Opened, a call shows as a phone shows it. Connected over FaceTime or Phone, laid out as the
@@ -610,8 +609,8 @@ struct ExpandedCallView: View {
     var closedDrop: CGFloat = 0
     var actions = CallActions()
     @ObservedObject var microphone = CallMicrophone.shared
+    @State private var soundPresented = false
     @Environment(\.activityBubbleCenter) private var bubbleCenter
-    @Environment(\.playerKeys) private var keys
     @Environment(\.colorSchemeContrast) private var contrast
 
     private var sourceAvailable: Bool { actions.sourceAvailable(call) }
@@ -627,7 +626,9 @@ struct ExpandedCallView: View {
         .accessibilityElement(children: .contain)
         .onChange(of: revealed) { _, visible in
             if visible { microphone.refresh() }
+            if !visible { soundPresented = false }
         }
+        .onChange(of: call) { soundPresented = false }
     }
 
     /// A FaceTime or Phone call: the caller's picture up in the corner beside the camera, as the
@@ -716,12 +717,7 @@ struct ExpandedCallView: View {
     /// The sound output, and a red cross to end it where the app's own button can be pressed.
     @ViewBuilder private func inlineButtons(_ h: CGFloat) -> some View {
         let side = CallLayout.round(h)
-        IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
-            let fromKeys = NSApp.currentEvent?.type == .keyDown
-            actions.output(fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil)
-        } glyph: {
-            glyph("speaker.wave.3.fill", CallLook.speakerGlyph, side)
-        }
+        soundButton(h, symbolShare: CallLook.speakerGlyph)
         if call.canEnd {
             IslandCircleButton(control: .activityFourth, height: h, tint: .white, label: String(localized: "End"), fill: CallLook.end, side: side) {
                 actions.end()
@@ -774,13 +770,7 @@ struct ExpandedCallView: View {
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
         let side = CallLayout.round(h)
         if call.isConnected {
-            IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
-                // From the keyboard the pointer can be anywhere: the menu opens under the button.
-                let fromKeys = NSApp.currentEvent?.type == .keyDown
-                actions.output(fromKeys ? keys?.focusFrame.flatMap { keys?.screenPoint?($0) } : nil)
-            } glyph: {
-                glyph("speaker.wave.3.fill", CallLook.speakerSymbol, side, weight: .regular)
-            }
+            soundButton(h, symbolShare: CallLook.speakerSymbol, weight: .regular)
             // Video, off, as the iPhone shows it on a voice call: the Mac can't add it to one.
             IslandCircle(height: h, tint: .white, highlighted: false, fill: CallLook.videoFill, side: side) {
                 Image(systemName: "video.slash.fill")
@@ -835,6 +825,25 @@ struct ExpandedCallView: View {
                 actions.end()
             } glyph: {
                 glyph("phone.down.fill", CallLook.endSymbol, side, weight: .bold)
+            }
+        }
+    }
+
+    /// Pointer, keyboard and accessibility activation all use this button's actual window and
+    /// frame. No current event or pointer position is needed to locate the call's dropdown.
+    private func soundButton(_ h: CGFloat, symbolShare: CGFloat, weight: Font.Weight = .semibold) -> some View {
+        let side = CallLayout.round(h)
+        return IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
+            if let output = actions.output { output(nil) } else { soundPresented = true }
+        } glyph: {
+            glyph("speaker.wave.3.fill", symbolShare, side, weight: weight)
+        }
+        .background {
+            if soundPresented {
+                SoundMenuPresenter(
+                    isPresented: $soundPresented,
+                    makeMenu: { AudioOutput.shared.menu(withVolume: false, outputsOnly: true) },
+                    followsPointer: false)
             }
         }
     }

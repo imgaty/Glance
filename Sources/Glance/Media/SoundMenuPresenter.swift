@@ -6,6 +6,8 @@ import SwiftUI
 struct SoundMenuPresenter: NSViewRepresentable {
     @Binding var isPresented: Bool
     let makeMenu: () -> SoundOutputMenu
+    /// Calls keep the dropdown under its button for every input method.
+    var followsPointer = true
 
     final class Anchor: NSView {
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -17,14 +19,16 @@ struct SoundMenuPresenter: NSViewRepresentable {
         private var menu: SoundOutputMenu?
         private var dismissed: () -> Void = {}
 
-        func update(shown: Bool, anchor: NSView, makeMenu: @escaping () -> SoundOutputMenu, dismissed: @escaping () -> Void) {
+        func update(shown: Bool, anchor: NSView, makeMenu: @escaping () -> SoundOutputMenu, followsPointer: Bool = true, dismissed: @escaping () -> Void) {
             self.dismissed = dismissed
             guard shown else { return cancel() }
             guard menu == nil, pending == nil else { return }
-            let pointer = NSApp.currentEvent.flatMap { event -> CGPoint? in
-                guard [.leftMouseDown, .leftMouseUp].contains(event.type), event.window === anchor.window else { return nil }
-                return event.window?.convertPoint(toScreen: event.locationInWindow)
-            }
+            let pointer: CGPoint? =
+                followsPointer
+                ? NSApp.currentEvent.flatMap { event -> CGPoint? in
+                    guard [.leftMouseDown, .leftMouseUp].contains(event.type), event.window === anchor.window else { return nil }
+                    return event.window?.convertPoint(toScreen: event.locationInWindow)
+                } : nil
             pending = Task { @MainActor [weak self, weak anchor] in
                 await Task.yield()
                 guard !Task.isCancelled, let self else { return }
@@ -53,7 +57,7 @@ struct SoundMenuPresenter: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> Anchor { Anchor() }
     func updateNSView(_ view: Anchor, context: Context) {
-        context.coordinator.update(shown: isPresented, anchor: view, makeMenu: makeMenu) { isPresented = false }
+        context.coordinator.update(shown: isPresented, anchor: view, makeMenu: makeMenu, followsPointer: followsPointer) { isPresented = false }
     }
     static func dismantleNSView(_ view: Anchor, coordinator: Coordinator) { coordinator.cancel() }
 }
