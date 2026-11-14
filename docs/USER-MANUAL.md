@@ -685,7 +685,9 @@ invent a countdown after snoozing, and leaves Clock's native alert available.
 Your active local print jobs appear beside the camera. Open one to see its
 printer, status and page count, when the printer reports one. **Cancel Job**
 requests cancellation of that exact job and waits for the spooler to confirm
-it has gone. **Print Center** opens Apple's queue. If the queue cannot be read,
+it has gone. If confirmation takes longer, it says the cancellation is
+unconfirmed and offers a retry without claiming the request was rejected.
+**Print Center** opens Apple's queue. If the queue cannot be read,
 Glance keeps the last status, disables cancellation and offers **Try Again**.
 
 ### Music recognition
@@ -714,6 +716,11 @@ the process ends. Turning this activity off hides it without interrupting a
 running shortcut. Existing runs keep their **Stop**, **Show Result** and
 **Done** commands in the menu even when their display is off. Shortcuts may
 ask for their own permissions or input.
+
+Results are temporary. Copy or move a result elsewhere to keep it. Unchanged
+results are eligible for cleanup the next time Glance starts after 24 hours;
+edited or exported files are preserved. Done removes empty completed results,
+not a nonempty result you may still want to keep.
 
 ### Focus
 

@@ -5,6 +5,7 @@
 //  Created by Gaty on 14/11/2026.
 //
 
+import AppKit
 import SwiftUI
 
 struct AlarmCompactView: View {
@@ -48,7 +49,45 @@ struct AlarmActivityView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static func width(camera: CGFloat) -> CGFloat { max(400, camera + PlayerLayout.padding * 2) }
-    static func height(restingHeight: CGFloat) -> CGFloat { restingHeight + LiveActivityView.cameraGap + 200 }
+    static func height(restingHeight: CGFloat, camera: CGFloat, shown: AlarmShown? = nil) -> CGFloat {
+        let contentWidth = max(width(camera: camera) - padding * 2, 1)
+        let labelWidth = max(contentWidth - 32, 1)
+        let headline = NSFont.preferredFont(forTextStyle: .headline, options: [:])
+        let subheadline = NSFont.preferredFont(forTextStyle: .subheadline, options: [:])
+        let callout = NSFont.preferredFont(forTextStyle: .callout, options: [:])
+        let titleLine = lineHeight(headline)
+        let title = shown?.alarm.title ?? String(localized: "Alarm")
+        let titleExtra = max(0, min(textHeight(title, font: headline, width: labelWidth), titleLine * 2) - titleLine)
+        let status = shown?.sourceAvailable == false ? String(localized: "Alarm status unavailable") : String(localized: "Alarm")
+        let statusExtra = max(0, textHeight(status, font: subheadline, width: labelWidth) - lineHeight(subheadline))
+        let detail: CGFloat
+        if let pending = shown?.pending {
+            detail = max(28, textHeight(pending.progress, font: callout, width: contentWidth) + 12)
+        } else if let failure = shown?.failure {
+            detail = textHeight(failure, font: callout, width: contentWidth) + 12
+        } else {
+            detail = 0
+        }
+        // The ordinary native label and button row need no error-sized empty area below them.
+        // Additional height follows the actual text width and the same semantic fonts as the view.
+        return restingHeight + LiveActivityView.cameraGap + 120 + titleExtra + statusExtra + detail
+    }
+
+    private static let padding: CGFloat = 16
+
+    private static func lineHeight(_ font: NSFont) -> CGFloat {
+        ceil(font.ascender - font.descender + font.leading)
+    }
+
+    private static func textHeight(_ text: String, font: NSFont, width: CGFloat) -> CGFloat {
+        max(
+            lineHeight(font),
+            ceil(
+                (text as NSString).boundingRect(
+                    with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font]
+                ).height))
+    }
 
     static func controls(for shown: AlarmShown) -> [PlayerControl] {
         (shown.canPerform(.snooze) ? [.activityFirst] : [])
@@ -110,7 +149,7 @@ struct AlarmActivityView: View {
             }
             .controlSize(.regular)
         }
-        .padding()
+        .padding(Self.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(shown.spoken)

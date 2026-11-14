@@ -24,12 +24,125 @@ struct ShortcutDefinition: Equatable, Hashable, Sendable, Identifiable {
 
 enum ShortcutError: Error { case invalidCatalog, unavailable }
 
+/// A private cache entry, never a shortcut input or an exported result. Only completed entries
+/// with an ownership receipt are eligible for age cleanup; active and legacy folders are left alone.
+struct ShortcutRunStorage: Equatable, Sendable {
+    static let retention: TimeInterval = 24 * 60 * 60
+    static var root: URL { FileManager.default.temporaryDirectory.appendingPathComponent("Glance-ShortcutRuns", isDirectory: true) }
+    private static let owner = "Glance.ShortcutRun.v1"
+    private static let receiptName = ".glance-completed.json"
+    let directory: URL
+    var output: URL { directory.appendingPathComponent("Result") }
+    var errors: URL { directory.appendingPathComponent("Error.txt") }
+
+    private struct Snapshot: Codable, Equatable {
+        let bytes: UInt64
+        let fileNumber: UInt64
+        let modified: Date
+    }
+    private struct Receipt: Codable {
+        let owner: String
+        let directory: String
+        let completed: Date
+        let result: Snapshot?
+    }
+
+    static func create(in root: URL = Self.root) throws -> ShortcutRunStorage {
+        let manager = FileManager.default
+        try manager.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        guard isDirectory(root) else { throw ShortcutError.unavailable }
+        let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try manager.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        return .init(directory: directory)
+    }
+
+    /// Called only after the owned process has exited and closed both output handles.
+    func finish(at date: Date = .now) -> (message: String?, output: URL?) {
+        let errorSnapshot = Self.snapshot(errors)
+        let errorFile: FileHandle? = errorSnapshot == nil ? nil : (try? FileHandle(forReadingFrom: errors))
+        let data = try? errorFile?.read(upToCount: 4_096)
+        try? errorFile?.close()
+        let message = data.flatMap { String(data: $0, encoding: .utf8) }?.trimmingCharacters(in: .whitespacesAndNewlines)
+        // The raw stderr file is no longer needed once its bounded UI message is retained.
+        if let errorSnapshot, Self.snapshot(errors) == errorSnapshot {
+            try? FileManager.default.removeItem(at: errors)
+        }
+        let result = Self.snapshot(output)
+        // An unexpected replacement, such as a symlink, is neither opened nor marked for deletion.
+        if result != nil || !FileManager.default.fileExists(atPath: output.path) {
+            let receipt = Receipt(owner: Self.owner, directory: directory.lastPathComponent, completed: date, result: result)
+            if let encoded = try? JSONEncoder().encode(receipt) {
+                try? encoded.write(to: directory.appendingPathComponent(Self.receiptName), options: .atomic)
+            }
+        }
+        return (message.flatMap { $0.isEmpty ? nil : $0 }, result.map { $0.bytes > 0 } == true ? output : nil)
+    }
+
+    /// Done only discards an empty owned result. Nonempty results expire at a later startup,
+    /// once their completion receipt is at least 24 hours old.
+    func discardEmptyResult() {
+        guard let receipt = receipt(), (receipt.result?.bytes ?? 0) == 0 else { return }
+        removeCompleted(receipt)
+    }
+
+    /// Run at startup, off the main actor. A file changed by the user is no longer ours to expire.
+    static func cleanupExpired(in root: URL = Self.root, now: Date = .now) {
+        guard isDirectory(root), let folders = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return }
+        for folder in folders {
+            let entry = ShortcutRunStorage(directory: folder)
+            guard let receipt = entry.receipt(), now.timeIntervalSince(receipt.completed) >= retention else { continue }
+            entry.removeCompleted(receipt)
+        }
+    }
+
+    private func receipt() -> Receipt? {
+        guard UUID(uuidString: directory.lastPathComponent) != nil, Self.isDirectory(directory) else { return nil }
+        let url = directory.appendingPathComponent(Self.receiptName)
+        guard let attributes = Self.snapshot(url), attributes.bytes <= 4_096,
+            let data = try? Data(contentsOf: url), let receipt = try? JSONDecoder().decode(Receipt.self, from: data),
+            receipt.owner == Self.owner, receipt.directory == directory.lastPathComponent
+        else { return nil }
+        return receipt
+    }
+
+    private func removeCompleted(_ receipt: Receipt) {
+        let manager = FileManager.default
+        guard let names = try? manager.contentsOfDirectory(atPath: directory.path),
+            Set(names).isSubset(of: ["Result", Self.receiptName])
+        else { return }
+        if names.contains("Result") {
+            // Preserve edited/replaced results; moved/exported files outside this folder are never visited.
+            guard let current = Self.snapshot(output), current == receipt.result else { return }
+            do { try manager.removeItem(at: output) } catch { return }
+        }
+        do { try manager.removeItem(at: directory.appendingPathComponent(Self.receiptName)) } catch { return }
+        // Unlike recursive removal, rmdir leaves any concurrently added file alone.
+        _ = directory.path.withCString { rmdir($0) }
+    }
+
+    private static func isDirectory(_ url: URL) -> Bool {
+        guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]) else { return false }
+        return values.isDirectory == true && values.isSymbolicLink != true
+    }
+
+    private static func snapshot(_ url: URL) -> Snapshot? {
+        guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]),
+            values.isRegularFile == true, values.isSymbolicLink != true,
+            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+            let bytes = attributes[.size] as? NSNumber, let number = attributes[.systemFileNumber] as? NSNumber,
+            let modified = attributes[.modificationDate] as? Date
+        else { return nil }
+        return .init(bytes: bytes.uint64Value, fileNumber: number.uint64Value, modified: modified)
+    }
+}
+
 struct ShortcutExit: Equatable, Sendable {
     enum Reason: Equatable, Sendable { case exit, signal }
     let status: Int32
     let reason: Reason
     var message: String?
     var output: URL?
+    var storage: ShortcutRunStorage?
 }
 
 struct ShortcutRun: Identifiable, Equatable, Sendable {
@@ -156,11 +269,10 @@ final class ShortcutCLI: ShortcutRunning {
     }
 
     func launch(_ shortcut: ShortcutDefinition, completion: @escaping @MainActor (ShortcutExit) -> Void) throws -> any ShortcutRunHandle {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Glance-ShortcutRuns", isDirectory: true)
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let output = directory.appendingPathComponent("Result")
-        let errors = directory.appendingPathComponent("Error.txt")
+        let storage = try ShortcutRunStorage.create()
+        let directory = storage.directory
+        let output = storage.output
+        let errors = storage.errors
         guard FileManager.default.createFile(atPath: output.path, contents: nil),
             FileManager.default.createFile(atPath: errors.path, contents: nil)
         else { throw ShortcutError.unavailable }
@@ -176,14 +288,10 @@ final class ShortcutCLI: ShortcutRunning {
         process.terminationHandler = { finished in
             try? out.close()
             try? err.close()
-            let errorFile = try? FileHandle(forReadingFrom: errors)
-            let errorData = try? errorFile?.read(upToCount: 4_096)
-            try? errorFile?.close()
-            let errorText = errorData.flatMap { String(data: $0, encoding: .utf8) }?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let count = (try? FileManager.default.attributesOfItem(atPath: output.path)[.size] as? NSNumber)?.intValue ?? 0
+            let saved = storage.finish()
             let result = ShortcutExit(
                 status: finished.terminationStatus, reason: finished.terminationReason == .exit ? .exit : .signal,
-                message: errorText.flatMap { $0.isEmpty ? nil : $0 }, output: count > 0 ? output : nil)
+                message: saved.message, output: saved.output, storage: storage)
             Task { @MainActor in completion(result) }
         }
         do { try process.run() } catch {
@@ -230,6 +338,9 @@ final class ShortcutActivity: ObservableObject {
     /// Display preferences never launch, cancel or forget an actual shortcut process.
     func start() {
         guard settingsObserver == nil else { return }
+        if live, !simulated {
+            Task.detached(priority: .utility) { ShortcutRunStorage.cleanupExpired() }
+        }
         settingsObserver = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.settingsChanged() }
         }
@@ -314,6 +425,7 @@ final class ShortcutActivity: ObservableObject {
     /// A running shortcut cannot be discarded while its process is still tracked.
     func dismiss(_ id: UUID) {
         guard let run = runs.first(where: { $0.id == id }), !run.state.active else { return }
+        if !simulated { run.exit?.storage?.discardEmptyResult() }
         runs.removeAll { $0.id == id }
         pendingStops.removeValue(forKey: id)?.cancel()
         if selected == id { selected = nil }

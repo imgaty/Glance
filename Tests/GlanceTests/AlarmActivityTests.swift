@@ -338,6 +338,27 @@ struct AlarmActivityTests {
         #expect(!NotchController.stepsAway(.alarm))
     }
 
+    @Test("Alarm height adds only the space needed for pending or wrapped error content")
+    func contentHeight() {
+        let normal = AlarmShown(alarm: alarm)
+        let height = AlarmActivityView.height(restingHeight: 32, camera: 185, shown: normal)
+        #expect(height < 32 + LiveActivityView.cameraGap + 200)
+        var pending = normal
+        pending.pending = .snooze
+        #expect(AlarmActivityView.height(restingHeight: 32, camera: 185, shown: pending) > height)
+        var failed = normal
+        failed.failure = String(repeating: "Clock hasn’t confirmed the change. Open Clock to check this alarm. ", count: 4)
+        let narrow = AlarmActivityView.height(restingHeight: 32, camera: 185, shown: failed)
+        let wide = AlarmActivityView.height(restingHeight: 32, camera: 520, shown: failed)
+        #expect(narrow > wide)
+        #expect(wide > height)
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.alarm = failed
+        model.expanded = .alarm
+        model.state = .open
+        #expect(model.metrics.height == AlarmActivityView.height(restingHeight: 32, camera: model.camera, shown: failed))
+    }
+
     @Test("Updating one alarm’s controls preserves its expanded presentation")
     func presentationUpdates() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)

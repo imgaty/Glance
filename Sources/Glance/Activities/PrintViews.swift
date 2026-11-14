@@ -43,6 +43,7 @@ struct PrintJobGlyph: View {
     static func symbol(for shown: PrintShown) -> String {
         if !shown.sourceAvailable { return "questionmark.circle" }
         if shown.cancellation == .pending { return "stop.circle" }
+        if shown.cancellation == .unconfirmed { return "questionmark.circle" }
         if shown.cancellation == .failed || shown.openFailed { return "exclamationmark.triangle.fill" }
         switch shown.job.state {
         case .queued: return "clock"
@@ -56,6 +57,7 @@ struct PrintJobGlyph: View {
     }
 
     static func caption(for shown: PrintShown) -> String {
+        if shown.cancellation == .unconfirmed { return String(localized: "Unconfirmed") }
         if !shown.sourceAvailable { return String(localized: "Unavailable") }
         if shown.cancellation == .pending { return String(localized: "Canceling…") }
         if shown.cancellation == .failed { return String(localized: "Cancel Failed") }
@@ -156,11 +158,11 @@ struct PrintJobView: View {
                         .help("Refresh print status")
                         .accessibilityIdentifier("refresh-print-status")
                 } else {
-                    Button(shown.cancellation == .failed ? String(localized: "Try Again") : String(localized: "Cancel Print Job"), role: .destructive, action: cancel)
+                    Button(shown.canRetryCancellation ? String(localized: "Try Again") : String(localized: "Cancel Print Job"), role: .destructive, action: cancel)
                         .notchControl()
                         .keyControl(.activitySecond, in: RoundedRectangle(cornerRadius: 6), spoken: String(localized: "Cancel Print Job"), action: cancel)
                         .disabled(!shown.canCancel)
-                        .help(shown.cancellation == .failed ? String(localized: "Try canceling this print job again") : String(localized: "Cancel this print job"))
+                        .help(shown.canRetryCancellation ? String(localized: "Try canceling this print job again") : String(localized: "Cancel this print job"))
                         .accessibilityIdentifier("cancel-print-job")
                 }
             }

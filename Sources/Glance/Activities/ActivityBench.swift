@@ -31,7 +31,7 @@ final class ActivityBench {
         /// A voice memo recorded until it's stopped, and one paused.
         case voiceMemo, voiceMemoPaused
         /// Print Center states, with no connection to a printer or the local queue.
-        case printing, printUnknown, printHeld, printStopped, printUnavailable, printCancelFailed, printOpenFailed
+        case printing, printUnknown, printHeld, printStopped, printUnavailable, printCancelFailed, printCancelUnconfirmed, printOpenFailed
         case alarm, alarmNoSnooze, alarmUnavailable, alarmPending, alarmFailed
         /// Local invocation snapshots only; these scenarios never execute a user shortcut.
         case shortcut, shortcutStarting, shortcutStopping, shortcutStopDelayed, shortcutComplete, shortcutStopped, shortcutEndedAfterStop, shortcutFailed, shortcutConcurrent
@@ -99,6 +99,7 @@ final class ActivityBench {
             case .printStopped: "Printing Stopped"
             case .printUnavailable: "Print Status Unavailable"
             case .printCancelFailed: "Cancel Failed"
+            case .printCancelUnconfirmed: "Cancellation Unconfirmed"
             case .printOpenFailed: "Print Center Unavailable"
             case .charging: "Charging"
             case .lowBattery: "Low Battery"
@@ -124,7 +125,7 @@ final class ActivityBench {
                     .recognitionCancelled,
                 ]
             ),
-            ("Printing", [.printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printOpenFailed]),
+            ("Printing", [.printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printCancelUnconfirmed, .printOpenFailed]),
             ("Shortcuts", [.shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent]),
             ("Announced", [.focus, .charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
         ]
@@ -230,7 +231,7 @@ final class ActivityBench {
         case .shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent:
             await shortcuts(scene)
         case .alarm, .alarmNoSnooze, .alarmUnavailable, .alarmPending, .alarmFailed: await alarm(scene)
-        case .printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printOpenFailed: await printing(scene)
+        case .printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printCancelUnconfirmed, .printOpenFailed: await printing(scene)
         case .call: await call()
         case .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread: await callState(scene)
         case .screenRecording: await screenRecording()
@@ -539,6 +540,7 @@ final class ActivityBench {
                 shown.job.progress = nil
             case .printUnavailable: shown.sourceAvailable = false
             case .printCancelFailed: shown.cancellation = .failed
+            case .printCancelUnconfirmed: shown.cancellation = .unconfirmed
             case .printOpenFailed: shown.openFailed = true
             default: break
             }

@@ -72,12 +72,85 @@ struct PrintActivityTests {
         await source.configure(removeOnCancel: false)
         #expect(!(await watch.cancel(expectedID: original.id)))
         #expect(watch.shown?.job.id == original.id)
-        #expect(watch.shown?.cancellation == .failed)
+        #expect(watch.shown?.cancellation == .unconfirmed)
+        #expect(watch.shown?.status == "Unable to Confirm Cancellation")
+        #expect(watch.shown?.canRetryCancellation == true)
+        #expect(await source.readCount == 10)  // Initial load, revalidation, eight bounded readbacks.
 
         await source.configure(removeOnCancel: true)
         #expect(await watch.cancel(expectedID: original.id))
         #expect(watch.shown == nil)
         #expect(await source.canceled == [original.id, original.id])
+    }
+
+    @Test("A slow accepted cancellation remains unconfirmed until later polling confirms it")
+    func slowCancellationCompletesLater() async {
+        let current = job()
+        let source = Source(jobs: [current])
+        let watch = PrintActivity(source: source, cancellationDelay: .zero)
+        await watch.refresh()
+        await source.configure(removeOnCancel: false)
+        #expect(!(await watch.cancel(expectedID: current.id)))
+        await watch.refresh()
+        #expect(watch.shown?.cancellation == .unconfirmed)
+        #expect(await source.canceled == [current.id])
+
+        await source.setJobs([])
+        await watch.refresh()
+        #expect(watch.shown == nil)
+        #expect(await source.canceled == [current.id])
+    }
+
+    @Test("Readback loss after acceptance is uncertainty with refresh recovery, not a rejected cancel")
+    func acceptedReadbackUnavailable() async {
+        let current = job()
+        let source = Source(jobs: [current])
+        let watch = PrintActivity(source: source, cancellationDelay: .zero)
+        await watch.refresh()
+        await source.configure(removeOnCancel: false, readFailsAfterCancel: true)
+        #expect(!(await watch.cancel(expectedID: current.id)))
+        #expect(watch.shown?.cancellation == .unconfirmed)
+        #expect(watch.shown?.status == "Unable to Confirm Cancellation")
+        #expect(watch.shown?.sourceAvailable == false)
+        #expect(watch.shown?.canCancel == false)
+
+        await source.configure(readFails: false, readFailsAfterCancel: false)
+        await watch.refresh()
+        #expect(watch.shown?.sourceAvailable == true)
+        #expect(watch.shown?.cancellation == .unconfirmed)
+        #expect(watch.shown?.canCancel == true)
+        #expect(await source.canceled == [current.id])
+    }
+
+    @Test("Rejecting a later retry does not turn an earlier accepted cancellation into definite failure")
+    func retryAfterAcknowledgment() async {
+        let current = job()
+        let source = Source(jobs: [current])
+        let watch = PrintActivity(source: source, cancellationDelay: .zero)
+        await watch.refresh()
+        await source.configure(removeOnCancel: false)
+        #expect(!(await watch.cancel(expectedID: current.id)))
+        await source.configure(cancelFails: true)
+        #expect(!(await watch.cancel(expectedID: current.id)))
+        #expect(watch.shown?.cancellation == .unconfirmed)
+        #expect(watch.shown?.sourceAvailable == true)
+        #expect(watch.shown?.canRetryCancellation == true)
+    }
+
+    @Test("Retrying an unconfirmed cancellation still rejects a reused queue identity")
+    func uncertainRetryRevalidatesIdentity() async {
+        let current = job()
+        let replacement = job(created: 200)
+        let source = Source(jobs: [current])
+        let watch = PrintActivity(source: source, cancellationDelay: .zero)
+        await watch.refresh()
+        await source.configure(removeOnCancel: false)
+        #expect(!(await watch.cancel(expectedID: current.id)))
+        await source.setJobs([replacement])
+        #expect(!(await watch.cancel(expectedID: current.id)))
+        #expect(await source.canceled == [current.id])
+        #expect(watch.shown?.job.id == replacement.id)
+        #expect(watch.shown?.cancellation == .idle)
     }
 
     @Test("A rejected cancellation keeps the job and offers a retry")
@@ -210,6 +283,11 @@ struct PrintActivityTests {
         #expect(PrintJobView.controls(for: shown) == [.activityFirst])
         shown.cancellation = .failed
         #expect(PrintJobView.controls(for: shown) == [.activityFirst, .activitySecond])
+        shown.cancellation = .unconfirmed
+        #expect(PrintJobView.controls(for: shown) == [.activityFirst, .activitySecond])
+        #expect(shown.canRetryCancellation)
+        #expect(PrintJobGlyph.symbol(for: shown) == "questionmark.circle")
+        #expect(PrintJobGlyph.caption(for: shown) == "Unconfirmed")
         shown.job.state = .completed
         #expect(PrintJobView.controls(for: shown) == [.activityFirst])
         shown.sourceAvailable = false
@@ -223,16 +301,18 @@ struct PrintActivityTests {
         var readFails = false
         var cancelFails = false
         var removeOnCancel = true
+        var readFailsAfterCancel = false
         private var holdRead = false
         private var heldRead: CheckedContinuation<[PrintJob], Never>?
 
         init(jobs: [PrintJob]) { self.jobs = jobs }
         var hasHeldRead: Bool { heldRead != nil }
         func setJobs(_ jobs: [PrintJob]) { self.jobs = jobs }
-        func configure(readFails: Bool? = nil, cancelFails: Bool? = nil, removeOnCancel: Bool? = nil) {
+        func configure(readFails: Bool? = nil, cancelFails: Bool? = nil, removeOnCancel: Bool? = nil, readFailsAfterCancel: Bool? = nil) {
             if let readFails { self.readFails = readFails }
             if let cancelFails { self.cancelFails = cancelFails }
             if let removeOnCancel { self.removeOnCancel = removeOnCancel }
+            if let readFailsAfterCancel { self.readFailsAfterCancel = readFailsAfterCancel }
         }
         func holdNextRead() { holdRead = true }
         func resumeRead() {
@@ -253,6 +333,7 @@ struct PrintActivityTests {
             canceled.append(id)
             if cancelFails { throw PrintSourceError.requestFailed }
             if removeOnCancel { jobs.removeAll { $0.id == id } }
+            if readFailsAfterCancel { readFails = true }
             return true
         }
     }

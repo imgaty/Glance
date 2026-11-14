@@ -614,7 +614,7 @@ final class NotchModel: ObservableObject {
                     AirPlayLayout.height(closedSize.height) + pull
                 )
             case .open where expanded == .alarm:
-                (AlarmActivityView.width(camera: camera) + pull * 0.35 + across, AlarmActivityView.height(restingHeight: closedSize.height) + pull)
+                (AlarmActivityView.width(camera: camera) + pull * 0.35 + across, AlarmActivityView.height(restingHeight: closedSize.height, camera: camera, shown: alarm) + pull)
             case .open where expanded == .printing:
                 (PrintJobView.width(camera: camera) + pull * 0.35 + across, PrintJobView.height(restingHeight: closedSize.height) + pull)
             case .open where expanded == .shortcut:
@@ -1309,7 +1309,7 @@ struct NotchView: View {
                 }
             )
             .padding(.top, model.closedSize.height + LiveActivityView.cameraGap)
-            .frame(width: AlarmActivityView.width(camera: model.camera), height: AlarmActivityView.height(restingHeight: model.closedSize.height), alignment: .top)
+            .frame(width: AlarmActivityView.width(camera: model.camera), height: AlarmActivityView.height(restingHeight: model.closedSize.height, camera: model.camera, shown: alarm), alignment: .top)
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)

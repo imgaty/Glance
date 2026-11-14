@@ -10,6 +10,12 @@
 
 ### Live Activities
 
+- Shortened alarm panels while leaving room for wrapped status and errors.
+- Added bounded cleanup for temporary shortcut results while preserving
+  results you changed or moved elsewhere.
+- Fixed accepted print cancellations being reported as failed while their
+  confirmation was still pending.
+
 - Fixed native music restoration waiting behind failed hiding, and stale
   hiding commands running after the display or preference changed.
 

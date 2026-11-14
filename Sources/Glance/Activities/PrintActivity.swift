@@ -88,7 +88,7 @@ struct PrintJob: Equatable, Sendable, Identifiable {
 }
 
 struct PrintShown: Equatable {
-    enum Cancellation: Equatable { case idle, pending, failed }
+    enum Cancellation: Equatable { case idle, pending, unconfirmed, failed }
 
     var job: PrintJob
     var additionalJobs = 0
@@ -97,8 +97,10 @@ struct PrintShown: Equatable {
     var openFailed = false
 
     var canCancel: Bool { sourceAvailable && job.canCancel && cancellation != .pending }
+    var canRetryCancellation: Bool { cancellation == .failed || cancellation == .unconfirmed }
 
     var status: String {
+        if cancellation == .unconfirmed { return String(localized: "Unable to Confirm Cancellation") }
         if !sourceAvailable { return String(localized: "Print Status Unavailable") }
         if cancellation == .pending { return String(localized: "Canceling Print Job…") }
         if cancellation == .failed { return String(localized: "Couldn't Cancel Print Job") }
@@ -288,8 +290,18 @@ final class PrintActivity: ObservableObject {
         generation += 1
         let request = generation
         cancellationID = expectedID
+        // An earlier accepted request remains uncertain even if a later retry is rejected.
+        var acknowledged = current.cancellation == .unconfirmed
+        var readingQueue = true
         shown?.cancellation = .pending
-        defer { if generation == request, cancellationID == expectedID { cancellationID = nil } }
+        defer {
+            if generation == request, cancellationID == expectedID {
+                cancellationID = nil
+                if shown?.job.id == expectedID, shown?.cancellation == .pending {
+                    shown?.cancellation = acknowledged ? .unconfirmed : .idle
+                }
+            }
+        }
 
         do {
             let before = try await source.read(keeping: expectedID)
@@ -298,8 +310,11 @@ final class PrintActivity: ObservableObject {
                 apply(before)
                 return false
             }
+            readingQueue = false
             let accepted = try await source.cancel(expectedID)
+            acknowledged = acknowledged || accepted
             guard request == generation, isEnabled(), !Task.isCancelled else { return false }
+            readingQueue = true
             for attempt in 0..<(accepted ? 8 : 1) {
                 let jobs = try await source.read(keeping: expectedID)
                 guard request == generation, isEnabled(), !Task.isCancelled else { return false }
@@ -307,11 +322,14 @@ final class PrintActivity: ObservableObject {
                 if !jobs.contains(where: { $0.id == expectedID && $0.state.isActive }) { return accepted }
                 if attempt < 7, accepted { try await Task.sleep(for: cancellationDelay) }
             }
-            if shown?.job.id == expectedID { shown?.cancellation = .failed }
+            if shown?.job.id == expectedID { shown?.cancellation = acknowledged ? .unconfirmed : .failed }
             return false
         } catch {
             guard request == generation, isEnabled(), !Task.isCancelled else { return false }
-            if shown?.job.id == expectedID { shown?.cancellation = .failed }
+            if shown?.job.id == expectedID {
+                shown?.cancellation = acknowledged ? .unconfirmed : .failed
+                if readingQueue { shown?.sourceAvailable = false }
+            }
             return false
         }
     }

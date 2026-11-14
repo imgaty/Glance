@@ -250,6 +250,23 @@ struct ShortcutActivityTests {
         #expect(activity.shown?.run.id == second.id)
     }
 
+    @Test("Done cleans only the completed run's empty owned cache folder")
+    func dismissEmptyOwnedResult() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Glance-ShortcutDismissTest-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storage = try ShortcutRunStorage.create(in: root)
+        try Data().write(to: storage.output)
+        _ = storage.finish()
+        let source = Source()
+        let activity = ShortcutActivity(source: source)
+        let id = activity.run(definition)
+        source.handles[0].isRunning = false
+        source.completions[0](.init(status: 0, reason: .exit, storage: storage))
+        activity.dismiss(id)
+        #expect(activity.runs.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: storage.directory.path))
+    }
+
     @Test("Keyboard controls match visible enabled controls in their visual order")
     func controlStates() {
         func shown(_ state: ShortcutRun.State, output: Bool = false) -> ShortcutShown {
