@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Restored the player's direct closing animation back to compact music and its
+  detached bubble, without the extra collapse and expansion.
+
 - Restored the player's direct opening spring and the original spring when
   switching between the tray and player. Other activity animations stay the same.
 

@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-/// The shared activity sequence, with a direct spring for opening the player.
+/// The shared activity sequence, with direct opening and closing for the player.
 extension NotchModel {
     private enum Presentation: Equatable {
         case hardware
@@ -137,6 +137,39 @@ extension NotchModel {
         bubbleReach = 0
         bubbleMerged = state == .open
         if state != .open { openedFromBubble = false }
+    }
+
+    /// The player's original close goes straight to its compact footprint, without a housing
+    /// midpoint. A detached origin reaches back to its bubble before the connecting end retracts.
+    func closePlayer() {
+        let reduced = activityMotionReduced
+        let intoBubble = openedFromBubble && second != nil && alert == nil && !folded
+        let clock = ContinuousClock()
+        let deadline = clock.now + .seconds(0.38 / max(NotchMotion.pace, 0.01))
+        var transaction = Transaction(animation: reduced ? nil : NotchMotion.playerClose)
+        transaction.disablesAnimations = reduced
+        withTransaction(transaction) {
+            cancelActivityTransition()
+            state = .closed
+            stretch = 0
+            lean = 0
+            pageStretch = 0
+            bubbleMerged = false
+            bubbleReach = intoBubble && !reduced ? bubbleSpan : 0
+            activityOpening = !reduced
+            if reduced { restoreActivityDestination() }
+        }
+        guard !reduced else { return }
+        let request = activityTransitionID
+        activityTransitionTask = Task { @MainActor [weak self] in
+            do { try await clock.sleep(until: deadline, tolerance: .zero) } catch { return }
+            guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
+            withAnimation(self.activityMotionReduced ? nil : NotchMotion.playerClose) {
+                self.restoreActivityDestination()
+                self.activityOpening = false
+            }
+            self.activityTransitionTask = nil
+        }
     }
 
     /// Teardown invalidates the delayed opening as well as cancelling its sleep.

@@ -52,7 +52,7 @@ struct ActivityMotionTests {
         await transition.value
     }
 
-    @Test("The player opens directly while other activities keep their hardware midpoint", arguments: NotchModel.Activity.allCases)
+    @Test("The player opens and closes directly while other activities keep their hardware midpoint", arguments: NotchModel.Activity.allCases)
     func familyOpenClose(_ activity: NotchModel.Activity) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
@@ -90,9 +90,14 @@ struct ActivityMotionTests {
         #expect(model.expanded == (activity == .music ? nil : activity))
 
         model.close()
-        expectHardware(model)
+        if activity == .music {
+            #expect(!model.activityFolded && !model.activityReturnsInline)
+            #expect(model.metrics.bodyWidth > model.closedSize.width)
+        } else {
+            expectHardware(model)
+            #expect(model.activityReturnsInline)
+        }
         #expect(model.state == .closed)
-        #expect(model.activityReturnsInline)
         #expect(model.activityTransitionID > opening)
         try await finishFold(model)
         #expect(!model.activityFolded)
@@ -116,7 +121,7 @@ struct ActivityMotionTests {
         #expect(model.openedFromBubble && model.bubbleMerged)
         let first = try #require(model.activityTransitionTask)
         model.close()
-        expectHardware(model)
+        #expect(!model.activityFolded && model.bubbleReach == model.bubbleSpan)
         let closing = try #require(model.activityTransitionTask)
         model.open { taps += 1 }
         let reopened = try #require(model.activityTransitionTask)
@@ -131,20 +136,47 @@ struct ActivityMotionTests {
         #expect(model.activities == order && model.openedFromBubble)
     }
 
+    @Test("Player closing restores its compact pose and detached bubble without a housing excursion", arguments: [false, true], [false, true])
+    func playerClosing(reduced: Bool, fromBubble: Bool) async {
+        let model = model(reduced: reduced)
+        defer { model.cancelActivityTransition() }
+        if fromBubble { install(.timer, in: model) }
+        install(.music, in: model)
+        if !fromBubble { install(.timer, in: model) }
+        let order = model.activities
+        model.openedFromBubble = fromBubble
+        model.open()
+        let opening = model.activityTransitionTask
+        model.close()
+        let closing = model.activityTransitionTask
+        #expect(model.state == .closed && !model.activityFolded)
+        #expect(!model.activityReturnsInline && !model.bubbleMerged)
+        #expect(model.metrics.bodyWidth > model.closedSize.width)
+        #expect(model.bubbleReach == (fromBubble && !reduced ? model.bubbleSpan : 0))
+        #expect(model.activityControlsHidden == !reduced)
+        await opening?.value
+        await closing?.value
+        #expect(model.state == .closed && !model.activityControlsHidden)
+        #expect(model.bubbleReach == 0 && !model.openedFromBubble)
+        #expect(model.activities == order && model.detached == order[1])
+        #expect(model.activityTransitionTask == nil)
+    }
+
     @Test("The compact return spring cannot leak into arrivals, replacements or a reversed opening")
     func compactReturnScope() {
         let model = model()
         defer { model.cancelActivityTransition() }
-        model.changeActivityPresentation { model.activity = true }
-        #expect(!model.activityReturnsInline)
-        model.open()
-        model.close()
-        #expect(model.activityReturnsInline)
-        model.open()
-        #expect(!model.activityReturnsInline)
-        model.close()
-        #expect(model.activityReturnsInline)
         model.changeActivityPresentation { model.timer = .paused(left: 75, total: 120) }
+        model.expanded = .timer
+        #expect(!model.activityReturnsInline)
+        model.open()
+        model.close()
+        #expect(model.activityReturnsInline)
+        model.open()
+        #expect(!model.activityReturnsInline)
+        model.close()
+        #expect(model.activityReturnsInline)
+        model.changeActivityPresentation { model.activity = true }
         #expect(!model.activityReturnsInline)
         model.open()
         model.close()
@@ -179,7 +211,7 @@ struct ActivityMotionTests {
         #expect(model.detached == nil)
 
         model.close()
-        expectHardware(model)
+        if fromBubble { expectHardware(model) } else { #expect(!model.activityFolded) }
         try await finishFold(model)
         #expect(model.detached == .timer)
         #expect(!model.bubbleMerged)

@@ -678,6 +678,8 @@ extension NotchMotion {
             : .spring(response: playerResponse, dampingFraction: 0.68)).paced
     }
 
+    static var playerClose: Animation { Animation.spring(response: 0.315, dampingFraction: 1.18).paced }
+
     static var expand: Animation {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: expandDuration)
@@ -809,6 +811,10 @@ extension NotchModel {
             }
             return
         }
+        if state == .open, page == .player, expanded == nil {
+            closePlayer()
+            return
+        }
         changeActivityPresentation(animation: IslandMotion.fold) {
             state = .closed
             stretch = 0
@@ -910,6 +916,9 @@ struct NotchView: View {
     }
 
     private var background: MusicBackground { backgroundShown ?? look.background }
+    private var playerClosingMotion: Animation {
+        model.page == .player && model.expanded == nil ? NotchMotion.playerClose : IslandMotion.fold
+    }
 
     /// With Reduce Transparency or Increase Contrast on, the notch is opaque whatever its setting.
     /// With the system's Liquid Glass, the glass itself is as dark as macOS makes it.
@@ -1025,7 +1034,7 @@ struct NotchView: View {
                 // Shown or hidden with the lyrics button, they fade; with the notch, they come and go
                 // as every opened view does.
                 .animation(Self.fade(in: model.showsLyrics)) { $0.opacity(model.showsLyrics ? 1 : 0).blur(radius: model.showsLyrics ? 0 : 4) }
-                .modifier(IslandReveal(hidden: !heroOpen))
+                .modifier(IslandReveal(hidden: !heroOpen, closing: playerClosingMotion))
                 .allowsHitTesting(places == nil && lyricsShown)
                 .accessibilityElement(children: lyricsShown ? .contain : .ignore)
                 .accessibilityHidden(true, isEnabled: !lyricsShown)
@@ -1044,7 +1053,7 @@ struct NotchView: View {
                 // Sliding to the tray, it fades; opening and closing, it comes and goes as every
                 // opened view does, the Dynamic Island's expanded activities' way.
                 .modifier(PageFade(hidden: onTray))
-                .modifier(IslandReveal(hidden: !heroOpen))
+                .modifier(IslandReveal(hidden: !heroOpen, closing: playerClosingMotion))
                 // The visual fade keeps the page mounted for motion; only its visible controls
                 // belong in the hit-test and accessibility trees.
                 .allowsHitTesting(places == nil && playerShown)
@@ -1058,7 +1067,7 @@ struct NotchView: View {
             .environment(\.notchControls, trayShown)
             .offset(x: onTray ? 0 : pageShift)
             .modifier(PageFade(hidden: !onTray))
-            .modifier(IslandReveal(hidden: !heroOpen))
+            .modifier(IslandReveal(hidden: !heroOpen, closing: playerClosingMotion))
             .allowsHitTesting(places == nil && trayShown)
             .accessibilityElement(children: trayShown ? .contain : .ignore)
             .accessibilityHidden(true, isEnabled: !trayShown)

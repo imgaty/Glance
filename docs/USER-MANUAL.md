@@ -93,13 +93,13 @@ song. Times and percentages use the digits of your language and region.
 
 Hover over the notch or click it, depending on
 **Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
-notch closes when the pointer leaves it. The player opens directly with its
-original spring, including when music is in the detached bubble. Other activity
-openings, closings and switches first fold smoothly to the camera housing, then
-expand into the next view with a small bounce. Closing the player also keeps
-this motion. Only the expansion bounces, both into the open view and back to
-the compact live activity. Hover keeps the compact footprint fixed before the
-collapse. The contents and detached bubble follow the same motion.
+notch closes when the pointer leaves it. The player opens and closes directly
+with its original springs, including when music is in the detached bubble.
+Other activity openings, closings and switches first fold smoothly to the camera
+housing, then expand into the next view with a small bounce. Only the expansion
+bounces, both into the open view and back to the compact live activity. Hover
+keeps the compact footprint fixed before the collapse. The contents and detached
+bubble follow the same motion.
 This also applies to detached activities and
 device announcements. When the last activity
 ends, it stays at the housing. Time and progress updates keep their place, and a

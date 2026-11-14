@@ -436,6 +436,7 @@ struct GrowsOut: ViewModifier {
 /// Motion on, it only fades.
 struct IslandReveal: ViewModifier {
     let hidden: Bool
+    var closing: Animation = IslandMotion.fold
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.islandExpansionMotion) private var expansionMotion
 
@@ -445,7 +446,7 @@ struct IslandReveal: ViewModifier {
     func body(content: Content) -> some View {
         content
             .islandFade(!hidden)
-            .animation(hidden ? IslandMotion.fold : expansionMotion) { $0.scaleEffect(hidden && !reduceMotion ? Self.start : 1) }
+            .animation(hidden ? closing : expansionMotion) { $0.scaleEffect(hidden && !reduceMotion ? Self.start : 1) }
     }
 }
 
