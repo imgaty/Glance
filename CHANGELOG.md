@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed long recording destination names overlapping the button that opens
+  the saved file.
+
 - Fixed the call's Sound Output menu relying on the pointer position to open.
   It now opens from its button for mouse, keyboard and accessibility actions.
 

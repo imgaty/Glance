@@ -786,6 +786,9 @@ struct ExpandedRecordingView: View {
         let savedFileState = savedFileStateOverride ?? screenWatch.savedFileState
         let title = ScreenRecordingButton.title(for: screen, needsPermission: needsPermission, savedFileState: savedFileState)
         let edge = PlayerLayout.padding
+        // Keep the full folder name for accessibility while its visible line truncates before
+        // the button, with the same inset between them as around the content.
+        let wordsWidth = max(width - edge - TimerLayout.buttonEdge(h) - TimerLayout.content(h) - edge, 0)
         let dot = NotchType.size * RecordingLook.openDot
         let closedDot = h * RecordingLook.dot
         // The dot slides out from beside the camera to before the time, the same size: down from
@@ -816,7 +819,8 @@ struct ExpandedRecordingView: View {
                 .padding(.top, RecordingLook.lineGap)
                 .modifier(IslandReveal(hidden: !revealed))
         }
-        .fixedSize()
+        .frame(width: wordsWidth, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.leading, edge)
         .frame(maxWidth: .infinity, alignment: .leading)
         // Being saved, the spinner beside the camera grows into the ring around the square.

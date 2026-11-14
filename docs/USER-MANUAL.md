@@ -713,8 +713,9 @@ it opens by itself,
 with `Saving Recording…` under the time and the ring around the button going
 round; then the square in the ring grows into the recording's first picture, and
 the notch says where it went, such as `Recording Saved to Desktop`. Click the
-picture to open the recording. Moving the pointer onto the notch and away closes
-it sooner. In a bubble, or beside one, the countdown's number shows inside its
+picture to open the recording. Long folder names shorten before the picture;
+VoiceOver reads the full destination. Moving the pointer onto the notch and
+away closes it sooner. In a bubble, or beside one, the countdown's number shows inside its
 ring.
 
 Hover over or click the notch while the recording has it, or click its bubble,
