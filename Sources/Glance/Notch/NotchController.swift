@@ -1985,26 +1985,54 @@ final class NotchController {
     /// From the menu, asked by name: what's announced folds away, or the notch's activity steps away
     /// for a moment, whatever it is, and an opened notch closes first.
     private func hideFirst() {
-        if model.state == .open {
-            let expanded = model.expanded
-            close(holdUntilExit: true)
-            if let expanded { dismiss(expanded) }
-            return
+        guard let target = putAwayTarget else { return }
+        let wasOpen = model.state == .open
+        if wasOpen { close(holdUntilExit: true) }
+        switch target {
+        case .alert(let kind):
+            if kind == .timerDone { ClockActivity.shared.dismissRing() } else { Activities.shared.dismiss(kind) }
+        case .activity(let activity):
+            dismiss(activity)
         }
-        if let alert = model.alert {
-            if alert.kind == .timerDone { ClockActivity.shared.dismissRing() } else { Activities.shared.dismiss(alert.kind) }
-        } else if let first = model.activities.first {
-            dismiss(first)
-        } else {
-            return
+        if !wasOpen { close(holdUntilExit: true) }
+    }
+
+    /// The menu's words and its action resolve the same visible content. An expanded player uses
+    /// nil for Music, and a pending announcement behind it is not what the menu puts away.
+    enum PutAwayTarget: Equatable {
+        case alert(NotchAlert.Kind)
+        case activity(NotchModel.Activity)
+    }
+
+    private var putAwayTarget: PutAwayTarget? {
+        Self.putAwayTarget(
+            state: model.state, page: model.page, expanded: model.expanded,
+            alert: model.alert?.kind, first: model.activities.first, hasMedia: nowPlaying.hasMedia)
+    }
+
+    nonisolated static func putAwayTarget(
+        state: NotchState, page: NotchPage, expanded: NotchModel.Activity?,
+        alert: NotchAlert.Kind?, first: NotchModel.Activity?, hasMedia: Bool
+    ) -> PutAwayTarget? {
+        if state == .open {
+            guard page == .player else { return nil }
+            if let expanded { return .activity(expanded) }
+            return hasMedia ? .activity(.music) : nil
         }
-        close(holdUntilExit: true)
+        if let alert { return .alert(alert) }
+        return first.map(PutAwayTarget.activity)
     }
 
     /// What the right-click menu offers to put away, as a swipe up on the notch would: its live
     /// activity, a call coming in, or Low Battery. None while there's nothing, or for a timer that's
     /// rung, which the menu stops itself.
-    var putAwayTitle: String? { Self.putAwayTitle(alert: model.alert?.kind, first: model.activities.first) }
+    var putAwayTitle: String? {
+        switch putAwayTarget {
+        case .alert(let kind): Self.putAwayTitle(alert: kind, first: nil)
+        case .activity(let activity): Self.putAwayTitle(alert: nil, first: activity)
+        case nil: nil
+        }
+    }
 
     nonisolated static func putAwayTitle(alert: NotchAlert.Kind?, first: NotchModel.Activity?) -> String? {
         if let alert {

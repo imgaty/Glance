@@ -557,6 +557,8 @@ In a call, Tab also reaches **Show in [app]** when the calling app can be opened
 Right-click the notch and choose **Live Activities** to open an ongoing
 activity, including one waiting behind the first two. An announcement waiting
 behind an already-open page does not block the menu or keyboard navigation.
+The **Hide** command names the activity currently open. Hiding it closes the
+notch and puts that activity away without stopping it.
 The selected activity keeps its place in arrival order. Screen-recording
 countdowns have no expanded view and are skipped; completed or hidden
 activities leave the menu.

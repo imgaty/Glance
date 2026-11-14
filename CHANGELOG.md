@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed the Hide command naming a different activity from the one it hid,
+  and fixed Hide Music only closing the expanded player.
+
 - Fixed hidden player, lyrics and tray controls remaining available to
   VoiceOver behind another activity.
 
