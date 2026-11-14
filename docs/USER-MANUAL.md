@@ -993,7 +993,7 @@ preview stays on what's playing.
 | `Open with` | `Hover`, `Click`, or `Hover or click` |
 | `Hover delay` | How long the pointer rests on the notch before it opens |
 | `Click and hold` | How long a click is held before it opens |
-| `Haptic feedback` | A light tap on the trackpad when the notch finishes collapsing before it opens (off at first); with Reduce Motion, the tap is immediate |
+| `Haptic feedback` | A light tap as the player starts opening, or when another activity reaches the housing before expanding (off at first); with Reduce Motion, the tap is immediate |
 | `Gestures` | Two-finger swipes down to open and up to close, and left and right to change songs; three-finger swipes on the open notch and scrolling sideways with Shift held to go between tools; and the same drags on a display with Touch, two fingers sideways for the tools. Scrolling goes the way your Mac scrolls |
 | `Open the player` | The keyboard shortcut, ⌥⇧1 at first; click it and type another, or Control-click it to restore ⌥⇧1 |
 | `Open the tray` | The tray's shortcut, ⌥⇧2 at first, changed the same way |
