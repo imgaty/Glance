@@ -285,11 +285,10 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens a dropdown with native glass, concentric rounded
-corners and no pointing arrow.
-It opens at the click, or below the button when using the keyboard, and takes
-keyboard focus while keeping the notch open. It stays on the display where it
-opened. Opening and closing use system transitions; the window resizes smoothly
+The `Sound Output` button opens the system dropdown, with native glass, rounded
+corners and an arrow pointing to the button. It uses the same button anchor for
+mouse and keyboard input, and takes keyboard focus while keeping the notch open.
+Opening and closing use system transitions; the window resizes smoothly
 as outputs change. Escape, another press on the button, or a click outside
 closes it.
 
@@ -307,7 +306,7 @@ Connected speakers and headphones appear under **Output**, with a circle in your
 Mac's accent color for the current output and battery details when available.
 The selected output's circle becomes lighter while pressed.
 Long output names wrap above their battery details. The list expands as outputs
-connect, with new rows fading in and becoming clear. Existing rows move into
+connect, with new rows fading in. Existing rows move into
 place and disconnected outputs fade away. Reduce Motion removes these
 animations. Nearby wireless destinations that are not connected
 appear only in macOS. Selecting an output closes Sound.

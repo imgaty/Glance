@@ -1,8 +1,7 @@
 import AppKit
-import CoreImage
 import SwiftUI
 
-/// An independent glass dropdown opened from the Sound button.
+/// A system popover opened from the Sound button.
 struct SoundMenuPresenter: NSViewRepresentable {
     @Binding var isPresented: Bool
     let makeMenu: () -> SoundOutputMenu
@@ -62,57 +61,58 @@ struct SoundMenuPresenter: NSViewRepresentable {
     static func dismantleNSView(_ view: Anchor, coordinator: Coordinator) { coordinator.cancel() }
 }
 
-/// AppKit renders the glass and window transitions; Glance owns placement and the corner radius.
+/// AppKit supplies the popover's glass, arrow, corners, placement and window animations.
 @MainActor
-final class SoundPopover: NSObject {
+final class SoundPopover: NSObject, NSPopoverDelegate {
     private weak var soundMenu: SoundOutputMenu?
-    let panel = SoundPopoverPanel()
+    let popover = NSPopover()
     let contentView = SoundPopoverContent()
     private let scroll = NSScrollView()
     private let stack = SoundMenuStack()
     private let maximumHeight: CGFloat
     private var holders: [ObjectIdentifier: SoundRowHolder] = [:]
     private(set) var contentSize = CGSize.zero
-    private var position: SoundMenuPlacement.Position?
-    private var anchor = CGRect.zero
-    private var monitors: [Any] = []
+    private var keys: Any?
     private var observers: [NSObjectProtocol] = []
     private var workspaceObserver: NSObjectProtocol?
     private var previousApp: NSRunningApplication?
     private weak var previousKey: NSWindow?
     private var dismissing = false
+    private var didFinish = false
     var onDismiss: (() -> Void)?
 
     init(menu: SoundOutputMenu, maximumHeight: CGFloat) {
         soundMenu = menu
         self.maximumHeight = maximumHeight
         super.init()
-        panel.contentView = contentView
-        panel.onDismiss = { [weak self] in self?.dismiss() }
-        panel.handleKey = { [weak self] in self?.soundMenu?.handleKey($0) == true }
+        popover.behavior = .transient
+        popover.delegate = self
+        let controller = NSViewController()
+        controller.title = String(localized: "Sound")
+        controller.view = contentView
+        popover.contentViewController = controller
+        contentView.onCancel = { [weak self] in self?.dismiss() }
         scroll.drawsBackground = false
         scroll.borderType = .noBorder
         scroll.autohidesScrollers = true
         scroll.autoresizingMask = [.width, .height]
         scroll.documentView = stack
-        contentView.contentView = scroll
+        contentView.addSubview(scroll)
         contentView.setAccessibilityLabel(String(localized: "Sound"))
-        panel.setAccessibilityLabel(String(localized: "Sound"))
         reload()
     }
 
-    /// Preserve rows by identity, moving existing rows while new ones reveal in the space opening.
-    /// A hidden content window can exercise this transition without presenting the dropdown.
+    /// Preserve row identity, including a volume edit, while AppKit resizes the popover.
     func reload(animated: Bool? = nil) {
         guard let menu = soundMenu, !dismissing else { return }
-        let animate = (animated ?? panel.isVisible) && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let animate = (animated ?? popover.isShown) && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let views = menu.items.compactMap(\.view)
         let rowsHeight = views.reduce(CGFloat.zero) { $0 + $1.frame.height }
         let height = ceil(rowsHeight + SoundLook.edge * 2)
         var next: [ObjectIdentifier: SoundRowHolder] = [:]
         var inserted: [SoundRowHolder] = []
         var moves: [(SoundRowHolder, CGRect)] = []
-        // Put any half-point window rounding above the rows, preserving the footer's exact inset.
+        // Put any half-point rounding above the rows, preserving the footer's exact inset.
         var top = height - SoundLook.edge - rowsHeight
         for view in views {
             let id = ObjectIdentifier(view)
@@ -136,20 +136,20 @@ final class SoundPopover: NSObject {
         let size = CGSize(width: SoundLook.width, height: ceil(min(height, maximumHeight)))
         scroll.hasVerticalScroller = height > size.height
         stack.setFrameSize(CGSize(width: SoundLook.width, height: height))
-        let resized = contentSize != size
-        contentSize = size
-        for holder in inserted { holder.reveal(animated: animate) }
+        if contentSize != size {
+            contentSize = size
+            popover.animates = animate
+            // The system owns the shown window's frame, including during live device changes.
+            if !popover.isShown {
+                contentView.setFrameSize(size)
+                scroll.frame = contentView.bounds
+            }
+            popover.contentSize = size
+        }
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = animate ? SoundRowHolder.duration : 0
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            if resized {
-                if let position {
-                    let frame = position.frame(for: size)
-                    if animate { panel.animator().setFrame(frame, display: true) } else { panel.setFrame(frame, display: panel.isVisible) }
-                } else {
-                    contentView.setFrameSize(size)
-                    scroll.frame = contentView.bounds
-                }
+            if !animate { context.duration = 0 }
+            for holder in inserted {
+                if animate { holder.animator().alphaValue = 1 } else { holder.alphaValue = 1 }
             }
             for (holder, frame) in moves {
                 if animate { holder.animator().frame = frame } else { holder.frame = frame }
@@ -158,94 +158,75 @@ final class SoundPopover: NSObject {
                 holder.isRemoving = true
                 if animate { holder.animator().alphaValue = 0 } else { holder.alphaValue = 0 }
             }
-        } completionHandler: { [weak self] in
-            MainActor.assumeIsolated {
-                removed.forEach { $0.removeFromSuperview() }
-                self?.panel.invalidateShadow()
-            }
+        } completionHandler: {
+            MainActor.assumeIsolated { removed.forEach { $0.removeFromSuperview() } }
         }
     }
 
-    func show(from view: NSView, pointer: CGPoint?) {
-        guard !dismissing, let parent = view.window, parent.isVisible,
-            let screen = SoundMenuPlacement.screen(for: pointer, fallback: parent.screen)
-        else { return dismiss() }
-        anchor = parent.convertToScreen(view.convert(view.bounds, to: nil))
-        panel.appearance = view.effectiveAppearance
-        place(
-            at: SoundMenuPlacement.position(
-                content: contentSize, anchor: anchor, visible: screen.visibleFrame, pointer: pointer,
-                mirrored: NSApp.userInterfaceLayoutDirection == .rightToLeft))
+    func show(from anchor: NSView, pointer: CGPoint?) {
+        guard !dismissing, let parent = anchor.window, parent.isVisible else { return finishDismissal() }
+        popover.appearance = anchor.effectiveAppearance
+        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         previousKey = NSApp.keyWindow
+        // A system popover needs the active app for immediate keyboard and slider focus.
         if !NSApp.isActive {
             previousApp = NSWorkspace.shared.frontmostApplication
             NSApp.activate()
         }
-        panel.animationBehavior = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? .none : .utilityWindow
-        panel.makeKeyAndOrderFront(nil)
-        panel.makeFirstResponder(contentView)
-        watchDismissal(parent: parent)
-    }
-
-    func place(at position: SoundMenuPlacement.Position) {
-        self.position = position
-        panel.setFrame(position.frame(for: contentSize), display: false)
-        contentView.layoutSubtreeIfNeeded()
-    }
-
-    private func watchDismissal(parent: NSWindow) {
-        let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
-        if let monitor = NSEvent.addGlobalMonitorForEvents(
-            matching: clicks,
-            handler: { [weak self] _ in
+        popover.show(
+            relativeTo: SoundMenuPlacement.anchorRect(in: anchor, pointer: pointer), of: anchor,
+            preferredEdge: SoundMenuPlacement.below(anchor))
+        guard popover.isShown else { return finishDismissal() }
+        takeFocus()
+        keys = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, !self.dismissing, event.window === self.contentView.window else { return event }
+            return self.soundMenu?.handleKey(event) == true ? nil : event
+        }
+        // Outside clicks and the positioning window's lifetime belong to NSPopover.
+        // Explicitly dismiss on desktop changes so it cannot follow a hidden activity.
+        observers.append(
+            NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: NSApp, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.dismiss() }
             })
-        {
-            monitors.append(monitor)
-        }
-        if let monitor = NSEvent.addLocalMonitorForEvents(
-            matching: clicks,
-            handler: { [weak self] event in
-                guard let self, event.window !== self.panel else { return event }
-                let point = event.window?.convertPoint(toScreen: event.locationInWindow)
-                self.dismiss()
-                // A second click on Sound closes it without reopening it from the same event.
-                return point.map(self.anchor.contains) == true ? nil : event
-            })
-        {
-            monitors.append(monitor)
-        }
-        for (name, object) in [
-            (NSWindow.willCloseNotification, parent as AnyObject), (NSApplication.didResignActiveNotification, NSApp as AnyObject),
-            (NSApplication.didChangeScreenParametersNotification, NSApp as AnyObject),
-        ] {
-            observers.append(
-                NotificationCenter.default.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.dismiss() }
-                })
-        }
         workspaceObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.dismiss() }
         }
     }
 
+    private func takeFocus() {
+        guard !dismissing else { return }
+        contentView.window?.makeKey()
+        contentView.window?.makeFirstResponder(contentView)
+    }
+
     func dismiss() {
         guard !dismissing else { return }
         dismissing = true
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
+        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if popover.isShown { popover.close() } else { finishDismissal() }
+    }
+
+    func popoverDidShow(_ notification: Notification) { takeFocus() }
+    func popoverShouldDetach(_ popover: NSPopover) -> Bool { false }
+    func popoverWillClose(_ notification: Notification) { dismissing = true }
+    func popoverDidClose(_ notification: Notification) { finishDismissal() }
+
+    private func finishDismissal() {
+        guard !didFinish else { return }
+        didFinish = true
+        dismissing = true
+        if let keys { NSEvent.removeMonitor(keys) }
+        keys = nil
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
         if let workspaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(workspaceObserver) }
         workspaceObserver = nil
-        let restoreFocus = panel.isKeyWindow
-        panel.onDismiss = nil
-        panel.handleKey = nil
-        panel.ignoresMouseEvents = true
-        panel.animationBehavior = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? .none : .utilityWindow
-        panel.orderOut(nil)
-        if restoreFocus, let previousKey, previousKey.isVisible, previousKey.canBecomeKey { previousKey.makeKey() }
-        if NSApp.isActive, let previousApp, !previousApp.isTerminated { previousApp.activate(options: []) }
+        contentView.onCancel = nil
+        if NSApp.isActive {
+            if NSApp.keyWindow == nil, let previousKey, previousKey.isVisible, previousKey.canBecomeKey { previousKey.makeKey() }
+            if let previousApp, !previousApp.isTerminated { previousApp.activate(options: []) }
+        }
+        previousKey = nil
         previousApp = nil
         let callback = onDismiss
         onDismiss = nil
@@ -253,49 +234,13 @@ final class SoundPopover: NSObject {
     }
 }
 
-final class SoundPopoverContent: NSGlassEffectView {
+final class SoundPopoverContent: NSView {
+    var onCancel: (() -> Void)?
     override var acceptsFirstResponder: Bool { true }
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        style = .regular
-        cornerRadius = SoundLook.outerRadius
-    }
-    required init?(coder: NSCoder) { nil }
+    override func cancelOperation(_ sender: Any?) { onCancel?() }
 }
 
-final class SoundPopoverPanel: NSPanel {
-    var onDismiss: (() -> Void)?
-    var handleKey: ((NSEvent) -> Bool)?
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
-
-    init() {
-        super.init(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
-        isReleasedWhenClosed = false
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = true
-        level = .popUpMenu
-        collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
-        hidesOnDeactivate = false
-        isMovable = false
-    }
-    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
-    override func cancelOperation(_ sender: Any?) { onDismiss?() }
-    override func resignKey() {
-        super.resignKey()
-        if isVisible { onDismiss?() }
-    }
-    override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, handleKey?(event) == true { return }
-        super.sendEvent(event)
-    }
-}
-
-/// The blur affects only an inserted row, never the popover glass or the live volume slider.
 final class SoundRowHolder: NSView {
-    static let duration: TimeInterval = 0.35
     var targetFrame: CGRect
     var isRemoving = false
 
@@ -308,31 +253,6 @@ final class SoundRowHolder: NSView {
     }
     required init?(coder: NSCoder) { nil }
     override func hitTest(_ point: NSPoint) -> NSView? { isRemoving ? nil : super.hitTest(point) }
-
-    func reveal(animated: Bool) {
-        guard animated, let layer else {
-            alphaValue = 1
-            return
-        }
-        alphaValue = 0
-        let blur = CIFilter(name: "CIGaussianBlur")!
-        blur.name = "soundReveal"
-        blur.setValue(0, forKey: kCIInputRadiusKey)
-        layer.filters = [blur]
-        let animation = CABasicAnimation(keyPath: "filters.soundReveal.inputRadius")
-        animation.fromValue = 6
-        animation.toValue = 0
-        animation.duration = Self.duration
-        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        layer.add(animation, forKey: "soundReveal")
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = Self.duration
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            animator().alphaValue = 1
-        } completionHandler: { [weak self] in
-            MainActor.assumeIsolated { self?.layer?.filters = nil }
-        }
-    }
 }
 
 private final class SoundMenuStack: NSView {
@@ -340,33 +260,15 @@ private final class SoundMenuStack: NSView {
 }
 
 enum SoundMenuPlacement {
-    static let gap: CGFloat = 6
-
-    struct Position {
-        let x: CGFloat
-        let edgeY: CGFloat
-        let below: Bool
-        let visible: CGRect
-
-        /// Keep the opening edge fixed as devices arrive; constrain only at a display edge.
-        func frame(for content: CGSize) -> CGRect {
-            let size = CGSize(width: min(content.width, visible.width), height: min(content.height, visible.height))
-            let y = below ? edgeY - size.height : edgeY
-            return CGRect(
-                x: min(max(x, visible.minX), visible.maxX - size.width),
-                y: min(max(y, visible.minY), visible.maxY - size.height), width: size.width, height: size.height)
-        }
+    /// Button-based entry points use their whole bounds, so different click locations cannot
+    /// move the popover. Only the legacy window-level entry point needs a click-sized anchor.
+    @MainActor static func anchorRect(in view: NSView, pointer: CGPoint?) -> CGRect {
+        guard !(view is SoundMenuPresenter.Anchor), let pointer, let window = view.window else { return view.bounds }
+        let local = view.convert(window.convertPoint(fromScreen: pointer), from: nil)
+        return CGRect(x: local.x - 0.5, y: local.y - 0.5, width: 1, height: 1)
     }
 
-    static func position(content: CGSize, anchor: CGRect, visible: CGRect, pointer: CGPoint?, mirrored: Bool = false) -> Position {
-        let lower = (pointer?.y ?? anchor.minY) - gap
-        let upper = (pointer?.y ?? anchor.maxY) + gap
-        let belowRoom = lower - visible.minY
-        let aboveRoom = visible.maxY - upper
-        let below = belowRoom >= content.height || belowRoom >= aboveRoom
-        let x = pointer.map { $0.x - (mirrored ? content.width : 0) } ?? (anchor.midX - content.width / 2)
-        return Position(x: x, edgeY: below ? lower : upper, below: below, visible: visible)
-    }
+    @MainActor static func below(_ view: NSView) -> NSRectEdge { view.isFlipped ? .maxY : .minY }
 
     @MainActor static func screen(for pointer: CGPoint?, fallback: NSScreen?) -> NSScreen? {
         pointer.flatMap { point in NSScreen.screens.first { $0.frame.contains(point) } } ?? fallback

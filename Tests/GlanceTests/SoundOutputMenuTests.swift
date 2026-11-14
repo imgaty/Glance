@@ -197,38 +197,32 @@ struct SoundOutputMenuTests {
                 guard let id = $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
                 return CGDisplayIsBuiltin(id.uint32Value) != 0
             })
-        let window = popover.panel
-        popover.place(
-            at: SoundMenuPlacement.position(
-                content: popover.contentSize, anchor: .zero, visible: screen.visibleFrame,
-                pointer: CGPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.maxY - 100)))
+        let window = NSWindow(contentRect: CGRect(origin: screen.visibleFrame.origin, size: popover.contentSize), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = popover.contentView
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
         window.ignoresMouseEvents = true
         window.orderFrontRegardless()
         defer { window.orderOut(nil) }
+        #expect(popover.popover.behavior == .transient)
+        #expect(popover.popover.contentViewController?.view === popover.contentView)
         let speaker = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view)
         let holder = try #require(speaker.superview)
         let oldHeight = popover.contentSize.height
-        let oldFrame = window.frame
-        #expect(popover.contentView.cornerRadius == 16)
         menu.refresh(devices: [speakers, headphones], current: headphones.id, batteries: [:])
         popover.reload(animated: true)
         let headphone = try #require(menu.items.first { $0.tag == Int(headphones.id) }?.view)
         let inserted = try #require(headphone.superview as? SoundRowHolder)
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight + headphone.frame.height)
-        #expect(!popover.panel.isKeyWindow)
-        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            #expect(inserted.layer?.animation(forKey: "soundReveal") != nil)
-        }
+        #expect(!window.isKeyWindow)
+        #expect(popover.popover.contentSize == popover.contentSize)
         // A current-output refresh must not replace or restart the appearing row.
         menu.refresh(devices: [speakers, headphones], current: speakers.id, batteries: [:])
         popover.reload(animated: true)
         #expect(headphone.superview === inserted)
-        try await waitForWindowAnimation { abs(window.frame.height - popover.contentSize.height) < 0.5 && inserted.layer?.filters?.isEmpty != false }
+        try await waitForWindowAnimation { inserted.alphaValue == 1 }
         #expect(inserted.alphaValue == 1)
-        #expect(abs(window.frame.height - popover.contentSize.height) < 0.5)
-        #expect(abs(window.frame.maxY - oldFrame.maxY) < 0.5)
+        #expect(popover.contentView.frame.size == popover.contentSize)
         let footer = try #require(menu.items.last?.view)
         #expect(abs(footer.convert(footer.bounds, to: popover.contentView).minY - SoundLook.highlightInset) < 0.01)
         #expect(inserted.layer?.filters?.isEmpty != false)
@@ -239,7 +233,6 @@ struct SoundOutputMenuTests {
         #expect(inserted.superview == nil)
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight)
-        #expect(abs(window.frame.height - oldHeight) < 0.5)
-        #expect(abs(window.frame.maxY - oldFrame.maxY) < 0.5)
+        #expect(popover.popover.contentSize == popover.contentSize)
     }
 }
