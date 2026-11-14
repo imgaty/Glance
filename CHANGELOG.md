@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed the recording countdown being announced as a button even though it
+  has no controls to open.
+
 - Added isolated previews for unavailable call controls and lyric loading and
   error states.
 

@@ -88,8 +88,7 @@ struct SystemActivityView: View {
                 RecordingMark(recording: recording, restingHeight: restingHeight, leadingOnly: leadingOnly)
                     .modifier(GrownAway(grown: grown))
                     .transition(IslandMotion.fade)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction(.default, open)
+                    .modifier(RecordingOpenAction(recording: recording, open: open))
             } else if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
                 TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
                     .modifier(IslandReveal(hidden: self.alert == nil))

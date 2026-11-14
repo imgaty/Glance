@@ -106,6 +106,23 @@ enum Recording: Equatable {
     }
 }
 
+/// The countdown is status only; the other recording presentations can open their controls.
+struct RecordingOpenAction: ViewModifier {
+    let recording: Recording
+    let open: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if case .screen(.countdown) = recording {
+            content
+        } else {
+            content
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default, open)
+        }
+    }
+}
+
 /// The recordings as the iPhone draws them in the Dynamic Island, measured from the user's own
 /// screenshots (3x, Display P3), by the island's height: beside the camera, the screen's red dot,
 /// its countdown's ring and its saving spinner, or Voice Memos' waveform and time; opened, the

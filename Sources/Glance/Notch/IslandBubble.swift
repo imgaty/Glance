@@ -141,8 +141,7 @@ struct IslandBubble: View {
                         Color.clear
                             .accessibilityElement()
                             .accessibilityLabel(recording.spoken(at: context.date))
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityAction(.default, open)
+                            .modifier(RecordingOpenAction(recording: recording, open: open))
                     }
                 } else if shown, !hidden, let call {
                     Color.clear
