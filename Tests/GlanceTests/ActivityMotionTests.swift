@@ -69,9 +69,9 @@ struct ActivityMotionTests {
         model.pageStretch = 7
         model.open()
         if activity == .music {
-            #expect(!model.activityFolded && model.activityOpening)
-            #expect(model.metrics.bodyWidth == model.openSize.width)
-            #expect(model.metrics.height == model.openSize.height)
+            #expect(!model.activityControlsHidden)
+            #expect(model.stretch == 12 && model.lean == 9 && model.pageStretch == 7)
+            #expect(!model.pressed)
         } else {
             expectHardware(model)
         }
@@ -82,7 +82,7 @@ struct ActivityMotionTests {
         model.stretch = 0
         model.lean = 0
         model.pageStretch = 0
-        try await finishFold(model)
+        if activity == .music { await model.activityTransitionTask?.value } else { try await finishFold(model) }
         #expect(!model.activityFolded)
         #expect(model.activityTransitionTask == nil)
         #expect(model.metrics.bodyWidth > model.closedSize.width)
@@ -99,7 +99,7 @@ struct ActivityMotionTests {
         }
         #expect(model.state == .closed)
         #expect(model.activityTransitionID > opening)
-        try await finishFold(model)
+        if activity == .music { await model.activityTransitionTask?.value } else { try await finishFold(model) }
         #expect(!model.activityFolded)
         #expect(model.metrics.bodyWidth > model.closedSize.width)
         #expect(model.activities == order)
@@ -117,20 +117,18 @@ struct ActivityMotionTests {
         var taps = 0
         model.open { taps += 1 }
         #expect(taps == 1)
-        #expect(!model.activityFolded && model.activityOpening)
+        #expect(!model.activityControlsHidden)
         #expect(model.openedFromBubble && model.bubbleMerged)
-        let first = try #require(model.activityTransitionTask)
+        #expect(model.activityTransitionTask == nil)
         model.close()
         #expect(!model.activityFolded && model.bubbleReach == model.bubbleSpan)
         let closing = try #require(model.activityTransitionTask)
         model.open { taps += 1 }
-        let reopened = try #require(model.activityTransitionTask)
+        #expect(model.activityTransitionTask == nil)
         #expect(taps == 2)
-        #expect(!model.activityFolded && model.activityOpening)
+        #expect(!model.activityControlsHidden)
         #expect(model.metrics.height == model.openSize.height)
-        await first.value
         await closing.value
-        await reopened.value
         #expect(model.state == .open && model.expanded == nil)
         #expect(!model.activityControlsHidden && model.activityTransitionTask == nil)
         #expect(model.activities == order && model.openedFromBubble)
@@ -147,13 +145,14 @@ struct ActivityMotionTests {
         model.openedFromBubble = fromBubble
         model.open()
         let opening = model.activityTransitionTask
+        await opening?.value
         model.close()
         let closing = model.activityTransitionTask
         #expect(model.state == .closed && !model.activityFolded)
-        #expect(!model.activityReturnsInline && !model.bubbleMerged)
+        #expect(!model.activityReturnsInline && model.bubbleMerged == (!fromBubble && !reduced))
         #expect(model.metrics.bodyWidth > model.closedSize.width)
         #expect(model.bubbleReach == (fromBubble && !reduced ? model.bubbleSpan : 0))
-        #expect(model.activityControlsHidden == !reduced)
+        #expect(!model.activityControlsHidden)
         await opening?.value
         await closing?.value
         #expect(model.state == .closed && !model.activityControlsHidden)
@@ -201,8 +200,8 @@ struct ActivityMotionTests {
         if fromBubble {
             expectHardware(model)
         } else {
-            #expect(!model.activityFolded && model.activityOpening)
-            #expect(model.metrics.height == model.openSize.height)
+            #expect(!model.activityControlsHidden)
+            #expect(model.state == .closed)
         }
         #expect(model.bubbleMerged)
         try await finishFold(model)
@@ -308,7 +307,7 @@ struct ActivityMotionTests {
         defer { model.cancelActivityTransition() }
         install(.music, in: model)
         model.open()
-        try await finishFold(model)
+        #expect(model.activityTransitionTask == nil)
         for page in [NotchPage.tray, .player, .tray, .player] {
             model.turn(to: page)
             #expect(model.state == .open)

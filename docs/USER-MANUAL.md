@@ -91,36 +91,39 @@ song. Times and percentages use the digits of your language and region.
 
 ## Opening and closing
 
-Hover over the notch or click it, depending on
-**Settings > Opening > Open with**: `Hover`, `Click`, or `Hover or click`. The
-notch closes when the pointer leaves it. The player opens and closes directly
-with its original springs, including when music is in the detached bubble.
+Hover over the notch or click it, depending on **Settings > Opening > Open
+with**: `Hover`, `Click`, or `Hover or click`. The notch closes when the pointer
+leaves it. The player and tray open and close with their original direct
+springs. Swipes follow your fingers and settle with that same tool motion;
+changing tools keeps the notch open, including while the pointer remains over
+the wider tray. Lyrics resizing, hover and press feedback also keep their
+original motion. Tools remain interactive during animation. When another
+activity is detached, its bubble merges before the tool opens and buds off after
+it closes. Opening music from its bubble returns to that bubble.
+
 Other activity openings, closings and switches first fold smoothly to the camera
 housing, then expand into the next view with a small bounce. Only the expansion
 bounces, both into the open view and back to the compact live activity. Hover
-keeps the compact footprint fixed before the collapse. The contents and detached
-bubble follow the same motion.
-This also applies to detached activities and
-device announcements. When the last activity
-ends, it stays at the housing. Time and progress updates keep their place, and a
-new action replaces an unfinished transition. The two-stage activity motion takes
-less than half a second at the default speed. Moving between the player and the
-tray uses the player's original spring and keeps the notch open, including while
-the pointer remains over the wider tray. With
-Reduce Motion on, they only fade, and nothing bounces: the notch, the bubbles and
-the cover settle straight where they're going, the star glows without swelling,
-the skip arrows stay where they are, and the welcome tour's pages fade rather
-than slide.
+keeps those compact activity footprints fixed. Their contents and detached
+bubble follow the same motion. Device announcements use this sequence too. When
+the last activity ends, it stays at the housing. Time and progress updates keep
+their place, and a new action replaces an unfinished transition. The two-stage
+activity motion takes less than half a second at the default speed.
 
-Controls become available as they appear. Escape can close an opening activity,
-and the activity navigation keys can change its destination during the animation.
-With `Haptic feedback` on in **Settings > Opening**, opening gives one light tap
-when the notch reaches the housing, just before expanding. The player gives its
-tap as it starts opening directly. Canceling before a delayed tap prevents it;
-automatic activity updates stay silent. Reduce Motion gives the tap immediately.
-Releasing a hold before its delay ends cancels opening, even during a fold.
-The next visible AirDrop transfer uses the same transition; the current transfer's
-progress updates without restarting it.
+With Reduce Motion on, nothing bounces: the notch, bubbles and cover settle
+straight where they're going, the star glows without swelling, the skip arrows
+stay where they are, and the welcome tour's pages fade rather than slide.
+
+Activity controls become available as they appear. Escape can close an opening
+activity, and the activity navigation keys can change its destination during the
+animation. With `Haptic feedback` on in **Settings > Opening**, opening an
+activity gives one light tap when the notch reaches the housing, just before
+expanding. Tools give their tap when opening starts. Canceling before a delayed
+activity tap prevents it; automatic activity updates stay silent. Reduce Motion
+gives the tap immediately. Releasing a hold before its delay ends cancels
+opening, even during a fold. The next visible AirDrop transfer uses the same
+activity transition; the current transfer's progress updates without restarting
+it.
 With `Hide in full screen` enabled, entering full screen folds directly to the
 camera housing. Leaving full screen restores the compact activities and bubble.
 

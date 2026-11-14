@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-/// The shared activity sequence, with direct opening and closing for the player.
+/// Activity presentation changes pass through the housing; tools retain direct navigation.
 extension NotchModel {
     private enum Presentation: Equatable {
         case hardware
@@ -45,14 +45,14 @@ extension NotchModel {
     /// Payload updates remain immediate, so a later input always acts on the latest state. Only a
     /// change of presentation folds the shell; elapsed time, progress and button feedback do not.
     func changeActivityPresentation(
-        animation: Animation? = IslandMotion.open, openingPlayer: Bool = false,
+        animation: Animation? = IslandMotion.open,
         onCollapse: (() -> Void)? = nil, _ changes: () -> Void
     ) {
         let before = activityPresentation
         let atHousing = before == .hardware && metrics.bodyWidth == closedSize.width && metrics.height == closedSize.height && bubbleReach == 0
         let hadActivity = !activities.isEmpty || alert != nil || expanded != nil
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let folds = !openingPlayer && (!atHousing || activityFolded)
+        let folds = !atHousing || activityFolded
         let clock = ContinuousClock()
         let pace = max(NotchMotion.pace, 0.01)
         let started = clock.now
@@ -62,13 +62,14 @@ extension NotchModel {
 
         // State and its first geometry phase must share one transaction. Publishing the open
         // destination before its fold starts a competing expansion, even within one run-loop turn.
-        let firstMotion = openingPlayer ? NotchMotion.player : folds ? Self.activityClosingMotion : Self.activityExpansionMotion
+        let firstMotion = folds ? Self.activityClosingMotion : Self.activityExpansionMotion
         var transaction = Transaction(animation: reduced ? nil : animation.map { _ in firstMotion })
         transaction.disablesAnimations = reduced || animation == nil
         withTransaction(transaction) {
             changes()
             guard before != activityPresentation else { return }
             feedbackAtCommit = true
+            toolPresentation = false
             guard hadActivity || !activities.isEmpty || alert != nil || expanded != nil else { return }
 
             activityTransitionTask?.cancel()
@@ -124,7 +125,7 @@ extension NotchModel {
             // A target change is not yet a visible button. Keep input out until the reveal has
             // reached its readable part, while Escape and destination navigation remain available.
             if self?.activityOpening == true {
-                let delay = openingPlayer ? NotchMotion.playerResponse : Self.activityControlDelay
+                let delay = Self.activityControlDelay
                 do { try await clock.sleep(until: revealStarted + .seconds(delay / pace), tolerance: .zero) } catch { return }
             }
             guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
@@ -139,34 +140,79 @@ extension NotchModel {
         if state != .open { openedFromBubble = false }
     }
 
-    /// The player's original close goes straight to its compact footprint, without a housing
-    /// midpoint. A detached origin reaches back to its bubble before the connecting end retracts.
-    func closePlayer() {
+    /// Tool opening keeps the old direct spring, with a short merge before opening beside a
+    /// detached activity. The task controls bubble choreography, never the tool input gate.
+    func openTools(onOpen: (() -> Void)? = nil) {
+        guard state != .open || activityControlsHidden else { return }
+        let reduced = activityMotionReduced
+        let origin = openedFromBubble
+        let merges = second != nil && !origin && state != .open && !reduced
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) {
+            cancelActivityTransition()
+            toolPresentation = true
+            openedFromBubble = origin
+            bubbleReach = origin && !reduced ? bubbleSpan : 0
+        }
+        let request = activityTransitionID
+        if merges {
+            withAnimation(ToolMotion.close) { bubbleMerged = true }
+        }
+        onOpen?()
+        guard activityTransitionID == request else { return }
+        guard merges else {
+            revealTools(reduced: reduced)
+            return
+        }
+        let clock = ContinuousClock()
+        let deadline = clock.now + .seconds(0.08 / max(NotchMotion.pace, 0.01))
+        activityTransitionTask = Task { @MainActor [weak self] in
+            do { try await clock.sleep(until: deadline, tolerance: .zero) } catch { return }
+            guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
+            self.revealTools(reduced: self.activityMotionReduced)
+            self.activityTransitionTask = nil
+        }
+    }
+
+    private func revealTools(reduced: Bool) {
+        withAnimation(reduced ? nil : ToolMotion.open) {
+            state = .open
+            pressed = false
+            bubblePressed = false
+            proximity = 0
+            pop = false
+            bubbleMerged = true
+            bubbleReach = 0
+        }
+    }
+
+    /// A tool closes directly to compact. A merged bubble buds off after 250 ms; a detached
+    /// origin reaches back to its bubble and retracts its connecting end after 380 ms.
+    func closeTools() {
         let reduced = activityMotionReduced
         let intoBubble = openedFromBubble && second != nil && alert == nil && !folded
+        let merged = bubbleMerged && second != nil && !intoBubble && !reduced
         let clock = ContinuousClock()
-        let deadline = clock.now + .seconds(0.38 / max(NotchMotion.pace, 0.01))
-        var transaction = Transaction(animation: reduced ? nil : NotchMotion.playerClose)
-        transaction.disablesAnimations = reduced
-        withTransaction(transaction) {
+        let deadline = clock.now + .seconds((intoBubble ? 0.38 : 0.25) / max(NotchMotion.pace, 0.01))
+        withAnimation(reduced ? nil : ToolMotion.close) {
             cancelActivityTransition()
+            toolPresentation = true
             state = .closed
             stretch = 0
             lean = 0
             pageStretch = 0
-            bubbleMerged = false
+            bubbleMerged = merged
             bubbleReach = intoBubble && !reduced ? bubbleSpan : 0
-            activityOpening = !reduced
-            if reduced { restoreActivityDestination() }
+            openedFromBubble = intoBubble && !reduced
         }
-        guard !reduced else { return }
+        guard !reduced, intoBubble || merged else { return }
         let request = activityTransitionID
         activityTransitionTask = Task { @MainActor [weak self] in
             do { try await clock.sleep(until: deadline, tolerance: .zero) } catch { return }
             guard let self, !Task.isCancelled, self.activityTransitionID == request else { return }
-            withAnimation(self.activityMotionReduced ? nil : NotchMotion.playerClose) {
+            withAnimation(self.activityMotionReduced ? nil : intoBubble ? ToolMotion.close : ToolMotion.bubble) {
                 self.restoreActivityDestination()
-                self.activityOpening = false
             }
             self.activityTransitionTask = nil
         }
@@ -177,6 +223,7 @@ extension NotchModel {
         activityTransitionTask?.cancel()
         activityTransitionTask = nil
         advanceActivityTransition()
+        toolPresentation = false
         activityFolded = false
         activityOpening = false
         activityReturnsInline = false
@@ -190,7 +237,7 @@ extension NotchModel {
     /// Kept after the reveal so content that explicitly animates its return shares the shell's
     /// curve. The next presentation change chooses anew; ordinary progress leaves it alone.
     var activityRevealMotion: Animation {
-        if state == .open, page == .player, expanded == nil { return NotchMotion.player }
+        if toolPresentation || (state == .open && expanded == nil) { return ToolMotion.open }
         if activityReturnsInline, case .compact = activityPresentation { return NotchMotion.inlineReturn }
         return Self.activityExpansionMotion
     }

@@ -674,7 +674,7 @@ final class NotchController {
             }
             return
         }
-        withAnimation(NotchMotion.expand) { model.use(PlayerLayout.current) }
+        withAnimation(ToolMotion.open) { model.use(PlayerLayout.current) }
     }
 
     /// Announcements use the same housing midpoint as activity opens and switches. Their data is
@@ -859,8 +859,8 @@ final class NotchController {
         refitAsRecordingCounts()
     }
 
-    /// The shared presentation sequence folds the attached and detached parts together.
-    private func openMerging() { model.open(onCollapse: Opening.openingTap) }
+    /// Tool opening retains its original merge; activity opening uses the housing midpoint.
+    private func openMerging() { model.open(onCollapse: model.expanded == nil ? Opening.tap : Opening.openingTap) }
 
     private var presentTask: Task<Void, Never>?
 
@@ -1140,7 +1140,7 @@ final class NotchController {
         if on, model.state == .peek { settle(at: p) }
         openTask?.cancel()
         restPoint = nil
-        withAnimation(NotchMotion.feedback) { model.bubbleHovered = on }
+        withAnimation(model.detached == .music ? ToolMotion.peek : NotchMotion.feedback) { model.bubbleHovered = on }
         if on {
             startPolling()
         } else if model.state == .closed {
@@ -1184,7 +1184,7 @@ final class NotchController {
             restPoint = nil
         }
         if model.bubbleHovered {
-            withAnimation(NotchMotion.feedback) { model.bubblePressed = true }
+            withAnimation(model.detached == .music ? ToolMotion.press(true) : NotchMotion.feedback) { model.bubblePressed = true }
         } else {
             model.press(true)
         }
@@ -1214,7 +1214,7 @@ final class NotchController {
         guard pressBeganClosed else { return }
         let onBubble = model.bubblePressed
         if onBubble {
-            withAnimation(NotchMotion.feedback) { model.bubblePressed = false }
+            withAnimation(model.detached == .music ? ToolMotion.press(false) : NotchMotion.feedback) { model.bubblePressed = false }
         } else {
             model.press(false)
         }
@@ -1666,9 +1666,9 @@ final class NotchController {
         guard !tucked, model.openableActivities.contains(activity) else { return }
         model.keys.clear()
         if model.state != .open {
-            present(activity, for: nil, onCollapse: Opening.openingTap)
+            present(activity, for: nil, onCollapse: activity == .music ? Opening.tap : Opening.openingTap)
         } else {
-            _ = model.selectActivity(activity, onCollapse: Opening.openingTap)
+            _ = model.selectActivity(activity, onCollapse: activity == .music ? Opening.tap : Opening.openingTap)
         }
         holds.remove(.presented)
         holds.insert(.keyboard)
@@ -2053,7 +2053,7 @@ final class NotchController {
     private func stretch(sideways: Bool) {
         guard !model.activityControlsHidden else { return }
         let open = model.state == .open
-        withAnimation(NotchMotion.feedback) {
+        withAnimation(model.interactingWithTools ? ToolMotion.tracking : NotchMotion.feedback) {
             if open || pull > 0 { model.stretch = Self.rubberBand(pull) }
             if sideways { model.lean = Self.sideBand(across) }
         }
@@ -2065,7 +2065,7 @@ final class NotchController {
         swipe = 0
         scrollAxis = nil
         across = 0
-        withAnimation(NotchMotion.feedback) {
+        withAnimation(model.interactingWithTools ? ToolMotion.release : NotchMotion.feedback) {
             model.stretch = 0
             model.lean = 0
             model.nudge = 0
@@ -2359,7 +2359,7 @@ final class NotchController {
             Opening.tap()
         }
         guard !model.activityControlsHidden else { return }
-        withAnimation(NotchMotion.feedback) {
+        withAnimation(ToolMotion.tracking) {
             model.pageStretch = abs(Self.pageLean(swipe))
         }
     }

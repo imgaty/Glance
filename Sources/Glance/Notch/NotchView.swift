@@ -133,6 +133,12 @@ final class NotchModel: ObservableObject {
     /// Only an expanded activity returning to compact uses the quieter settling spring.
     @Published var activityReturnsInline = false
     var activityControlsHidden: Bool { activityFolded || activityOpening }
+    /// The last destination was a tool; its detached-bubble return keeps the original curves.
+    @Published var toolPresentation = false
+    /// Closed hover and gestures follow the destination that the pointer would open.
+    var interactingWithTools: Bool {
+        state == .open ? expanded == nil : alert == nil && expansion(fromBubble: bubbleHovered) == nil
+    }
     private(set) var activityTransitionID: UInt = 0
     var activityTransitionTask: Task<Void, Never>?
     /// A scene-local accessibility override for isolated previews and motion checks.
@@ -404,7 +410,9 @@ final class NotchModel: ObservableObject {
     @discardableResult
     func selectActivity(_ activity: Activity, onCollapse: (() -> Void)? = nil) -> Bool {
         guard openableActivities.contains(activity) else { return false }
+        let pendingTool = toolPresentation && activityTransitionTask != nil
         changeActivityPresentation(animation: NotchMotion.expand, onCollapse: onCollapse) {
+            if pendingTool { state = .open }
             keys.clear()
             page = .player
             expanded = activity == .music ? nil : activity
@@ -591,10 +599,14 @@ final class NotchModel: ObservableObject {
         let pull = max(stretch, 0)
         let across = abs(lean)
         let resting = short ? closedSize.height : restingHeight
+        let swells =
+            interactingWithTools && !activityControlsHidden && !collapsed && !restingTall
+            && !(activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        let swell: CGFloat = swells ? (state == .peek ? 7 : state == .closed ? 3 * proximity : 0) : 0
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed, .peek:
-                (restingWidth + pull * 0.4 + across, resting + pull)
+                (restingWidth + 2 * swell + pull * 0.4 + across, resting + swell + pull)
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
@@ -662,7 +674,6 @@ enum NotchMotion {
 
     static let foldDuration = 0.16
     static let expandDuration = 0.28
-    static let playerResponse = 0.5
 }
 
 extension Animation {
@@ -671,15 +682,6 @@ extension Animation {
 }
 
 extension NotchMotion {
-    /// The player's original direct opening and tray-page spring.
-    static var player: Animation {
-        (NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            ? Animation.spring(response: 0.42, dampingFraction: 1)
-            : .spring(response: playerResponse, dampingFraction: 0.68)).paced
-    }
-
-    static var playerClose: Animation { Animation.spring(response: 0.315, dampingFraction: 1.18).paced }
-
     static var expand: Animation {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: expandDuration)
@@ -720,20 +722,19 @@ extension NotchModel {
         // The tray and player are pages of the same open surface, not separate arrivals.
         // Interrupt a pending activity reveal without taking navigation through the housing.
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        var transaction = Transaction(animation: animated && !reduced ? NotchMotion.player : nil)
+        var transaction = Transaction(animation: animated && !reduced ? ToolMotion.open : nil)
         transaction.disablesAnimations = !animated || reduced
         withTransaction(transaction) {
             if state == .open { cancelActivityTransition() }
             expanded = nil
             self.page = page
-            stretch = 0
-            lean = 0
+            toolPresentation = true
             pageStretch = 0
         }
     }
 
     func peek() {
-        withAnimation(NotchMotion.feedback) { state = .peek }
+        withAnimation(interactingWithTools ? ToolMotion.peek : NotchMotion.feedback) { state = .peek }
     }
 
     /// Closed → a device extended, the notch and what it shows in one motion.
@@ -746,6 +747,13 @@ extension NotchModel {
 
     /// A small hover settles directly. An extended device returns through the housing first.
     func settle(closeness: CGFloat) {
+        if interactingWithTools, !alertExtended {
+            withAnimation(ToolMotion.settle) {
+                state = .closed
+                proximity = Self.eased(closeness)
+            }
+            return
+        }
         changeActivityPresentation(animation: alertExtended ? IslandMotion.fold : NotchMotion.feedback) {
             state = .closed
             alertExtended = false
@@ -753,10 +761,14 @@ extension NotchModel {
         }
     }
 
-    /// The player opens directly; other activities first collapse to the housing.
+    /// Tools open directly; activities first collapse to the housing.
     func open(onCollapse: (() -> Void)? = nil) {
         guard !entering else { return }
-        changeActivityPresentation(animation: Self.activityExpansionMotion, openingPlayer: page == .player && expanded == nil, onCollapse: onCollapse) {
+        if expanded == nil {
+            openTools(onOpen: onCollapse)
+            return
+        }
+        changeActivityPresentation(animation: Self.activityExpansionMotion, onCollapse: onCollapse) {
             state = .open
             pressed = false
             bubblePressed = false
@@ -811,8 +823,8 @@ extension NotchModel {
             }
             return
         }
-        if state == .open, page == .player, expanded == nil {
-            closePlayer()
+        if (state == .open && expanded == nil) || (toolPresentation && activityTransitionTask != nil) {
+            closeTools()
             return
         }
         changeActivityPresentation(animation: IslandMotion.fold) {
@@ -824,17 +836,17 @@ extension NotchModel {
         }
     }
 
-    /// Squeezed while pressed; let go, it returns without overshooting.
+    /// Tools retain their original press spring; activities use their quieter feedback.
     func press(_ down: Bool) {
         guard pressed != down else { return }
-        withAnimation(NotchMotion.feedback) { pressed = down }
+        withAnimation(interactingWithTools ? ToolMotion.press(down) : NotchMotion.feedback) { pressed = down }
     }
 
-    /// Track pointer proximity without changing the compact footprint.
+    /// Tools grow slightly toward the pointer; activity footprints stay fixed.
     func approach(_ closeness: CGFloat) {
         let value = Self.eased(closeness)
         guard abs(value - proximity) > 0.01 || (value == 0 && proximity != 0) else { return }
-        withAnimation(NotchMotion.feedback) { proximity = value }
+        withAnimation(interactingWithTools ? ToolMotion.approach : NotchMotion.feedback) { proximity = value }
     }
 
     private static func eased(_ closeness: CGFloat) -> CGFloat {
@@ -917,7 +929,7 @@ struct NotchView: View {
 
     private var background: MusicBackground { backgroundShown ?? look.background }
     private var playerClosingMotion: Animation {
-        model.page == .player && model.expanded == nil ? NotchMotion.playerClose : IslandMotion.fold
+        model.expanded == nil ? ToolMotion.close : IslandMotion.fold
     }
 
     /// With Reduce Transparency or Increase Contrast on, the notch is opaque whatever its setting.
@@ -1105,7 +1117,7 @@ struct NotchView: View {
         .environment(\.soundMenuChanged, SoundMenuAction(owner: model))
         // Turned off, any lyrics showing fold away.
         .onChange(of: lyricsOn) {
-            if !lyricsOn { withAnimation(NotchMotion.expand) { model.lyrics = false } }
+            if !lyricsOn { withAnimation(ToolMotion.open) { model.lyrics = false } }
         }
         // Turned off while it shows, the tray slides away for the player, as swiping to it does.
         .onChange(of: trayOn) {
@@ -1220,7 +1232,7 @@ struct NotchView: View {
             restingHeight: model.closedSize.height,
             notchEnd: model.state != .open ? m.bodyWidth / 2 - m.fold : runsIn ? m.bodyWidth / 2 : restingEnd,
             hidden: model.state == .open || model.activityFolded, runsIn: runsIn, sharedGlyph: bubbleShares,
-            hovered: model.bubbleHovered, pressed: model.bubblePressed)
+            hovered: model.bubbleHovered, pressed: model.bubblePressed, toolMotion: model.toolPresentation)
     }
 
     /// Keep each activity's closed pose mounted, so the notch's own transaction moves it.
@@ -1438,7 +1450,7 @@ struct NotchView: View {
     /// The lyrics open beside the player, widening the notch with the Dynamic Island's spring, from
     /// the waveform or a lyrics button.
     private func toggleLyrics() {
-        withAnimation(NotchMotion.expand) { model.lyrics.toggle() }
+        withAnimation(ToolMotion.open) { model.lyrics.toggle() }
     }
 
     /// The lyrics keep the same space below the camera as above the notch's bottom edge.

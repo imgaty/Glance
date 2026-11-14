@@ -54,6 +54,7 @@ struct IslandBubble: View {
     var sharedGlyph = false
     let hovered: Bool
     let pressed: Bool
+    var toolMotion = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.islandExpansionMotion) private var expansionMotion
     /// What it showed, kept on as it runs back into the notch, so it fades as it goes rather than
@@ -79,7 +80,7 @@ struct IslandBubble: View {
     static let inBy: Double = 0.13
 
     /// On the same expansion or collapse motion as the notch's end, so the two part evenly.
-    private var motion: Animation { shown ? expansionMotion : IslandMotion.fold }
+    private var motion: Animation { toolMotion ? (shown ? ToolMotion.bubble : ToolMotion.close) : (shown ? expansionMotion : IslandMotion.fold) }
 
     var body: some View {
         let h = restingHeight

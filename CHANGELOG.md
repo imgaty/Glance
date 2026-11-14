@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Restored the original tool gestures, hover feedback, tray opening and closing,
+  lyrics resizing and detached bubble motion. Tool switching remains available
+  during animation; Live Activities keep their current transitions.
+
 - Restored the player's direct closing animation back to compact music and its
   detached bubble, without the extra collapse and expansion.
 

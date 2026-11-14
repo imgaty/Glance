@@ -74,7 +74,7 @@ struct HeroArtwork: View {
                         .transition(IslandMotion.fade)
                     }
                 }
-                .animation(IslandMotion.open, value: nowPlaying.artwork.map(ObjectIdentifier.init))
+                .animation(isOpen ? ToolMotion.bubble : IslandMotion.open, value: nowPlaying.artwork.map(ObjectIdentifier.init))
             }
             .overlay {
                 // The moving cover, in the open player, once it can show its first frame.

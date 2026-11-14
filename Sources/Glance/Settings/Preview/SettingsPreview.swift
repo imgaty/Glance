@@ -19,7 +19,7 @@ final class SettingsPreview: ObservableObject {
     let scrollClock = ScrollClock()
     /// Read afresh in production; isolated scenes can supply their own opening configuration.
     private let opening: () -> Opening
-    private let openingFeedback: () -> Void
+    private let openingFeedback: (() -> Void)?
     @Published var display: String {
         didSet { followDisplay() }
     }
@@ -33,7 +33,7 @@ final class SettingsPreview: ObservableObject {
         (NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main)?.notchID ?? ""
     }
 
-    init(opening: @escaping () -> Opening = { .current }, openingFeedback: @escaping () -> Void = Opening.openingTap) {
+    init(opening: @escaping () -> Opening = { .current }, openingFeedback: (() -> Void)? = nil) {
         self.opening = opening
         self.openingFeedback = openingFeedback
         let display = Self.defaultDisplay
@@ -59,7 +59,7 @@ final class SettingsPreview: ObservableObject {
     private func followDisplay() {
         let top = self.top
         guard model.closedSize != top.notch || model.hasCamera != top.camera else { return }
-        withAnimation(NotchMotion.expand) { model.useDisplay(size: top.notch, camera: top.camera) }
+        withAnimation(model.interactingWithTools ? ToolMotion.open : NotchMotion.expand) { model.useDisplay(size: top.notch, camera: top.camera) }
     }
 
     /// The top of the display shown, as the pictures of it draw it.
@@ -100,7 +100,9 @@ final class SettingsPreview: ObservableObject {
     /// screen does.
     func setInteractive(_ on: Bool, animated: Bool) {
         guard on != interactive || (!on && revealed && model.state != .open) else { return }
+        let tools = model.interactingWithTools
         model.cancelActivityTransition()
+        model.toolPresentation = tools
         pointerLocation = nil
         pointerGeometry = nil
         openingZone = nil
@@ -114,7 +116,8 @@ final class SettingsPreview: ObservableObject {
         openTask?.cancel()
         closeTask?.cancel()
         closeTask = nil
-        var transaction = Transaction(animation: animated ? (on ? IslandMotion.fold : NotchMotion.expand) : nil)
+        let motion = tools ? (on ? ToolMotion.close : ToolMotion.open) : (on ? IslandMotion.fold : NotchMotion.expand)
+        var transaction = Transaction(animation: animated ? motion : nil)
         transaction.disablesAnimations = !animated
         if on {
             revealTask?.cancel()
@@ -191,7 +194,7 @@ final class SettingsPreview: ObservableObject {
             if onBubble != model.bubbleHovered {
                 openTask?.cancel()
                 restPoint = nil
-                withAnimation(NotchMotion.feedback) { model.bubbleHovered = onBubble }
+                withAnimation(model.detached == .music ? ToolMotion.peek : NotchMotion.feedback) { model.bubbleHovered = onBubble }
             }
             if onBubble || onNotch {
                 if onNotch, model.state == .closed { peek() }
@@ -227,7 +230,7 @@ final class SettingsPreview: ObservableObject {
     private func goHome(_ g: Geometry) {
         openTask?.cancel()
         restPoint = nil
-        withAnimation(IslandMotion.fold) { model.bubbleHovered = false }
+        withAnimation(model.detached == .music ? ToolMotion.close : IslandMotion.fold) { model.bubbleHovered = false }
         switch model.state {
         case .closed, .peek:
             if model.state == .peek { settle() } else { model.approach(0) }
@@ -382,7 +385,7 @@ final class SettingsPreview: ObservableObject {
         }
         model.open { [weak self] in
             guard let self, self.feelsOpening, self.opening().haptics else { return }
-            self.openingFeedback()
+            (self.openingFeedback ?? (self.model.expanded == nil ? Opening.tap : Opening.openingTap))()
         }
     }
 

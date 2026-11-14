@@ -109,8 +109,10 @@ struct ActivityMotionInteractionTests {
     func heldOpening(_ detached: Bool) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
-        model.activity = true
-        if detached { model.timer = .paused(left: 75, total: 120) }
+        model.timer = .paused(left: 75, total: 120)
+        if detached { model.activity = true }
+        model.expanded = .timer
+        model.openedFromBubble = detached
         model.press(true)
         model.bubblePressed = detached
         model.stretch = 18
@@ -140,7 +142,9 @@ struct ActivityMotionInteractionTests {
         preview.setInteractive(true, animated: false)
         let model = preview.model
         model.activityReducesMotion = false
-        model.activity = true
+        model.activity = false
+        model.timer = .paused(left: 75, total: 120)
+        model.expanded = .timer
         defer { model.cancelActivityTransition() }
         model.open()
         await model.activityTransitionTask?.value
@@ -231,12 +235,13 @@ struct ActivityMotionInteractionTests {
     }
 
     @Test("Canceling an open destination keeps its detached activity merged")
-    func cancelOpenDestination() {
+    func cancelOpenDestination() async {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.activity = true
         model.timer = .paused(left: 75, total: 120)
         model.open()
+        await model.activityTransitionTask?.value
         model.cancelActivityTransition()
         #expect(model.state == .open && model.bubbleMerged)
         #expect(model.detached == nil && model.bubbleReach == 0)
