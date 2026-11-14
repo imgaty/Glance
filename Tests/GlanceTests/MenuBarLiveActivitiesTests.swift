@@ -5,6 +5,7 @@
 //  Created by Gaty on 11/11/2026.
 //
 
+import Foundation
 import Testing
 
 @testable import Glance
@@ -132,4 +133,189 @@ struct MenuBarLiveActivitiesTests {
         #expect(!absent.isComplete(.init(hidden: ["Now Playing"])))
     }
 
+    @Test("A newly absent replacement restores during another switch's failure backoff")
+    @MainActor func restoreBeforeBackoff() async {
+        let settings = FakeActivitySettings()
+        settings.owned = ["Clock"]
+        settings.values["Clock"] = false
+        settings.failures = ["Clock"]
+        let manager = settings.manager()
+        await manager.reconcile()
+        #expect(settings.owned == ["Clock", "Now Playing"])
+        #expect(settings.opens == 1)
+
+        settings.now += 1
+        settings.visible = []
+        await manager.reconcile()
+        #expect(settings.values["Now Playing"] == true)
+        #expect(settings.owned == ["Clock"])
+        #expect(settings.opens == 2)
+        #expect(settings.attempts.filter { $0.name == "Clock" }.count == 1)
+
+        await manager.reconcile()
+        #expect(settings.opens == 2)
+        settings.now += 60
+        await manager.reconcile()
+        #expect(settings.opens == 3)
+        #expect(settings.attempts.filter { $0.name == "Clock" }.count == 2)
+    }
+
+    @Test("Turning hiding off during Settings discovery never issues the stale hide")
+    @MainActor func changedDuringDiscovery() async {
+        let settings = FakeActivitySettings()
+        settings.onOpen = { settings.hiding = false }
+        await settings.manager().reconcile()
+        #expect(settings.writes.isEmpty)
+        #expect(settings.values["Now Playing"] == true)
+        #expect(settings.owned.isEmpty)
+        #expect(settings.closes == settings.opens)
+    }
+
+    @Test("A queued row reauthorizes after its read and skips an absent replacement")
+    @MainActor func changedBeforePress() async {
+        let settings = FakeActivitySettings()
+        settings.beforeAuthorization = { settings.visible = [] }
+        await settings.manager().reconcile()
+        #expect(settings.skipped == 1)
+        #expect(settings.writes.isEmpty)
+        #expect(settings.owned.isEmpty)
+    }
+
+    @Test("A visibility change during an in-flight hide gets an immediate corrective pass")
+    @MainActor func changedDuringPress() async {
+        let settings = FakeActivitySettings()
+        settings.afterSubmission = { _, target in if !target { settings.visible = [] } }
+        await settings.manager().reconcile()
+        #expect(settings.writes == [.init(name: "Now Playing", target: false), .init(name: "Now Playing", target: true)])
+        #expect(settings.owned.isEmpty)
+        #expect(settings.opens == 2)
+        #expect(settings.closes == 2)
+    }
+
+    @Test("Failed discovery keeps ownership and bounds retries while restoration is unavailable")
+    @MainActor func failedDiscoveryIsBounded() async {
+        let settings = FakeActivitySettings()
+        settings.owned = ["Now Playing"]
+        settings.values["Now Playing"] = false
+        settings.visible = []
+        settings.unavailable = true
+        let manager = settings.manager()
+        await manager.reconcile()
+        for _ in 0..<5 { await manager.reconcile() }
+        #expect(settings.opens == 1)
+        #expect(settings.owned == ["Now Playing"])
+        settings.now += 60
+        await manager.reconcile()
+        #expect(settings.opens == 2)
+        #expect(settings.writes.isEmpty)
+    }
+
+    @Test("An acknowledged hide with missing readback remains owned for restoration")
+    @MainActor func uncertainSubmissionRemainsOwned() async {
+        let settings = FakeActivitySettings()
+        settings.unconfirmed = ["Now Playing"]
+        let manager = settings.manager()
+        await manager.reconcile()
+        #expect(settings.owned == ["Now Playing"])
+        settings.visible = []
+        settings.unconfirmed = []
+        await manager.reconcile()
+        #expect(settings.owned.isEmpty)
+        #expect(settings.values["Now Playing"] == true)
+    }
+
+    @Test("An already disabled unowned switch is never enabled by reconciliation")
+    @MainActor func preserveUserDisabledSetting() async {
+        let settings = FakeActivitySettings()
+        settings.values["Now Playing"] = false
+        settings.values["Journal"] = false
+        let manager = settings.manager()
+        await manager.reconcile()
+        settings.visible = []
+        await manager.reconcile()
+        #expect(settings.writes.isEmpty)
+        #expect(settings.owned.isEmpty)
+        #expect(settings.values["Now Playing"] == false)
+        #expect(settings.values["Journal"] == false)
+    }
+
+    @Test("Repeated changes during native writes cannot create an unbounded corrective loop")
+    @MainActor func correctivePassIsBounded() async {
+        let settings = FakeActivitySettings()
+        settings.afterSubmission = { _, target in settings.visible = target ? ["Now Playing"] : [] }
+        await settings.manager().reconcile()
+        #expect(settings.opens == 2)
+        #expect(settings.writes.count == 2)
+        #expect(settings.closes == 2)
+    }
+}
+
+/// The async boundaries match discovery, the state read before a press, and its readback.
+/// Nothing here opens System Settings or reads/writes the real user's preferences.
+@MainActor
+private final class FakeActivitySettings {
+    struct Write: Equatable {
+        let name: String
+        let target: Bool
+    }
+
+    var now = Date(timeIntervalSince1970: 1000)
+    var hiding = true
+    var owned: [String] = []
+    var visible: Set<String> = ["Now Playing"]
+    var values = ["Now Playing": true, "Clock": true, "Journal": true]
+    var failures = Set<String>()
+    var unconfirmed = Set<String>()
+    var unavailable = false
+    var opens = 0
+    var closes = 0
+    var skipped = 0
+    var attempts: [Write] = []
+    var writes: [Write] = []
+    var onOpen: (() -> Void)?
+    var beforeAuthorization: (() -> Void)?
+    var afterSubmission: ((String, Bool) -> Void)?
+
+    func manager() -> MenuBarLiveActivities {
+        let manager = MenuBarLiveActivities(
+            dependencies: .init(
+                now: { self.now }, hiding: { self.hiding }, owned: { self.owned },
+                saveOwned: { self.owned = $0 }, isTrusted: { true }, pillShowing: { false },
+                openSettings: { await self.open() }))
+        manager.replacements = { self.visible }
+        return manager
+    }
+
+    private func open() async -> MenuBarLiveActivities.SettingsSession? {
+        opens += 1
+        await Task.yield()
+        let hook = onOpen
+        onOpen = nil
+        hook?()
+        guard !unavailable else { return nil }
+        let rows = ["Clock", "Now Playing", "Journal"].map { name in
+            MenuBarLiveActivities.SettingsRow(name: name) { target, authorization in
+                await self.apply(name: name, target: target, authorization: authorization)
+            }
+        }
+        return .init(rows: rows, close: { self.closes += 1 })
+    }
+
+    private func apply(name: String, target: Bool, authorization: MenuBarLiveActivities.WriteAuthorization) async -> MenuBarLiveActivities.WriteOutcome {
+        attempts.append(.init(name: name, target: target))
+        if values[name] == target { return .unchanged }
+        let hook = beforeAuthorization
+        beforeAuthorization = nil
+        hook?()
+        guard await authorization.isCurrent() else {
+            skipped += 1
+            return .stale
+        }
+        guard !failures.contains(name) else { return .failed }
+        values[name] = target
+        writes.append(.init(name: name, target: target))
+        afterSubmission?(name, target)
+        await Task.yield()
+        return .submitted(confirmed: !unconfirmed.contains(name))
+    }
 }

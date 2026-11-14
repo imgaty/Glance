@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed native music restoration waiting behind failed hiding, and stale
+  hiding commands running after the display or preference changed.
+
 - Added ringing Clock alarms, local print jobs, Focus announcements, music
   recognition and shortcuts started from Glance, with native controls and
   settings for each activity. Existing system activities stay available.
