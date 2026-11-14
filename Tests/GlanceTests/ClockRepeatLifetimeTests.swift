@@ -120,6 +120,43 @@ struct ClockRepeatLifetimeTests {
         #expect(clock.timer == nil)
     }
 
+    @Test("A new ring replaces an expired failed repeat without losing unrelated announcements")
+    func failedRingReplacement() async throws {
+        let activities = Activities()
+        let backend = RepeatBackend()
+        let clock = ClockActivity(activities: activities, repeatAction: backend.restart)
+        clock.benchRing(length: 30, title: "First")
+        let first = try #require(activities.alert)
+        clock.repeatTimer()
+        try await settle { backend.pending != nil }
+        // The real expiry task invokes this once. Returning while pending ends that task.
+        let expire = try #require(first.expired)
+        expire()
+        backend.complete(nil)
+        try await settle { clock.repeatState == .failed }
+
+        let charging = NotchAlert(kind: .charging, content: .battery(title: "Charging", level: .init(percent: 70, charging: true)), spoken: "Charging", stays: true)
+        let device = NotchAlert(kind: .device, content: .device(model: .airpods, battery: 75), spoken: "AirPods connected", stays: true)
+        activities.post(charging)
+        activities.post(device)
+        clock.benchRing(length: 60, title: "Second")
+
+        #expect(activities.alert?.id != first.id)
+        #expect(!activities.waiting.contains { $0.id == first.id })
+        try await settle { activities.alert?.id == charging.id }
+        #expect(activities.waiting.contains { $0.id == device.id })
+        #expect(activities.waiting.filter { $0.kind == .timerDone }.map(\.spoken) == ["Second done"])
+        activities.dismiss(id: charging.id)
+        try await settle { activities.alert?.id == device.id }
+        activities.dismiss(id: device.id)
+        try await settle { activities.alert?.spoken == "Second done" }
+        #expect(clock.rang?.title == "Second")
+        #expect(clock.rang?.length == 60)
+        #expect(clock.repeatState == .idle)
+        #expect(clock.timer == nil)
+        clock.dismissRing()
+    }
+
     private enum WaitError: Error { case timeout }
 
     private func settle(_ ready: () -> Bool) async throws {

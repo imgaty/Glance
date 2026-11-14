@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed a later timer ringing behind an earlier failed repeat, which could
+  leave the earlier timer's name above the later timer's controls.
+
 - Fixed Repeat failing to find Clock's timer editor. Pending repeats now show
   their progress, and failed repeats stay available
   with a message so they can be retried or stopped.

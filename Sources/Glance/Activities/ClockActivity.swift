@@ -263,6 +263,9 @@ final class ClockActivity: ObservableObject {
             repeatTask = nil
             repeatRequest = nil
             repeatState = .idle
+            // A failed or pending repeat may have outlived its expiry callback. Retire its
+            // presentation before its buttons can address this newer ring; other kinds stay queued.
+            if rang != nil { activities.dismiss(.timerDone) }
         }
         rang = (rung.length, rung.title, rung.date)
         let name = rung.title ?? String(localized: "Timer")
