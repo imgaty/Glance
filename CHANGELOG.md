@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Changed the notch's menu to offer **Recognize Music** and **Run Shortcut**
+  only while their Live Activities are on, or while a shortcut run is going.
+
 - Restored the menu bar menu as Control Center draws its menus, with the
   `Glance` switch at the top. Recognize Music and Run Shortcut moved to the
   notch's menu.

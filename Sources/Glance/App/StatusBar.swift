@@ -359,19 +359,24 @@ extension StatusBarController: NSMenuDelegate {
             item.submenu = choices
             items.append(item)
         }
-        let recognize = NSMenuItem(title: String(localized: "Recognize Music"), action: #selector(recognizeMusicFromMenu), keyEquivalent: "")
-        recognize.target = self
-        recognize.isEnabled = canLaunchActivity?() == true && UserDefaults.standard.bool(forKey: Preferences.activityRecognition)
-        items.append(recognize)
-        let shortcuts = NSMenuItem(title: String(localized: "Run Shortcut"), action: nil, keyEquivalent: "")
-        // Existing invocations stay manageable when their display or the notch is disabled.
-        // The submenu revalidates availability only for launching a new shortcut.
-        shortcuts.isEnabled = true
-        shortcuts.submenu = ShortcutActivity.shared.makeRunMenu(
-            canRun: { [weak self] in self?.canLaunchActivity?() == true },
-            open: { [weak self] id in self?.onOpenShortcut?(id) }
-        )
-        items.append(shortcuts)
+        // Each only with its switch on in Live Activities, so the menu offers nothing that can't run.
+        if UserDefaults.standard.bool(forKey: Preferences.activityRecognition) {
+            let recognize = NSMenuItem(title: String(localized: "Recognize Music"), action: #selector(recognizeMusicFromMenu), keyEquivalent: "")
+            recognize.target = self
+            recognize.isEnabled = canLaunchActivity?() == true
+            items.append(recognize)
+        }
+        // Runs already going stay in reach even after the switch is turned off.
+        if UserDefaults.standard.bool(forKey: Preferences.activityShortcuts) || !ShortcutActivity.shared.runs.isEmpty {
+            let shortcuts = NSMenuItem(title: String(localized: "Run Shortcut"), action: nil, keyEquivalent: "")
+            // The submenu revalidates availability only for launching a new shortcut.
+            shortcuts.isEnabled = true
+            shortcuts.submenu = ShortcutActivity.shared.makeRunMenu(
+                canRun: { [weak self] in self?.canLaunchActivity?() == true },
+                open: { [weak self] id in self?.onOpenShortcut?(id) }
+            )
+            items.append(shortcuts)
+        }
         if let timer = clock.timer {
             add(timer.isRunning ? String(localized: "Pause Timer") : String(localized: "Resume Timer"), #selector(pauseOrResumeTimer))
             add(String(localized: "Cancel Timer"), #selector(cancelTimer))

@@ -136,7 +136,7 @@ camera housing. Leaving full screen restores the compact activities and bubble.
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
 | Swipe left or right with three fingers, on the open notch | Stretches the notch and what's in it with your fingers and switches to the tray, and back to the player, easing into place as you let go (with `Accessibility` allowed) |
 | Hold Shift and scroll sideways | Switches to the tray, and back to the player; a mouse's wheel scrolls a tray with more than fits instead, and, scrolled on past the row's end, goes back to the player |
-| Right-click | Shows the menu: Check for Updates…, Settings, and Quit |
+| Right-click | Shows the menu: Check for Updates…, Settings, and Quit, with Recognize Music and Run Shortcut while their Live Activities are on |
 | Drag something near the notch and hold it there a moment | Opens the tray, to drop it there |
 | ⌥⇧1, from any app | Opens the notch with the player; again, closes it |
 | ⌥⇧2, from any app | Opens the notch with the tray; again, closes it |
