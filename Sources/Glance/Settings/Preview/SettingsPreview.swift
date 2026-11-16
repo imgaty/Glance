@@ -385,7 +385,7 @@ final class SettingsPreview: ObservableObject {
         }
         model.open { [weak self] in
             guard let self, self.feelsOpening, self.opening().haptics else { return }
-            (self.openingFeedback ?? (self.model.expanded == nil ? Opening.tap : Opening.openingTap))()
+            (self.openingFeedback ?? (self.model.expanded == nil ? { Opening.tap() } : Opening.openingTap))()
         }
     }
 

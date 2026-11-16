@@ -42,10 +42,11 @@ struct Opening {
             haptics: defaults.bool(forKey: Preferences.haptics))
     }
 
-    /// A tap on the trackpad, if haptic feedback is on.
-    static func tap() {
+    /// A tap on the trackpad, if haptic feedback is on. Alignment, as Apple means it, for something
+    /// dragged or swiped into its place; generic for anything else.
+    static func tap(_ pattern: NSHapticFeedbackManager.FeedbackPattern = .generic) {
         guard current.haptics else { return }
-        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .now)
     }
 
     /// A discrete opening beat, separate from pressure-level and gesture feedback.
@@ -860,7 +861,7 @@ final class NotchController {
     }
 
     /// Tool opening retains its original merge; activity opening uses the housing midpoint.
-    private func openMerging() { model.open(onCollapse: model.expanded == nil ? Opening.tap : Opening.openingTap) }
+    private func openMerging() { model.open(onCollapse: model.expanded == nil ? { Opening.tap() } : Opening.openingTap) }
 
     private var presentTask: Task<Void, Never>?
 
@@ -1666,9 +1667,9 @@ final class NotchController {
         guard !tucked, model.openableActivities.contains(activity) else { return }
         model.keys.clear()
         if model.state != .open {
-            present(activity, for: nil, onCollapse: activity == .music ? Opening.tap : Opening.openingTap)
+            present(activity, for: nil, onCollapse: activity == .music ? { Opening.tap() } : Opening.openingTap)
         } else {
-            _ = model.selectActivity(activity, onCollapse: activity == .music ? Opening.tap : Opening.openingTap)
+            _ = model.selectActivity(activity, onCollapse: activity == .music ? { Opening.tap() } : Opening.openingTap)
         }
         holds.remove(.presented)
         holds.insert(.keyboard)
@@ -1859,7 +1860,7 @@ final class NotchController {
         let onWell = isOnAirDrop(point)
         if model.airDropTargeted != onWell {
             withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = onWell }
-            if onWell { Opening.tap() }
+            if onWell { Opening.tap(.alignment) }
         }
         guard Tray.accepts(pasteboard) else { return [] }
         // Back to the row, with a place at its front for the drop.
@@ -2334,7 +2335,7 @@ final class NotchController {
                 let page: NotchPage = flick != Self.readsRightToLeft ? .tray : .player
                 if page != model.page {
                     turn(to: page)
-                    Opening.tap()
+                    Opening.tap(.alignment)
                 }
             }
             swipeEnded()
@@ -2356,7 +2357,7 @@ final class NotchController {
         if !pullFired, abs(swipe) > Self.pageTurn, target != model.page {
             pullFired = true
             turn(to: target)
-            Opening.tap()
+            Opening.tap(.alignment)
         }
         guard !model.activityControlsHidden else { return }
         withAnimation(ToolMotion.tracking) {

@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Changed `Haptic feedback` to the trackpad's alignment tap when something drops
+  onto AirDrop or the notch turns between the player and the tray, and to its
+  plain tap everywhere else.
+
 - Fixed the `Work`, `Gaming` and `Mindfulness` Focus changes never showing, and
   Focus symbols missing beside the camera.
 
