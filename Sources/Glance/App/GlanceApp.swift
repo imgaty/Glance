@@ -178,11 +178,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.dataSource = nil
     }
 
+    @objc private func showAbout() {
+        NSApp.orderFrontStandardAboutPanel(options: [.applicationIcon: GlanceLogo.make(width: 64, template: false)])
+    }
+
     /// The menu bar while Settings or the welcome tour is open: Apple's standard menus, in their
     /// order, with what those windows can use of them.
     func makeMainMenu() -> NSMenu {
         let app = NSMenu()
-        app.addItem(withTitle: String(localized: "About Glance"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        app.addItem(withTitle: String(localized: "About Glance"), action: #selector(showAbout), keyEquivalent: "").target = self
         app.addItem(.separator())
         app.addItem(withTitle: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",").target = self
         app.addItem(.separator())

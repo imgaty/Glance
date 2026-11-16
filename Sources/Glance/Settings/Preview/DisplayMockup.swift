@@ -510,7 +510,8 @@ private struct MenuBarPicture: View {
             .modifier(Framed(inside: inside))
             Spacer(minLength: 0)
             Group {
-                Image(systemName: "rectangle.topthird.inset.filled")
+                Image(nsImage: GlanceLogo.menuBar)
+                    .renderingMode(.template)
                 if top.builtIn { Image(systemName: "battery.75percent") }
                 Image(systemName: "wifi")
                 Image(systemName: "magnifyingglass")

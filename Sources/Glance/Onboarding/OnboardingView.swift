@@ -239,14 +239,17 @@ private struct PageDots: View {
 
 // MARK: - Pages
 
-/// What's in Glance, as Apple welcomes you to an app: its icon, the title, and a line for each
+/// What's in Glance, as Apple welcomes you to an app: its logo, the title, and a line for each
 /// highlight of each feature, its symbol in the accent color beside it.
 private struct WelcomePage: View {
     var body: some View {
         PageLayout(title: String(localized: "Welcome to Glance")) {
-            Image(nsImage: NSApp.applicationIconImage)
+            Image(nsImage: GlanceLogo.image)
+                .renderingMode(.template)
                 .resizable()
+                .scaledToFit()
                 .frame(width: OnboardingMetrics.iconSize, height: OnboardingMetrics.iconSize)
+                .foregroundStyle(.primary)
                 .accessibilityHidden(true)
         } content: {
             VStack(alignment: .leading, spacing: 24) {

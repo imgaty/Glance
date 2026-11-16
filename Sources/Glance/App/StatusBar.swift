@@ -300,27 +300,8 @@ final class StatusBarController: NSObject {
 
     // MARK: Icon
 
-    /// A screen with its top filled in, the app icon's own shapes in the same proportions, nearly
-    /// square. Its outline is 1.5 points, as heavy as the icons beside it in the menu bar read,
-    /// and the top sits a point inside it, its corners following the outline's. A template, so it
-    /// follows the menu bar's appearance, as symbols do.
-    private static let notchIcon: NSImage = {
-        let image = NSImage(size: NSSize(width: 17, height: 15), flipped: false) { rect in
-            NSColor.black.set()
-            let line: CGFloat = 1.5
-            let radius: CGFloat = 3
-            let screen = NSBezierPath(roundedRect: rect.insetBy(dx: line / 2, dy: line / 2), xRadius: radius, yRadius: radius)
-            screen.lineWidth = line
-            screen.stroke()
-            let inside = line + 1
-            let top = radius - line / 2 - 1
-            NSBezierPath(roundedRect: NSRect(x: inside, y: rect.maxY - inside - 3, width: rect.width - inside * 2, height: 3), xRadius: top, yRadius: top).fill()
-            return true
-        }
-        image.isTemplate = true
-        image.accessibilityDescription = "Glance"
-        return image
-    }()
+    /// The app icon's mark without its tile, with lines heavy enough for the menu bar.
+    private static let notchIcon = GlanceLogo.menuBar
     private static let hammerIcon = symbol("hammer", "Rebuilding")
 
     private static func symbol(_ name: String, _ description: String) -> NSImage {

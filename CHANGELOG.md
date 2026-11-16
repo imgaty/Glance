@@ -360,9 +360,11 @@
   pictures and hidden pages no longer expose playback actions.
 - Extended Reduce Motion throughout the notch, settings and welcome tour,
   and kept artwork colors readable with Increase Contrast.
-- Added a layered app icon for macOS appearance styles, a black glass pane
-  lit from a notch at its top, and matched the menu bar icon's proportions to
-  its neighbors.
+- Added a layered app icon for macOS appearance styles: a glass frame that
+  reads as square, with a notch at its top and, an even gap inside it, a
+  panel that fades from top to bottom. The welcome tour, About window and
+  menu bar use the same logo without its tile. The menu bar's has heavier
+  lines, so it reads as clearly as the icons beside it.
 
 <br>
 
