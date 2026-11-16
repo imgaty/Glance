@@ -7,48 +7,44 @@
 
 import SwiftUI
 
+/// Music recognition beside the camera: its state at the left end, a word for it at the right; in the
+/// bubble, the state alone.
 struct MusicRecognitionCompactView: View {
     let state: MusicRecognitionActivity.State
     var minimal = false
     var leadingOnly = false
     var restingHeight: CGFloat = 32
-    static let wing: CGFloat = 96
+
+    @MainActor
+    static func wing(for state: MusicRecognitionActivity.State, restingHeight: CGFloat) -> CGFloat {
+        CompactActivityLayout.wing(caption: MusicRecognitionGlyph.caption(for: state), restingHeight: restingHeight)
+    }
 
     var body: some View {
         Group {
             if minimal {
-                MusicRecognitionGlyph(state: state, minimal: true)
+                MusicRecognitionGlyph(state: state, minimal: true, restingHeight: restingHeight)
             } else {
-                ZStack {
-                    MusicRecognitionGlyph(state: state)
-                        .frame(width: max(restingHeight - LiveActivityView.inset * 2, 0))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if !leadingOnly {
-                        Text(MusicRecognitionGlyph.caption(for: state))
-                            .lineLimit(1)
-                            .frame(width: Self.wing - LiveActivityView.inset * 2, alignment: .trailing)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
+                CompactActivityMark(caption: MusicRecognitionGlyph.caption(for: state), restingHeight: restingHeight, leadingOnly: leadingOnly) {
+                    MusicRecognitionGlyph(state: state, restingHeight: restingHeight)
                 }
-                .padding(.horizontal, LiveActivityView.inset)
             }
         }
-        .font(.body)
-        .foregroundStyle(.primary)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "Music recognition, \(state.title)"))
     }
 }
 
-/// A native state cue stays meaningful when the activity loses its text wing.
+/// A state's mark, which still says what's happening when the words beside it are hidden.
 struct MusicRecognitionGlyph: View {
     let state: MusicRecognitionActivity.State
     var minimal = false
+    var restingHeight: CGFloat = 32
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static func symbol(for state: MusicRecognitionActivity.State) -> String {
         switch state {
-        case .idle: "music.note"
+        case .idle: "shazam.logo.fill"
         case .requestingPermission: "mic"
         case .recognizing: "waveform"
         case .match: "checkmark.circle.fill"
@@ -76,40 +72,50 @@ struct MusicRecognitionGlyph: View {
     var body: some View {
         Group {
             if state == .recognizing, !minimal, !reduceMotion {
-                ProgressView().controlSize(.small)
+                ProgressView().controlSize(.small).tint(.white)
             } else {
                 Image(systemName: Self.symbol(for: state))
+                    .font(.system(size: minimal ? restingHeight * 0.5 : LiveActivityView.textSize(for: restingHeight) + 2, weight: .semibold))
+                    .foregroundStyle(.white)
             }
         }
-        .font(.body)
-        .foregroundStyle(.primary)
         .accessibilityHidden(true)
     }
 }
 
+/// Music recognition opened, in one row: Shazam's mark at the left end, or the song's cover once
+/// it's found, which opens the song; what's happening beside the camera, and under it what to do or
+/// who it's by; at the right end, the one or two things to do next.
 struct MusicRecognitionActivityView: View {
     @ObservedObject var activity: MusicRecognitionActivity
     private let stateOverride: MusicRecognitionActivity.State?
+    let restingHeight: CGFloat
+    let camera: CGFloat
+    var revealed = true
     @Environment(\.activityPreview) private var preview
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(activity: MusicRecognitionActivity? = nil, stateOverride: MusicRecognitionActivity.State? = nil) {
+    init(
+        activity: MusicRecognitionActivity? = nil, stateOverride: MusicRecognitionActivity.State? = nil, restingHeight: CGFloat = 32,
+        camera: CGFloat = 185, revealed: Bool = true
+    ) {
         self.activity = activity ?? .shared
         self.stateOverride = stateOverride
+        self.restingHeight = restingHeight
+        self.camera = camera
+        self.revealed = revealed
     }
 
     private var state: MusicRecognitionActivity.State { stateOverride ?? activity.state }
-    static func width(camera: CGFloat) -> CGFloat { max(440, camera + PlayerLayout.padding * 2) }
-    static func height(restingHeight: CGFloat) -> CGFloat { restingHeight + LiveActivityView.cameraGap + 210 }
 
     enum Action: Hashable { case recognize, cancel, openSong, settings, done }
 
+    /// In the order they stand. Opening a song found is its cover, at the left end.
     static func actions(for state: MusicRecognitionActivity.State) -> [Action] {
         if state.isWorking { return [.cancel] }
         switch state {
         case .idle: return [.recognize]
         case .match(let song): return song.musicURL != nil || song.webURL != nil ? [.openSong, .done] : [.done]
-        case .denied: return [.settings, .recognize, .done]
+        case .denied: return [.settings, .done]
         case .restricted, .failure(.configuration): return [.done]
         default: return [.recognize, .done]
         }
@@ -119,78 +125,107 @@ struct MusicRecognitionActivityView: View {
         Array([PlayerControl.activityFirst, .activitySecond, .activityThird].prefix(actions(for: state).count))
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                if case .match(let song) = state, let url = song.artworkURL {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFit()
-                    } placeholder: {
-                        Image(systemName: "music.note").font(.title2).foregroundStyle(.secondary)
-                    }
-                    .frame(width: 48, height: 48)
-                    .accessibilityHidden(true)
-                } else {
-                    Image(systemName: "music.note")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(state.title)
-                        .font(.headline)
-                        .lineLimit(2)
-                    detail
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            if state.isWorking, !reduceMotion {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel(state.title)
-            }
-            if stateOverride == nil, let failure = activity.actionFailure {
-                Text(failure)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            HStack {
-                ForEach(Array(Self.actions(for: state).enumerated()), id: \.element) { index, action in
-                    if action == .done { Spacer(minLength: 8) }
-                    actionButton(action, control: Self.controls(for: state)[index])
-                }
-            }
-            .controlSize(.regular)
+    /// Short enough to stop at the camera: what's happening, or the song found. The state's full
+    /// name is said under the pointer and to VoiceOver.
+    static func title(for state: MusicRecognitionActivity.State) -> String {
+        switch state {
+        case .idle, .noMatch: state.title
+        case .requestingPermission, .denied, .restricted: String(localized: "Microphone")
+        case .recognizing: String(localized: "Listening…")
+        case .match(let song): song.title
+        case .failure: String(localized: "Unavailable")
+        case .cancelled: String(localized: "Canceled")
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Music Recognition")
     }
 
-    @ViewBuilder private var detail: some View {
+    /// One short line under the title.
+    static func detail(for state: MusicRecognitionActivity.State) -> String {
         switch state {
-        case .idle:
-            Text("Identify a song using your microphone. An audio signature is sent to Shazam.")
-        case .requestingPermission:
-            Text("Allow microphone access to recognize music.")
-        case .recognizing:
-            Text("Keep your Mac near the music.")
-        case .match(let song):
-            if let artist = song.artist { Text(artist) }
-        case .noMatch:
-            Text("Try again while music is playing.")
-        case .denied:
-            Text("Allow Glance to use the microphone in System Settings, then try again.")
-        case .restricted:
-            Text("Microphone access is restricted on this Mac.")
-        case .failure(let failure):
-            Text(failure.message)
-        case .cancelled:
-            Text("Music recognition has stopped.")
+        case .idle: String(localized: "Sends an audio signature to Shazam")
+        case .requestingPermission: String(localized: "Allow microphone access")
+        case .recognizing: String(localized: "Keep your Mac near the music")
+        case .match(let song): song.artist ?? String(localized: "Song Found")
+        case .noMatch: String(localized: "Try again while music plays")
+        case .denied: String(localized: "Allow it in System Settings")
+        case .restricted: String(localized: "Restricted on this Mac")
+        case .failure(.connection): String(localized: "Check your internet connection")
+        case .failure(.recognition): String(localized: "Try again in a moment")
+        case .failure(.configuration): String(localized: "Not available in this build")
+        case .cancelled: String(localized: "Stopped listening")
+        }
+    }
+
+    /// The whole of it, under the pointer and to VoiceOver: the state's full name, and what to do.
+    static func explanation(for state: MusicRecognitionActivity.State) -> String {
+        let more: String? =
+            switch state {
+            case .idle: String(localized: "Identifies a song with your microphone. An audio signature is sent to Shazam.")
+            case .requestingPermission: String(localized: "Allow microphone access to recognize music.")
+            case .denied: String(localized: "Allow Glance to use the microphone in System Settings, then try again.")
+            case .restricted: String(localized: "Microphone access is restricted on this Mac.")
+            case .failure(let failure): failure.message
+            default: detail(for: state)
+            }
+        return [state.title, more].compactMap { $0 }.joined(separator: "\n")
+    }
+
+    private static func trailing(for state: MusicRecognitionActivity.State) -> [Action] { actions(for: state).filter { $0 != .openSong } }
+
+    @MainActor
+    static func width(for state: MusicRecognitionActivity.State, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
+        ActivityRowLayout.width(title: title(for: state), detail: detail(for: state), buttons: trailing(for: state).count, restingHeight: h, camera: camera)
+    }
+
+    static func height(restingHeight h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) }
+
+    var body: some View {
+        let h = restingHeight
+        let actions = Self.actions(for: state)
+        let controls = Self.controls(for: state)
+        let failure = stateOverride == nil ? activity.actionFailure : nil
+        ActivityRow(
+            restingHeight: h, camera: camera, width: Self.width(for: state, restingHeight: h, camera: camera),
+            title: Self.title(for: state), detail: failure ?? Self.detail(for: state), explanation: failure ?? Self.explanation(for: state),
+            buttons: Self.trailing(for: state).count, revealed: revealed
+        ) {
+            picture(h, opens: actions.first == .openSong)
+        } trailing: {
+            ForEach(Array(actions.enumerated()), id: \.element) { index, action in
+                if action != .openSong { button(action, control: controls[index], h) }
+            }
+        }
+        .accessibilityLabel(String(localized: "Music Recognition"))
+    }
+
+    @ViewBuilder private func picture(_ h: CGFloat, opens: Bool) -> some View {
+        let side = TimerLayout.content(h)
+        if case .match(let song) = state, let url = song.artworkURL {
+            let cover = AsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Color.white.opacity(0.2)
+            }
+            .frame(width: side, height: side)
+            .clipShape(RoundedRectangle(cornerRadius: side * 0.2237, style: .continuous))
+            if opens {
+                Button { perform(.openSong) } label: { cover.contentShape(Rectangle()) }
+                    .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+                    .notchControl()
+                    .keyControl(.activityFirst, in: RoundedRectangle(cornerRadius: side * 0.2237, style: .continuous), outset: CGSize(width: 3, height: 3), spoken: title(for: .openSong)) {
+                        perform(.openSong)
+                    }
+                    .accessibilityLabel(title(for: .openSong))
+                    .help(title(for: .openSong))
+                    .accessibilityIdentifier("recognition-openSong")
+            } else {
+                cover.accessibilityHidden(true)
+            }
+        } else {
+            ActivityRowPicture(restingHeight: h, label: opens ? title(for: .openSong) : nil, open: opens ? { perform(.openSong) } : nil) {
+                Image(systemName: "shazam.logo.fill")
+                    .font(.system(size: h * 0.62, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
         }
     }
 
@@ -201,18 +236,30 @@ struct MusicRecognitionActivityView: View {
         case .openSong:
             if case .match(let song) = state, song.musicURL != nil { return String(localized: "Open in Music") }
             return String(localized: "Open in Shazam")
-        case .settings: return String(localized: "Microphone Settings…")
+        case .settings: return String(localized: "Microphone Settings")
         case .done: return String(localized: "Done")
         }
     }
 
-    private func actionButton(_ action: Action, control: PlayerControl) -> some View {
-        let button = Button(title(for: action), role: action == .cancel ? .cancel : nil) { perform(action) }
-        return Group {
-            if [.recognize, .openSong, .settings].contains(action) { button.buttonStyle(.borderedProminent) } else { button.buttonStyle(.bordered) }
+    private func button(_ action: Action, control: PlayerControl, _ h: CGFloat) -> some View {
+        IslandCircleButton(control: control, height: h, tint: .white, label: title(for: action)) {
+            perform(action)
+        } glyph: {
+            switch action {
+            case .cancel, .done:
+                CrossGlyph(height: h)
+            case .recognize:
+                Image(systemName: state == .idle ? "shazam.logo.fill" : "arrow.clockwise")
+                    .font(.system(size: h * (state == .idle ? 0.62 : 0.55), weight: .semibold))
+                    .foregroundStyle(.white)
+            case .settings:
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: h * 0.55, weight: .semibold))
+                    .foregroundStyle(.white)
+            case .openSong:
+                EmptyView()
+            }
         }
-        .notchControl()
-        .keyControl(control, in: RoundedRectangle(cornerRadius: 6), spoken: title(for: action)) { perform(action) }
         .accessibilityIdentifier("recognition-\(String(describing: action))")
     }
 

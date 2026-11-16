@@ -1128,7 +1128,7 @@ struct ScreenRecordingButton: View {
         if screen.isSaved {
             switch savedFileState {
             case .unavailable: return String(localized: "Recording Unavailable")
-            case .openingFailed: return String(localized: "Couldn’t Open Recording")
+            case .openingFailed: return String(localized: "Couldn't Open Recording")
             case .available: break
             }
         }

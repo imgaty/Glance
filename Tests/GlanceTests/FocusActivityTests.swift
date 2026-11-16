@@ -19,7 +19,7 @@ struct FocusActivityTests {
         #expect(change.name == "Work")
         #expect(change.symbol == "person.lanyardcard.fill")
         #expect(change.state == .on)
-        #expect(change.text == "Work · On")
+        #expect(change.text == "On")
         #expect(change.spoken == "Work, On")
         let off = try #require(FocusChange.read(snapshot(texts: ["Work", "Off"]), words: english, symbolExists: { _ in true }))
         #expect(off.state == .off)

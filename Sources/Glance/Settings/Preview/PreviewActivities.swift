@@ -142,7 +142,11 @@ extension SettingsPreview {
             model.recognitionIdentity = UUID()
             await hold(\.recognition, MusicRecognitionActivity.State.recognizing)
         case .alarm:
-            await hold(\.alarm, ActivityBench.alarmFixture())
+            // Ringing, as it comes in: the tall alert over everything, as the iPhone's Clock shows it.
+            let alarm = ActivityBench.alarmFixture()
+            model.alarm = alarm
+            await say(NotchAlert(kind: .alarm, content: .alarm(title: alarm.alarm.title), spoken: alarm.spoken, stays: true))
+            model.alarm = nil
         case .printing:
             await hold(\.printing, ActivityBench.printFixture())
         case .voiceMemo:

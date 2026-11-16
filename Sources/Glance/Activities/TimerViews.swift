@@ -587,6 +587,8 @@ enum AlertButton: Hashable {
     case lowPower
     /// A call coming in.
     case accept, decline
+    /// A ringing alarm's.
+    case snooze, alarmStop
 }
 
 /// A drawn alert button follows the same drag-out cancellation as a native button, and a new

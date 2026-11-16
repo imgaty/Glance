@@ -702,6 +702,7 @@ final class NotchController {
                 model.alertExtended = false
             }
         }
+        extendFocus(alert)
         guard alert == nil else { return }
         if let page = reopening, Activities.shared.waiting.isEmpty {
             reopening = nil
@@ -1236,6 +1237,8 @@ final class NotchController {
         case .stop: ClockActivity.shared.dismissRing()
         case .accept: CallWatch.shared.accept()
         case .decline: CallWatch.shared.decline()
+        case .snooze: AlarmActivity.shared.perform(.snooze, expectedID: model.alarm?.alarm.id)
+        case .alarmStop: AlarmActivity.shared.perform(.stop, expectedID: model.alarm?.alarm.id)
         case .lowPower:
             LowPowerMode.shared.toggle()
         }
@@ -1336,6 +1339,24 @@ final class NotchController {
         if let restPoint, hypot(p.x - restPoint.x, p.y - restPoint.y) < Self.restTremble { return }
         restPoint = p
         scheduleOpen(after: opening.hoverDelay + Self.restTime)
+    }
+
+    private var focusExtension: Task<Void, Never>?
+
+    /// A Focus changing extends by itself a second after it shows, for 1.4 seconds, then settles back
+    /// beside the camera, as the iPhone's does.
+    private func extendFocus(_ alert: NotchAlert?) {
+        focusExtension?.cancel()
+        guard let alert, alert.kind == .focus, case .status(_, _, let state, _) = alert.content else { return }
+        focusExtension = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(FocusChange.extendsAfter))
+            guard let self, !Task.isCancelled, self.model.alert?.id == alert.id, self.model.state == .closed else { return }
+            self.model.alertExtendedWing = FocusExtendedView.wing(name: alert.name ?? "", state: state, restingHeight: self.model.closedSize.height)
+            self.model.changeActivityPresentation(animation: NotchMotion.expand) { self.model.alertExtended = true }
+            try? await Task.sleep(for: .seconds(FocusChange.extendsFor))
+            guard !Task.isCancelled, self.model.alert?.id == alert.id, self.model.alertExtended else { return }
+            self.model.changeActivityPresentation(animation: IslandMotion.fold) { self.model.alertExtended = false }
+        }
     }
 
     /// A device being announced extends to say what it is, as the iPhone's AirPods do, for as long
@@ -2222,6 +2243,7 @@ final class NotchController {
             switch alert {
             case .incomingCall: return String(localized: "Hide Call")
             case .lowBattery: return String(localized: "Hide Low Battery")
+            case .alarm: return String(localized: "Hide Alarm")
             default: return nil
             }
         }

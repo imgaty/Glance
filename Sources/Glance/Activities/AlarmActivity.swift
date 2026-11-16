@@ -13,6 +13,8 @@ struct AlarmShown: Equatable {
     var sourceAvailable = true
     var pending: AlarmActivity.Action?
     var failure: String?
+    /// When it started ringing, the time shown above its name.
+    var rangAt: Date?
 
     func canPerform(_ action: AlarmActivity.Action) -> Bool {
         sourceAvailable && pending == nil && alarm.actions.contains(action)
@@ -305,8 +307,8 @@ final class AlarmActivity: ObservableObject {
             if current?.id == target.id {
                 failure =
                     current?.actions.contains(action) == true
-                    ? String(localized: "Clock hasn’t confirmed the change. Try again or open Clock.")
-                    : String(localized: "Clock hasn’t confirmed the change. Open Clock to check this alarm.")
+                    ? String(localized: "Clock hasn't confirmed the change. Try again or open Clock.")
+                    : String(localized: "Clock hasn't confirmed the change. Open Clock to check this alarm.")
             }
             finish(token)
         }
@@ -324,7 +326,24 @@ final class AlarmActivity: ObservableObject {
     }
 
     private func updateShown() {
-        shown = current.map { AlarmShown(alarm: $0, sourceAvailable: isAvailable, pending: pending, failure: failure) }
+        let previous = shown
+        if let current, ringing?.id != current.id { ringing = (current.id, .now) }
+        if current == nil { ringing = nil }
+        shown = current.map { AlarmShown(alarm: $0, sourceAvailable: isAvailable, pending: pending, failure: failure, rangAt: ringing?.since) }
+        announce(from: previous, to: shown)
+    }
+
+    /// The alarm ringing now, and since when.
+    private var ringing: (id: String, since: Date)?
+
+    /// A new alarm comes in as iOS's does in the Dynamic Island: as tall as the notch's alerts, over
+    /// whatever shows, with Snooze and Stop, until it stops ringing. Swiped away, it stays beside the
+    /// camera as an activity.
+    private func announce(from old: AlarmShown?, to new: AlarmShown?) {
+        guard self === AlarmActivity.shared, old?.alarm.id != new?.alarm.id else { return }
+        if old != nil { Activities.shared.dismiss(.alarm) }
+        guard let new else { return }
+        Activities.shared.post(NotchAlert(kind: .alarm, content: .alarm(title: new.alarm.title), spoken: new.spoken, stays: true))
     }
 
     /// A source-build scene never reaches a native AX source or launches Clock.

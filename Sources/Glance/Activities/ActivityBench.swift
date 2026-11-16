@@ -509,7 +509,7 @@ final class ActivityBench {
             case .alarmNoSnooze: shown.alarm = .init(id: shown.alarm.id, title: shown.alarm.title, actions: [.stop])
             case .alarmUnavailable: shown.sourceAvailable = false
             case .alarmPending: shown.pending = .snooze
-            case .alarmFailed: shown.failure = String(localized: "Clock hasn’t confirmed the change. Try again or open Clock.")
+            case .alarmFailed: shown.failure = String(localized: "Clock hasn't confirmed the change. Try again or open Clock.")
             default: break
             }
             watch.bench(shown)

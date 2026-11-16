@@ -54,7 +54,7 @@ final class MusicRecognitionActivity: ObservableObject {
         var title: String {
             switch self {
             case .connection: String(localized: "Connection Problem")
-            case .recognition: String(localized: "Couldn’t Recognize Music")
+            case .recognition: String(localized: "Couldn't Recognize Music")
             case .configuration: String(localized: "Music Recognition Unavailable")
             }
         }
@@ -63,7 +63,7 @@ final class MusicRecognitionActivity: ObservableObject {
             switch self {
             case .connection: String(localized: "Check your internet connection, then try again.")
             case .recognition: String(localized: "Music recognition is unavailable right now. Try again.")
-            case .configuration: String(localized: "Music recognition isn’t available in this build of Glance.")
+            case .configuration: String(localized: "Music recognition isn't available in this build of Glance.")
             }
         }
     }
@@ -89,7 +89,7 @@ final class MusicRecognitionActivity: ObservableObject {
             case .denied: String(localized: "Microphone Access Is Off")
             case .restricted: String(localized: "Microphone Access Is Restricted")
             case .failure(let failure): failure.title
-            case .cancelled: String(localized: "Recognition Cancelled")
+            case .cancelled: String(localized: "Recognition Canceled")
             }
         }
     }
@@ -262,7 +262,7 @@ final class MusicRecognitionActivity: ObservableObject {
             actionFailure = nil
             return
         }
-        actionFailure = backend.openURL(url) ? nil : String(localized: "The song couldn’t be opened. Try again.")
+        actionFailure = backend.openURL(url) ? nil : String(localized: "The song couldn't be opened. Try again.")
     }
 
     func openMicrophoneSettings() {

@@ -13,7 +13,7 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus
+        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus, alarm
 
         /// A device or its case running low: its ring red.
         var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
@@ -31,25 +31,31 @@ struct NotchAlert: Identifiable, Equatable {
         /// The Mac's battery running low, as tall as the Alarm, with a button to turn on Low Power
         /// Mode (see `LowBatteryView`).
         case lowBattery(percent: Int)
-        /// A state, as Silent Mode and a Focus are shown: a symbol in its color on the left, a word
-        /// or a name on the right.
-        case status(symbol: String, tint: Color, text: String)
+        /// A state, as a Focus is shown on the iPhone and the Mac: its symbol in its color on the left,
+        /// the state's word in the same color on the right. On, the symbol sits on white when it
+        /// extends; off, on its color, faintly.
+        case status(symbol: String, tint: Color, text: String, on: Bool = true)
         /// A call coming in, as tall as the Alarm: the caller, and to decline or accept it.
         case incomingCall(CallShown)
         /// A timer that's done, as the Alarm goes off: its symbol shaking, its length and its name, and
         /// buttons to start it again or stop it.
         case timerDone(length: TimeInterval, name: String)
+        /// An alarm ringing, as iOS 27's Clock shows one in the Dynamic Island (see `AlarmRingingView`).
+        /// Its state is read live from the alarm; its name is here for its width.
+        case alarm(title: String)
     }
 
     /// Taller than the notch, as the Dynamic Island's Alarm is, for what's to be acted on.
     var tall: Bool {
         switch content {
-        case .timerDone, .lowBattery, .incomingCall: true
+        case .timerDone, .lowBattery, .incomingCall, .alarm: true
         default: false
         }
     }
 
     let id = UUID()
+    /// When it was made, for what it shows of when it happened.
+    let shownAt = Date.now
     let kind: Kind
     let content: Content
     /// What VoiceOver says of it.

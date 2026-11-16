@@ -671,36 +671,47 @@ as Repeat and Stop.
 
 ### Alarms
 
-When Clock presents an identifiable ringing alarm, Glance shows its time or
-name beside the camera. The menu-bar alarm currently offers **Open Clock**;
-Glance does not invent actions that its source cannot expose. For a ringing
-notification with advertised controls, open it to use **Snooze** or **Stop**, when the
-native alert offers those actions, or **Open Clock**. Actions always target the
-alarm you opened. While an action is pending, its controls are disabled;
-Glance waits for the native alert to disappear before clearing it. A failed
-action stays visible so you can retry or use Clock.
+When Clock presents an identifiable ringing alarm, the notch grows by itself as
+the iPhone's Dynamic Island does for an alarm: the alarm clock in Clock's
+orange, shaking, the time it rang above the alarm's name, and **Snooze** and
+**Stop** as round buttons at the right, when the alarm offers them. Click either
+where it is, as with a finished timer. Glance does not invent actions that its
+source cannot expose. Actions always target the alarm showing. While one is
+pending, its button dims and the time gives way to `Snoozing…` or
+`Stopping…`; a failed one shows `Not confirmed`, with the details under the
+pointer, so you can retry or use Clock.
+
+Swipe up, or choose **Hide Alarm** in the notch's menu, to put the alert away.
+The alarm keeps ringing and stays beside the camera, its clock and name in
+orange. Opening the notch shows the alert again, with the keys reaching the
+clock, which opens Clock, and the buttons.
 
 This needs Accessibility permission. Glance does not read scheduled alarms or
 invent a countdown after snoozing, and leaves Clock's native alert available.
-**Hide Alarm** only hides that alert in Glance; it does not stop the alarm.
 
 ### Printing
 
-Your active local print jobs appear beside the camera. Open one to see its
-printer, status and page count, when the printer reports one. **Cancel Job**
-requests cancellation of that exact job and waits for the spooler to confirm
-it has gone. If confirmation takes longer, it says the cancellation is
-unconfirmed and offers a retry without claiming the request was rejected.
-**Print Center** opens Apple's queue. If the queue cannot be read,
-Glance keeps the last status, disables cancellation and offers **Try Again**.
+Your active local print jobs appear beside the camera: a ring filling as the
+pages print and the share printed, or a word for the job's state. Open one to
+see it in one row, as the timer opens: the printer at the left end, which opens
+Print Center; the job's name beside the camera, with its state and printer under
+it; and at the right end the ✕ that cancels it, inside the ring. Cancelling
+requests that exact job and waits for the spooler to confirm it has gone. If
+confirmation takes longer, it says the cancellation is unconfirmed and offers
+a retry without claiming the request was rejected. If the queue cannot be read,
+Glance keeps the last status and offers **Try Again**. More jobs waiting are
+listed under the pointer.
 
 ### Music recognition
 
 Right-click the notch and choose **Recognize Music**. Glance requests microphone
 permission at that point and uses ShazamKit to identify the song. ShazamKit
-sends an audio signature to Shazam. **Cancel** ends listening; a match, no-match
-or failure stays visible until **Done**. A match can open its Music link.
-Opening or closing the notch never starts a recognition session by itself.
+sends an audio signature to Shazam. Open the activity to see it in one row:
+Shazam's mark at the left end, or the song's cover once it's found, which opens
+it in Music; what's happening beside the camera and what to do under it; and
+round buttons at the right end. **Cancel** ends listening; a match, no-match or
+failure stays until **Done**. Opening or closing the notch never starts a
+recognition session by itself.
 
 Recognition needs a network connection and ShazamKit authorization for this
 build. If that authorization is missing, Glance explains that recognition is
@@ -711,8 +722,10 @@ Center remain separate.
 
 Right-click the notch and choose **Run Shortcut**, then a shortcut. The submenu
 also lists runs already started in Glance; choosing one opens that run without
-starting it again. Open the activity to request **Stop**, open Shortcuts or
-view a saved result after completion. **Done** dismisses a finished run.
+starting it again. Open the activity to see it in one row: Shortcuts at the left
+end, which opens the app; the shortcut's name beside the camera and its state
+under it; **Stop** at the right end while it runs, and **Show Result** and
+**Done** once it's over. **Done** dismisses a finished run.
 
 Glance tracks its own launched processes, not runs started elsewhere. **Stop**
 is an interruption request, and the activity keeps showing that request until
@@ -728,10 +741,14 @@ not a nonempty result you may still want to keep.
 
 ### Focus
 
-A confirmed Focus change appears briefly with its name and whether it turned
-on or off. Glance observes the system's actual announcement; it does not infer
-Focus from preferences or show a persistent state that may be out of date.
-macOS keeps its own Focus controls.
+A confirmed Focus change appears as the iPhone and Apple's MacBook Pro show it:
+the Focus's symbol at the left end and `On` or `Off` at the right, both in the
+Focus's color, or gray when it turned off. After a second it extends for a
+moment, the symbol in a circle beside the Focus's name, then settles back and
+goes. Apple's own Focuses keep their colors; a Focus of your own takes your
+Mac's accent color. Glance observes the system's actual announcement; it does
+not infer Focus from preferences or show a persistent state that may be out of
+date. macOS keeps its own Focus controls.
 
 ### AirDrop
 

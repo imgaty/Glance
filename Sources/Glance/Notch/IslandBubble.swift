@@ -124,13 +124,13 @@ struct IslandBubble: View {
                         } else if let keptAirDrop {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if let keptAlarm {
-                            AlarmCompactView(shown: keptAlarm, minimal: true)
+                            AlarmCompactView(shown: keptAlarm, minimal: true, restingHeight: h)
                         } else if let keptPrint {
-                            PrintJobGlyph(shown: keptPrint, minimal: true)
+                            PrintJobGlyph(shown: keptPrint, minimal: true, restingHeight: h)
                         } else if let keptShortcut {
-                            ShortcutRunGlyph(state: keptShortcut.run.state, minimal: true)
+                            ShortcutRunGlyph(state: keptShortcut.run.state, minimal: true, restingHeight: h)
                         } else if let keptRecognition {
-                            MusicRecognitionCompactView(state: keptRecognition, minimal: true)
+                            MusicRecognitionCompactView(state: keptRecognition, minimal: true, restingHeight: h)
                         } else if keptRoute != nil {
                             Image(systemName: "airplay.audio")
                                 .font(.system(size: h * 0.5, weight: .semibold))

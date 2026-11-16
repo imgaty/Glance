@@ -256,7 +256,7 @@ struct MusicRecognitionActivityTests {
     func keyboardActions() {
         #expect(MusicRecognitionActivityView.actions(for: .requestingPermission) == [.cancel])
         #expect(MusicRecognitionActivityView.actions(for: .recognizing) == [.cancel])
-        #expect(MusicRecognitionActivityView.actions(for: .denied) == [.settings, .recognize, .done])
+        #expect(MusicRecognitionActivityView.actions(for: .denied) == [.settings, .done])
         #expect(MusicRecognitionActivityView.actions(for: .restricted) == [.done])
         #expect(MusicRecognitionActivityView.actions(for: .match(song)) == [.openSong, .done])
         #expect(MusicRecognitionActivityView.actions(for: .match(.init(title: nil, artist: nil))) == [.done])

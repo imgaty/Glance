@@ -13,17 +13,49 @@ struct FocusChange: Equatable, Sendable {
     /// Preserve the state word from the native banner, in its language.
     let stateText: String
 
-    var text: String { "\(name) · \(stateText)" }
+    /// Beside the camera, as the iPhone and the Mac show it: the state's word alone, the symbol saying
+    /// which Focus.
+    var text: String { stateText }
     var spoken: String { "\(name), \(stateText)" }
 
     @MainActor
     func alert(kind: NotchAlert.Kind) -> NotchAlert {
-        // Accessibility supplies the symbol and name, but not a Focus mode's color. Use the
-        // user's semantic accent instead of guessing a private mode-to-color mapping.
         NotchAlert(
-            kind: kind, content: .status(symbol: symbol, tint: state == .on ? .accentColor : .secondary, text: text),
-            spoken: spoken, name: name)
+            kind: kind, content: .status(symbol: symbol, tint: state == .on ? Self.color(for: symbol) : Self.off, text: text, on: state == .on),
+            spoken: spoken, seconds: Self.shows, name: name)
     }
+
+    /// Accessibility gives a Focus's symbol and name but not its color. Apple's own Focuses each keep
+    /// one color with their symbol (DoNotDisturb.framework), drawn as the system color in the dark,
+    /// as on the iPhone's Dynamic Island; a Focus of your own takes your Mac's accent color.
+    @MainActor
+    static func color(for symbol: String) -> Color {
+        let system: NSColor? =
+            switch symbol {
+            // Do Not Disturb's moon in purple, as macOS 27's own artwork and an iPhone recording show it.
+            case "moon.fill", "person.fill", "_gm": .systemPurple
+            case "bed.double.fill", "car.fill": .systemIndigo
+            case "person.lanyardcard.fill": .systemTeal
+            case "figure.run": .systemGreen
+            case "book.closed.fill": .systemOrange
+            case "rocket.fill": .systemBlue
+            case "apple.mindfulness": .systemMint
+            default: nil
+            }
+        guard let system else { return .accentColor }
+        var resolved = system
+        NSAppearance(named: .darkAqua)?.performAsCurrentDrawingAppearance { resolved = system.usingColorSpace(.sRGB) ?? system }
+        return Color(nsColor: resolved)
+    }
+
+    /// Off, as the iPhone shows it: gray.
+    static let off = Color(white: 103 / 255)
+
+    /// As the iPhone shows a Focus changing, measured from a recording: beside the camera, then after
+    /// a second it extends by itself for 1.4 seconds, then back beside the camera and gone.
+    static let extendsAfter = 1.0
+    static let extendsFor = 1.4
+    static let shows = 3.4
 
     static func read(
         _ snapshot: FocusBannerSnapshot, words: FocusStateWords?, symbolExists: (String) -> Bool
@@ -279,5 +311,62 @@ final class FocusWatch: @unchecked Sendable {
             pending += children.reversed().map { ($0, depth + 1) }
         }
         return FocusBannerSnapshot(identifier: identifier, texts: texts, images: images)
+    }
+}
+
+/// A Focus changing, extended, as the iPhone shows it for a moment after it changes, measured from a
+/// recording: the symbol in a circle at the left end, white with the symbol in its color when it's on,
+/// the color faintly behind it when it's off; the Focus's name in white beside it; the state's word at
+/// the right end, in the color.
+struct FocusExtendedView: View {
+    let symbol: String
+    let tint: Color
+    let name: String
+    let state: String
+    let on: Bool
+    let restingHeight: CGFloat
+
+    /// The state's word, this far in from the right end, by the extended notch's height (18 of 84).
+    static let stateEdge: CGFloat = 18 / 84
+
+    var body: some View {
+        let h = restingHeight
+        let tall = TimerLayout.tallHeight(h)
+        let side = TimerLayout.content(h)
+        ZStack {
+            HStack(spacing: h * AirDropLayout.gap) {
+                SystemSymbol.glyph(symbol, size: side * 0.5)
+                    .foregroundStyle(on ? tint : .white)
+                    .frame(width: side, height: side)
+                    .background(Circle().fill(on ? Color.white : tint.opacity(0.29)))
+                Text(name)
+                    .font(NotchType.title)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.leading, PlayerLayout.padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(state)
+                .font(NotchType.title)
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .padding(.trailing, tall * Self.stateEdge)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .frame(height: tall)
+    }
+
+    /// Each side of the camera, as wide as the wider needs: the circle and the name beside the camera on
+    /// the left, the word on the right.
+    @MainActor
+    static func wing(name: String, state: String, restingHeight h: CGFloat) -> CGFloat {
+        func width(_ text: String) -> CGFloat {
+            ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 1
+        }
+        let gap = LiveActivityView.cameraGap
+        let left = PlayerLayout.padding + TimerLayout.content(h) + h * AirDropLayout.gap + min(width(name), h * TimerLayout.titleLimit) + gap
+        let right = gap + width(state) + TimerLayout.tallHeight(h) * stateEdge
+        return max(left, right)
     }
 }

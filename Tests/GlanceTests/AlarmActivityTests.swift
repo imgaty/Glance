@@ -89,7 +89,7 @@ struct AlarmActivityTests {
         try await settle { !activity.isRefreshing }
         let shown = try #require(activity.shown)
         #expect(shown.alarm.title == "16:05")
-        #expect(AlarmActivityView.controls(for: shown) == [.activityThird])
+        #expect(AlarmActivityView.controls(for: shown) == [.activityFirst])
         activity.perform(.stop, expectedID: shown.alarm.id)
         activity.perform(.snooze, expectedID: shown.alarm.id)
         #expect(source.commands.isEmpty)
@@ -325,38 +325,44 @@ struct AlarmActivityTests {
 
     @Test("Keyboard traversal follows advertised actions and keeps Open Clock reachable")
     func keyboardCapabilities() {
+        // In the order they stand: Clock at the left end, then Snooze and Stop.
         var shown = AlarmShown(alarm: alarm)
         #expect(AlarmActivityView.controls(for: shown) == [.activityFirst, .activitySecond, .activityThird])
         shown.pending = .stop
-        #expect(AlarmActivityView.controls(for: shown) == [.activityThird])
+        #expect(AlarmActivityView.controls(for: shown) == [.activityFirst])
         shown.pending = nil
         shown.sourceAvailable = false
-        #expect(AlarmActivityView.controls(for: shown) == [.activityThird])
+        #expect(AlarmActivityView.controls(for: shown) == [.activityFirst])
         shown.sourceAvailable = true
         shown.alarm = .init(id: alarm.id, title: alarm.title, actions: [.stop])
-        #expect(AlarmActivityView.controls(for: shown) == [.activitySecond, .activityThird])
+        #expect(AlarmActivityView.controls(for: shown) == [.activityFirst, .activityThird])
         #expect(!NotchController.stepsAway(.alarm))
     }
 
-    @Test("Alarm height adds only the space needed for pending or wrapped error content")
+    @Test("A ringing alarm is as tall as the Timer's alert; its name runs under the camera, and a failure stays in it")
     func contentHeight() {
         let normal = AlarmShown(alarm: alarm)
-        let height = AlarmActivityView.height(restingHeight: 32, camera: 185, shown: normal)
-        #expect(height < 32 + LiveActivityView.cameraGap + 200)
+        #expect(AlarmActivityView.height(restingHeight: 32) == TimerLayout.tallHeight(32))
         var pending = normal
         pending.pending = .snooze
-        #expect(AlarmActivityView.height(restingHeight: 32, camera: 185, shown: pending) > height)
+        #expect(AlarmActivityView.detail(for: pending) == AlarmActivity.Action.snooze.progress)
         var failed = normal
-        failed.failure = String(repeating: "Clock hasn’t confirmed the change. Open Clock to check this alarm. ", count: 4)
-        let narrow = AlarmActivityView.height(restingHeight: 32, camera: 185, shown: failed)
-        let wide = AlarmActivityView.height(restingHeight: 32, camera: 520, shown: failed)
-        #expect(narrow > wide)
-        #expect(wide > height)
+        failed.failure = "Clock hasn't confirmed the change. Open Clock to check this alarm."
+        #expect(AlarmActivityView.detail(for: failed) == String(localized: "Not confirmed"))
+        // As iOS 27 lays it out, the name sits under the camera, cut short before the buttons, so a
+        // long one doesn't widen the notch.
+        let long = AlarmShown(alarm: .init(id: alarm.id, title: String(repeating: "Wake ", count: 6), actions: alarm.actions))
+        #expect(AlarmActivityView.width(for: long, restingHeight: 32, camera: 185) == AlarmActivityView.width(for: normal, restingHeight: 32, camera: 185))
+        // An alarm without a name of its own, titled with its time, says Alarm under the time.
+        let unnamed = AlarmShown(alarm: .init(id: alarm.id, title: "07:30", actions: alarm.actions))
+        #expect(AlarmRingingView.lines(for: unnamed, rangAt: .now) == ("07:30", String(localized: "Alarm")))
+        #expect(AlarmRingingView.lines(for: pending, rangAt: .now).top == AlarmActivity.Action.snooze.progress)
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.alarm = failed
         model.expanded = .alarm
         model.state = .open
-        #expect(model.metrics.height == AlarmActivityView.height(restingHeight: 32, camera: model.camera, shown: failed))
+        #expect(model.metrics.height == TimerLayout.tallHeight(32))
+        #expect(model.metrics.bodyWidth == AlarmActivityView.width(for: failed, restingHeight: 32, camera: model.camera))
     }
 
     @Test("Updating one alarm’s controls preserves its expanded presentation")

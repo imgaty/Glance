@@ -10,6 +10,20 @@
 
 ### Live Activities
 
+- Changed a ringing Clock alarm to come in as the iPhone's does in the Dynamic
+  Island, as tall as the notch's alerts: the alarm clock shaking in Clock's
+  orange, the time above the alarm's name, and **Snooze** and **Stop** as round
+  buttons. Swiped away, it stays beside the camera.
+
+- Changed Focus changes to show as the iPhone and Apple's MacBook Pro do: the
+  Focus's symbol and `On` or `Off` in its color, extending for a moment with its
+  name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps
+  its color.
+
+- Rebuilt printing, music recognition and shortcuts in one row, as the timer
+  opens, with round buttons, a print job's progress as a ring, and words that
+  fit beside the camera.
+
 - Changed the notch's menu to offer **Recognize Music** and **Run Shortcut**
   only while their Live Activities are on, or while a shortcut run is going.
 

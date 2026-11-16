@@ -69,7 +69,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $hidesSystemActivities) {
                     Text("Hide native Live Activities")
-                    Text("Hides native Now Playing while its replacement is visible in Glance. Other activities keep their native controls.")
+                    Text("Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.")
                 }
                 // Said only when it's in the way.
                 if hidesSystemActivities, !accessibilityAllowed {
@@ -158,31 +158,31 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $alarms) {
                     Text("Alarms")
-                    Text("Shows Clock’s firing alarms with their available Snooze and Stop controls. Requires Accessibility; Clock’s alert remains available.")
+                    Text("Shows Clock's alarms as they ring, with Snooze and Stop. Needs Accessibility.")
                 }
             }
             Section {
                 Toggle(isOn: $printing) {
                     Text("Printing")
-                    Text("Shows your active print jobs, with controls to cancel a job or open Print Center.")
+                    Text("Shows your print jobs as they print, with a button to cancel each.")
                 }
             }
             Section {
                 Toggle(isOn: $focus) {
-                    Text("Focus Changes")
-                    Text("Briefly shows the Focus name and state when macOS announces a change. Requires Accessibility.")
+                    Text("Focus")
+                    Text("Briefly shows a Focus turning on or off. Needs Accessibility.")
                 }
             }
             Section {
                 Toggle(isOn: $recognition) {
                     Text("Music Recognition")
-                    Text("Choose Recognize Music in Glance’s menu to identify a song with your microphone. Enabling this does not start listening.")
+                    Text("Recognizes the song playing near you when you choose Recognize Music in the notch's menu. Glance listens only then.")
                 }
             }
             Section {
                 Toggle(isOn: $shortcuts) {
                     Text("Shortcuts")
-                    Text("Shows shortcuts you run from Glance’s menu, with a control to stop each run.")
+                    Text("Shows shortcuts you run from the notch's menu, with a button to stop each.")
                 }
             }
         }

@@ -32,6 +32,8 @@ struct SystemActivityView: View {
     var airdrop: AirDropShown? = nil
     var printing: PrintShown? = nil
     var alarm: AlarmShown? = nil
+    /// The alarm ringing, whichever activity shows: its alert takes the notch, as the iPhone's does.
+    var ringingAlarm: AlarmShown? = nil
     var recognition: MusicRecognitionActivity.State? = nil
     var shortcut: ShortcutShown? = nil
     /// A call, when that has the notch.
@@ -97,6 +99,13 @@ struct SystemActivityView: View {
                     .modifier(GrownAway(grown: grown))
                     .transition(IslandMotion.fade)
                     .modifier(RecordingOpenAction(recording: recording, open: open))
+            } else if let alert = shownAlert, case .alarm = alert.content, let ringing = ringingAlarm ?? alarm ?? leavingAlarm {
+                AlarmRingingView(
+                    shown: ringing, restingHeight: restingHeight, width: closedWidth + wing * 2, mode: .alert(hovered: hoveredButton),
+                    rangAt: ringing.rangAt ?? alert.shownAt)
+                    .modifier(IslandReveal(hidden: self.alert == nil))
+                    .id(alert.id)
+                    .transition(IslandMotion.fade)
             } else if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
                 TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
                     .modifier(IslandReveal(hidden: self.alert == nil))
@@ -123,6 +132,13 @@ struct SystemActivityView: View {
                 .transition(IslandMotion.fade)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(alert.spoken)
+            } else if let alert = shownAlert, extended, alert.kind == .focus, case .status(let symbol, let tint, let text, let on) = alert.content {
+                FocusExtendedView(symbol: symbol, tint: tint, name: alert.name ?? "", state: text, on: on, restingHeight: restingHeight)
+                    .modifier(IslandReveal(hidden: self.alert == nil))
+                    .id("\(alert.id)-extended")
+                    .transition(IslandMotion.fade)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(alert.spoken)
             } else if let alert = shownAlert {
                 // Each side kept to its own end, so it rides in and out with it, and from the end
                 // within it.
@@ -357,10 +373,10 @@ struct SystemActivityView: View {
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-        case .status(let symbol, let tint, _):
+        case .status(let symbol, let tint, _, _):
             ArrivingSymbol(symbol: symbol, color: tint, size: size + 2, side: side)
         // Laid out on their own (see `TimerDoneView`, `LowBatteryView` and `IncomingCallView`).
-        case .timerDone, .lowBattery, .incomingCall:
+        case .timerDone, .lowBattery, .incomingCall, .alarm:
             EmptyView()
         }
     }
@@ -377,10 +393,10 @@ struct SystemActivityView: View {
                     .fixedSize()
                 BatteryGlyph(level: level, color: level.color, height: restingHeight * BatteryGlyph.height)
             }
-        case .status(_, _, let text):
+        case .status(_, let tint, let text, _):
             MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
-                .foregroundStyle(.white)
-        case .timerDone, .lowBattery, .incomingCall:
+                .foregroundStyle(tint)
+        case .timerDone, .lowBattery, .incomingCall, .alarm:
             EmptyView()
         }
     }
@@ -434,10 +450,13 @@ struct SystemActivityView: View {
         }
         // As tall as the Alarm, as wide as its words or its buttons.
         if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
+        if case .alarm(let title) = alert.content {
+            return AlarmRingingView.wing(for: AlarmShown(alarm: .init(id: "", title: title, actions: [.snooze, .stop])), restingHeight: restingHeight, closedWidth: closedWidth)
+        }
         let (inset, outset) = insets(for: alert.content, restingHeight: restingHeight)
         let (left, right): (CGFloat, CGFloat) =
             switch alert.content {
-            case .device, .timerDone, .lowBattery, .incomingCall:
+            case .device, .timerDone, .lowBattery, .incomingCall, .alarm:
                 (0, 0)
             case .battery(let title, let level):
                 (
@@ -445,7 +464,7 @@ struct SystemActivityView: View {
                     gap + digitsWidth(level.percent.formatted(.percent), size, .semibold) + restingHeight * BatteryGlyph.gap
                         + BatteryGlyph.width(height: restingHeight * BatteryGlyph.height) + outset
                 )
-            case .status(_, _, let text):
+            case .status(_, _, let text, _):
                 (inset + side + gap, gap + width(text, size, .semibold) + outset)
             }
         return min(max(left, right), maxWing)
