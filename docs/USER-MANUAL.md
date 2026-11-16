@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 14 November 2026`
+`Created: 11 October 2026` | `Last updated: 16 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -696,7 +696,7 @@ Glance keeps the last status, disables cancellation and offers **Try Again**.
 
 ### Music recognition
 
-Choose **Recognize Music** from Glance's menu. Glance requests microphone
+Right-click the notch and choose **Recognize Music**. Glance requests microphone
 permission at that point and uses ShazamKit to identify the song. ShazamKit
 sends an audio signature to Shazam. **Cancel** ends listening; a match, no-match
 or failure stays visible until **Done**. A match can open its Music link.
@@ -709,7 +709,7 @@ Center remain separate.
 
 ### Running shortcuts
 
-Choose **Run Shortcut** from Glance's menu, then a shortcut. The native submenu
+Right-click the notch and choose **Run Shortcut**, then a shortcut. The submenu
 also lists runs already started in Glance; choosing one opens that run without
 starting it again. Open the activity to request **Stop**, open Shortcuts or
 view a saved result after completion. **Done** dismisses a finished run.
@@ -856,17 +856,15 @@ Glance's icon in the menu bar opens a menu:
 
 | Item | Operation |
 | --- | --- |
-| `Enable Glance` | The checkmark means the notch is enabled on every configured display; choose it to turn the notch off or back on |
-| `Recognize Music` | Starts an explicit music recognition session when its activity and the notch are enabled |
-| `Run Shortcut` | Lists your shortcuts and runs already started in Glance |
+| `Glance` switch | Turns the notch off on every display, until it's turned back on |
 | `Check for Updates…` | Looks for a new version now |
 | `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
 | `Quit Glance` | Closes the notch away, then quits Glance, as any other way of quitting it does but `Force Quit` |
 
 The menu works from the keyboard too: the up and down arrows go from row to
-row, **Return** chooses the highlighted item, typing finds a matching command,
-and **Escape** closes it. macOS draws and operates the menu.
+row, the switch among them, **Return** or **Space** chooses the one lit, a
+letter goes to the next row starting with it, and **Escape** closes it.
 Unavailable actions are disabled for VoiceOver as well as the pointer.
 
 <br>
@@ -889,8 +887,6 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 | --- | --- |
 | `Open at login` | Starts Glance when you log in |
 | `Permissions` | Shows each permission, why it's asked and whether it's allowed, over the Settings window |
-| `Recognize Music` | Starts an explicit music recognition session when its activity and the notch are enabled |
-| `Run Shortcut` | Lists your shortcuts and runs already started in Glance |
 | `Check for Updates…` | Looks for a new version now |
 | `Update automatically` | Looks for, downloads and installs new versions on its own |
 

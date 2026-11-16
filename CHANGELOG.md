@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Restored the menu bar menu as Control Center draws its menus, with the
+  `Glance` switch at the top. Recognize Music and Run Shortcut moved to the
+  notch's menu.
+
 - Changed `Haptic feedback` to the trackpad's alignment tap when something drops
   onto AirDrop or the notch turns between the player and the tray, and to its
   plain tap everywhere else.
@@ -51,8 +55,8 @@
 - Fixed native activities being hidden without a visible replacement. Other
   apps keep their controls, and Glance restores settings it previously changed.
 
-- Changed the menu-bar menu and Sound output rows to system controls, with
-  native highlighting, pressed feedback and keyboard behavior.
+- Changed Sound output rows to system controls, with native highlighting,
+  pressed feedback and keyboard behavior.
 - Fixed closing Sound taking focus away from another Glance window.
 
 - Changed Sound to the system dropdown, with native corners, arrow, placement

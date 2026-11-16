@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 14 November 2026`
+`Created: 11 October 2026` | `Last updated: 16 November 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -57,9 +57,9 @@ keeps the left of the notch and the second goes in a bubble of its own off the
 right, as on the iPhone.
 Clock alarms appear when an identifiable ringing alert is available, with the
 actions that alert actually offers. Printing shows your active local print
-jobs. Focus changes appear as short announcements. Choose **Recognize Music**
-from Glance's menu to start a ShazamKit session, or **Run Shortcut** to run a
-shortcut and keep its state and result beside the camera.
+jobs. Focus changes appear as short announcements. Right-click the notch and
+choose **Recognize Music** to start a ShazamKit session, or **Run Shortcut** to
+run a shortcut and keep its state and result beside the camera.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
