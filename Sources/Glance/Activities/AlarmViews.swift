@@ -29,19 +29,124 @@ enum AlarmLook {
     static let timeTop: CGFloat = 39 / alert
     /// The zz's share of its circle.
     static let snoozeGlyph: CGFloat = 25.5 / 50
-    /// `alarm.fill`'s ink is a little taller and narrower than its point size.
-    static let glyphInkPerPoint: (width: CGFloat, height: CGFloat) = (0.93, 1.005)
 
-    static func glyphSize(_ h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) * glyphHeight / glyphInkPerPoint.height }
+    /// The clock's ink at the alert's height `h`, as tall as `glyphHeight` of it.
+    static func glyphInk(_ h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) * glyphHeight }
+}
 
-    /// The room the symbol keeps either side of its ink, so the ink, not the symbol's box, sits at
-    /// `glyphEdge`.
-    @MainActor
-    static func glyphBearing(_ h: CGFloat) -> CGFloat {
-        let size = glyphSize(h)
-        guard let image = NSImage(systemSymbolName: "alarm.fill", accessibilityDescription: nil)?.withSymbolConfiguration(.init(pointSize: size, weight: .regular))
-        else { return 0 }
-        return max((image.size.width - size * glyphInkPerPoint.width) / 2, 0)
+/// The alarm clock Clock rings in the Dynamic Island, which isn't `alarm.fill`: a fuller face with
+/// thicker hands at nine o'clock, short legs, and two bells apart from the face. Measured from iOS 27
+/// in units where the face is 22.45 across its radius, its middle at 0 and up positive. Ringing, as
+/// Clock's own does: the whole clock rocks 1.5° either way about a point 28.1 under the face's middle,
+/// and each bell slides 2 either way along its own edge, a little blurred, all together, 0.06 seconds
+/// each way, eased.
+struct AlarmClockGlyph: View {
+    /// As tall as its ink, from the higher bell's top to the feet.
+    let height: CGFloat
+    var tint: Color = AlarmLook.ink
+    var ringing = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let face: CGFloat = 22.45
+    /// The ink at rest, around the face's middle.
+    private static let inkLeft: CGFloat = -22.45, inkRight: CGFloat = 23.55
+    private static let inkTop: CGFloat = 27.42, inkBottom: CGFloat = -23.06
+    private static var inkHeight: CGFloat { inkTop - inkBottom }
+    /// How wide it is for a height.
+    static func width(forHeight height: CGFloat) -> CGFloat { height * (inkRight - inkLeft) / inkHeight }
+
+    private static let pivot = CGPoint(x: 0.49, y: -28.11)
+    private static let tilt = 1.5 * Double.pi / 180
+    private static let swing: TimeInterval = 0.06
+    /// Each bell's middle at rest, the way it slides, and the side its flat edge faces.
+    private static let bells: [(rest: CGPoint, slide: CGVector, facing: CGVector)] = [
+        (CGPoint(x: -15.45, y: 20.73), CGVector(dx: 0.807, dy: 0.5905), CGVector(dx: 0.578, dy: -0.816)),
+        (CGPoint(x: 16.86, y: 19.68), CGVector(dx: 0.807, dy: -0.5905), CGVector(dx: -0.578, dy: -0.816)),
+    ]
+    private static let bellRadius: CGFloat = 6.686
+    /// The flat edge, this far past the bell's middle toward the face.
+    private static let bellCut: CGFloat = 0.446
+
+    var body: some View {
+        let shaking = ringing && !reduceMotion
+        TimelineView(.animation(paused: !shaking)) { context in
+            // Clock's ease each way: 0 to 1 and back.
+            let phase = shaking ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: Self.swing * 2) / Self.swing : 0.5
+            let u = phase < 1 ? phase : 2 - phase
+            let eased = u * u * (3 - 2 * u)
+            // Drawn with room around its ink, as the bells slide and blur past where they rest.
+            Canvas { canvas, _ in
+                draw(in: &canvas, angle: shaking ? Self.tilt * (1 - 2 * eased) : 0, slide: shaking ? CGFloat(4 * eased - 2) : 0, blur: shaking)
+            }
+            .padding(-Self.margin * height / Self.inkHeight)
+        }
+        .frame(width: Self.width(forHeight: height), height: height)
+        .accessibilityHidden(true)
+    }
+
+    /// Room beyond the ink at rest, in the drawing's units.
+    private static let margin: CGFloat = 6
+
+    private func draw(in canvas: inout GraphicsContext, angle: Double, slide: CGFloat, blur: Bool) {
+        let k = height / Self.inkHeight
+        let m = Self.margin
+        func at(_ p: CGPoint) -> CGPoint { CGPoint(x: (p.x - Self.inkLeft + m) * k, y: (Self.inkTop - p.y + m) * k) }
+        // The whole clock rocks about the point under its feet; drawn upside down from its units, so
+        // its turn the other way round.
+        let pivot = at(Self.pivot)
+        canvas.translateBy(x: pivot.x, y: pivot.y)
+        canvas.rotate(by: .radians(-angle))
+        canvas.translateBy(x: -pivot.x, y: -pivot.y)
+        let shading = GraphicsContext.Shading.color(tint)
+
+        canvas.drawLayer { body in
+            let middle = at(.zero)
+            let r = Self.face * k
+            body.fill(Path(ellipseIn: CGRect(x: middle.x - r, y: middle.y - r, width: 2 * r, height: 2 * r)), with: shading)
+            var legs = Path()
+            legs.move(to: at(CGPoint(x: -10.13, y: -12.8)))
+            legs.addLine(to: at(CGPoint(x: -18.14, y: -20.81)))
+            legs.move(to: at(CGPoint(x: 10.1, y: -12.8)))
+            legs.addLine(to: at(CGPoint(x: 18.11, y: -20.81)))
+            body.stroke(legs, with: shading, style: StrokeStyle(lineWidth: 4.5 * k, lineCap: .round))
+            // The hands, cut out at nine o'clock, meeting a little under the middle.
+            var hands = Path()
+            hands.move(to: at(CGPoint(x: -9.47, y: -1.2)))
+            hands.addLine(to: at(CGPoint(x: 0, y: -1.2)))
+            hands.move(to: at(CGPoint(x: 0, y: -1.2)))
+            hands.addLine(to: at(CGPoint(x: 0, y: 11.54)))
+            body.blendMode = .destinationOut
+            body.stroke(hands, with: .color(.black), style: StrokeStyle(lineWidth: 4.05 * k, lineCap: .round))
+        }
+
+        canvas.drawLayer { bells in
+            if blur { bells.addFilter(.blur(radius: k)) }
+            for bell in Self.bells {
+                let middle = CGPoint(x: bell.rest.x + bell.slide.dx * slide, y: bell.rest.y + bell.slide.dy * slide)
+                // A round bell cut flat on the side facing the face, a little past its middle.
+                let along = CGVector(dx: -bell.facing.dy, dy: bell.facing.dx)
+                let half = sqrt(Self.bellRadius * Self.bellRadius - Self.bellCut * Self.bellCut)
+                let cut = CGPoint(x: middle.x + bell.facing.dx * Self.bellCut, y: middle.y + bell.facing.dy * Self.bellCut)
+                let from = CGPoint(x: cut.x + along.dx * half, y: cut.y + along.dy * half)
+                let to = CGPoint(x: cut.x - along.dx * half, y: cut.y - along.dy * half)
+                var path = Path()
+                let steps = 40
+                let a0 = atan2(from.y - middle.y, from.x - middle.x)
+                let a1 = atan2(to.y - middle.y, to.x - middle.x)
+                // Round the side away from the face: counterclockwise if that passes it, else the
+                // other way.
+                let away = atan2(-bell.facing.dy, -bell.facing.dx)
+                func turn(_ x: Double) -> Double { let r = x.truncatingRemainder(dividingBy: 2 * .pi); return r < 0 ? r + 2 * .pi : r }
+                let sweep = turn(away - a0) <= turn(a1 - a0) ? turn(a1 - a0) : turn(a1 - a0) - 2 * .pi
+                for i in 0...steps {
+                    let a = a0 + sweep * Double(i) / Double(steps)
+                    let p = at(CGPoint(x: middle.x + Self.bellRadius * cos(a), y: middle.y + Self.bellRadius * sin(a)))
+                    if i == 0 { path.move(to: p) } else { path.addLine(to: p) }
+                }
+                path.closeSubpath()
+                bells.fill(path, with: shading)
+            }
+        }
     }
 }
 
@@ -63,14 +168,10 @@ struct AlarmCompactView: View {
     var body: some View {
         Group {
             if minimal {
-                Image(systemName: "alarm.fill")
-                    .font(.system(size: restingHeight * 0.5, weight: .semibold))
-                    .foregroundStyle(tint)
+                AlarmClockGlyph(height: restingHeight * 0.5, tint: tint, ringing: shown.pending == nil)
             } else {
                 CompactActivityMark(caption: shown.alarm.title, captionColor: tint, restingHeight: restingHeight, leadingOnly: leadingOnly) {
-                    Image(systemName: "alarm.fill")
-                        .font(.system(size: LiveActivityView.textSize(for: restingHeight) + 2, weight: .semibold))
-                        .foregroundStyle(tint)
+                    AlarmClockGlyph(height: LiveActivityView.textSize(for: restingHeight) + 2, tint: tint, ringing: shown.pending == nil)
                 }
             }
         }
@@ -94,7 +195,6 @@ struct AlarmRingingView: View {
     let mode: Mode
     /// When it started ringing, which the time above its name says.
     var rangAt: Date
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// What shows above the name: what's happening to it, or the time it rang; and the name, or Alarm
     /// for one without, whose title is its time.
@@ -126,7 +226,7 @@ struct AlarmRingingView: View {
         let words = min(
             max(textWidth(lines.top, size: tall * AlarmLook.timeSize, weight: .regular), textWidth(lines.name, size: tall * AlarmLook.titleSize, weight: .medium)),
             h * TimerLayout.titleLimit)
-        let left = tall * AlarmLook.glyphEdge + AlarmLook.glyphSize(h) * AlarmLook.glyphInkPerPoint.width + gap
+        let left = tall * AlarmLook.glyphEdge + AlarmClockGlyph.width(forHeight: AlarmLook.glyphInk(h)) + gap
         let right = gap + buttonsWidth(h) + TimerLayout.buttonEdge(h)
         let across = tall * AlarmLook.wordsStart + words + h * TimerLayout.buttonGap + buttonsWidth(h) + TimerLayout.buttonEdge(h)
         return max(left, right, (across - closedWidth) / 2)
@@ -141,7 +241,7 @@ struct AlarmRingingView: View {
         let wordsTop = tall * AlarmLook.timeTop - (timeFont.ascender - timeFont.capHeight)
         ZStack(alignment: .topLeading) {
             glyph(h)
-                .padding(.leading, tall * AlarmLook.glyphEdge - AlarmLook.glyphBearing(h))
+                .padding(.leading, tall * AlarmLook.glyphEdge)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             VStack(alignment: .leading, spacing: 0) {
                 Text(lines.top)
@@ -169,10 +269,7 @@ struct AlarmRingingView: View {
     }
 
     @ViewBuilder private func glyph(_ h: CGFloat) -> some View {
-        let symbol = Image(systemName: "alarm.fill")
-            .font(.system(size: AlarmLook.glyphSize(h)))
-            .foregroundStyle(AlarmLook.ink)
-            .symbolEffect(.wiggle, options: .repeat(.continuous), isActive: !reduceMotion && shown.pending == nil)
+        let symbol = AlarmClockGlyph(height: AlarmLook.glyphInk(h), ringing: shown.pending == nil)
         switch mode {
         case .alert:
             symbol.accessibilityHidden(true)

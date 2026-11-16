@@ -44,6 +44,16 @@ enum NotchTimer {
         return minutes % 60 == 0 ? String(localized: "\(minutes / 60)h") : String(localized: "\(minutes / 60)h \(minutes % 60)m")
     }
 
+    /// Beside its ring alone, with another activity detached, as iOS 27's Clock squeezes it there:
+    /// whole minutes gone by, 3m; seconds in the last minute, 27s; past an hour, as `condensed`.
+    /// Short units as macOS writes them in the language Glance shows.
+    static func squeezed(_ seconds: TimeInterval) -> String {
+        let whole = Int(seconds.rounded(.up))
+        if whole >= 3600 { return condensed(seconds) }
+        let unit: Duration.UnitsFormatStyle.Unit = whole < 60 ? .seconds : .minutes
+        return Duration.seconds(whole).formatted(.units(allowed: [unit], width: .narrow, fractionalPart: .hide(rounded: .down)))
+    }
+
     /// As VoiceOver says it: its name, what's left in words, and that it's paused: "Timer, 4 minutes,
     /// 57 seconds left, paused".
     static func spoken(_ state: State, name: String = String(localized: "Timer"), at date: Date = .now) -> String {

@@ -45,14 +45,15 @@ extension NotchModel {
     /// Payload updates remain immediate, so a later input always acts on the latest state. Only a
     /// change of presentation folds the shell; elapsed time, progress and button feedback do not.
     func changeActivityPresentation(
-        animation: Animation? = IslandMotion.open,
+        animation: Animation? = IslandMotion.open, opensDirectly: Bool = false,
         onCollapse: (() -> Void)? = nil, _ changes: () -> Void
     ) {
         let before = activityPresentation
         let atHousing = before == .hardware && metrics.bodyWidth == closedSize.width && metrics.height == closedSize.height && bubbleReach == 0
         let hadActivity = !activities.isEmpty || alert != nil || expanded != nil
         let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let folds = !atHousing || activityFolded
+        // An activity alone opens out of its own compact; every other change folds to the housing.
+        let folds = !opensDirectly && (!atHousing || activityFolded)
         let clock = ContinuousClock()
         let pace = max(NotchMotion.pace, 0.01)
         let started = clock.now

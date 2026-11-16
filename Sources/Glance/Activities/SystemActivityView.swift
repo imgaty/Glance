@@ -172,6 +172,20 @@ struct SystemActivityView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // Nothing opened takes its place: it fades as the notch opens, and back as it closes.
                     .islandFade(!grown)
+                    // With another activity detached, the time moves beside the ring, squeezed, as
+                    // iOS 27's Clock shows it with two activities: 3m, then 27s.
+                    if case .timer(let timer) = shown {
+                        TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                            Text(NotchTimer.squeezed(timer.left(at: context.date)))
+                                .font(.system(size: size, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(TimerLayout.ink)
+                                .fixedSize()
+                        }
+                        .padding(.leading, Self.squeezedStart(restingHeight))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .islandFade(leadingOnly && !grown)
+                        .accessibilityHidden(true)
+                    }
                     TimelineView(.periodic(from: .now, by: shown.countsDown ? 0.5 : 1)) { context in
                         let reading = Self.reading(shown, at: context.date)
                         HStack(spacing: Self.pauseGap) {
@@ -416,6 +430,19 @@ struct SystemActivityView: View {
     /// How far in from its end the timer's ring or the stopwatch's symbol sits: as far as from the
     /// top and bottom, concentric with the end.
     static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * TimerLayout.ring, in: h) }
+
+    /// Where a timer's squeezed time starts beside its ring, with another activity detached: after
+    /// the ring by 0.27 of the height, as iOS 27's Clock spaces them.
+    static func squeezedStart(_ h: CGFloat) -> CGFloat { ringEdge(h) + h * TimerLayout.ring + h * 0.27 }
+
+    /// The notch's leading side for a timer with another activity detached: its ring and squeezed
+    /// time, up to the camera. Room for two digits of either unit, so it holds still as it counts.
+    @MainActor
+    static func squeezedWing(for timer: NotchTimer.State, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: LiveActivityView.textSize(for: h), weight: .semibold)
+        let widest = [59, 3599, timer.left(at: date)].map { ceil((NotchTimer.squeezed($0) as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
+        return squeezedStart(h) + widest + LiveActivityView.cameraGap
+    }
 
     /// A symbol's square, as the cover's beside the camera.
     static func side(_ restingHeight: CGFloat) -> CGFloat {

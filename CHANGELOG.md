@@ -11,9 +11,17 @@
 ### Live Activities
 
 - Changed a ringing Clock alarm to come in as the iPhone's does in the Dynamic
-  Island, as tall as the notch's alerts: the alarm clock shaking in Clock's
-  orange, the time above the alarm's name, and **Snooze** and **Stop** as round
-  buttons. Swiped away, it stays beside the camera.
+  Island, as tall as the notch's alerts: Clock's own alarm clock in its orange,
+  rocking as its bells shake, the time above the alarm's name, and **Snooze**
+  and **Stop** as round buttons. Swiped away, it stays beside the camera.
+
+- Changed activities to open as the iPhone's Dynamic Island does when held: one
+  alone beside the camera grows straight into its open view. Closing, switching
+  and a second activity coming or going still fold to the camera first, now at
+  the iPhone's own pace.
+
+- Changed a timer sharing the notch with another activity to keep its time
+  beside its ring, as `3m` or `27s`, as the iPhone's Clock does.
 
 - Changed Focus changes to show as the iPhone and Apple's MacBook Pro do: the
   Focus's symbol and `On` or `Off` in its color, extending for a moment with its
@@ -131,16 +139,18 @@
 - Fixed Shuffle and Repeat in the made-up player and kept its commands from
   reaching a real playing app.
 
-- Changed activity opening, closing and switching to fold smoothly to the camera
-  housing, then expand with a small bounce into the open or inline view.
+- Changed activity closing and switching, and opening beside another activity,
+  to fold smoothly to the camera housing, then expand with a small bounce into
+  the open or inline view.
   Only the expansion bounces. The contents and detached bubble follow the same
   motion. Hover and click feedback do not add a separate rebound.
   Returning to the inline activity has a much smaller rebound than opening.
-  Hover keeps the compact footprint fixed, so opening begins with the collapse.
+  Hover keeps the compact footprint fixed.
   Releasing a held click or swipe during opening keeps the final size steady.
   Fixed a downward bulge and a detached activity stepping sideways at the start
   of the collapse.
-  With `Haptic feedback` on, opening gives one tap at the housing before expanding.
+  With `Haptic feedback` on, opening gives one tap, at the housing when it folds
+  there first.
   Canceling before the housing prevents the tap; automatic updates stay silent.
   Removed an extra pulse and pause at the housing that made the movement stutter.
   This includes detached activities and announcements.

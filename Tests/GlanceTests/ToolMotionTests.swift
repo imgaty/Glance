@@ -102,7 +102,8 @@ struct ToolMotionTests {
         #expect(model.metrics.height == model.closedSize.height)
         model.expanded = .timer
         model.open()
-        #expect(model.activityFolded && model.activityControlsHidden)
-        #expect(model.metrics.bodyWidth == model.closedSize.width && model.metrics.height == model.closedSize.height)
+        // An activity grows straight to its own height, with no hover swell added.
+        #expect(!model.activityFolded && model.activityControlsHidden)
+        #expect(model.metrics.height == TimerLayout.tallHeight(model.closedSize.height))
     }
 }

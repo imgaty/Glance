@@ -46,6 +46,8 @@ struct ActivityMotionInteractionTests {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
+        // Beside another activity, so opening folds to the housing before it reveals.
+        model.stopwatch = .stopped(elapsed: 31)
         model.expanded = .timer
         var phases: [(folded: Bool, opening: Bool)] = []
         let watch = model.$activityFolded.combineLatest(model.$activityOpening).dropFirst().sink {
@@ -87,6 +89,7 @@ struct ActivityMotionInteractionTests {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
+        model.stopwatch = .stopped(elapsed: 31)
         model.expanded = .timer
         model.open()
         let transition = try #require(model.activityTransitionTask)
@@ -252,6 +255,8 @@ struct ActivityMotionInteractionTests {
     func previewStationaryPointer() async throws {
         let preview = preview()
         let model = preview.model
+        // Beside another activity, so opening folds to the housing first.
+        model.stopwatch = .stopped(elapsed: 31)
         defer { model.cancelActivityTransition() }
         let geometry = geometry(model)
         model.openNotch()
@@ -270,6 +275,8 @@ struct ActivityMotionInteractionTests {
     func previewDeferredExit() async throws {
         let preview = preview()
         let model = preview.model
+        // Beside another activity, so opening folds to the housing first.
+        model.stopwatch = .stopped(elapsed: 31)
         defer { model.cancelActivityTransition() }
         let geometry = geometry(model)
         model.openNotch()

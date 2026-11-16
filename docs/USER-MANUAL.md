@@ -101,14 +101,19 @@ original motion. Tools remain interactive during animation. When another
 activity is detached, its bubble merges before the tool opens and buds off after
 it closes. Opening music from its bubble returns to that bubble.
 
-Other activity openings, closings and switches first fold smoothly to the camera
-housing, then expand into the next view with a small bounce. Only the expansion
-bounces, both into the open view and back to the compact live activity. Hover
-keeps those compact activity footprints fixed. Their contents and detached
-bubble follow the same motion. Device announcements use this sequence too. When
-the last activity ends, it stays at the housing. Time and progress updates keep
-their place, and a new action replaces an unfinished transition. The two-stage
-activity motion takes less than half a second at the default speed.
+An activity alone beside the camera opens straight out of it, as the iPhone's
+Dynamic Island does when you hold it: the notch grows into the open view with a
+small bounce while what was beside the camera blurs away and the open view
+blurs in. Closing it, switching activities, an announcement, and opening beside
+another activity first fold to the camera housing, as the iPhone's island
+shrinks to its bare pill, then expand into the next view. The fold starts fast
+and slows into the housing, and the next view opens about a third of a second
+after it began. Only the expansion bounces, both into the open view and back to
+the compact live activity. Hover keeps those compact activity footprints fixed.
+Their contents and detached bubble follow the same motion. Device announcements
+use this sequence too. When the last activity ends, it stays at the housing.
+Time and progress updates keep their place, and a new action replaces an
+unfinished transition.
 
 With Reduce Motion on, nothing bounces: the notch, bubbles and cover settle
 straight where they're going, the star glows without swelling, the skip arrows
@@ -591,7 +596,9 @@ seconds, with the pause symbol while it's stopped.
 With two activities going on, the one that started first keeps the left of the
 notch, and the other moves out into a round bubble of its own off the notch's
 right end, as the iPhone shows two activities at once: with music playing first,
-the music shows its cover and the timer its ring in the bubble. A third waits
+the music shows its cover and the timer its ring in the bubble. A timer that
+keeps the notch shows its time beside its ring, in short units such as `3m` or
+`27s`, as the iPhone's Clock does with two activities. A third waits
 its turn. As on the iPhone, they take their turns in the order they started,
 whatever they are; one that ends and starts again, such as music paused for a
 while, goes to the back. The order is kept when Glance opens again: what was
@@ -672,8 +679,9 @@ as Repeat and Stop.
 ### Alarms
 
 When Clock presents an identifiable ringing alarm, the notch grows by itself as
-the iPhone's Dynamic Island does for an alarm: the alarm clock in Clock's
-orange, shaking, the time it rang above the alarm's name, and **Snooze** and
+the iPhone's Dynamic Island does for an alarm: Clock's own alarm clock in its
+orange, rocking on its feet as its bells shake, the time it rang above the
+alarm's name, and **Snooze** and
 **Stop** as round buttons at the right, when the alarm offers them. Click either
 where it is, as with a finished timer. Glance does not invent actions that its
 source cannot expose. Actions always target the alarm showing. While one is

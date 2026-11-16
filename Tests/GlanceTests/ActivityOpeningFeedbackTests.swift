@@ -18,6 +18,8 @@ struct ActivityOpeningFeedbackTests {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
+        // Beside another activity, so opening folds to the housing first.
+        model.stopwatch = .stopped(elapsed: 31)
         model.expanded = .timer
         var taps = 0
         model.open {
@@ -35,6 +37,22 @@ struct ActivityOpeningFeedbackTests {
         model.close()
         await model.activityTransitionTask?.value
         #expect(taps == 1)
+    }
+
+    @Test("An activity alone taps once as it grows out of its compact")
+    func directBeat() async throws {
+        let model = model()
+        defer { model.cancelActivityTransition() }
+        model.timer = .paused(left: 75, total: 120)
+        model.expanded = .timer
+        var taps = 0
+        model.open { taps += 1 }
+        #expect(taps == 1)
+        #expect(!model.activityFolded && model.activityOpening && model.activityControlsHidden)
+        let task = try #require(model.activityTransitionTask)
+        await task.value
+        #expect(taps == 1)
+        #expect(model.state == .open && !model.activityControlsHidden)
     }
 
     enum Interruption: CaseIterable { case close, teardown, fullscreen, replacement }
@@ -90,6 +108,8 @@ struct ActivityOpeningFeedbackTests {
         preview.setInteractive(true, animated: false)
         preview.model.activity = false
         preview.model.timer = .paused(left: 75, total: 120)
+        // Beside another activity, so opening folds to the housing first.
+        preview.model.stopwatch = .stopped(elapsed: 31)
         defer { preview.model.cancelActivityTransition() }
         preview.model.openNotch()
         let task = try #require(preview.model.activityTransitionTask)

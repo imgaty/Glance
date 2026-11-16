@@ -567,7 +567,11 @@ final class NotchModel: ObservableObject {
         if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
         if let recording = activities.first.flatMap(recording(of:)) { return RecordingLook.wing(for: recording, restingHeight: closedSize.height) }
         if activity, pop { return max(popWing, resting) }
-        // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares.
+        // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares. A
+        // timer with another activity detached keeps its time beside its ring, squeezed.
+        if case .timer(let timer)? = notchClock, detached != nil {
+            return max(SystemActivityView.squeezedWing(for: timer, restingHeight: closedSize.height), resting)
+        }
         if notchClock != nil { return max(timerWing, resting) }
         if activities.first == .alarm, let alarm { return max(AlarmCompactView.wing(for: alarm, restingHeight: closedSize.height), resting) }
         if activities.first == .printing, let printing { return max(PrintJobMark.wing(for: printing, restingHeight: closedSize.height), resting) }
@@ -686,7 +690,10 @@ enum NotchMotion {
     /// at a time.
     nonisolated(unsafe) static var pace: Double = 1
 
-    static let foldDuration = 0.16
+    /// How long an activity's fold to the housing takes before what comes next opens: the Dynamic
+    /// Island's on iOS 27, measured frame by frame closing a timer and as a second activity came
+    /// and went, reaches its bare pill in 0.22 to 0.27 seconds and opens again by 0.3.
+    static let foldDuration = 0.3
     static let expandDuration = 0.28
 }
 
@@ -712,7 +719,14 @@ extension NotchMotion {
         return .spring(duration: expandDuration, bounce: 0.05).paced
     }
 
-    static var fold: Animation { eased(duration: foldDuration) }
+    /// Into the housing as the Dynamic Island goes: fast at once, half way in 0.08 seconds, nine
+    /// tenths by 0.2, settling with no travel past it.
+    static var fold: Animation {
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            return eased(duration: 0.16)
+        }
+        return .spring(response: 0.3, dampingFraction: 1).paced
+    }
     static var feedback: Animation { eased(duration: 0.18) }
 
     /// Starts and stops at rest, with one speed peak and no travel beyond either endpoint.
@@ -775,14 +789,17 @@ extension NotchModel {
         }
     }
 
-    /// Tools open directly; activities first collapse to the housing.
+    /// Tools open directly, and so does an activity alone beside the camera, growing out of its own
+    /// compact as the Dynamic Island's does when held, measured on iOS 27. Opened over an
+    /// announcement or beside another activity, it first collapses to the housing.
     func open(onCollapse: (() -> Void)? = nil) {
         guard !entering else { return }
         if expanded == nil {
             openTools(onOpen: onCollapse)
             return
         }
-        changeActivityPresentation(animation: Self.activityExpansionMotion, onCollapse: onCollapse) {
+        let alone = state != .open && alert == nil && !activityFolded && !collapsed && activities.prefix(2).count == 1
+        changeActivityPresentation(animation: Self.activityExpansionMotion, opensDirectly: alone, onCollapse: onCollapse) {
             state = .open
             pressed = false
             bubblePressed = false

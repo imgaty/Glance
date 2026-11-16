@@ -52,7 +52,7 @@ struct ActivityMotionTests {
         await transition.value
     }
 
-    @Test("The player opens and closes directly while other activities keep their hardware midpoint", arguments: NotchModel.Activity.allCases)
+    @Test("Activities open straight out of their compact, as the player does, and close through the hardware midpoint", arguments: NotchModel.Activity.allCases)
     func familyOpenClose(_ activity: NotchModel.Activity) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
@@ -73,7 +73,10 @@ struct ActivityMotionTests {
             #expect(model.stretch == 12 && model.lean == 9 && model.pageStretch == 7)
             #expect(!model.pressed)
         } else {
-            expectHardware(model)
+            // Alone, it grows out of its compact as the Dynamic Island's does when held, measured on
+            // iOS 27: nothing folds, and its controls wait for the reveal.
+            #expect(!model.activityFolded && model.activityOpening && model.activityControlsHidden)
+            #expect(model.metrics.bodyWidth > model.closedSize.width)
         }
         #expect(model.state == .open)
         #expect(!model.activityReturnsInline)
@@ -432,6 +435,8 @@ struct ActivityMotionTests {
         let model = model()
         defer { model.cancelActivityTransition() }
         install(.timer, in: model)
+        // Beside another activity, so opening folds first.
+        install(.stopwatch, in: model)
         model.expanded = .timer
         model.open()
         expectHardware(model)

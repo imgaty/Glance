@@ -414,9 +414,11 @@ struct ActivitiesTests {
         model.timer = .running(until: .now + 300, total: 300)
         model.timerWing = SystemActivityView.wing(for: .timer(model.timer!), restingHeight: resting)
         #expect(model.wing == model.timerWing)
-        // Music started after it is detached; the timer keeps its own side as it is.
+        // Music started after it is detached; the timer keeps its own side, its time squeezed beside
+        // its ring, as iOS 27's Clock shows it with two activities.
         model.activity = true
-        #expect(model.wing == model.timerWing && model.detached == .music)
+        let squeezed = SystemActivityView.squeezedWing(for: model.timer!, restingHeight: resting)
+        #expect(model.wing == max(squeezed, LiveActivityView.restingWing(restingHeight: resting)) && model.detached == .music)
         // Music first, the timer detached, music keeps its own side as it is.
         model.timer = nil
         model.timer = .running(until: .now + 300, total: 300)
@@ -625,7 +627,7 @@ struct ActivitiesTests {
         model.state = .closed
         model.activity = false
         #expect(model.notchClock == .timer(model.timer!))
-        #expect(model.wing == max(model.timerWing, LiveActivityView.restingWing(restingHeight: 32)))
+        #expect(model.wing == max(SystemActivityView.squeezedWing(for: model.timer!, restingHeight: 32), LiveActivityView.restingWing(restingHeight: 32)))
         #expect(model.detached == .stopwatch)
         #expect(model.expansion(fromBubble: false) == .timer)
         #expect(model.expansion(fromBubble: true) == .stopwatch)
