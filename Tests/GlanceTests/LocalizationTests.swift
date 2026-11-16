@@ -58,6 +58,29 @@ struct LocalizationTests {
         }
     }
 
+    /// Words written straight into the code that the catalog doesn't have ship in English only, while
+    /// the test above, which reads only the catalog, still passes. Words built from values aren't
+    /// checked here: their keys take a placeholder for each value.
+    @Test("Every word the code shows is in the catalog")
+    func inCatalog() throws {
+        let catalog = try Self.catalog("Localizable")
+        let sources = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appending(path: "Sources/Glance")
+        let shown = #/(?:String\(localized:\s*|\bText\(|\bButton\(|\bToggle\(|\bLabel\(|\bSection\(|\.help\(|\.accessibilityLabel\(|\.accessibilityHint\(|spokenButton\()"((?:[^"\\\n]|\\.)*)"/#
+        let files = FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil)?.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" } ?? []
+        #expect(!files.isEmpty)
+        for file in files {
+            let lines = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false)
+            for (number, line) in lines.enumerated() where !line.trimmingCharacters(in: .whitespaces).hasPrefix("//") {
+                for match in String(line).matches(of: shown) {
+                    let key = String(match.output.1)
+                    guard !key.contains("\\("), key.contains(where: \.isLetter) else { continue }
+                    #expect(catalog[key] != nil, "\(file.lastPathComponent):\(number + 1) shows \"\(key)\", which isn't in Localizable.xcstrings")
+                }
+            }
+        }
+    }
+
     @Test("Names stay as they are")
     func names() throws {
         let catalog = try Self.catalog("Localizable")

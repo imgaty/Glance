@@ -24,6 +24,9 @@
   opens, with round buttons, a print job's progress as a ring, and words that
   fit beside the camera.
 
+- Added every word of alarms, printing, music recognition, shortcuts and Focus
+  in all 34 languages.
+
 - Changed the notch's menu to offer **Recognize Music** and **Run Shortcut**
   only while their Live Activities are on, or while a shortcut run is going.
 
