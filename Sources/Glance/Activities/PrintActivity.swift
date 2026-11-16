@@ -132,6 +132,10 @@ actor CUPSPrintSource: PrintJobSource {
             jobs[index].progress = progress(for: selected.id, connection: connection)
             jobs[index].printerName = printerName(selected.id.printer, connection: connection)
         }
+        // The job kept has left the queue: how it ended, for the activity's last look at it.
+        if let id, id.isSpecific, !jobs.contains(where: { $0.id == id }), let state = endedState(of: id, connection: connection) {
+            jobs.append(PrintJob(id: id, title: "", owner: owner, state: state))
+        }
         return jobs
     }
 
@@ -189,6 +193,19 @@ actor CUPSPrintSource: PrintJobSource {
             let completed = ippFindAttribute(response, "job-impressions-completed", IPP_TAG_INTEGER)
         else { return nil }
         return .init(completed: Int(ippGetInteger(completed, 0)), total: Int(ippGetInteger(total, 0)))
+    }
+
+    /// How a job that's left the queue ended, if CUPS still keeps it.
+    private func endedState(of id: PrintJob.ID, connection: OpaquePointer) -> PrintJob.State? {
+        guard let request = ippNewRequest(IPP_OP_GET_JOB_ATTRIBUTES) else { return nil }
+        ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "job-uri", nil, "ipp://localhost/jobs/\(id.number)")
+        ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name", nil, owner)
+        guard let response = cupsDoRequest(connection, request, "/") else { return nil }
+        defer { ippDelete(response) }
+        guard Self.succeeded(ippGetStatusCode(response)), let attribute = ippFindAttribute(response, "job-state", IPP_TAG_ENUM),
+            let state = PrintJob.State(rawValue: ippGetInteger(attribute, 0)), !state.isActive
+        else { return nil }
+        return state
     }
 
     private static func succeeded(_ status: ipp_status_t) -> Bool {
@@ -361,6 +378,18 @@ final class PrintActivity: ObservableObject {
 
     private func apply(_ jobs: [PrintJob]) {
         let previous = shown
+        // The job shown has just left the queue printed, or failed: it shows how it ended until the
+        // next read, as Apple's progress activity shows its check before it goes. One canceled goes
+        // at once.
+        if let previous, previous.job.state.isActive, previous.cancellation == .idle,
+            let ended = jobs.first(where: { $0.id == previous.job.id && !$0.state.isActive }), ended.state == .completed || ended.state == .failed
+        {
+            var job = previous.job
+            job.state = ended.state
+            if ended.state == .completed, let progress = job.progress { job.progress = .init(completed: progress.total, total: progress.total) }
+            shown = PrintShown(job: job, additionalJobs: jobs.filter(\.state.isActive).count)
+            return
+        }
         guard let job = PrintJob.selected(in: jobs, keeping: previous?.job.id) else {
             shown = nil
             return

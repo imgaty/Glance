@@ -8,21 +8,20 @@
 import AppKit
 import SwiftUI
 
-/// A print job beside the camera: how far it's got at the left end, as a ring, and at the right end
-/// the share printed, or what's become of it.
+/// A print job beside the camera, as Apple's progress activity: Print Center's icon at the left end,
+/// and at the right the ring of how far it's got, or how it ended.
 struct PrintJobMark: View {
     let shown: PrintShown
     let restingHeight: CGFloat
     var leadingOnly = false
 
-    @MainActor
     static func wing(for shown: PrintShown, restingHeight: CGFloat) -> CGFloat {
-        CompactActivityLayout.wing(caption: PrintJobGlyph.caption(for: shown), restingHeight: restingHeight)
+        TaskCompactMark<EmptyView>.wing(restingHeight: restingHeight)
     }
 
     var body: some View {
-        CompactActivityMark(caption: PrintJobGlyph.caption(for: shown), restingHeight: restingHeight, leadingOnly: leadingOnly) {
-            PrintJobGlyph(shown: shown, restingHeight: restingHeight)
+        TaskCompactMark(status: PrintJobGlyph.status(for: shown), restingHeight: restingHeight, leadingOnly: leadingOnly) {
+            TaskAppIcon(bundleID: PrintJobView.app, fallback: "printer.fill", side: SystemActivityView.side(restingHeight))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(shown.spoken)
@@ -30,34 +29,26 @@ struct PrintJobMark: View {
     }
 }
 
-/// The same mark beside the camera and in the bubble: a ring filling as the pages print, a spinner
-/// while it prints with nothing to count, or a symbol for what's become of it.
+/// The job's ring, as beside the camera, alone in the bubble.
 struct PrintJobGlyph: View {
     let shown: PrintShown
     var minimal = false
     var restingHeight: CGFloat = 32
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static func symbol(for shown: PrintShown) -> String {
-        if !shown.sourceAvailable { return "questionmark.circle" }
-        if shown.cancellation == .pending { return "stop.circle" }
-        if shown.cancellation == .unconfirmed { return "questionmark.circle" }
-        if shown.cancellation == .failed || shown.openFailed { return "exclamationmark.triangle.fill" }
+    /// The pages printed, filling the ring; an arc going round while it waits or prints with nothing
+    /// to count; a check once printed, an exclamation mark if it failed or its status can't be read.
+    /// On hold or stopped, the ring stands still where it got to.
+    static func status(for shown: PrintShown) -> TaskStatus {
+        let fraction = shown.job.progress?.fraction
+        if !shown.sourceAvailable { return TaskStatus(outcome: .failed, fraction: fraction) }
         switch shown.job.state {
-        case .queued: return "clock"
-        case .held: return "pause.circle.fill"
-        case .printing: return "printer.fill"
-        case .stopped: return "stop.circle.fill"
-        case .canceled: return "minus.circle"
-        case .failed: return "xmark.circle.fill"
-        case .completed: return "checkmark.circle.fill"
+        case .queued: return .working
+        case .printing: return fraction.map(TaskStatus.counting) ?? .working
+        case .held, .stopped: return .counting(fraction ?? 0)
+        case .completed: return .done
+        case .failed: return TaskStatus(outcome: .failed, fraction: fraction)
+        case .canceled: return .stopped
         }
-    }
-
-    /// Printing with a count, the share done; otherwise a word for its state.
-    static func caption(for shown: PrintShown) -> String {
-        if let progress = counting(shown) { return progress.fraction.formatted(.percent.precision(.fractionLength(0))) }
-        return word(for: shown)
     }
 
     /// A word or two for its state, short enough for beside the camera.
@@ -78,34 +69,14 @@ struct PrintJobGlyph: View {
         }
     }
 
-    /// The pages printed of how many, while it prints and nothing's gone wrong.
-    static func counting(_ shown: PrintShown) -> PrintJob.Progress? {
-        guard shown.sourceAvailable, shown.cancellation == .idle, !shown.openFailed, shown.job.state == .printing else { return nil }
-        return shown.job.progress
-    }
-
     var body: some View {
-        let h = restingHeight
-        Group {
-            if let progress = Self.counting(shown) {
-                ProgressRing(fraction: progress.fraction, diameter: h * TimerLayout.ring, line: h * AirDropLayout.ringLine)
-            } else if Self.counting(shown) == nil, shown.sourceAvailable, shown.cancellation == .idle, !shown.openFailed,
-                shown.job.state == .printing, !reduceMotion
-            {
-                ProgressView().controlSize(.small).tint(.white)
-            } else {
-                Image(systemName: Self.symbol(for: shown))
-                    .font(.system(size: minimal ? h * 0.5 : LiveActivityView.textSize(for: h) + 2, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-        }
-        .accessibilityHidden(true)
+        TaskRing(status: Self.status(for: shown), diameter: restingHeight * TimerLayout.ring)
     }
 }
 
-/// A print job opened, in one row: the printer at the left end opens Print Center; the job's name
-/// beside the camera and what's happening to it under that; at the right end, the ✕ that cancels it,
-/// in the ring of how far it's got, as AirDrop's stop is.
+/// A print job opened, in one row, as Apple's progress activity: Print Center's icon at the left
+/// end, which opens it; the job's name beside the camera and what's happening to it under that; at
+/// the right end the ring, with the square inside it that cancels the job.
 struct PrintJobView: View {
     let shown: PrintShown
     let restingHeight: CGFloat
@@ -114,6 +85,9 @@ struct PrintJobView: View {
     var cancel: () -> Void = {}
     var openPrintCenter: () -> Void = {}
     var refresh: () -> Void = {}
+
+    /// Print Center, whose icon the job shows.
+    static let app = "com.apple.printcenter"
 
     static func detail(for shown: PrintShown) -> String { "\(PrintJobGlyph.word(for: shown)) · \(shown.job.displayPrinter)" }
 
@@ -128,10 +102,8 @@ struct PrintJobView: View {
         return lines.joined(separator: "\n")
     }
 
-    /// Something at the right end: a button, or the ring alone when the job can't be canceled.
-    private static func buttons(for shown: PrintShown) -> Int {
-        !shown.sourceAvailable || shown.job.canCancel || shown.cancellation != .idle || shown.job.progress != nil ? 1 : 0
-    }
+    /// The ring at the right end, and Try Again before it while the queue can't be read.
+    private static func buttons(for shown: PrintShown) -> Int { shown.sourceAvailable ? 1 : 2 }
 
     @MainActor
     static func width(for shown: PrintShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
@@ -151,12 +123,8 @@ struct PrintJobView: View {
             title: shown.job.title, detail: Self.detail(for: shown), explanation: Self.explanation(for: shown),
             buttons: Self.buttons(for: shown), revealed: revealed
         ) {
-            ActivityRowPicture(restingHeight: h, label: String(localized: "Open Print Center"), open: openPrintCenter) {
-                Image(systemName: "printer.fill")
-                    .font(.system(size: h * 0.55, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .accessibilityIdentifier("open-print-center")
+            TaskAppButton(bundleID: Self.app, fallback: "printer.fill", restingHeight: h, label: String(localized: "Open Print Center"), open: openPrintCenter)
+                .accessibilityIdentifier("open-print-center")
         } trailing: {
             trailing(h)
         }
@@ -164,7 +132,6 @@ struct PrintJobView: View {
     }
 
     @ViewBuilder private func trailing(_ h: CGFloat) -> some View {
-        let side = TimerLayout.content(h)
         if !shown.sourceAvailable {
             IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Try Again"), action: refresh) {
                 Image(systemName: "arrow.clockwise")
@@ -172,28 +139,15 @@ struct PrintJobView: View {
                     .foregroundStyle(.white)
             }
             .accessibilityIdentifier("refresh-print-status")
-        } else if shown.canRetryCancellation, shown.canCancel {
-            IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Try Canceling Again"), action: cancel) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: h * 0.55, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .accessibilityIdentifier("cancel-print-job")
-        } else if shown.job.canCancel || shown.cancellation == .pending {
-            IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Cancel Print Job"), action: cancel) {
-                ZStack {
-                    if let progress = shown.job.progress {
-                        ProgressRing(fraction: progress.fraction, diameter: side, line: h * AirDropLayout.bigRingLine)
-                    }
-                    CrossGlyph(height: h)
-                }
-            }
-            .disabled(!shown.canCancel)
-            .opacity(shown.canCancel ? 1 : 0.45)
-            .accessibilityValue(shown.job.progress.map { $0.fraction.formatted(.percent.precision(.fractionLength(0))) } ?? "")
-            .accessibilityIdentifier("cancel-print-job")
-        } else if let progress = shown.job.progress {
-            ProgressRing(fraction: progress.fraction, diameter: side, line: h * AirDropLayout.bigRingLine)
         }
+        // Cancels the job while it can be; otherwise, as once it's printed, only how it stands.
+        TaskRingButton(
+            status: PrintJobGlyph.status(for: shown), control: .activitySecond, height: h,
+            label: shown.canRetryCancellation ? String(localized: "Try Canceling Again") : String(localized: "Cancel Print Job"),
+            held: shown.cancellation == .pending, interactive: shown.sourceAvailable && (shown.job.canCancel || shown.cancellation == .pending),
+            action: cancel
+        )
+        .disabled(!shown.canCancel)
+        .accessibilityIdentifier("cancel-print-job")
     }
 }

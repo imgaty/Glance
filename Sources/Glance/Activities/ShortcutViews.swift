@@ -8,20 +8,20 @@
 import AppKit
 import SwiftUI
 
-/// A shortcut running beside the camera: its state at the left end, a word for it at the right.
+/// A shortcut running beside the camera, as Apple's progress activity: Shortcuts' icon at the left
+/// end, and at the right the ring, going round while it runs, or how it ended.
 struct ShortcutRunMark: View {
     let shown: ShortcutShown
     let restingHeight: CGFloat
     var leadingOnly = false
 
-    @MainActor
     static func wing(for shown: ShortcutShown, restingHeight: CGFloat) -> CGFloat {
-        CompactActivityLayout.wing(caption: ShortcutRunGlyph.caption(for: shown.run.state), restingHeight: restingHeight)
+        TaskCompactMark<EmptyView>.wing(restingHeight: restingHeight)
     }
 
     var body: some View {
-        CompactActivityMark(caption: ShortcutRunGlyph.caption(for: shown.run.state), restingHeight: restingHeight, leadingOnly: leadingOnly) {
-            ShortcutRunGlyph(state: shown.run.state, restingHeight: restingHeight)
+        TaskCompactMark(status: ShortcutRunGlyph.status(for: shown.run.state), restingHeight: restingHeight, leadingOnly: leadingOnly) {
+            TaskAppIcon(bundleID: ShortcutRunView.app, fallback: "square.2.layers.3d.fill", side: SystemActivityView.side(restingHeight))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(shown.spoken)
@@ -29,24 +29,21 @@ struct ShortcutRunMark: View {
     }
 }
 
-/// The same mark beside the camera and in the bubble. The spinner means only that the run is going
-/// on; it doesn't pretend to know how far the shortcut has got.
+/// The run's ring, as beside the camera, alone in the bubble. It goes round only to say the run is
+/// going on; it doesn't pretend to know how far the shortcut has got.
 struct ShortcutRunGlyph: View {
     let state: ShortcutRun.State
     var minimal = false
     var restingHeight: CGFloat = 32
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static func symbol(for state: ShortcutRun.State) -> String {
+    /// Going round while it runs or stops; a check when it's done, an exclamation mark when it
+    /// couldn't finish, and the stop square when you stopped it.
+    static func status(for state: ShortcutRun.State) -> TaskStatus {
         switch state {
-        case .starting: "hourglass"
-        case .running: "bolt.fill"
-        case .stopping: "stop.circle"
-        case .stopDelayed: "exclamationmark.triangle.fill"
-        case .completed: "checkmark.circle.fill"
-        case .stopped: "stop.circle.fill"
-        case .endedAfterStop: "minus.circle"
-        case .failed: "xmark.circle.fill"
+        case .starting, .running, .stopping, .stopDelayed: .working
+        case .completed: .done
+        case .failed: .failed
+        case .stopped, .endedAfterStop: .stopped
         }
     }
 
@@ -64,22 +61,14 @@ struct ShortcutRunGlyph: View {
     }
 
     var body: some View {
-        Group {
-            if state == .running, !minimal, !reduceMotion {
-                ProgressView().controlSize(.small).tint(.white)
-            } else {
-                Image(systemName: Self.symbol(for: state))
-                    .font(.system(size: minimal ? restingHeight * 0.5 : LiveActivityView.textSize(for: restingHeight) + 2, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-        }
-        .accessibilityHidden(true)
+        TaskRing(status: Self.status(for: state), diameter: restingHeight * TimerLayout.ring)
     }
 }
 
-/// A shortcut run from Glance's menu, opened in one row: Shortcuts at the left end, which it opens;
-/// the shortcut's name beside the camera and its state under it; at the right end, Stop while it
-/// runs, and once it's over its result and Done.
+/// A shortcut run from Glance's menu, opened in one row, as Apple's progress activity: Shortcuts'
+/// icon at the left end, which opens it; the shortcut's name beside the camera and its state under
+/// it; at the right end the ring, with the square inside it that stops the run. Once it's over the
+/// ring shows how it ended and closes it, as Done, its result before it.
 struct ShortcutRunView: View {
     let shown: ShortcutShown
     let restingHeight: CGFloat
@@ -89,6 +78,9 @@ struct ShortcutRunView: View {
     var dismiss: () -> Void = {}
     var openShortcuts: () -> Void = {}
     var showResult: () -> Void = {}
+
+    /// Shortcuts, whose icon the run shows.
+    static let app = "com.apple.shortcuts"
 
     static func detail(for shown: ShortcutShown) -> String { ShortcutRunGlyph.caption(for: shown.run.state) }
 
@@ -130,39 +122,30 @@ struct ShortcutRunView: View {
             title: shown.run.shortcut.name, detail: Self.detail(for: shown), explanation: Self.explanation(for: shown),
             buttons: Self.buttons(for: shown), revealed: revealed
         ) {
-            ActivityRowPicture(restingHeight: h, label: String(localized: "Open Shortcuts"), open: openShortcuts) {
-                Image(systemName: "square.2.layers.3d.fill")
-                    .font(.system(size: h * 0.55, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
+            TaskAppButton(
+                bundleID: Self.app, fallback: "square.2.layers.3d.fill", restingHeight: h, label: String(localized: "Open Shortcuts"), open: openShortcuts
+            )
             .accessibilityIdentifier("open-shortcuts")
         } trailing: {
-            if shown.run.state.active {
-                IslandCircleButton(
-                    control: .activitySecond, height: h, tint: .white,
-                    label: shown.run.state == .stopDelayed ? String(localized: "Try Stopping Again") : String(localized: "Stop Shortcut"), action: stop
-                ) {
-                    RoundedRectangle(cornerRadius: h * 0.06, style: .continuous)
-                        .fill(.white)
-                        .frame(width: h * 0.42, height: h * 0.42)
+            let active = shown.run.state.active
+            if !active, shown.run.exit?.output != nil {
+                IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Show Result"), action: showResult) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: h * 0.55, weight: .semibold))
+                        .foregroundStyle(.white)
                 }
-                .disabled(!shown.run.canStop)
-                .opacity(shown.run.canStop ? 1 : 0.45)
-                .accessibilityIdentifier("stop-shortcut")
-            } else {
-                if shown.run.exit?.output != nil {
-                    IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Show Result"), action: showResult) {
-                        Image(systemName: "doc.text.fill")
-                            .font(.system(size: h * 0.55, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                    .accessibilityIdentifier("show-shortcut-result")
-                }
-                IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Done"), action: dismiss) {
-                    CrossGlyph(height: h)
-                }
-                .accessibilityIdentifier("dismiss-shortcut")
+                .accessibilityIdentifier("show-shortcut-result")
             }
+            // One ring all the way: Stop while it runs, Done once it's over.
+            TaskRingButton(
+                status: ShortcutRunGlyph.status(for: shown.run.state), control: .activitySecond, height: h,
+                label: active
+                    ? (shown.run.state == .stopDelayed ? String(localized: "Try Stopping Again") : String(localized: "Stop Shortcut"))
+                    : String(localized: "Done"),
+                held: shown.run.state == .stopping, action: active ? stop : dismiss
+            )
+            .disabled(active && !shown.run.canStop)
+            .accessibilityIdentifier(active ? "stop-shortcut" : "dismiss-shortcut")
         }
         .accessibilityLabel(shown.spoken)
     }

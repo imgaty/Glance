@@ -28,9 +28,12 @@
   name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps
   its color.
 
-- Rebuilt printing, music recognition and shortcuts in one row, as the timer
-  opens, with round buttons, a print job's progress as a ring, and words that
-  fit beside the camera.
+- Rebuilt printing, music recognition and shortcuts as the iPhone shows a task
+  an app finishes in the background: the app's icon beside the camera with a
+  ring that fills or goes round, and opened, one row as the timer opens, the
+  ring at its end with a square inside it to stop the task. A check springs in
+  when it's done and an exclamation mark when it fails, and a printed job shows
+  its check before it goes.
 
 - Added every word of alarms, printing, music recognition, shortcuts and Focus
   in all 34 languages.

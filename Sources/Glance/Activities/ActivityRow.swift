@@ -164,26 +164,3 @@ struct CompactActivityMark<Mark: View>: View {
         }
     }
 }
-
-/// Progress as a ring, white on a faint track, as AirDrop's is in its color.
-struct ProgressRing: View {
-    let fraction: Double
-    let diameter: CGFloat
-    let line: CGFloat
-    var tint: Color = .white
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(tint.opacity(0.25), lineWidth: line)
-            Circle()
-                .trim(from: 0, to: max(min(fraction, 1), 0))
-                .stroke(tint, style: StrokeStyle(lineWidth: line, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .animation(reduceMotion ? nil : .linear(duration: 0.15), value: fraction)
-        }
-        .frame(width: diameter - line, height: diameter - line)
-        .frame(width: diameter, height: diameter)
-        .accessibilityHidden(true)
-    }
-}

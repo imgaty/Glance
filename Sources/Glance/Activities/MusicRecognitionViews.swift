@@ -7,26 +7,26 @@
 
 import SwiftUI
 
-/// Music recognition beside the camera: its state at the left end, a word for it at the right; in the
-/// bubble, the state alone.
+/// Music recognition beside the camera, as Apple's progress activity: Shazam's mark at the left end,
+/// and at the right the ring, going round while it listens, or how it ended; in the bubble, the
+/// ring alone.
 struct MusicRecognitionCompactView: View {
     let state: MusicRecognitionActivity.State
     var minimal = false
     var leadingOnly = false
     var restingHeight: CGFloat = 32
 
-    @MainActor
     static func wing(for state: MusicRecognitionActivity.State, restingHeight: CGFloat) -> CGFloat {
-        CompactActivityLayout.wing(caption: MusicRecognitionGlyph.caption(for: state), restingHeight: restingHeight)
+        TaskCompactMark<EmptyView>.wing(restingHeight: restingHeight)
     }
 
     var body: some View {
         Group {
             if minimal {
-                MusicRecognitionGlyph(state: state, minimal: true, restingHeight: restingHeight)
+                TaskRing(status: MusicRecognitionGlyph.status(for: state), diameter: restingHeight * TimerLayout.ring)
             } else {
-                CompactActivityMark(caption: MusicRecognitionGlyph.caption(for: state), restingHeight: restingHeight, leadingOnly: leadingOnly) {
-                    MusicRecognitionGlyph(state: state, restingHeight: restingHeight)
+                TaskCompactMark(status: MusicRecognitionGlyph.status(for: state), restingHeight: restingHeight, leadingOnly: leadingOnly) {
+                    MusicRecognitionGlyph(side: SystemActivityView.side(restingHeight))
                 }
             }
         }
@@ -35,57 +35,37 @@ struct MusicRecognitionCompactView: View {
     }
 }
 
-/// A state's mark, which still says what's happening when the words beside it are hidden.
+/// Shazam's mark, white, filling the side given as an app's icon would.
 struct MusicRecognitionGlyph: View {
-    let state: MusicRecognitionActivity.State
-    var minimal = false
-    var restingHeight: CGFloat = 32
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let side: CGFloat
 
-    static func symbol(for state: MusicRecognitionActivity.State) -> String {
+    /// Going round while it asks for the microphone or listens; a check when it found the song, an
+    /// exclamation mark when it found none or couldn't listen, and the stop square when you canceled.
+    static func status(for state: MusicRecognitionActivity.State) -> TaskStatus {
         switch state {
-        case .idle: "shazam.logo.fill"
-        case .requestingPermission: "mic"
-        case .recognizing: "waveform"
-        case .match: "checkmark.circle.fill"
-        case .noMatch: "questionmark.circle"
-        case .denied, .restricted: "mic.slash"
-        case .failure: "exclamationmark.triangle.fill"
-        case .cancelled: "stop.circle.fill"
-        }
-    }
-
-    static func caption(for state: MusicRecognitionActivity.State) -> String {
-        switch state {
-        case .idle: String(localized: "Recognize")
-        case .requestingPermission: String(localized: "Microphone")
-        case .recognizing: String(localized: "Listening…")
-        case .match: String(localized: "Song Found")
-        case .noMatch: String(localized: "No Match")
-        case .denied: String(localized: "Mic Off")
-        case .restricted: String(localized: "Restricted")
-        case .failure: String(localized: "Unavailable")
-        case .cancelled: String(localized: "Stopped")
+        case .idle: .counting(0)
+        case .requestingPermission, .recognizing: .working
+        case .match: .done
+        case .noMatch, .denied, .restricted, .failure: .failed
+        case .cancelled: .stopped
         }
     }
 
     var body: some View {
-        Group {
-            if state == .recognizing, !minimal, !reduceMotion {
-                ProgressView().controlSize(.small).tint(.white)
-            } else {
-                Image(systemName: Self.symbol(for: state))
-                    .font(.system(size: minimal ? restingHeight * 0.5 : LiveActivityView.textSize(for: restingHeight) + 2, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-        }
-        .accessibilityHidden(true)
+        Image(systemName: "shazam.logo.fill")
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(.white)
+            .frame(width: side, height: side)
+            .accessibilityHidden(true)
     }
 }
 
-/// Music recognition opened, in one row: Shazam's mark at the left end, or the song's cover once
-/// it's found, which opens the song; what's happening beside the camera, and under it what to do or
-/// who it's by; at the right end, the one or two things to do next.
+/// Music recognition opened, in one row, as Apple's progress activity: Shazam's mark at the left end,
+/// or the song's cover once it's found, which opens the song; what's happening beside the camera,
+/// and under it what to do or who it's by; at the right end the ring, with the square inside it that
+/// cancels listening. Once it's over the ring shows how it ended and closes it, as Done, with what
+/// else there is to do before it.
 struct MusicRecognitionActivityView: View {
     @ObservedObject var activity: MusicRecognitionActivity
     private let stateOverride: MusicRecognitionActivity.State?
@@ -107,7 +87,13 @@ struct MusicRecognitionActivityView: View {
 
     private var state: MusicRecognitionActivity.State { stateOverride ?? activity.state }
 
-    enum Action: Hashable { case recognize, cancel, openSong, settings, done }
+    enum Action: Hashable {
+        case recognize, cancel, openSong, settings, done
+
+        /// Its place in the row: Cancel and Done are the one ring, which goes on from one to the
+        /// other, so what changes in it is seen to change.
+        var slot: String { self == .cancel || self == .done ? "ring" : String(describing: self) }
+    }
 
     /// In the order they stand. Opening a song found is its cover, at the left end.
     static func actions(for state: MusicRecognitionActivity.State) -> [Action] {
@@ -190,7 +176,7 @@ struct MusicRecognitionActivityView: View {
         ) {
             picture(h, opens: actions.first == .openSong)
         } trailing: {
-            ForEach(Array(actions.enumerated()), id: \.element) { index, action in
+            ForEach(Array(actions.enumerated()), id: \.element.slot) { index, action in
                 if action != .openSong { button(action, control: controls[index], h) }
             }
         }
@@ -241,13 +227,24 @@ struct MusicRecognitionActivityView: View {
         }
     }
 
-    private func button(_ action: Action, control: PlayerControl, _ h: CGFloat) -> some View {
+    @ViewBuilder private func button(_ action: Action, control: PlayerControl, _ h: CGFloat) -> some View {
+        if action == .cancel || action == .done {
+            TaskRingButton(status: MusicRecognitionGlyph.status(for: state), control: control, height: h, label: title(for: action)) {
+                perform(action)
+            }
+            .accessibilityIdentifier("recognition-\(String(describing: action))")
+        } else {
+            circleButton(action, control: control, h)
+        }
+    }
+
+    private func circleButton(_ action: Action, control: PlayerControl, _ h: CGFloat) -> some View {
         IslandCircleButton(control: control, height: h, tint: .white, label: title(for: action)) {
             perform(action)
         } glyph: {
             switch action {
             case .cancel, .done:
-                CrossGlyph(height: h)
+                EmptyView()
             case .recognize:
                 Image(systemName: state == .idle ? "shazam.logo.fill" : "arrow.clockwise")
                     .font(.system(size: h * (state == .idle ? 0.62 : 0.55), weight: .semibold))

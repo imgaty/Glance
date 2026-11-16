@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import Glance
@@ -6,16 +7,26 @@ import Testing
 @MainActor
 @Suite("Compact activity status")
 struct ActivityStatusPresentationTests {
-    @Test("Running detached activities keep recognizable distinct identities")
+    @Test("Each task shows its own app beside the camera, and its ring says how it stands")
     func runningIdentities() {
-        let symbols = [ShortcutRunGlyph.symbol(for: .running), PrintJobGlyph.symbol(for: ActivityBench.printFixture()), MusicRecognitionGlyph.symbol(for: .recognizing)]
-        #expect(Set(symbols).count == symbols.count)
+        #expect(Set([PrintJobView.app, ShortcutRunView.app]).count == 2)
+        #expect(ShortcutRunGlyph.status(for: .running).spinning)
+        #expect(MusicRecognitionGlyph.status(for: .recognizing).spinning)
+        #expect(PrintJobGlyph.status(for: ActivityBench.printFixture()) == .counting(ActivityBench.printFixture().job.progress!.fraction))
+        // Beside the camera the notch keeps one width however the task stands: no words to fit.
+        let wing = TaskCompactMark<EmptyView>.wing(restingHeight: 32)
+        #expect(ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .running)), restingHeight: 32) == wing)
+        #expect(ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .failed)), restingHeight: 32) == wing)
+        #expect(MusicRecognitionCompactView.wing(for: .noMatch, restingHeight: 32) == wing)
     }
 
     @Test("Shortcut terminal states remain distinct without animation or a text wing")
     func shortcutStates() {
-        let states: [ShortcutRun.State] = [.running, .stopping, .completed, .stopped, .failed]
-        #expect(Set(states.map(ShortcutRunGlyph.symbol(for:))).count == states.count)
+        #expect(ShortcutRunGlyph.status(for: .stopping) == .working)
+        #expect(ShortcutRunGlyph.status(for: .completed) == .done)
+        #expect(ShortcutRunGlyph.status(for: .stopped) == .stopped)
+        #expect(ShortcutRunGlyph.status(for: .endedAfterStop) == .stopped)
+        #expect(ShortcutRunGlyph.status(for: .failed) == .failed)
         let finished = ShortcutShown(run: .fixture(state: .completed))
         let detailed = ShortcutShown(run: .fixture(state: .failed), additionalRuns: 1)
         // One row as tall as the Timer's either way; what doesn't fit is said under the pointer.
@@ -23,22 +34,31 @@ struct ActivityStatusPresentationTests {
         #expect(ShortcutRunView.explanation(for: detailed).count > ShortcutRunView.explanation(for: finished).count)
     }
 
-    @Test("Print attention states replace the normal printer mark without relying on color")
+    @Test("Print states: the ring fills, stands still on hold, checks when printed and warns when unread")
     func printStates() {
         let normal = ActivityBench.printFixture()
         var held = normal
         held.job.state = .held
+        #expect(PrintJobGlyph.status(for: held).outcome == .working)
+        #expect(!PrintJobGlyph.status(for: held).spinning)
+        var queued = normal
+        queued.job.state = .queued
+        #expect(PrintJobGlyph.status(for: queued).spinning)
         var unavailable = normal
         unavailable.sourceAvailable = false
-        var failed = normal
-        failed.cancellation = .failed
-        let symbols = [normal, held, unavailable, failed].map(PrintJobGlyph.symbol(for:))
-        #expect(Set(symbols).count == symbols.count)
+        #expect(PrintJobGlyph.status(for: unavailable).outcome == .failed)
+        var printed = normal
+        printed.job.state = .completed
+        #expect(PrintJobGlyph.status(for: printed) == .done)
+        #expect(PrintJobGlyph.word(for: printed) == "Complete")
     }
 
-    @Test("Recognition success, failure and microphone denial differ from listening in minimal mode")
+    @Test("Recognition success, failure and canceling differ from listening")
     func recognitionStates() {
-        let states: [MusicRecognitionActivity.State] = [.recognizing, .match(.init(title: "Song", artist: nil)), .failure(.recognition), .denied, .cancelled]
-        #expect(Set(states.map(MusicRecognitionGlyph.symbol(for:))).count == states.count)
+        #expect(MusicRecognitionGlyph.status(for: .match(.init(title: "Song", artist: nil))) == .done)
+        #expect(MusicRecognitionGlyph.status(for: .failure(.recognition)) == .failed)
+        #expect(MusicRecognitionGlyph.status(for: .denied) == .failed)
+        #expect(MusicRecognitionGlyph.status(for: .noMatch) == .failed)
+        #expect(MusicRecognitionGlyph.status(for: .cancelled) == .stopped)
     }
 }

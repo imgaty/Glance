@@ -699,27 +699,40 @@ invent a countdown after snoozing, and leaves Clock's native alert available.
 
 ### Printing
 
-Your active local print jobs appear beside the camera: a ring filling as the
-pages print and the share printed, or a word for the job's state. Open one to
-see it in one row, as the timer opens: the printer at the left end, which opens
-Print Center; the job's name beside the camera, with its state and printer under
-it; and at the right end the ✕ that cancels it, inside the ring. Cancelling
-requests that exact job and waits for the spooler to confirm it has gone. If
-confirmation takes longer, it says the cancellation is unconfirmed and offers
-a retry without claiming the request was rejected. If the queue cannot be read,
-Glance keeps the last status and offers **Try Again**. More jobs waiting are
+Your active local print jobs appear beside the camera as the iPhone shows a
+task an app finishes in the background: Print Center's icon at the left, and at
+the right a ring filling as the pages print. The ring goes round while the job
+waits or prints without a page count, and stands still while it's on hold or
+stopped. When the job has printed, a check springs into the ring before the
+activity closes; a job that fails shows an exclamation mark instead.
+
+Open one to see it in one row, as the timer opens: Print Center's icon at the
+left end, which opens Print Center; the job's name beside the camera, with its
+state and printer under it; and at the right end the ring, with the square
+inside it that cancels the job. Cancelling requests that exact job and waits for
+the spooler to confirm it has gone. If confirmation takes longer, it says the
+cancellation is unconfirmed and offers a retry without claiming the request was
+rejected. If the queue cannot be read, Glance keeps the last status, shows an
+exclamation mark in the ring and offers **Try Again**. More jobs waiting are
 listed under the pointer.
 
 ### Music recognition
 
 Right-click the notch and choose **Recognize Music**. Glance requests microphone
 permission at that point and uses ShazamKit to identify the song. ShazamKit
-sends an audio signature to Shazam. Open the activity to see it in one row:
-Shazam's mark at the left end, or the song's cover once it's found, which opens
-it in Music; what's happening beside the camera and what to do under it; and
-round buttons at the right end. **Cancel** ends listening; a match, no-match or
-failure stays until **Done**. Opening or closing the notch never starts a
-recognition session by itself.
+sends an audio signature to Shazam. Beside the camera, Shazam's mark sits at the
+left and the ring at the right, going round while Glance listens. Open the
+activity to see it in one row: Shazam's mark at the left end, or the song's
+cover once it's found, which opens it in Music; what's happening beside the
+camera and what to do under it; and at the right end the ring, with the square
+inside it that cancels listening.
+
+Once it's over, the ring shows how it ended: a check for a song found, an
+exclamation mark when none was found or Glance couldn't listen, and the square
+if you canceled. The ring is then **Done**, with **Try Again** or **Microphone
+Settings** before it when they apply. A match, no-match or failure stays until
+**Done**. Opening or closing the notch never starts a recognition session by
+itself.
 
 Recognition needs a network connection and ShazamKit authorization for this
 build. If that authorization is missing, Glance explains that recognition is
@@ -730,10 +743,14 @@ Center remain separate.
 
 Right-click the notch and choose **Run Shortcut**, then a shortcut. The submenu
 also lists runs already started in Glance; choosing one opens that run without
-starting it again. Open the activity to see it in one row: Shortcuts at the left
-end, which opens the app; the shortcut's name beside the camera and its state
-under it; **Stop** at the right end while it runs, and **Show Result** and
-**Done** once it's over. **Done** dismisses a finished run.
+starting it again. Beside the camera, Shortcuts' icon sits at the left and the
+ring at the right, going round while the shortcut runs. Open the activity to
+see it in one row: Shortcuts' icon at the left end, which opens the app; the
+shortcut's name beside the camera and its state under it; and at the right end
+the ring, with the square inside it: **Stop**. Once it's over, the ring shows
+how it ended, a check, an exclamation mark if it couldn't finish, or the square
+if you stopped it, and becomes **Done**, with **Show Result** before it.
+**Done** dismisses a finished run.
 
 Glance tracks its own launched processes, not runs started elsewhere. **Stop**
 is an interruption request, and the activity keeps showing that request until

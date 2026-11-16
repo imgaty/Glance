@@ -49,6 +49,38 @@ struct PrintActivityTests {
         #expect(PrintJob.selected(in: [job(state: .completed)], keeping: nil) == nil)
     }
 
+    @Test("A job that leaves the queue printed or failed shows how it ended until the next read; one canceled goes at once")
+    func endedJob() async {
+        var original = job()
+        original.progress = .init(completed: 2, total: 4)
+        let source = Source(jobs: [original])
+        let watch = PrintActivity(source: source, cancellationDelay: .zero)
+        await watch.refresh()
+        #expect(watch.shown.map(PrintJobGlyph.status(for:)) == .counting(0.5))
+        await source.setJobs([job(state: .completed)])
+        await watch.refresh()
+        #expect(watch.shown?.job.state == .completed)
+        #expect(watch.shown?.job.title == "Project notes")
+        #expect(watch.shown?.job.progress?.fraction == 1)
+        #expect(watch.shown.map(PrintJobGlyph.status(for:)) == .done)
+        await watch.refresh()
+        #expect(watch.shown == nil)
+
+        await source.setJobs([original])
+        await watch.refresh()
+        await source.setJobs([job(state: .failed)])
+        await watch.refresh()
+        #expect(watch.shown.map(PrintJobGlyph.status(for:))?.outcome == .failed)
+        await watch.refresh()
+        #expect(watch.shown == nil)
+
+        await source.setJobs([original])
+        await watch.refresh()
+        await source.setJobs([job(state: .canceled)])
+        await watch.refresh()
+        #expect(watch.shown == nil)
+    }
+
     @Test("Cancel revalidates the exact printer, job and creation time before reaching the writer")
     func staleCancellation() async {
         for replacement in [job(13), job(printer: "Other"), job(created: 200), job(state: .completed)] {
@@ -286,8 +318,7 @@ struct PrintActivityTests {
         shown.cancellation = .unconfirmed
         #expect(PrintJobView.controls(for: shown) == [.activityFirst, .activitySecond])
         #expect(shown.canRetryCancellation)
-        #expect(PrintJobGlyph.symbol(for: shown) == "questionmark.circle")
-        #expect(PrintJobGlyph.caption(for: shown) == "Unconfirmed")
+        #expect(PrintJobGlyph.word(for: shown) == "Unconfirmed")
         shown.job.state = .completed
         #expect(PrintJobView.controls(for: shown) == [.activityFirst])
         shown.sourceAvailable = false
