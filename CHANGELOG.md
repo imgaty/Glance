@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 14 November 2026`
+`Created: 11 October 2026` | `Last updated: 16 November 2026`
 
 <br>
 
@@ -9,6 +9,9 @@
 `Released: not yet`
 
 ### Live Activities
+
+- Fixed the `Work`, `Gaming` and `Mindfulness` Focus changes never showing, and
+  Focus symbols missing beside the camera.
 
 - Restored the original tool gestures, hover feedback, tray opening and closing,
   lyrics resizing and detached bubble motion. Tool switching remains available

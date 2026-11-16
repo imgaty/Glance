@@ -238,9 +238,8 @@ final class FocusWatch: @unchecked Sendable {
                             guard let self, AXIsProcessTrusted(),
                                 let change = FocusChange.read(
                                     snapshot, words: words,
-                                    symbolExists: {
-                                        NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil
-                                    }),
+                                    // Apple keeps some Focus symbols, like Work's, to itself.
+                                    symbolExists: SystemSymbol.exists),
                                 let callback = self.lock.withLock({ self.generation == version ? self.onChange : nil })
                             else { return }
                             callback(change)

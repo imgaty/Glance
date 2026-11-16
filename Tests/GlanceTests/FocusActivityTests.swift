@@ -25,6 +25,18 @@ struct FocusActivityTests {
         #expect(off.state == .off)
     }
 
+    /// Work's symbol, and Gaming's and Mindfulness's, are only in Apple's private list: asked for by
+    /// their public name they don't exist, and those Focus changes were dropped.
+    @Test("Focus modes with Apple's private symbols are read and drawn")
+    @MainActor
+    func privateSymbols() throws {
+        for symbol in ["person.lanyardcard.fill", "rocket.fill", "apple.mindfulness", "moon.fill"] {
+            #expect(SystemSymbol.exists(symbol), "\(symbol)")
+        }
+        #expect(!SystemSymbol.exists("not.a.symbol"))
+        #expect(FocusChange.read(snapshot(), words: english, symbolExists: SystemSymbol.exists) != nil)
+    }
+
     @Test("State parsing uses the native language, with no English or false-Off fallback")
     func localizedState() throws {
         let portuguese = try #require(FocusStateWords(on: "Ativado", off: "Desativado"))

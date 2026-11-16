@@ -787,8 +787,7 @@ struct ArrivingSymbol: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: size, weight: .semibold))
+        SystemSymbol.glyph(symbol, size: size)
             .foregroundStyle(color)
             .frame(width: side, height: side)
             .symbolEffect(.bounce, value: arrived && !reduceMotion)
