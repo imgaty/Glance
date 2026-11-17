@@ -78,10 +78,13 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
                         .font(NotchType.title)
                         .foregroundStyle(titleColor)
                         .frame(maxWidth: titleRoom, alignment: .leading)
-                    Text(detail)
-                        .font(NotchType.detail)
-                        .foregroundStyle(NotchType.detailColor)
-                        .frame(maxWidth: lineRoom, alignment: .leading)
+                    // A name alone, as Shortcuts' opened run, sits on the middle.
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(NotchType.detail)
+                            .foregroundStyle(NotchType.detailColor)
+                            .frame(maxWidth: lineRoom, alignment: .leading)
+                    }
                 }
                 .lineLimit(1)
                 .truncationMode(.tail)

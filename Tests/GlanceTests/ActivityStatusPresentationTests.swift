@@ -15,8 +15,10 @@ struct ActivityStatusPresentationTests {
         #expect(PrintJobGlyph.status(for: ActivityBench.printFixture()) == .counting(ActivityBench.printFixture().job.progress!.fraction))
         // Beside the camera the notch keeps one width however the task stands: no words to fit.
         let wing = TaskCompactMark<EmptyView>.wing(restingHeight: 32)
-        #expect(ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .running)), restingHeight: 32) == wing)
-        #expect(ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .failed)), restingHeight: 32) == wing)
+        // Shortcuts' own measures, the same however the run stands.
+        #expect(
+            ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .running)), restingHeight: 32)
+                == ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .failed)), restingHeight: 32))
         #expect(MusicRecognitionCompactView.wing(for: .noMatch, restingHeight: 32) == wing)
     }
 

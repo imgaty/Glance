@@ -8,20 +8,48 @@
 import AppKit
 import SwiftUI
 
-/// A shortcut running beside the camera, as Apple's progress activity: Shortcuts' icon at the left
-/// end, and at the right the ring, going round while it runs, or how it ended.
+/// A shortcut running, measured from iOS 27's Shortcuts in the Dynamic Island, by the island's
+/// height. Beside the camera, the shortcut's own icon at the left, in further from the end than
+/// from the top and bottom, and the ring in its color at the right. Opened, its icon laid flat as
+/// a diamond on a dark one, as Shortcuts' own layers, its name, and the ring.
+enum ShortcutRunLook {
+    static let icon: CGFloat = 0.636
+    static let iconEdge: CGFloat = 0.273
+    static let ring: CGFloat = 0.645
+    static let ringEdge: CGFloat = 0.2
+    /// Opened, by the opened height: the diamond's width as it shows, its height by its width, and
+    /// how far the dark one lies under it, by the opened height.
+    static let diamond: CGFloat = 0.55
+    static let flat: CGFloat = 0.8
+    static let under: CGFloat = 0.219
+    /// The dark one: the shortcut's color at a quarter, as the ring's track.
+    static let underShade: Double = 0.25
+}
+
+/// A shortcut running beside the camera: its icon at the left end, and at the right the ring in its
+/// color, filling as it goes, or how it ended.
 struct ShortcutRunMark: View {
     let shown: ShortcutShown
     let restingHeight: CGFloat
     var leadingOnly = false
 
-    static func wing(for shown: ShortcutShown, restingHeight: CGFloat) -> CGFloat {
-        TaskCompactMark<EmptyView>.wing(restingHeight: restingHeight)
+    static func wing(for shown: ShortcutShown, restingHeight h: CGFloat) -> CGFloat {
+        let gap = LiveActivityView.cameraGap
+        let left = h * (ShortcutRunLook.iconEdge + ShortcutRunLook.icon) + gap
+        let right = gap + h * (ShortcutRunLook.ring + ShortcutRunLook.ringEdge)
+        return max(left, right)
     }
 
     var body: some View {
-        TaskCompactMark(status: ShortcutRunGlyph.status(for: shown.run.state), restingHeight: restingHeight, leadingOnly: leadingOnly) {
-            TaskAppIcon(bundleID: ShortcutRunView.app, fallback: "square.2.layers.3d.fill", side: SystemActivityView.side(restingHeight))
+        let h = restingHeight
+        ZStack {
+            ShortcutTile(look: shown.look, side: h * ShortcutRunLook.icon)
+                .padding(.leading, h * ShortcutRunLook.iconEdge)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            TaskRing(status: ShortcutRunGlyph.status(for: shown.run.state), diameter: h * ShortcutRunLook.ring, tint: shown.look?.tint)
+                .padding(.trailing, h * ShortcutRunLook.ringEdge)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .islandFade(!leadingOnly)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(shown.spoken)
@@ -29,15 +57,70 @@ struct ShortcutRunMark: View {
     }
 }
 
-/// The run's ring, as beside the camera, alone in the bubble. It goes round only to say the run is
-/// going on; it doesn't pretend to know how far the shortcut has got.
+/// A shortcut's icon, as Shortcuts draws it: its rounded square in its color with its glyph. Without
+/// it, Shortcuts' layers on the shortcut's color, or faint white.
+struct ShortcutTile: View {
+    let look: ShortcutLook?
+    let side: CGFloat
+
+    var body: some View {
+        Group {
+            if let icon = look?.icon {
+                Image(nsImage: icon).resizable().interpolation(.high)
+            } else {
+                RoundedRectangle(cornerRadius: side * TaskAppIcon.corner, style: .continuous)
+                    .fill(look?.tint ?? .white.opacity(0.2))
+                    .overlay {
+                        Image(systemName: "square.2.layers.3d.fill")
+                            .font(.system(size: side * 0.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+            }
+        }
+        .frame(width: side, height: side)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The shortcut's icon opened, as the iPhone lays it: flat, as a diamond, on a dark copy of itself
+/// half a diamond lower, as Shortcuts' layers are drawn.
+struct ShortcutStack: View {
+    let look: ShortcutLook?
+    /// The opened height.
+    let height: CGFloat
+
+    var body: some View {
+        let width = height * ShortcutRunLook.diamond
+        // Its corners round off the diamond's points: the square that shows that wide across.
+        let side = width / (2.squareRoot() - 2 * TaskAppIcon.corner * (2.squareRoot() - 1))
+        let lower = height * ShortcutRunLook.under
+        ZStack {
+            RoundedRectangle(cornerRadius: side * TaskAppIcon.corner, style: .continuous)
+                .fill((look?.tint ?? .white).opacity(ShortcutRunLook.underShade))
+                .frame(width: side, height: side)
+                .rotationEffect(.degrees(45))
+                .scaleEffect(x: 1, y: ShortcutRunLook.flat)
+                .offset(y: lower / 2)
+            ShortcutTile(look: look, side: side)
+                .rotationEffect(.degrees(45))
+                .scaleEffect(x: 1, y: ShortcutRunLook.flat)
+                .offset(y: -lower / 2)
+        }
+        .frame(width: width, height: width * ShortcutRunLook.flat + lower)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The run's ring, as beside the camera, alone in the bubble.
 struct ShortcutRunGlyph: View {
     let state: ShortcutRun.State
+    var look: ShortcutLook? = nil
     var minimal = false
     var restingHeight: CGFloat = 32
 
-    /// Going round while it runs or stops; a check when it's done, an exclamation mark when it
-    /// couldn't finish, and the stop square when you stopped it.
+    /// Filling as it runs (Shortcuts' own runs tell how far they've got; one started from Glance
+    /// doesn't, so it goes round); a check when it's done, an exclamation mark when it couldn't
+    /// finish, and the stop square when you stopped it.
     static func status(for state: ShortcutRun.State) -> TaskStatus {
         switch state {
         case .starting, .running, .stopping, .stopDelayed: .working
@@ -47,28 +130,16 @@ struct ShortcutRunGlyph: View {
         }
     }
 
-    static func caption(for state: ShortcutRun.State) -> String {
-        switch state {
-        case .starting: String(localized: "Starting…")
-        case .running: String(localized: "Running")
-        case .stopping: String(localized: "Stopping…")
-        case .stopDelayed: String(localized: "Still Running")
-        case .completed: String(localized: "Complete")
-        case .stopped: String(localized: "Stopped")
-        case .endedAfterStop: String(localized: "Run Ended")
-        case .failed: String(localized: "Failed")
-        }
-    }
-
     var body: some View {
-        TaskRing(status: Self.status(for: state), diameter: restingHeight * TimerLayout.ring)
+        TaskRing(status: Self.status(for: state), diameter: restingHeight * TimerLayout.ring, tint: look?.tint)
     }
 }
 
-/// A shortcut run from Glance's menu, opened in one row, as Apple's progress activity: Shortcuts'
-/// icon at the left end, which opens it; the shortcut's name beside the camera and its state under
-/// it; at the right end the ring, with the square inside it that stops the run. Once it's over the
-/// ring shows how it ended and closes it, as Done, its result before it.
+/// A shortcut run from Glance's menu, opened, as the iPhone's: its icon laid flat at the left end,
+/// which opens Shortcuts; its name beside the camera; at the right end the ring in its color, with
+/// the square inside it that stops the run. Once it's over the ring turns white with how it ended,
+/// and the run goes by itself, unless it has a result to show or it failed; then the ring closes
+/// it, as Done, its result before it.
 struct ShortcutRunView: View {
     let shown: ShortcutShown
     let restingHeight: CGFloat
@@ -81,8 +152,6 @@ struct ShortcutRunView: View {
 
     /// Shortcuts, whose icon the run shows.
     static let app = "com.apple.shortcuts"
-
-    static func detail(for shown: ShortcutShown) -> String { ShortcutRunGlyph.caption(for: shown.run.state) }
 
     /// What the line has no room for: why it ended, or what to do while it runs.
     static func explanation(for shown: ShortcutShown) -> String {
@@ -104,7 +173,7 @@ struct ShortcutRunView: View {
 
     @MainActor
     static func width(for shown: ShortcutShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
-        ActivityRowLayout.width(title: shown.run.shortcut.name, detail: detail(for: shown), buttons: buttons(for: shown), restingHeight: h, camera: camera)
+        ActivityRowLayout.width(title: shown.run.shortcut.name, detail: "", buttons: buttons(for: shown), restingHeight: h, camera: camera)
     }
 
     static func height(restingHeight h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) }
@@ -119,12 +188,19 @@ struct ShortcutRunView: View {
         let h = restingHeight
         ActivityRow(
             restingHeight: h, camera: camera, width: Self.width(for: shown, restingHeight: h, camera: camera),
-            title: shown.run.shortcut.name, detail: Self.detail(for: shown), explanation: Self.explanation(for: shown),
+            title: shown.run.shortcut.name, detail: "", explanation: Self.explanation(for: shown),
             buttons: Self.buttons(for: shown), revealed: revealed
         ) {
-            TaskAppButton(
-                bundleID: Self.app, fallback: "square.2.layers.3d.fill", restingHeight: h, label: String(localized: "Open Shortcuts"), open: openShortcuts
-            )
+            Button(action: openShortcuts) {
+                ShortcutStack(look: shown.look, height: TimerLayout.tallHeight(h))
+                    .frame(width: TimerLayout.content(h), height: TimerLayout.content(h))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+            .notchControl()
+            .keyControl(.activityFirst, in: Rectangle(), outset: CGSize(width: 3, height: 3), spoken: String(localized: "Open Shortcuts"), action: openShortcuts)
+            .accessibilityLabel(String(localized: "Open Shortcuts"))
+            .help(String(localized: "Open Shortcuts"))
             .accessibilityIdentifier("open-shortcuts")
         } trailing: {
             let active = shown.run.state.active
@@ -142,7 +218,7 @@ struct ShortcutRunView: View {
                 label: active
                     ? (shown.run.state == .stopDelayed ? String(localized: "Try Stopping Again") : String(localized: "Stop Shortcut"))
                     : String(localized: "Done"),
-                held: shown.run.state == .stopping, action: active ? stop : dismiss
+                held: shown.run.state == .stopping, tint: shown.look?.tint, action: active ? stop : dismiss
             )
             .disabled(active && !shown.run.canStop)
             .accessibilityIdentifier(active ? "stop-shortcut" : "dismiss-shortcut")

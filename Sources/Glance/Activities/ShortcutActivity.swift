@@ -175,6 +175,10 @@ struct ShortcutRun: Identifiable, Equatable, Sendable {
     var message: String?
 
     var canStop: Bool { state == .running || state == .stopDelayed }
+    /// Over with nothing more to see: done with no result, or stopped.
+    var closesByItself: Bool {
+        (state == .completed && exit?.output == nil) || state == .stopped || state == .endedAfterStop
+    }
     var spoken: String { "\(shortcut.name), \(state.title)" }
 
     /// Entirely local presentation data for Settings and the isolated activity bench.
@@ -216,6 +220,8 @@ struct ShortcutRun: Identifiable, Equatable, Sendable {
 struct ShortcutShown: Equatable {
     var run: ShortcutRun
     var additionalRuns = 0
+    /// The shortcut's color and icon, once Shortcuts has given them.
+    var look: ShortcutLook? = nil
     var status: String { run.state.title }
     var spoken: String { run.spoken }
 }
@@ -328,11 +334,33 @@ final class ShortcutActivity: ObservableObject {
     private var selected: UUID?
     private var catalogCache: [ShortcutDefinition] = []
 
-    init(source: (any ShortcutRunning)? = nil, stopDelay: Duration = .seconds(8), isEnabled: @escaping () -> Bool = { true }) {
+    /// How long a run that's done, or that you stopped, shows how it ended before it goes, as the
+    /// iPhone's shortcut leaves the Dynamic Island once its check is in. One with a result stays,
+    /// to be shown; one that failed stays, to be read.
+    private let closeDelay: Duration
+    private var closing: [UUID: Task<Void, Never>] = [:]
+
+    init(
+        source: (any ShortcutRunning)? = nil, stopDelay: Duration = .seconds(8), closeDelay: Duration = .seconds(1.8),
+        isEnabled: @escaping () -> Bool = { true }
+    ) {
         self.source = source ?? ShortcutCLI()
         live = source == nil
         self.stopDelay = stopDelay
+        self.closeDelay = closeDelay
         self.isEnabled = isEnabled
+    }
+
+    /// Closes a run that's over by itself, if it should (see `closeDelay`).
+    private func closeLater(_ id: UUID) {
+        guard let run = runs.first(where: { $0.id == id }), run.closesByItself else { return }
+        closing[id]?.cancel()
+        closing[id] = Task { [weak self, closeDelay] in
+            try? await Task.sleep(for: closeDelay)
+            guard !Task.isCancelled, let self else { return }
+            closing[id] = nil
+            dismiss(id)
+        }
     }
 
     /// Display preferences never launch, cancel or forget an actual shortcut process.
@@ -396,6 +424,7 @@ final class ShortcutActivity: ObservableObject {
             runs[index].finish(.init(status: SIGINT, reason: .signal))
             benchActions.append("stop:\(id.uuidString)")
             publish()
+            closeLater(id)
             return
         }
         guard let handle = handles[id], handle.isRunning else { return }
@@ -428,6 +457,7 @@ final class ShortcutActivity: ObservableObject {
         if !simulated { run.exit?.storage?.discardEmptyResult() }
         runs.removeAll { $0.id == id }
         pendingStops.removeValue(forKey: id)?.cancel()
+        closing.removeValue(forKey: id)?.cancel()
         if selected == id { selected = nil }
         publish()
         if benched, runs.isEmpty { benchDismissed() }
@@ -487,6 +517,7 @@ final class ShortcutActivity: ObservableObject {
         handles.removeValue(forKey: id)
         pendingStops.removeValue(forKey: id)?.cancel()
         publish()
+        closeLater(id)
     }
 
     private func publish() {
@@ -498,7 +529,17 @@ final class ShortcutActivity: ObservableObject {
             selected.flatMap { id in runs.first { $0.id == id } }
             ?? runs.first(where: { $0.state.active }) ?? runs.last
         selected = run?.id
-        shown = run.map { ShortcutShown(run: $0, additionalRuns: max(0, runs.count - 1)) }
+        shown = run.map { ShortcutShown(run: $0, additionalRuns: max(0, runs.count - 1), look: look(for: $0.shortcut)) }
+    }
+
+    /// The shortcut's look: one of Shortcuts' colors on the bench, never asking Shortcuts; read from
+    /// Shortcuts for a real run, the notch updating once it's in.
+    private func look(for shortcut: ShortcutDefinition) -> ShortcutLook? {
+        if simulated { return .fixture }
+        guard live else { return nil }
+        if let look = ShortcutLooks.shared.look(for: shortcut.id) { return look }
+        ShortcutLooks.shared.load(shortcut.id) { [weak self] in self?.publish() }
+        return nil
     }
 }
 

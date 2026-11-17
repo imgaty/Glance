@@ -6,205 +6,205 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يغيّر Glance الترتيب العشوائي والتكرار والمفضلة ومستوى الصوت في الموسيقى وSpotify، ويعثر على علامة تبويب المتصفح التي تشغّل الصوت."
+            "value": "يغيّر Glance الترتيب العشوائي والتكرار والمفضلة ومستوى الصوت في الموسيقى وSpotify، ويعثر على علامة تبويب المتصفح التي تشغّل الصوت. ويقرأ أيضًا لون كل اختصار ورمزه من تطبيق الاختصارات."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Glance canvia l’aleatori, la repetició, els preferits i el volum a Música i Spotify, i troba la pestanya del navegador que reprodueix."
+            "value": "El Glance canvia l’aleatori, la repetició, els preferits i el volum a Música i Spotify, i troba la pestanya del navegador que reprodueix. També llegeix el color i la icona de cada drecera de l’app Dreceres."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance mění náhodné přehrávání, opakování, oblíbené a hlasitost v Hudbě a Spotify a najde panel prohlížeče, který hraje."
+            "value": "Glance mění náhodné přehrávání, opakování, oblíbené a hlasitost v Hudbě a Spotify a najde panel prohlížeče, který hraje. Také čte barvu a ikonu každé zkratky z aplikace Zkratky."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance ændrer bland, gentag, favoritter og lydstyrke i Musik og Spotify og finder den browserfane, der spiller."
+            "value": "Glance ændrer bland, gentag, favoritter og lydstyrke i Musik og Spotify og finder den browserfane, der spiller. Den læser også hver genvejs farve og symbol fra Genveje."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance ändert Zufallswiedergabe, Wiederholen, Favoriten und Lautstärke in Musik und Spotify und findet den Browser-Tab, der gerade spielt."
+            "value": "Glance ändert Zufallswiedergabe, Wiederholen, Favoriten und Lautstärke in Musik und Spotify und findet den Browser-Tab, der gerade spielt. Außerdem liest es Farbe und Symbol jedes Kurzbefehls aus der App „Kurzbefehle“."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το Glance αλλάζει την τυχαία σειρά, την επανάληψη, τα αγαπημένα και την ένταση στη Μουσική και στο Spotify, και βρίσκει την καρτέλα του προγράμματος περιήγησης που παίζει."
+            "value": "Το Glance αλλάζει την τυχαία σειρά, την επανάληψη, τα αγαπημένα και την ένταση στη Μουσική και στο Spotify, και βρίσκει την καρτέλα του προγράμματος περιήγησης που παίζει. Διαβάζει επίσης το χρώμα και το εικονίδιο κάθε συντόμευσης από τις Συντομεύσεις."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance cambia el modo aleatorio, la repetición, los favoritos y el volumen en Música y Spotify, y encuentra la pestaña del navegador que está reproduciendo."
+            "value": "Glance cambia el modo aleatorio, la repetición, los favoritos y el volumen en Música y Spotify, y encuentra la pestaña del navegador que está reproduciendo. También lee el color y el icono de cada atajo desde Atajos."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance muuttaa sekoitusta, toistoa, suosikkeja ja äänenvoimakkuutta Musiikissa ja Spotifyssa ja löytää soittavan selainvälilehden."
+            "value": "Glance muuttaa sekoitusta, toistoa, suosikkeja ja äänenvoimakkuutta Musiikissa ja Spotifyssa ja löytää soittavan selainvälilehden. Se lukee myös jokaisen pikakomennon värin ja kuvakkeen Pikakomennoista."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance modifie la lecture aléatoire, la répétition, les favoris et le volume dans Musique et Spotify, et trouve l’onglet du navigateur qui joue."
+            "value": "Glance modifie la lecture aléatoire, la répétition, les favoris et le volume dans Musique et Spotify, et trouve l’onglet du navigateur qui joue. Il lit aussi la couleur et l’icône de chaque raccourci dans Raccourcis."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance משנה ערבוב, חזרה, מועדפים ועוצמת קול במוזיקה וב-Spotify, ומוצא את כרטיסיית הדפדפן שמנגנת."
+            "value": "Glance משנה ערבוב, חזרה, מועדפים ועוצמת קול במוזיקה וב-Spotify, ומוצא את כרטיסיית הדפדפן שמנגנת. הוא גם קורא את הצבע והצלמית של כל קיצור מהיישום ״קיצורים״."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance संगीत और Spotify में शफ़ल, दोहराएँ, पसंदीदा और वॉल्यूम बदलता है, और चल रहा ब्राउज़र टैब ढूँढता है।"
+            "value": "Glance संगीत और Spotify में शफ़ल, दोहराएँ, पसंदीदा और वॉल्यूम बदलता है, और चल रहा ब्राउज़र टैब ढूँढता है। यह शॉर्टकट्स से हर शॉर्टकट का रंग और आइकन भी पढ़ता है।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance mijenja nasumičnu reprodukciju, ponavljanje, omiljene i glasnoću u Glazbi i Spotifyju te pronalazi karticu preglednika koja svira."
+            "value": "Glance mijenja nasumičnu reprodukciju, ponavljanje, omiljene i glasnoću u Glazbi i Spotifyju te pronalazi karticu preglednika koja svira. Također čita boju i ikonu svakog prečaca iz aplikacije Prečaci."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A Glance módosítja a véletlen sorrendet, az ismétlést, a kedvenceket és a hangerőt a Zene és a Spotify appban, és megtalálja a lejátszó böngészőlapot."
+            "value": "A Glance módosítja a véletlen sorrendet, az ismétlést, a kedvenceket és a hangerőt a Zene és a Spotify appban, és megtalálja a lejátszó böngészőlapot. Emellett beolvassa minden parancs színét és ikonját a Parancsok appból."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance mengubah acak, ulangi, favorit, dan volume di Musik dan Spotify, serta menemukan tab browser yang sedang memutar."
+            "value": "Glance mengubah acak, ulangi, favorit, dan volume di Musik dan Spotify, serta menemukan tab browser yang sedang memutar. Glance juga membaca warna dan ikon setiap pintasan dari Pintasan."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance cambia riproduzione casuale, ripetizione, preferiti e volume in Musica e Spotify, e trova il pannello del browser in riproduzione."
+            "value": "Glance cambia riproduzione casuale, ripetizione, preferiti e volume in Musica e Spotify, e trova il pannello del browser in riproduzione. Legge anche il colore e l’icona di ogni comando rapido da Comandi Rapidi."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "GlanceはミュージックとSpotifyのシャッフル、リピート、お気に入り、音量を変更し、再生中のブラウザのタブを見つけます。"
+            "value": "GlanceはミュージックとSpotifyのシャッフル、リピート、お気に入り、音量を変更し、再生中のブラウザのタブを見つけます。また、ショートカットから各ショートカットの色とアイコンを読み取ります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance는 음악 및 Spotify의 임의 재생, 반복, 즐겨찾기, 음량을 변경하고 재생 중인 브라우저 탭을 찾습니다."
+            "value": "Glance는 음악 및 Spotify의 임의 재생, 반복, 즐겨찾기, 음량을 변경하고 재생 중인 브라우저 탭을 찾습니다. 또한 단축어 앱에서 각 단축어의 색상과 아이콘을 읽습니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance menukar kocok, ulang, kegemaran dan kelantangan dalam Muzik dan Spotify, dan mencari tab pelayar yang sedang dimainkan."
+            "value": "Glance menukar kocok, ulang, kegemaran dan kelantangan dalam Muzik dan Spotify, dan mencari tab pelayar yang sedang dimainkan. Ia juga membaca warna dan ikon setiap pintasan daripada Pintasan."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance endrer tilfeldig rekkefølge, gjenta, favoritter og volum i Musikk og Spotify, og finner nettleserfanen som spiller."
+            "value": "Glance endrer tilfeldig rekkefølge, gjenta, favoritter og volum i Musikk og Spotify, og finner nettleserfanen som spiller. Den leser også fargen og symbolet til hver snarvei fra Snarveier."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance wijzigt willekeurig, herhalen, favorieten en volume in Muziek en Spotify, en vindt het browsertabblad dat afspeelt."
+            "value": "Glance wijzigt willekeurig, herhalen, favorieten en volume in Muziek en Spotify, en vindt het browsertabblad dat afspeelt. Het leest ook de kleur en het symbool van elke opdracht uit Opdrachten."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance zmienia losowanie, powtarzanie, ulubione i głośność w Muzyce i Spotify oraz znajduje kartę przeglądarki, w której gra dźwięk."
+            "value": "Glance zmienia losowanie, powtarzanie, ulubione i głośność w Muzyce i Spotify oraz znajduje kartę przeglądarki, w której gra dźwięk. Odczytuje też kolor i ikonę każdego skrótu z aplikacji Skróty."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Glance altera o aleatório, a repetição, os favoritos e o volume no Música e no Spotify, e encontra a aba do navegador que está tocando."
+            "value": "O Glance altera o aleatório, a repetição, os favoritos e o volume no Música e no Spotify, e encontra a aba do navegador que está tocando. Ele também lê a cor e o ícone de cada atalho no app Atalhos."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Glance altera o aleatório, a repetição, os favoritos e o volume na Música e no Spotify, e encontra o separador do navegador que está a reproduzir."
+            "value": "O Glance altera o aleatório, a repetição, os favoritos e o volume na Música e no Spotify, e encontra o separador do navegador que está a reproduzir. Também lê a cor e o ícone de cada atalho na app Atalhos."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance schimbă amestecarea, repetarea, favoritele și volumul în Muzică și Spotify și găsește fila browserului care redă."
+            "value": "Glance schimbă amestecarea, repetarea, favoritele și volumul în Muzică și Spotify și găsește fila browserului care redă. De asemenea, citește culoarea și pictograma fiecărei scurtături din Scurtături."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance меняет перемешивание, повтор, избранное и громкость в Музыке и Spotify и находит вкладку браузера, где идёт воспроизведение."
+            "value": "Glance меняет перемешивание, повтор, избранное и громкость в Музыке и Spotify и находит вкладку браузера, где идёт воспроизведение. Также оно считывает цвет и значок каждой быстрой команды из приложения «Быстрые команды»."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance mení náhodné prehrávanie, opakovanie, obľúbené a hlasitosť v Hudbe a Spotify a nájde panel prehliadača, ktorý hrá."
+            "value": "Glance mení náhodné prehrávanie, opakovanie, obľúbené a hlasitosť v Hudbe a Spotify a nájde panel prehliadača, ktorý hrá. Tiež číta farbu a ikonu každej skratky z aplikácie Skratky."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance spreminja naključno predvajanje, ponavljanje, priljubljene in glasnost v aplikacijah Glasba in Spotify ter najde zavihek brskalnika, ki predvaja."
+            "value": "Glance spreminja naključno predvajanje, ponavljanje, priljubljene in glasnost v aplikacijah Glasba in Spotify ter najde zavihek brskalnika, ki predvaja. Prebere tudi barvo in ikono vsake bližnjice iz aplikacije Bližnjice."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance ändrar blandning, upprepning, favoriter och volym i Musik och Spotify, och hittar webbläsarfliken som spelar."
+            "value": "Glance ändrar blandning, upprepning, favoriter och volym i Musik och Spotify, och hittar webbläsarfliken som spelar. Den läser också varje genvägs färg och symbol från Genvägar."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance เปลี่ยนการสุ่ม การเล่นซ้ำ รายการโปรด และระดับเสียงในเพลงและ Spotify และค้นหาแถบเบราว์เซอร์ที่กำลังเล่น"
+            "value": "Glance เปลี่ยนการสุ่ม การเล่นซ้ำ รายการโปรด และระดับเสียงในเพลงและ Spotify และค้นหาแถบเบราว์เซอร์ที่กำลังเล่น และยังอ่านสีและไอคอนของคำสั่งลัดแต่ละรายการจากแอปคำสั่งลัด"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance, Müzik ve Spotify’da karıştırma, tekrarlama, sık kullanılanlar ve sesi değiştirir, çalan tarayıcı sekmesini bulur."
+            "value": "Glance, Müzik ve Spotify’da karıştırma, tekrarlama, sık kullanılanlar ve sesi değiştirir, çalan tarayıcı sekmesini bulur. Ayrıca her kestirmenin rengini ve simgesini Kestirmeler’den okur."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance змінює перемішування, повтор, вподобання і гучність у Музиці та Spotify і знаходить вкладку браузера, де йде відтворення."
+            "value": "Glance змінює перемішування, повтор, вподобання і гучність у Музиці та Spotify і знаходить вкладку браузера, де йде відтворення. Також він зчитує колір і значок кожної швидкої команди з програми «Швидкі команди»."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance thay đổi trộn bài, lặp lại, yêu thích và âm lượng trong Nhạc và Spotify, đồng thời tìm tab trình duyệt đang phát."
+            "value": "Glance thay đổi trộn bài, lặp lại, yêu thích và âm lượng trong Nhạc và Spotify, đồng thời tìm tab trình duyệt đang phát. Glance cũng đọc màu và biểu tượng của từng phím tắt từ ứng dụng Phím tắt."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance 可更改音乐和 Spotify 中的随机播放、重复、个人收藏和音量，并查找正在播放的浏览器标签页。"
+            "value": "Glance 可更改音乐和 Spotify 中的随机播放、重复、个人收藏和音量，并查找正在播放的浏览器标签页。它还会从“快捷指令”读取每个快捷指令的颜色和图标。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glance 可更改音樂和 Spotify 中的隨機播放、重複、喜好項目和音量，並尋找正在播放的瀏覽器標籤頁。"
+            "value": "Glance 可更改音樂和 Spotify 中的隨機播放、重複、喜好項目和音量，並尋找正在播放的瀏覽器標籤頁。它也會從「捷徑」讀取每個捷徑的顏色和圖像。"
           }
         }
       }

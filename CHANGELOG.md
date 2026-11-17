@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 16 November 2026`
+`Created: 11 October 2026` | `Last updated: 17 November 2026`
 
 <br>
 
@@ -28,12 +28,16 @@
   name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps
   its color.
 
-- Rebuilt printing, music recognition and shortcuts as the iPhone shows a task
-  an app finishes in the background: the app's icon beside the camera with a
-  ring that fills or goes round, and opened, one row as the timer opens, the
-  ring at its end with a square inside it to stop the task. A check springs in
-  when it's done and an exclamation mark when it fails, and a printed job shows
-  its check before it goes.
+- Rebuilt printing and music recognition as the iPhone shows a task an app
+  finishes in the background: the app's icon beside the camera with a ring that
+  fills or goes round, and opened, one row as the timer opens, the ring at its
+  end with a square inside it to stop the task. A check springs in when it's
+  done and an exclamation mark when it fails, and a printed job shows its check
+  before it goes.
+
+- Changed shortcuts started from Glance to show as the iPhone shows a shortcut
+  running: its own icon beside the camera with a ring in its color, the icon
+  laid flat when opened, and a white check before the run closes by itself.
 
 - Added every word of alarms, printing, music recognition, shortcuts and Focus
   in all 34 languages.

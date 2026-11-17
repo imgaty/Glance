@@ -53,6 +53,24 @@ struct ShortcutActivityTests {
         #expect(throws: ShortcutError.self) { try ShortcutDefinition.catalog("Name (not-a-uuid)") }
     }
 
+    @Test("A run done with nothing to show, or stopped, closes by itself after its check; a failure stays")
+    func closesByItself() async throws {
+        let source = Source()
+        let activity = ShortcutActivity(source: source, closeDelay: .milliseconds(80))
+        let done = activity.run(definition)
+        let failed = activity.run(definition)
+        let stopped = activity.run(definition)
+        source.finish(0)
+        source.finish(1, status: 1)
+        activity.stop(stopped)
+        source.finish(2, status: SIGINT, reason: .signal)
+        #expect(activity.runs.first { $0.id == done }?.state == .completed)
+        #expect(activity.runs.first { $0.id == stopped }?.state == .stopped)
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(activity.runs.map(\.id) == [failed])
+        #expect(activity.runs.first?.state == .failed)
+    }
+
     @Test("Concurrent runs of the same shortcut stop only the captured run")
     func exactRunCancellation() {
         let source = Source()

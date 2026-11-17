@@ -42,8 +42,10 @@ enum TaskRingLook {
     static let openLine: CGFloat = 0.0965
     static let overLine: CGFloat = 0.0781
     static let openOverLine: CGFloat = 0.0567
-    /// The track, white at a fifth, as Apple's.
+    /// The track, white at a fifth, as Apple's; in a task's own color, that color at a quarter,
+    /// as Shortcuts' ring measured in iOS 27's simulator.
     static let track: Double = 0.2
+    static let tintedTrack: Double = 0.25
     /// The arc going round: most of a turn, once every two seconds.
     static let arc: CGFloat = 0.78
     static let turn: TimeInterval = 2
@@ -96,6 +98,10 @@ struct TaskRing: View {
     let diameter: CGFloat
     var opened = false
     var pressed = false
+    /// The task's own color, as Shortcuts gives each shortcut's: the ring, the arc and the square
+    /// in it, the track the color at a quarter. Once over, white, as Apple's turns. Without it,
+    /// white on a white track at a fifth.
+    var tint: Color? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -105,17 +111,20 @@ struct TaskRing: View {
         let ring = 2 * d * look.radius
         let fill = status.outcome == .done ? 1 : status.fraction ?? 0
         let settle = reduceMotion ? nil : look.settle
+        let ink = status.over ? Color.white : tint ?? .white
+        let track = tint.map { $0.opacity(look.tintedTrack) } ?? .white.opacity(look.track)
         ZStack {
             ZStack {
-                Circle().stroke(.white.opacity(look.track), lineWidth: line)
+                Circle().stroke(track, lineWidth: line)
                     .opacity(status.spinning ? 0 : 1)
                 Circle()
                     .trim(from: 0, to: max(min(fill, 1), 0))
-                    .stroke(.white, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                    .stroke(ink, style: StrokeStyle(lineWidth: line, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .opacity(status.spinning ? 0 : 1)
                     .animation(reduceMotion ? nil : .linear(duration: 0.15), value: fill)
-                TaskSpinner(line: line, shown: status.spinning)
+                    .animation(settle, value: status.over)
+                TaskSpinner(line: line, shown: status.spinning, ink: ink)
             }
             .frame(width: ring, height: ring)
             .animation(settle, value: line)
@@ -123,7 +132,7 @@ struct TaskRing: View {
             .opacity(pressed ? look.pressedRingOpacity : 1)
             let square = opened && !(status.outcome == .done || status.outcome == .failed) || status.outcome == .stopped
             RoundedRectangle(cornerRadius: d * look.stopCorner, style: .continuous)
-                .fill(.white)
+                .fill(status.outcome == .stopped ? .white : tint ?? .white)
                 .frame(width: d * look.stop, height: d * look.stop)
                 .scaleEffect(pressed && !reduceMotion ? look.pressedStop : 1)
                 .opacity(pressed ? look.pressedStopOpacity : 1)
@@ -143,6 +152,7 @@ struct TaskRing: View {
 private struct TaskSpinner: View {
     let line: CGFloat
     let shown: Bool
+    var ink: Color = .white
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -151,7 +161,7 @@ private struct TaskSpinner: View {
             let angle = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: turn) / turn * 360
             Circle()
                 .trim(from: 0, to: TaskRingLook.arc)
-                .stroke(.white, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                .stroke(ink, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(180 + angle))
         }
         .opacity(shown ? 1 : 0)
@@ -242,12 +252,13 @@ struct TaskRingButton: View {
     /// Held pressed while what pressing it asked for is under way, as stopping.
     var held = false
     var interactive = true
+    var tint: Color? = nil
     let action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) { Color.clear }
-            .buttonStyle(TaskRingPress(status: status, side: TimerLayout.content(height), hovering: hovering, held: held))
+            .buttonStyle(TaskRingPress(status: status, side: TimerLayout.content(height), hovering: hovering, held: held, tint: tint))
             .onHover { hovering = $0 }
             .notchControl()
             .keyControl(control, outset: CGSize(width: 3, height: 3), spoken: label, action: action)
@@ -264,9 +275,10 @@ private struct TaskRingPress: ButtonStyle {
     let side: CGFloat
     let hovering: Bool
     let held: Bool
+    let tint: Color?
 
     func makeBody(configuration: Configuration) -> some View {
-        TaskRingPressBody(status: status, side: side, hovering: hovering, pressed: configuration.isPressed || held)
+        TaskRingPressBody(status: status, side: side, hovering: hovering, pressed: configuration.isPressed || held, tint: tint)
     }
 }
 
@@ -275,10 +287,11 @@ private struct TaskRingPressBody: View {
     let side: CGFloat
     let hovering: Bool
     let pressed: Bool
+    let tint: Color?
     @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        TaskRing(status: status, diameter: side, opened: true, pressed: pressed)
+        TaskRing(status: status, diameter: side, opened: true, pressed: pressed, tint: tint)
             .background(Circle().fill(.white.opacity(enabled && hovering ? 0.08 : 0)).animation(.easeOut(duration: 0.15), value: hovering))
             .contentShape(Circle())
     }

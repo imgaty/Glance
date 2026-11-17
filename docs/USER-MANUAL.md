@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 16 November 2026`
+`Created: 11 October 2026` | `Last updated: 17 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -743,14 +743,18 @@ Center remain separate.
 
 Right-click the notch and choose **Run Shortcut**, then a shortcut. The submenu
 also lists runs already started in Glance; choosing one opens that run without
-starting it again. Beside the camera, Shortcuts' icon sits at the left and the
-ring at the right, going round while the shortcut runs. Open the activity to
-see it in one row: Shortcuts' icon at the left end, which opens the app; the
-shortcut's name beside the camera and its state under it; and at the right end
-the ring, with the square inside it: **Stop**. Once it's over, the ring shows
-how it ended, a check, an exclamation mark if it couldn't finish, or the square
-if you stopped it, and becomes **Done**, with **Show Result** before it.
-**Done** dismisses a finished run.
+starting it again. A run shows as the iPhone shows a shortcut running: beside
+the camera, the shortcut's own icon at the left and a ring in its color at the
+right, going round while it runs. Open the activity to see the icon laid flat at
+the left end, which opens Shortcuts, the shortcut's name beside the camera, and
+at the right end the ring, with the square inside it: **Stop**.
+
+When the shortcut finishes, the ring turns white with a check and the activity
+closes by itself a moment later; one you stopped closes the same way. A run that
+couldn't finish shows an exclamation mark and stays, as does one with a result:
+the ring then becomes **Done**, with **Show Result** before it. The first time,
+macOS asks to let Glance control `Shortcuts Events`, which gives each shortcut's
+icon and color. Without it, runs show in white with Shortcuts' layers.
 
 Glance tracks its own launched processes, not runs started elsewhere. **Stop**
 is an interruption request, and the activity keeps showing that request until
@@ -1082,6 +1086,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Automation` for `Music` | The shuffle, repeat, favorite and volume controls, and showing the song in its playlist when the cover is clicked |
 | `Automation` for `Spotify` | The shuffle, repeat and volume controls, and reading the song link as a fallback when the cover is clicked |
 | `Automation` for your browser | Switching to the tab that's playing when the cover is clicked (`Safari`, `Chrome`, `Brave`, `Edge` and `Vivaldi`) |
+| `Automation` for `Shortcuts Events` | Showing each shortcut's own icon and color while it runs |
 | `Power control` | Optional, one-time administrator approval for the signed helper that turns Low Power Mode on and off with the battery button. It does not change other power settings |
 | `Accessibility` | Opening the current song in its source in `Spotify`; repeating one song there, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
 | `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |

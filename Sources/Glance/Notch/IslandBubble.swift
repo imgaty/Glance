@@ -128,7 +128,7 @@ struct IslandBubble: View {
                         } else if let keptPrint {
                             PrintJobGlyph(shown: keptPrint, minimal: true, restingHeight: h)
                         } else if let keptShortcut {
-                            ShortcutRunGlyph(state: keptShortcut.run.state, minimal: true, restingHeight: h)
+                            ShortcutRunGlyph(state: keptShortcut.run.state, look: keptShortcut.look, minimal: true, restingHeight: h)
                         } else if let keptRecognition {
                             MusicRecognitionCompactView(state: keptRecognition, minimal: true, restingHeight: h)
                         } else if keptRoute != nil {
