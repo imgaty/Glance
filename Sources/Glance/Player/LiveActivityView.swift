@@ -28,9 +28,15 @@ struct LiveActivityView: View {
     /// much, and their padding with them, so they stay as far from its ends as from its top and
     /// bottom.
     var swell: CGFloat = 1
-    /// Above, below and in from the ends of the artwork and the waveform.
-    /// than a notch, so they're about as big there. Both sit in squares of the same size.
+    /// Above, below and in from the ends of what other activities show beside the camera.
     static let inset: CGFloat = 6
+
+    /// iOS 27's island Now Playing (`MRUActivityNowPlayingView`), by the island's height, 36.67
+    /// points: the cover a 23-point square 9 in from its end, centered; the waveform's 22-point box 9
+    /// in from the other end.
+    static func coverSide(_ h: CGFloat) -> CGFloat { h * 23 / 36.67 }
+    static func waveformSide(_ h: CGFloat) -> CGFloat { h * 22 / 36.67 }
+    static func musicEdge(_ h: CGFloat) -> CGFloat { h * 9 / 36.67 }
 
     /// The least between what the wings show and the camera housing, both black: as near as can be
     /// without anything going under it.
@@ -49,9 +55,9 @@ struct LiveActivityView: View {
     /// How far in from a wing's end its words sit: as far as above and below their line.
     static func textEdge(restingHeight h: CGFloat) -> CGFloat { concentric(lineHeight(textSize(for: h)), in: h) }
 
-    /// Each wing at rest with music: the artwork's square, in from the end as far as from the top
-    /// and bottom, and up to the camera.
-    static func restingWing(restingHeight h: CGFloat) -> CGFloat { h - inset + cameraGap }
+    /// Each wing at rest with music: the cover and the waveform where iOS 27 puts them, up to the
+    /// camera.
+    static func restingWing(restingHeight h: CGFloat) -> CGFloat { musicEdge(h) + max(coverSide(h), waveformSide(h)) + cameraGap }
     /// Between the artwork and the title.
     static let textGap: CGFloat = 8
 
@@ -66,8 +72,7 @@ struct LiveActivityView: View {
             // A point to spare, so rounding never sets a title that fits scrolling.
             ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 2
         }
-        let side = restingHeight - inset * 2
-        let left = inset + side + textGap + width(title, .semibold) + cameraGap
+        let left = musicEdge(restingHeight) + coverSide(restingHeight) + textGap + width(title, .semibold) + cameraGap
         let right = cameraGap + width(artist, .medium) + textEdge(restingHeight: restingHeight)
         return min(max(left, right, restingHeight), NotchModel.maxPopWing)
     }
@@ -81,8 +86,9 @@ struct LiveActivityView: View {
     @State private var popChanges = 0
 
     var body: some View {
-        let edge = Self.inset * swell
-        let side = (restingHeight - Self.inset * 2) * swell
+        let edge = Self.musicEdge(restingHeight) * swell
+        let side = Self.coverSide(restingHeight) * swell
+        let waveform = Self.waveformSide(restingHeight) * swell
         let popLeaving = popKept && !pop
         let words = pop || popKept
         let lane = popLeaving ? max(popLane, wing - edge - Self.cameraGap, side) : max(wing - edge - Self.cameraGap, side)
@@ -111,7 +117,7 @@ struct LiveActivityView: View {
             ZStack(alignment: .trailing) {
                 // The waveform's room.
                 Color.clear
-                    .frame(width: side, height: side)
+                    .frame(width: waveform, height: waveform)
                     .padding(.trailing, edge)
                 if words {
                     MarqueeText(text: nowPlaying.artist, font: .system(size: size, weight: .medium), active: true, alignment: .trailing)

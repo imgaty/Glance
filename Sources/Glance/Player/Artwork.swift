@@ -213,8 +213,9 @@ private struct PressReporting: ButtonStyle {
 /// A rounded square whose corners follow its size: the closed notch's radius when small, the
 /// player's when large, and in between while it flies.
 struct ArtworkShape: Shape {
-    /// The artwork's corner radius in the closed notch, for its side.
-    static let restingRadius: CGFloat = 0.3
+    /// The artwork's corner radius in the closed notch, for its side: iOS 27's island cover, style 7,
+    /// rounds a 23-point square by 5.5 (`MRUArtworkCornerRadius`).
+    static let restingRadius: CGFloat = 5.5 / 23
 
     var small: CGFloat
     var smallRadius: CGFloat

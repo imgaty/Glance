@@ -1087,7 +1087,7 @@ struct NotchView: View {
             .accessibilityHidden(true, isEnabled: !trayShown)
             restingPlaces(m, swell: swell)
             // Its corners round as the notch's do, swollen or not.
-            HeroArtwork(isOpen: heroOpen, restingSide: (closed.height - LiveActivityView.inset * 2) * swell)
+            HeroArtwork(isOpen: heroOpen, restingSide: LiveActivityView.coverSide(closed.height) * swell)
                 .matchedGeometryEffect(id: heroOpen || model.second == .music ? Hero.openArtwork : Hero.liveArtwork, in: hero, isSource: false)
                 .offset(x: model.nudge)
                 // There open, or in the closed notch while something plays, coming and going as the
@@ -1373,14 +1373,15 @@ struct NotchView: View {
         }
     }
 
-    /// Where the cover and the waveform rest in the closed notch: at its ends, as far in from them as
-    /// from its top and bottom (see `LiveActivityView`). Laid out at the size the notch is going to,
+    /// Where the cover and the waveform rest in the closed notch: at its ends, where iOS 27 puts them
+    /// (see `LiveActivityView`). Laid out at the size the notch is going to,
     /// rather than at each step of its animation, so closing, they fly straight there, shrinking as
     /// the notch does, inside it all the way and never past the camera, rather than chasing its ends.
     private func restingPlaces(_ m: NotchMetrics, swell: CGFloat) -> some View {
         let h = model.closedSize.height
-        let side = (h - LiveActivityView.inset * 2) * swell
-        let edge = LiveActivityView.inset * swell
+        let side = LiveActivityView.coverSide(h) * swell
+        let waveform = LiveActivityView.waveformSide(h) * swell
+        let edge = LiveActivityView.musicEdge(h) * swell
         return ZStack(alignment: .topLeading) {
             Color.clear
                 .frame(width: side, height: side)
@@ -1388,9 +1389,9 @@ struct NotchView: View {
                 .position(
                     x: m.flare + edge + side / 2, y: m.height / 2)
             Color.clear
-                .frame(width: side, height: side)
+                .frame(width: waveform, height: waveform)
                 .matchedGeometryEffect(id: Hero.liveWaveform, in: hero)
-                .position(x: m.flare + m.bodyWidth - edge - side / 2, y: m.height / 2)
+                .position(x: m.flare + m.bodyWidth - edge - waveform / 2, y: m.height / 2)
         }
         .frame(width: m.totalWidth, height: m.height)
         .allowsHitTesting(false)

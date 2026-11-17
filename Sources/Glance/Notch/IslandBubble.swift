@@ -97,7 +97,7 @@ struct IslandBubble: View {
                     case nil:
                         if keptMusic {
                             // As the cover beside the camera: its size, its corners, dimmed while paused.
-                            let side = h - LiveActivityView.inset * 2
+                            let side = LiveActivityView.coverSide(h)
                             Group {
                                 if let keptArtwork {
                                     Image(nsImage: keptArtwork).resizable().aspectRatio(contentMode: .fill)
