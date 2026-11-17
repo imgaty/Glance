@@ -636,7 +636,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded == .recognition && recognition != nil:
                 (
                     MusicRecognitionActivityView.width(for: recognition!, restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
-                    MusicRecognitionActivityView.height(restingHeight: closedSize.height) + pull
+                    MusicRecognitionActivityView.height(for: recognition!, restingHeight: closedSize.height) + pull
                 )
             case .open where expanded.flatMap(recording(of:)) != nil:
                 (
@@ -1367,8 +1367,7 @@ struct NotchView: View {
                 shown: shortcut, restingHeight: model.closedSize.height, camera: model.camera, revealed: visible,
                 stop: { if !activityPreview { ShortcutActivity.shared.stop(shortcut.run.id) } },
                 dismiss: { if !activityPreview { ShortcutActivity.shared.dismiss(shortcut.run.id) } },
-                openShortcuts: { if !activityPreview { ShortcutActivity.shared.openShortcuts() } },
-                showResult: { if !activityPreview { ShortcutActivity.shared.showResult(shortcut.run.id) } }
+                openShortcuts: { if !activityPreview { ShortcutActivity.shared.openShortcuts() } }
             )
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)

@@ -42,10 +42,10 @@ enum TaskRingLook {
     static let openLine: CGFloat = 0.0965
     static let overLine: CGFloat = 0.0781
     static let openOverLine: CGFloat = 0.0567
-    /// The track, white at a fifth, as Apple's; in a task's own color, that color at a quarter,
-    /// as Shortcuts' ring measured in iOS 27's simulator.
+    /// The track, white at a fifth, as Apple's; in a task's own color, that color at 36.5%, as
+    /// Shortcuts' ring measured in iOS 27's simulator, where it stays under the arc going round.
     static let track: Double = 0.2
-    static let tintedTrack: Double = 0.25
+    static let tintedTrack: Double = 0.365
     /// The arc going round: most of a turn, once every two seconds.
     static let arc: CGFloat = 0.78
     static let turn: TimeInterval = 2
@@ -99,8 +99,8 @@ struct TaskRing: View {
     var opened = false
     var pressed = false
     /// The task's own color, as Shortcuts gives each shortcut's: the ring, the arc and the square
-    /// in it, the track the color at a quarter. Once over, white, as Apple's turns. Without it,
-    /// white on a white track at a fifth.
+    /// in it, the track the color at 36.5%, kept under the arc going round. Once over, white, as
+    /// Apple's turns. Without it, white on a white track at a fifth, the track gone while it spins.
     var tint: Color? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -116,7 +116,7 @@ struct TaskRing: View {
         ZStack {
             ZStack {
                 Circle().stroke(track, lineWidth: line)
-                    .opacity(status.spinning ? 0 : 1)
+                    .opacity(status.spinning && tint == nil ? 0 : 1)
                 Circle()
                     .trim(from: 0, to: max(min(fill, 1), 0))
                     .stroke(ink, style: StrokeStyle(lineWidth: line, lineCap: .round))
@@ -253,12 +253,14 @@ struct TaskRingButton: View {
     var held = false
     var interactive = true
     var tint: Color? = nil
+    /// Its own size, as the activity's row measures it, in place of the Timer's buttons'.
+    var side: CGFloat? = nil
     let action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) { Color.clear }
-            .buttonStyle(TaskRingPress(status: status, side: TimerLayout.content(height), hovering: hovering, held: held, tint: tint))
+            .buttonStyle(TaskRingPress(status: status, side: side ?? TimerLayout.content(height), hovering: hovering, held: held, tint: tint))
             .onHover { hovering = $0 }
             .notchControl()
             .keyControl(control, outset: CGSize(width: 3, height: 3), spoken: label, action: action)

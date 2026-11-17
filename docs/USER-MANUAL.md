@@ -731,10 +731,12 @@ at the right end the ring, with the square inside it: **Stop**.
 
 When the shortcut finishes, the ring turns white with a check and the activity
 closes by itself a moment later; one you stopped closes the same way. A run that
-couldn't finish shows an exclamation mark and stays, as does one with a result:
-the ring then becomes **Done**, with **Show Result** before it. The first time,
-macOS asks to let Glance control `Shortcuts Events`, which gives each shortcut's
-icon and color. Without it, runs show in white with Shortcuts' layers.
+couldn't finish shows an exclamation mark and stays until **Done**. One with a
+result leaves the notch too, but stays in the **Run Shortcut** menu: choose it
+there, then **Show Result**, or **Show Activity** to open it again. The first
+time, macOS asks to let Glance control `Shortcuts Events`, which gives each
+shortcut's icon and color. Without it, runs show in white with Shortcuts'
+layers.
 
 Glance tracks its own launched processes, not runs started elsewhere. **Stop**
 is an interruption request, and the activity keeps showing that request until

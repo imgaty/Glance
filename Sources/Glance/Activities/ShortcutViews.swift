@@ -72,7 +72,7 @@ struct ShortcutTile: View {
                     .fill(look?.tint ?? .white.opacity(0.2))
                     .overlay {
                         Image(systemName: "square.2.layers.3d.fill")
-                            .font(.system(size: side * 0.5, weight: .semibold))
+                            .font(.system(size: side * 0.62, weight: .semibold))
                             .foregroundStyle(.white)
                     }
             }
@@ -148,7 +148,6 @@ struct ShortcutRunView: View {
     var stop: () -> Void = {}
     var dismiss: () -> Void = {}
     var openShortcuts: () -> Void = {}
-    var showResult: () -> Void = {}
 
     /// Shortcuts, whose icon the run shows.
     static let app = "com.apple.shortcuts"
@@ -167,33 +166,28 @@ struct ShortcutRunView: View {
         return lines.joined(separator: "\n")
     }
 
-    private static func buttons(for shown: ShortcutShown) -> Int {
-        shown.run.state.active ? 1 : (shown.run.exit?.output != nil ? 2 : 1)
-    }
-
     @MainActor
     static func width(for shown: ShortcutShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
-        ActivityRowLayout.width(title: shown.run.shortcut.name, detail: "", buttons: buttons(for: shown), restingHeight: h, camera: camera)
+        ActivityRowLayout.width(title: shown.run.shortcut.name, detail: "", buttons: 1, metrics: .shortcut(h), restingHeight: h, camera: camera)
     }
 
-    static func height(restingHeight h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) }
+    static func height(restingHeight h: CGFloat) -> CGFloat { ActivityRowMetrics.shortcut(h).height }
 
-    /// In the order they stand: Shortcuts at the left, then the result, then Stop or Done.
+    /// In the order they stand: Shortcuts at the left, then Stop, or Done once it's over.
     static func controls(for shown: ShortcutShown) -> [PlayerControl] {
-        [.activityFirst] + (shown.run.exit?.output != nil ? [.activityThird] : [])
-            + (shown.run.canStop || !shown.run.state.active ? [.activitySecond] : [])
+        [.activityFirst] + (shown.run.canStop || !shown.run.state.active ? [.activitySecond] : [])
     }
 
     var body: some View {
         let h = restingHeight
+        let metrics = ActivityRowMetrics.shortcut(h)
         ActivityRow(
-            restingHeight: h, camera: camera, width: Self.width(for: shown, restingHeight: h, camera: camera),
-            title: shown.run.shortcut.name, detail: "", explanation: Self.explanation(for: shown),
-            buttons: Self.buttons(for: shown), revealed: revealed
+            restingHeight: h, camera: camera, width: Self.width(for: shown, restingHeight: h, camera: camera), metrics: metrics,
+            title: shown.run.shortcut.name, detail: "", explanation: Self.explanation(for: shown), buttons: 1, revealed: revealed
         ) {
             Button(action: openShortcuts) {
-                ShortcutStack(look: shown.look, height: TimerLayout.tallHeight(h))
-                    .frame(width: TimerLayout.content(h), height: TimerLayout.content(h))
+                ShortcutStack(look: shown.look, height: metrics.height)
+                    .frame(width: metrics.pictureSide, height: metrics.pictureSide)
                     .contentShape(Rectangle())
             }
             .buttonStyle(IslandPress(highlight: false, contactSize: nil))
@@ -204,21 +198,13 @@ struct ShortcutRunView: View {
             .accessibilityIdentifier("open-shortcuts")
         } trailing: {
             let active = shown.run.state.active
-            if !active, shown.run.exit?.output != nil {
-                IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Show Result"), action: showResult) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.system(size: h * 0.55, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .accessibilityIdentifier("show-shortcut-result")
-            }
             // One ring all the way: Stop while it runs, Done once it's over.
             TaskRingButton(
                 status: ShortcutRunGlyph.status(for: shown.run.state), control: .activitySecond, height: h,
                 label: active
                     ? (shown.run.state == .stopDelayed ? String(localized: "Try Stopping Again") : String(localized: "Stop Shortcut"))
                     : String(localized: "Done"),
-                held: shown.run.state == .stopping, tint: shown.look?.tint, action: active ? stop : dismiss
+                held: shown.run.state == .stopping, tint: shown.look?.tint, side: metrics.buttonSide, action: active ? stop : dismiss
             )
             .disabled(active && !shown.run.canStop)
             .accessibilityIdentifier(active ? "stop-shortcut" : "dismiss-shortcut")

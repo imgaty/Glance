@@ -26,7 +26,7 @@ struct ActivityStatusPresentationTests {
         let finished = ShortcutShown(run: .fixture(state: .completed))
         let detailed = ShortcutShown(run: .fixture(state: .failed), additionalRuns: 1)
         // One row as tall as the Timer's either way; what doesn't fit is said under the pointer.
-        #expect(ShortcutRunView.height(restingHeight: 32) == TimerLayout.tallHeight(32))
+        #expect(ShortcutRunView.height(restingHeight: 32) == ActivityRowMetrics.shortcut(32).height)
         #expect(ShortcutRunView.explanation(for: detailed).count > ShortcutRunView.explanation(for: finished).count)
     }
 

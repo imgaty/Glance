@@ -175,10 +175,9 @@ struct ShortcutRun: Identifiable, Equatable, Sendable {
     var message: String?
 
     var canStop: Bool { state == .running || state == .stopDelayed }
-    /// Over with nothing more to see: done with no result, or stopped.
-    var closesByItself: Bool {
-        (state == .completed && exit?.output == nil) || state == .stopped || state == .endedAfterStop
-    }
+    /// Over with nothing more to see in the notch: done, its result in the Run Shortcut menu, or
+    /// stopped. One that failed stays, to be read.
+    var closesByItself: Bool { state == .completed || state == .stopped || state == .endedAfterStop }
     var spoken: String { "\(shortcut.name), \(state.title)" }
 
     /// Entirely local presentation data for Settings and the isolated activity bench.
@@ -335,10 +334,13 @@ final class ShortcutActivity: ObservableObject {
     private var catalogCache: [ShortcutDefinition] = []
 
     /// How long a run that's done, or that you stopped, shows how it ended before it goes, as the
-    /// iPhone's shortcut leaves the Dynamic Island once its check is in. One with a result stays,
-    /// to be shown; one that failed stays, to be read.
+    /// iPhone's shortcut leaves the Dynamic Island once its check is in. One that failed stays, to
+    /// be read.
     private let closeDelay: Duration
     private var closing: [UUID: Task<Void, Never>] = [:]
+    /// Done with a result: gone from the notch, but kept in the Run Shortcut menu with Show Result
+    /// until Done, or shown again from there.
+    private var putAway: Set<UUID> = []
 
     init(
         source: (any ShortcutRunning)? = nil, stopDelay: Duration = .seconds(8), closeDelay: Duration = .seconds(1.8),
@@ -359,7 +361,13 @@ final class ShortcutActivity: ObservableObject {
             try? await Task.sleep(for: closeDelay)
             guard !Task.isCancelled, let self else { return }
             closing[id] = nil
-            dismiss(id)
+            if runs.first(where: { $0.id == id })?.exit?.output != nil {
+                putAway.insert(id)
+                if selected == id { selected = nil }
+                publish()
+            } else {
+                dismiss(id)
+            }
         }
     }
 
@@ -447,6 +455,7 @@ final class ShortcutActivity: ObservableObject {
 
     func select(_ id: UUID) {
         guard runs.contains(where: { $0.id == id }) else { return }
+        putAway.remove(id)
         selected = id
         publish()
     }
@@ -456,6 +465,7 @@ final class ShortcutActivity: ObservableObject {
         guard let run = runs.first(where: { $0.id == id }), !run.state.active else { return }
         if !simulated { run.exit?.storage?.discardEmptyResult() }
         runs.removeAll { $0.id == id }
+        putAway.remove(id)
         pendingStops.removeValue(forKey: id)?.cancel()
         closing.removeValue(forKey: id)?.cancel()
         if selected == id { selected = nil }
@@ -525,11 +535,12 @@ final class ShortcutActivity: ObservableObject {
             shown = nil
             return
         }
+        let showing = runs.filter { !putAway.contains($0.id) }
         let run =
-            selected.flatMap { id in runs.first { $0.id == id } }
-            ?? runs.first(where: { $0.state.active }) ?? runs.last
+            selected.flatMap { id in showing.first { $0.id == id } }
+            ?? showing.first(where: { $0.state.active }) ?? showing.last
         selected = run?.id
-        shown = run.map { ShortcutShown(run: $0, additionalRuns: max(0, runs.count - 1), look: look(for: $0.shortcut)) }
+        shown = run.map { ShortcutShown(run: $0, additionalRuns: max(0, showing.count - 1), look: look(for: $0.shortcut)) }
     }
 
     /// The shortcut's look: one of Shortcuts' colors on the bench, never asking Shortcuts; read from

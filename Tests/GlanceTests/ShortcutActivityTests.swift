@@ -36,9 +36,9 @@ struct ShortcutActivityTests {
             handles.append(handle)
             return handle
         }
-        func finish(_ index: Int, status: Int32 = 0, reason: ShortcutExit.Reason = .exit) {
+        func finish(_ index: Int, status: Int32 = 0, reason: ShortcutExit.Reason = .exit, output: URL? = nil) {
             handles[index].isRunning = false
-            completions[index](.init(status: status, reason: reason))
+            completions[index](.init(status: status, reason: reason, output: output))
         }
     }
 
@@ -69,6 +69,23 @@ struct ShortcutActivityTests {
         try await Task.sleep(for: .milliseconds(400))
         #expect(activity.runs.map(\.id) == [failed])
         #expect(activity.runs.first?.state == .failed)
+    }
+
+    @Test("A run done with a result leaves the notch by itself but stays in the menu until Done")
+    func resultStaysInMenu() async throws {
+        let source = Source()
+        let activity = ShortcutActivity(source: source, closeDelay: .milliseconds(80))
+        let done = activity.run(definition)
+        source.finish(0, output: URL(fileURLWithPath: "/glance-test/Result"))
+        #expect(activity.shown?.run.id == done)
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(activity.shown == nil)
+        #expect(activity.runs.map(\.id) == [done])
+        // Shown again from the menu, it stays; Done takes it away.
+        activity.select(done)
+        #expect(activity.shown?.run.id == done)
+        activity.dismiss(done)
+        #expect(activity.runs.isEmpty && activity.shown == nil)
     }
 
     @Test("Concurrent runs of the same shortcut stop only the captured run")
@@ -293,7 +310,7 @@ struct ShortcutActivityTests {
         #expect(ShortcutRunView.controls(for: shown(.running)) == [.activityFirst, .activitySecond])
         #expect(ShortcutRunView.controls(for: shown(.stopping)) == [.activityFirst])
         #expect(ShortcutRunView.controls(for: shown(.stopDelayed)) == [.activityFirst, .activitySecond])
-        #expect(ShortcutRunView.controls(for: shown(.completed, output: true)) == [.activityFirst, .activityThird, .activitySecond])
+        #expect(ShortcutRunView.controls(for: shown(.completed, output: true)) == [.activityFirst, .activitySecond])
         #expect(ShortcutRunView.controls(for: shown(.failed)) == [.activityFirst, .activitySecond])
     }
 

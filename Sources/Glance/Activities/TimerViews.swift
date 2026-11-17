@@ -777,9 +777,12 @@ struct CrossGlyph: View {
     let height: CGFloat
     /// White, or a color of the activity's own, as Music Recognition's blue.
     var color: Color = .white
+    /// Its own size and line, as measured on another activity, in place of the Timer's.
+    var size: CGFloat? = nil
+    var weight: CGFloat? = nil
 
     var body: some View {
-        let side = height * TimerLayout.cross, line = height * TimerLayout.crossLine
+        let side = size ?? height * TimerLayout.cross, line = weight ?? height * TimerLayout.crossLine
         Path { path in
             let a = line / 2, b = side - line / 2
             path.move(to: CGPoint(x: a, y: a))
