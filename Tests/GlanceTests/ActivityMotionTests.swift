@@ -22,7 +22,6 @@ struct ActivityMotionTests {
         case .timer: model.timer = .paused(left: 75, total: 120)
         case .stopwatch: model.stopwatch = .stopped(elapsed: 31)
         case .airdrop: model.airdrop = AirDropShown(id: "motion-transfer", sender: "Alex", preview: nil, fraction: 0.3)
-        case .airplay: model.airplay = AirPlayRoute(name: "Fixture Speaker", symbol: "hifispeaker", outputID: 41)
         case .call: model.call = CallShown(name: "Alex", over: "Phone", phase: .connected(since: start))
         case .screenRecording: model.screenRecording = .recording(since: start)
         case .voiceMemo: model.voiceMemo = .recording(since: start)
@@ -279,7 +278,7 @@ struct ActivityMotionTests {
         install(.call, in: model)
         install(.voiceMemo, in: model)
         install(.screenRecording, in: model)
-        install(.airplay, in: model)
+        install(.stopwatch, in: model)
         let initial = model.activityTransitionID
         model.changeActivityPresentation {
             model.airdrop?.fraction = 0.4
@@ -287,7 +286,7 @@ struct ActivityMotionTests {
             model.call?.phase = .connected(since: start + 1)
             model.voiceMemo = .recording(since: start + 1)
             model.screenRecording = .recording(since: start + 1)
-            model.airplay?.stopFailed = true
+            model.stopwatch = .stopped(elapsed: 32)
         }
         #expect(model.activityTransitionID == initial)
         #expect(!model.activityFolded)

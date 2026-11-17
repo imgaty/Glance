@@ -194,12 +194,6 @@
   progress on the current transfer stays in place.
   Outgoing progress no longer claims success before macOS confirms delivery.
   With Reduce Motion, the progress ring updates without sweeping.
-- Added AirPlay destinations, with **Stop AirPlay** to return sound to its
-  previous output.
-  Stop checks that the same AirPlay route is still selected and is unavailable
-  when no local output can receive the sound.
-  A failed change keeps the destination visible and offers **Try Again**.
-  When there is no return destination, **No Local Output** stays readable.
 - Added screen recordings and Voice Memos, with elapsed time and a stop
   button. A saved screen recording opens from its preview and joins the tray.
   Hiding native Live Activities no longer disables screen recording's native

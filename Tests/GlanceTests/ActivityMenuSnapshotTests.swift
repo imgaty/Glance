@@ -26,7 +26,6 @@ struct ActivityMenuSnapshotTests {
             model.airdrop = AirDropShown(id: "transfer-\(variant)", sender: "Alex", preview: nil, fraction: 0.2)
         case .timer: model.timer = .running(until: start + 300 + offset, total: 300)
         case .stopwatch: model.stopwatch = .running(since: start + offset)
-        case .airplay: model.airplay = AirPlayRoute(name: "Speaker \(variant)", symbol: "homepod", outputID: UInt32(variant + 1))
         case .recognition:
             model.recognitionIdentity = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", variant + 1))
             model.recognition = .recognizing
@@ -46,7 +45,6 @@ struct ActivityMenuSnapshotTests {
         case .airdrop: model.airdrop = nil
         case .timer: model.timer = nil
         case .stopwatch: model.stopwatch = nil
-        case .airplay: model.airplay = nil
         case .alarm: model.alarm = nil
         case .shortcut: model.shortcut = nil
         case .recognition:
@@ -109,23 +107,16 @@ struct ActivityMenuSnapshotTests {
         #expect(hidden.isEmpty)
     }
 
-    @Test("Progress and action-availability updates keep the same transfer and route hideable")
+    @Test("Progress and action-availability updates keep the same transfer hideable")
     func continuingTransfers() throws {
-        for activity in [NotchModel.Activity.airdrop, .airplay] {
-            let model = model(), player = NowPlaying(followsPlayers: false)
-            seed(activity, in: model, player: player)
-            var hidden: [NotchController.PutAwayTarget] = []
-            let command = try #require(NotchController.putAwayCommand(model: model, nowPlaying: player) { hidden.append($0) })
-            if activity == .airdrop {
-                model.airdrop?.fraction = 0.8
-                model.airdrop?.canStop = false
-            } else {
-                model.airplay?.stopFailed = true
-                model.airplay?.canStop = false
-            }
-            command.action()
-            #expect(hidden == [.activity(activity)])
-        }
+        let model = model(), player = NowPlaying(followsPlayers: false)
+        seed(.airdrop, in: model, player: player)
+        var hidden: [NotchController.PutAwayTarget] = []
+        let command = try #require(NotchController.putAwayCommand(model: model, nowPlaying: player) { hidden.append($0) })
+        model.airdrop?.fraction = 0.8
+        model.airdrop?.canStop = false
+        command.action()
+        #expect(hidden == [.activity(.airdrop)])
     }
 
     @Test("A new announcement of the same kind does not inherit Hide")

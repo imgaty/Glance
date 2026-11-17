@@ -30,7 +30,7 @@ struct ActivityDismissalTests {
         #expect(
             NotchController.putAwayTarget(
                 state: .open, page: .player, expanded: nil,
-                alert: .lowBattery, first: .airplay, hasMedia: false) == nil)
+                alert: .lowBattery, first: .stopwatch, hasMedia: false) == nil)
     }
 
     @Test("Closed and peeking menus target their visible announcement or first activity", arguments: [NotchState.closed, .peek])
@@ -42,7 +42,7 @@ struct ActivityDismissalTests {
         #expect(
             NotchController.putAwayTarget(
                 state: state, page: .player, expanded: .airdrop,
-                alert: nil, first: .airplay, hasMedia: true) == .activity(.airplay))
+                alert: nil, first: .stopwatch, hasMedia: true) == .activity(.stopwatch))
         #expect(
             NotchController.putAwayTarget(
                 state: state, page: .player, expanded: nil,

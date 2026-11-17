@@ -194,10 +194,6 @@ final class NotchModel: ObservableObject {
     @Published var timerWing: CGFloat = 0
     /// The timer's label, as named in Clock.
     @Published var timerName: String?
-    /// The speaker or TV the sound plays on over AirPlay (see `AirPlayWatch`).
-    @Published var airplay: AirPlayRoute? {
-        didSet { arrived(.airplay, airplay != nil) }
-    }
     /// A call, ringing or going on.
     @Published var call: CallShown? {
         didSet { arrived(.call, call != nil) }
@@ -301,13 +297,13 @@ final class NotchModel: ObservableObject {
     @Published var pressedAlertButton: AlertButton?
 
     /// Opened to an activity's own view, as the Dynamic Island expands one, rather than to the
-    /// player: AirDrop, the timer, the stopwatch, or AirPlay.
+    /// player: AirDrop, the timer, the stopwatch, or an alarm.
     @Published var expanded: Activity?
 
     /// What can show at once: a call, the screen being recorded, a voice memo being recorded, music, a
-    /// file coming in over AirDrop, Clock's timer, its stopwatch, AirPlay.
+    /// file coming in over AirDrop, Clock's timer, its stopwatch, an alarm, Music Recognition, a shortcut.
     enum Activity: String, Hashable, CaseIterable {
-        case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, airplay, recognition, alarm, shortcut
+        case call, screenRecording, voiceMemo, music, airdrop, timer, stopwatch, recognition, alarm, shortcut
     }
 
     /// When each one going on started, in turn: as on the iPhone, they take the notch first come,
@@ -368,7 +364,7 @@ final class NotchModel: ObservableObject {
         UserDefaults.standard.set(order, forKey: Self.orderKey)
     }
 
-    /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop, AirPlay. Music's
+    /// Swiped away, each until it changes: Clock's timer or stopwatch, AirDrop. Music's
     /// goes with `activity`.
     @Published var dismissed: Set<Activity> = []
 
@@ -383,7 +379,6 @@ final class NotchModel: ObservableObject {
         if airdrop != nil { shown.append(.airdrop) }
         if timer != nil { shown.append(.timer) }
         if stopwatch != nil { shown.append(.stopwatch) }
-        if airplay != nil { shown.append(.airplay) }
         if alarm != nil { shown.append(.alarm) }
         if recognition != nil { shown.append(.recognition) }
         if shortcut != nil { shown.append(.shortcut) }
@@ -421,7 +416,7 @@ final class NotchModel: ObservableObject {
     /// An activity's timer or stopwatch, if it's one.
     func clock(of activity: Activity) -> ClockShown? {
         switch activity {
-        case .call, .screenRecording, .voiceMemo, .music, .airdrop, .airplay, .recognition, .alarm, .shortcut: nil
+        case .call, .screenRecording, .voiceMemo, .music, .airdrop, .recognition, .alarm, .shortcut: nil
         case .timer: timer.map(ClockShown.timer)
         case .stopwatch: stopwatch.map(ClockShown.stopwatch)
         }
@@ -481,12 +476,11 @@ final class NotchModel: ObservableObject {
 
     /// The timer or stopwatch opened to, and the room the camera takes in the middle of its row.
     var expandedClock: ClockShown? { expanded.flatMap(clock(of:)) }
-    /// What the notch was opened to has gone: the timer ended, the stopwatch was reset, or the sound
-    /// left AirPlay.
+    /// What the notch was opened to has gone: the timer ended, the stopwatch was reset, or the call
+    /// ended.
     var expandedGone: Bool {
         switch expanded {
         case .timer, .stopwatch: expandedClock == nil
-        case .airplay: airplay == nil
         case .alarm: alarm == nil
         case .recognition: recognition == nil
         case .shortcut: shortcut == nil
@@ -507,7 +501,6 @@ final class NotchModel: ObservableObject {
         case .music: String(localized: "Music")
         case .timer: timerName ?? String(localized: "Timer")
         case .stopwatch: String(localized: "Stopwatch")
-        case .airplay: "AirPlay"
         case .airdrop: "AirDrop"
         case .alarm: alarm?.alarm.title ?? String(localized: "Alarm")
         case .recognition: String(localized: "Music Recognition")
@@ -560,8 +553,8 @@ final class NotchModel: ObservableObject {
         if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
         if let recording = activities.first.flatMap(recording(of:)) { return RecordingLook.wing(for: recording, restingHeight: closedSize.height) }
         if activity, pop { return max(popWing, resting) }
-        // A timer or the stopwatch with the notch. AirPlay's symbols take the cover's squares. A
-        // timer with another activity detached keeps its time beside its ring, squeezed.
+        // A timer or the stopwatch with the notch. A timer with another activity detached keeps its
+        // time beside its ring, squeezed.
         if case .timer(let timer)? = notchClock, detached != nil {
             return max(SystemActivityView.squeezedWing(for: timer, restingHeight: closedSize.height), resting)
         }
@@ -616,12 +609,6 @@ final class NotchModel: ObservableObject {
                         for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height, closedWidth: closedSize.width)
                         + pull * 0.35 + across,
                     ExpandedCallView.height(for: call ?? CallShown(name: "", over: "", phase: .ringing), restingHeight: closedSize.height) + pull
-                )
-            case .open where expanded == .airplay:
-                (
-                    ExpandedAirPlayView.width(for: airplay ?? AirPlayRoute(name: "", symbol: ""), restingHeight: closedSize.height)
-                        + pull * 0.35 + across,
-                    AirPlayLayout.height(closedSize.height) + pull
                 )
             case .open where expanded == .alarm && alarm != nil:
                 (
@@ -999,7 +986,6 @@ struct NotchView: View {
             SystemActivityView(
                 restingHeight: closed.height, closedWidth: closed.width, wing: model.wing, alert: model.folded ? nil : model.alert,
                 clock: model.musicShown || model.folded ? nil : model.notchClock,
-                route: model.activities.first == .airplay && !model.folded ? model.airplay : nil,
                 airdrop: model.activities.first == .airdrop && !model.folded ? model.airdrop : nil,
                 alarm: model.activities.first == .alarm && !model.folded ? model.alarm : nil,
                 ringingAlarm: model.alarm,
@@ -1035,7 +1021,6 @@ struct NotchView: View {
                 .animation(isOpen ? .easeOut(duration: 0.1) : .easeOut(duration: 0.1).delay(0.2)) { $0.opacity(isOpen ? 0 : 1) }
             Group {
                 expandedTimer(shown: expandedShown)
-                expandedAirPlay(shown: expandedShown)
                 expandedCall(shown: expandedShown)
                 expandedAirDrop(shown: expandedShown)
                 expandedRecording(shown: expandedShown)
@@ -1235,7 +1220,6 @@ struct NotchView: View {
         let runsIn = model.state == .open && model.bubbleMerged && !model.openedFromBubble
         return IslandBubble(
             shown: activity != nil && !model.bubbleMerged && !model.activityFolded, clock: activity.flatMap(model.clock(of:)),
-            route: activity == .airplay ? model.airplay : nil,
             airdrop: activity == .airdrop ? model.airdrop : nil,
             alarm: activity == .alarm ? model.alarm : nil,
             recognition: activity == .recognition ? model.recognition : nil,
@@ -1300,22 +1284,6 @@ struct NotchView: View {
                 revealed: visible, closedWidth: grownOrigin(.call)
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.call))
-            .environment(\.notchControls, visible && !activityPreview)
-            .allowsHitTesting(places == nil && visible)
-            .accessibilityHidden(!visible)
-            .transition(IslandMotion.fade)
-        }
-    }
-
-    @ViewBuilder private func expandedAirPlay(shown: Bool) -> some View {
-        if let route = model.airplay {
-            let h = model.closedSize.height
-            let visible = shown && model.expanded == .airplay
-            ExpandedAirPlayView(
-                route: route, restingHeight: h, width: ExpandedAirPlayView.width(for: route, restingHeight: h),
-                revealed: visible, closedWidth: grownOrigin(.airplay)
-            )
-            .environment(\.activityBubbleCenter, bubbleOrigin(.airplay))
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)

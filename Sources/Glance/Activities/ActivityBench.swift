@@ -20,7 +20,7 @@ final class ActivityBench {
 
     enum Scene: String, CaseIterable {
         case focus
-        case music, airdrop, airdropSend, timer, stopwatch, airplay, call, charging, lowBattery, headphones, deviceBattery, caseBattery
+        case music, airdrop, airdropSend, timer, stopwatch, call, charging, lowBattery, headphones, deviceBattery, caseBattery
         /// A call in one state, held for the round: coming in, swiped away while it rings, going out,
         /// going on, with someone whose name is too long and for over an hour, with a number, in an app
         /// that says nothing about it, and with nothing read from macOS's popup.
@@ -67,7 +67,6 @@ final class ActivityBench {
             case .airdropReal: "Real Files, Nothing Made Up"
             case .timer: "Timer"
             case .stopwatch: "Stopwatch"
-            case .airplay: "AirPlay"
             case .shortcut: "Running Shortcut"
             case .shortcutStarting: "Starting Shortcut"
             case .shortcutStopping: "Stopping Shortcut"
@@ -107,7 +106,6 @@ final class ActivityBench {
             ("Music", [.music]),
             ("AirDrop", [.airdrop, .airdropSend, .airdropReal]),
             ("Clock", [.timer, .stopwatch, .alarm, .alarmNoSnooze, .alarmUnavailable, .alarmPending, .alarmFailed]),
-            ("AirPlay", [.airplay]),
             (
                 "Music Recognition",
                 [
@@ -214,7 +212,6 @@ final class ActivityBench {
         case .airdropSend: await airDrop(sending: true)
         case .timer: await timer()
         case .stopwatch: await stopwatch()
-        case .airplay: await airPlay()
         case .recognition, .recognitionPermission, .recognitionMatch, .recognitionNoMatch, .recognitionDenied, .recognitionRestricted, .recognitionOffline, .recognitionFailed, .recognitionCancelled:
             await recognition(scene)
         case .shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent:
@@ -425,19 +422,6 @@ final class ActivityBench {
     /// A made-up call's Accept was pressed.
     func answered() {
         callAnswered = true
-    }
-
-    private func airPlay() async {
-        let watch = AirPlayWatch.shared
-        var index = 0
-        while !Task.isCancelled {
-            let name = ["HomePod", "Living Room TV", "Kitchen", "MacBook Pro"][index % 4]
-            watch.bench(AirPlayRoute(name: name, symbol: AirPlayRoute.symbol(for: name)))
-            await round(of: .airplay)
-            watch.bench(nil)
-            index += 1
-            await wait(Self.rest)
-        }
     }
 
     private func recognition(_ scene: Scene) async {

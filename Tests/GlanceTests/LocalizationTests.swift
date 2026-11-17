@@ -84,7 +84,7 @@ struct LocalizationTests {
     @Test("Names stay as they are")
     func names() throws {
         let catalog = try Self.catalog("Localizable")
-        for name in ["Glance", "AirDrop", "AirPlay", "Safari"] {
+        for name in ["Glance", "AirDrop", "Safari"] {
             #expect(catalog[name]?["shouldTranslate"] as? Bool == false)
         }
     }

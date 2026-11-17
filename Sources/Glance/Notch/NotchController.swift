@@ -115,7 +115,6 @@ final class NotchController {
     private var alertWatch: AnyCancellable?
     private var timerWatch: AnyCancellable?
     private var clockNameWatch: AnyCancellable?
-    private var airPlayWatch: AnyCancellable?
     private var callWatch: AnyCancellable?
     private var callMinutes: AnyCancellable?
     private var recordingWatch: AnyCancellable?
@@ -392,10 +391,6 @@ final class NotchController {
         clockNameWatch = ClockActivity.shared.$timerTitle.removeDuplicates().sink { [weak self] title in
             MainActor.assumeIsolated { self?.model.timerName = title }
         }
-        // The sound going to AirPlay (see `AirPlayWatch`).
-        airPlayWatch = AirPlayWatch.shared.$route.removeDuplicates().sink { [weak self] route in
-            MainActor.assumeIsolated { self?.show(airplay: route) }
-        }
         // A call (see `CallWatch`), refitting as its time gains a digit.
         callWatch = CallWatch.shared.$call.removeDuplicates().sink { [weak self] call in
             MainActor.assumeIsolated { self?.show(call: call) }
@@ -560,7 +555,7 @@ final class NotchController {
         returns.values.forEach { $0.cancel() }
         [
             playingWatch, titleWatch, settingsWatch, songWatch, alertWatch, timerWatch,
-            clockNameWatch, airPlayWatch, callWatch, callMinutes, recordingWatch, savedRecordingWatch,
+            clockNameWatch, callWatch, callMinutes, recordingWatch, savedRecordingWatch,
             airDropWatch, alarmWatch, recognitionWatch, shortcutWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
         ].forEach { $0?.cancel() }
         stopPolling()
@@ -822,16 +817,6 @@ final class NotchController {
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         if model.expanded == .alarm, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
-    }
-
-    /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it
-    /// leaves, the notch closes.
-    private func show(airplay route: AirPlayRoute?) {
-        model.changeActivityPresentation(animation: route == nil ? IslandMotion.fold : IslandMotion.open) {
-            if route != model.airplay { model.dismissed.remove(.airplay) }
-            model.airplay = route
-        }
-        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
     /// A recording started counting down, started, was paused, is being saved, or ended: its wings
@@ -1645,7 +1630,6 @@ final class NotchController {
         case .call:
             model.call.map { ExpandedCallView.controls(for: $0, microphoneAvailable: CallMicrophone.canMute, sourceAvailable: $0.sourceURL != nil) } ?? []
         case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
-        case .airplay: model.airplay?.canStop == true ? [.activityFirst] : []
         case .alarm: model.alarm.map(AlarmActivityView.controls(for:)) ?? []
         case .recognition: model.recognition.map(MusicRecognitionActivityView.controls(for:)) ?? []
         case .shortcut: model.shortcut.map(ShortcutRunView.controls(for:)) ?? []
@@ -2195,7 +2179,6 @@ final class NotchController {
             case airdrop(String)
             case timer(NotchTimer.State)
             case stopwatch(Stopwatch)
-            case airplay(output: UInt32?, name: String)
             case alarm(String)
             case recognition(UUID)
             case shortcut(UUID)
@@ -2224,7 +2207,6 @@ final class NotchController {
             case .airdrop: content = model.airdrop.map { .airdrop($0.id) }
             case .timer: content = model.timer.map(PutAwayIdentity.Content.timer)
             case .stopwatch: content = model.stopwatch.map(PutAwayIdentity.Content.stopwatch)
-            case .airplay: content = model.airplay.map { .airplay(output: $0.outputID, name: $0.name) }
             case .alarm: content = model.alarm.map { .alarm($0.alarm.id) }
             case .recognition: content = model.recognition == nil ? nil : model.recognitionIdentity.map(PutAwayIdentity.Content.recognition)
             case .shortcut: content = model.shortcut.map { .shortcut($0.run.id) }
@@ -2250,7 +2232,6 @@ final class NotchController {
         case .airdrop: return String(localized: "Hide AirDrop")
         case .timer: return String(localized: "Hide Timer")
         case .stopwatch: return String(localized: "Hide Stopwatch")
-        case .airplay: return String(localized: "Hide AirPlay")
         case .alarm: return String(localized: "Hide Alarm")
         case .recognition: return String(localized: "Hide Music Recognition")
         case .shortcut: return String(localized: "Hide Shortcut")
@@ -2274,8 +2255,8 @@ final class NotchController {
 
     /// A live activity swiped away, for a moment: still going, it comes back by itself after
     /// `swipedAway`, and sooner if it changes: music with the next song, or when it plays again; a
-    /// timer or the stopwatch when it's started, paused or ended; AirDrop with the next file;
-    /// AirPlay with the next speaker; a call when it's answered.
+    /// timer or the stopwatch when it's started, paused or ended; AirDrop with the next file; a call
+    /// when it's answered.
     private func dismiss(_ activity: NotchModel.Activity) {
         model.changeActivityPresentation(animation: IslandMotion.fold) {
             if activity == .music {

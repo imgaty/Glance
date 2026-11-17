@@ -7305,426 +7305,6 @@
         }
       }
     },
-    "AirPlay": {
-      "localizations": {},
-      "shouldTranslate": false
-    },
-    "AirPlay, output: %@": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay، الإخراج: %@"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, sortida: %@"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, výstup: %@"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, udgang: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, Ausgabe: %@"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, έξοδος: %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, salida: %@"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, ulostulo: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, sortie : %@"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, פלט: %@"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, आउटपुट: %@"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, izlaz: %@"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, kimenet: %@"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, output: %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, uscita: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay、出力: %@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, 출력: %@"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, output: %@"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, utgang: %@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, uitvoer: %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, wyjście: %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, saída: %@"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, saída: %@"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, ieșire: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, выход: %@"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, výstup: %@"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, izhod: %@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, utgång: %@"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, เอาต์พุต: %@"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, çıkış: %@"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, вихід: %@"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, đầu ra: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay，输出：%@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay，輸出：%@"
-          }
-        }
-      }
-    },
-    "AirPlay, playing on %@": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay، يتم التشغيل على %@"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, reproduint a %@"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, přehrává se na %@"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, afspiller på %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, Wiedergabe auf %@"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, αναπαραγωγή σε %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, reproduciendo en %@"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, toistetaan kohteessa %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, lecture sur %@"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, מנגן ב-%@"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, %@ पर चल रहा है"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, reproducira se na %@"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, lejátszás itt: %@"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, diputar di %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, in riproduzione su %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay、%@で再生中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, %@에서 재생 중"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, dimainkan pada %@"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, spiller på %@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, speelt af op %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, odtwarzanie na %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, reproduzindo em %@"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, a reproduzir em %@"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, redare pe %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, воспроизведение на %@"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, prehráva sa na %@"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, predvajanje na %@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, spelas på %@"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay กำลังเล่นบน %@"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, %@ üzerinde çalıyor"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, відтворення на %@"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay, đang phát trên %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隔空播放，正在 %@ 上播放"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay，正在 %@ 上播放"
-          }
-        }
-      }
-    },
     "Alarm": {
       "localizations": {
         "ar": {
@@ -23987,422 +23567,6 @@
         }
       }
     },
-    "Couldn't change output": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تعذر تغيير الإخراج"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No s’ha pogut canviar la sortida"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Výstup nelze změnit"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Udgangen kunne ikke ændres"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgabe nicht geändert"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Δεν ήταν δυνατή η αλλαγή εξόδου"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se ha podido cambiar la salida"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ulostuloa ei voitu vaihtaa"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible de changer de sortie"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "לא ניתן היה לשנות את הפלט"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "आउटपुट नहीं बदल सका"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Izlaz nije promijenjen"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nem sikerült módosítani a kimenetet"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak dapat mengubah output"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossibile cambiare l’uscita"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出力を変更できませんでした"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "출력을 변경할 수 없음"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak dapat menukar output"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunne ikke endre utgang"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan uitvoer niet wijzigen"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie można zmienić wyjścia"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível alterar a saída"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível alterar a saída"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nu s-a putut schimba ieșirea"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось изменить выход"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Výstup sa nepodarilo zmeniť"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Izhoda ni bilo mogoče spremeniti"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det gick inte att ändra utgång"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ไม่สามารถเปลี่ยนเอาต์พุตได้"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Çıkış değiştirilemedi"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не вдалося змінити вихід"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không thể thay đổi đầu ra"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法更改输出"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法更改輸出"
-          }
-        }
-      }
-    },
-    "Couldn't change output. Try stopping AirPlay again.": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تعذر تغيير الإخراج. حاول إيقاف AirPlay مرة أخرى."
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No s’ha pogut canviar la sortida. Torna a provar d’aturar l’AirPlay."
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Výstup nelze změnit. Zkuste AirPlay zastavit znovu."
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Udgangen kunne ikke ændres. Prøv at stoppe AirPlay igen."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgabe konnte nicht geändert werden. Versuche erneut, AirPlay zu stoppen."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Δεν ήταν δυνατή η αλλαγή εξόδου. Δοκιμάστε ξανά να διακόψετε το AirPlay."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se ha podido cambiar la salida. Intenta detener AirPlay de nuevo."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ulostuloa ei voitu vaihtaa. Yritä pysäyttää AirPlay uudelleen."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible de changer de sortie. Essayez à nouveau d’arrêter AirPlay."
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "לא ניתן היה לשנות את הפלט. יש לנסות לעצור את AirPlay שוב."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "आउटपुट नहीं बदल सका। AirPlay को फिर से रोकने की कोशिश करें।"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Izlaz nije bilo moguće promijeniti. Pokušajte ponovno zaustaviti AirPlay."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nem sikerült módosítani a kimenetet. Próbáld újra leállítani az AirPlayt."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak dapat mengubah output. Coba hentikan AirPlay lagi."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossibile cambiare l’uscita. Prova di nuovo a interrompere AirPlay."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出力を変更できませんでした。もう一度AirPlayを停止してみてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "출력을 변경할 수 없습니다. AirPlay를 다시 중단해 보십시오."
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak dapat menukar output. Cuba hentikan AirPlay lagi."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunne ikke endre utgang. Prøv å stoppe AirPlay igjen."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan uitvoer niet wijzigen. Probeer AirPlay opnieuw te stoppen."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie można zmienić wyjścia. Spróbuj ponownie zatrzymać AirPlay."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível alterar a saída. Tente parar o AirPlay novamente."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível alterar a saída. Tente parar o AirPlay novamente."
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nu s-a putut schimba ieșirea. Încearcă din nou să oprești AirPlay."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось изменить выход. Попробуйте снова остановить AirPlay."
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Výstup sa nepodarilo zmeniť. Skúste AirPlay zastaviť znova."
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Izhoda ni bilo mogoče spremeniti. Poskusite znova ustaviti AirPlay."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det gick inte att ändra utgång. Försök stoppa AirPlay igen."
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ไม่สามารถเปลี่ยนเอาต์พุตได้ ลองหยุด AirPlay อีกครั้ง"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Çıkış değiştirilemedi. AirPlay’i yeniden durdurmayı deneyin."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не вдалося змінити вихід. Спробуйте знову зупинити AirPlay."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không thể thay đổi đầu ra. Hãy thử dừng AirPlay lại."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法更改输出。请再次尝试停止 AirPlay。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法更改輸出。請再次嘗試停止 AirPlay。"
-          }
-        }
-      }
-    },
     "Couldn't restart": {
       "localizations": {
         "ar": {
@@ -35879,214 +35043,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "隱藏 AirDrop"
-          }
-        }
-      }
-    },
-    "Hide AirPlay": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إخفاء AirPlay"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar AirPlay"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skrýt AirPlay"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skjul AirPlay"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay ausblenden"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Απόκρυψη AirPlay"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar AirPlay"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kätke AirPlay"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masquer AirPlay"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "הסתרת AirPlay"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay छिपाएँ"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sakrij AirPlay"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay elrejtése"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sembunyikan AirPlay"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nascondi AirPlay"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlayを隠す"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay 가리기"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sembunyikan AirPlay"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skjul AirPlay"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verberg AirPlay"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ukryj AirPlay"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar AirPlay"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar AirPlay"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ascunde AirPlay"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скрыть AirPlay"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skryť AirPlay"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skrij AirPlay"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Göm AirPlay"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ซ่อน AirPlay"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay’i gizle"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сховати AirPlay"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ẩn AirPlay"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐藏 AirPlay"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隱藏 AirPlay"
           }
         }
       }
@@ -50451,214 +49407,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Next"
-          }
-        }
-      }
-    },
-    "No Local Output": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا يوجد إخراج محلي"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cap sortida local"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Žádný místní výstup"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen lokal udgang"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine lokale Ausgabe"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Καμία τοπική έξοδος"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin salida local"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ei paikallista ulostuloa"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune sortie locale"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "אין פלט מקומי"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "कोई स्थानीय आउटपुट नहीं"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nema lokalnog izlaza"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nincs helyi kimenet"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak Ada Output Lokal"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessuna uscita locale"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ローカル出力なし"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "로컬 출력 없음"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiada Output Setempat"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen lokal utgang"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geen lokale uitvoer"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak wyjścia lokalnego"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhuma Saída Local"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhuma saída local"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nicio ieșire locală"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нет локального выхода"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Žiadny lokálny výstup"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ni lokalnega izhoda"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen lokal utgång"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ไม่มีเอาต์พุตในเครื่อง"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yerel Çıkış Yok"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Немає локального виходу"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không có đầu ra cục bộ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无本地输出"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有本機輸出"
           }
         }
       }
@@ -78201,210 +76949,210 @@
         }
       }
     },
-    "Shows AirPods and Beats as they connect, and sound going to AirPlay.": {
+    "Shows AirPods and Beats as they connect.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يعرض AirPods وBeats عند توصيلها، والصوت المرسل إلى AirPlay."
+            "value": "يعرض AirPods وBeats عند توصيلها."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra els AirPods i els Beats en connectar-se, i el so que va a AirPlay."
+            "value": "Mostra els AirPods i els Beats en connectar-se."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí AirPods a Beats při připojení a zvuk posílaný přes AirPlay."
+            "value": "Zobrazí AirPods a Beats při připojení."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser AirPods og Beats, når de tilsluttes, og lyd, der går til AirPlay."
+            "value": "Viser AirPods og Beats, når de tilsluttes."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeigt AirPods und Beats beim Verbinden, und Ton, der an AirPlay geht."
+            "value": "Zeigt AirPods und Beats beim Verbinden."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Εμφανίζει τα AirPods και Beats κατά τη σύνδεση, και τον ήχο που πηγαίνει στο AirPlay."
+            "value": "Εμφανίζει τα AirPods και Beats κατά τη σύνδεση."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra los AirPods y Beats al conectarse, y el sonido que va a AirPlay."
+            "value": "Muestra los AirPods y Beats al conectarse."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Näyttää AirPodsit ja Beatsit yhdistettäessä sekä AirPlayhin menevän äänen."
+            "value": "Näyttää AirPodsit ja Beatsit yhdistettäessä."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Affiche les AirPods et les Beats à leur connexion, et le son envoyé vers AirPlay."
+            "value": "Affiche les AirPods et les Beats à leur connexion."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "מציג AirPods ו-Beats בזמן החיבור, וצליל שעובר ל-AirPlay."
+            "value": "מציג AirPods ו-Beats בזמן החיבור."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "कनेक्ट होते समय AirPods और Beats दिखाता है, और AirPlay पर जाने वाली ध्वनि भी।"
+            "value": "कनेक्ट होते समय AirPods और Beats दिखाता है।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikazuje AirPods i Beats pri povezivanju te zvuk koji ide na AirPlay."
+            "value": "Prikazuje AirPods i Beats pri povezivanju."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mutatja az AirPodsot és a Beatset csatlakozáskor, és az AirPlayre menő hangot."
+            "value": "Mutatja az AirPodsot és a Beatset csatlakozáskor."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menampilkan AirPods dan Beats saat tersambung, dan suara yang menuju AirPlay."
+            "value": "Menampilkan AirPods dan Beats saat tersambung."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra AirPods e Beats quando si connettono, e il suono inviato ad AirPlay."
+            "value": "Mostra AirPods e Beats quando si connettono."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AirPodsとBeatsの接続時とAirPlayへの音声を表示します。"
+            "value": "AirPodsとBeatsの接続時に表示します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AirPods 및 Beats가 연결될 때와 AirPlay로 가는 사운드를 표시합니다."
+            "value": "AirPods 및 Beats가 연결될 때 표시합니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menunjukkan AirPods dan Beats semasa disambungkan, dan bunyi yang pergi ke AirPlay."
+            "value": "Menunjukkan AirPods dan Beats semasa disambungkan."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser AirPods og Beats når de kobles til, og lyd som går til AirPlay."
+            "value": "Viser AirPods og Beats når de kobles til."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toont AirPods en Beats als ze verbinden, en geluid dat naar AirPlay gaat."
+            "value": "Toont AirPods en Beats als ze verbinden."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokazuje AirPods i Beats podczas łączenia oraz dźwięk wysyłany przez AirPlay."
+            "value": "Pokazuje AirPods i Beats podczas łączenia."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra AirPods e Beats ao conectar, e o som enviado por AirPlay."
+            "value": "Mostra AirPods e Beats ao conectar."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra os AirPods e os Beats quando se ligam, e o som enviado por AirPlay."
+            "value": "Mostra os AirPods e os Beats quando se ligam."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arată AirPods și Beats când se conectează și sunetul trimis la AirPlay."
+            "value": "Arată AirPods și Beats când se conectează."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывает AirPods и Beats при подключении и звук, идущий на AirPlay."
+            "value": "Показывает AirPods и Beats при подключении."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí AirPods a Beats pri pripojení a zvuk posielaný cez AirPlay."
+            "value": "Zobrazí AirPods a Beats pri pripojení."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokaže AirPods in Beats ob povezavi ter zvok, ki gre na AirPlay."
+            "value": "Pokaže AirPods in Beats ob povezavi."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visar AirPods och Beats när de ansluts, och ljud som går till AirPlay."
+            "value": "Visar AirPods och Beats när de ansluts."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "แสดง AirPods และ Beats เมื่อเชื่อมต่อ และเสียงที่ส่งไปยัง AirPlay"
+            "value": "แสดง AirPods และ Beats เมื่อเชื่อมต่อ"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "AirPods ve Beats’i bağlanırken, AirPlay’e giden sesi de gösterir."
+            "value": "AirPods ve Beats’i bağlanırken gösterir."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показує AirPods і Beats під час під’єднання та звук, що йде на AirPlay."
+            "value": "Показує AirPods і Beats під час під’єднання."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hiện AirPods và Beats khi kết nối, và âm thanh chuyển tới AirPlay."
+            "value": "Hiện AirPods và Beats khi kết nối."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示连接时的 AirPods 和 Beats，以及传到隔空播放的声音。"
+            "value": "显示连接时的 AirPods 和 Beats。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "顯示連接時的 AirPods 和 Beats，以及傳到 AirPlay 的聲音。"
+            "value": "顯示連接時的 AirPods 和 Beats。"
           }
         }
       }
@@ -84025,214 +82773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止 AirDrop"
-          }
-        }
-      }
-    },
-    "Stop AirPlay": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إيقاف AirPlay"
-          }
-        },
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aturar AirPlay"
-          }
-        },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastavit AirPlay"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stop AirPlay"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay stoppen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Διακοπή AirPlay"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Detener AirPlay"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pysäytä AirPlay"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arrêter AirPlay"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "עצירת AirPlay"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay रोकें"
-          }
-        },
-        "hr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaustavi AirPlay"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay leállítása"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hentikan AirPlay"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Interrompi AirPlay"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlayを停止"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay 중단"
-          }
-        },
-        "ms": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hentikan AirPlay"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stopp AirPlay"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stop AirPlay"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zatrzymaj AirPlay"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parar AirPlay"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parar AirPlay"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oprește AirPlay"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Остановить AirPlay"
-          }
-        },
-        "sk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastaviť AirPlay"
-          }
-        },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustavi AirPlay"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stoppa AirPlay"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "หยุด AirPlay"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPlay’i durdur"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Зупинити AirPlay"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dừng AirPlay"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "停止隔空播放"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "停止 AirPlay"
           }
         }
       }
@@ -99029,222 +97569,222 @@
         }
       }
     },
-    "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop alarm alarms snooze focus printing printer print jobs print center recognize recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar": {
+    "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airdrop alarm alarms snooze focus recognize recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "نشاط مباشر أنشطة موسيقى غلاف موجة صوتية مغلق إعلان صوت جديد أغاني بطارية شحن طاقة منخفضة موصول أجهزة airpods beats سماعات بلوتوث airplay airdrop مؤقت مؤقتات عد تنازلي ساعة ساعة إيقاف شريط القوائم منبه منبهات غفوة تركيز طباعة طابعة مركز الطباعة التعرف موسيقى shazam ميكروفون اختصار اختصارات أتمتة"
+            "value": "نشاط مباشر أنشطة موسيقى غلاف موجة صوتية مغلق إعلان صوت جديد أغاني بطارية شحن طاقة منخفضة موصول أجهزة airpods beats سماعات بلوتوث airdrop مؤقت مؤقتات عد تنازلي ساعة ساعة إيقاف شريط القوائم منبه منبهات غفوة تركيز التعرف موسيقى shazam ميكروفون اختصار اختصارات أتمتة"
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "activitat en directe activitats música portada forma d’ona tancat anunciar àudio nou cançons bateria càrrega baix consum connectat dispositius airpods beats auriculars bluetooth airplay airdrop temporitzador temporitzadors compte enrere rellotge cronòmetre barra de menús alarma alarmes posposar concentració impressió impressora centre d’impressió reconèixer música shazam micròfon drecera dreceres automatització"
+            "value": "activitat en directe activitats música portada forma d’ona tancat anunciar àudio nou cançons bateria càrrega baix consum connectat dispositius airpods beats auriculars bluetooth airdrop temporitzador temporitzadors compte enrere rellotge cronòmetre barra de menús alarma alarmes posposar concentració reconèixer música shazam micròfon drecera dreceres automatització"
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "živá aktivita aktivity hudba obal vlna zavřený oznamovat nový zvuk skladby baterie nabíjení úsporný režim připojeno zařízení airpods beats sluchátka bluetooth airplay airdrop minutka minutky odpočet hodiny stopky řádek nabídek budík budíky odložit soustředění tisk tiskárna centrum tisku rozpoznat hudba shazam mikrofon zkratka zkratky automatizace"
+            "value": "živá aktivita aktivity hudba obal vlna zavřený oznamovat nový zvuk skladby baterie nabíjení úsporný režim připojeno zařízení airpods beats sluchátka bluetooth airdrop minutka minutky odpočet hodiny stopky řádek nabídek budík budíky odložit soustředění rozpoznat hudba shazam mikrofon zkratka zkratky automatizace"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "liveaktivitet aktiviteter musik cover bølgeform lukket annoncer ny lyd sange batteri oplader strømbesparelse tilsluttet enheder airpods beats høretelefoner bluetooth airplay airdrop timer timere nedtælling ur stopur menulinje alarm alarmer snooze fokus udskrivning printer printercentral genkend musik shazam mikrofon genvej genveje automatisering"
+            "value": "liveaktivitet aktiviteter musik cover bølgeform lukket annoncer ny lyd sange batteri oplader strømbesparelse tilsluttet enheder airpods beats høretelefoner bluetooth airdrop timer timere nedtælling ur stopur menulinje alarm alarmer snooze fokus genkend musik shazam mikrofon genvej genveje automatisering"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "live-aktivität aktivitäten musik cover wellenform geschlossen neue audiowiedergabe songs batterie laden stromsparen angeschlossen geräte airpods beats kopfhörer bluetooth airplay airdrop timer countdown uhr stoppuhr menüleiste wecker alarm schlummern fokus drucken drucker druckzentrale erkennen musikerkennung shazam mikrofon kurzbefehl kurzbefehle automatisierung"
+            "value": "live-aktivität aktivitäten musik cover wellenform geschlossen neue audiowiedergabe songs batterie laden stromsparen angeschlossen geräte airpods beats kopfhörer bluetooth airdrop timer countdown uhr stoppuhr menüleiste wecker alarm schlummern fokus erkennen musikerkennung shazam mikrofon kurzbefehl kurzbefehle automatisierung"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "ζωντανή δραστηριότητα δραστηριότητες μουσική εξώφυλλο κυματομορφή κλειστό αναγγελία νέος ήχος τραγούδια μπαταρία φόρτιση χαμηλή ισχύς ρεύμα συσκευές airpods beats ακουστικά bluetooth airplay airdrop χρονομέτρης χρονομετρητές αντίστροφη μέτρηση ρολόι χρονόμετρο γραμμή μενού ξυπνητήρι ξυπνητήρια αναβολή εστίαση εκτύπωση εκτυπωτής κέντρο εκτύπωσης αναγνώριση μουσική shazam μικρόφωνο συντόμευση συντομεύσεις αυτοματισμός"
+            "value": "ζωντανή δραστηριότητα δραστηριότητες μουσική εξώφυλλο κυματομορφή κλειστό αναγγελία νέος ήχος τραγούδια μπαταρία φόρτιση χαμηλή ισχύς ρεύμα συσκευές airpods beats ακουστικά bluetooth airdrop χρονομέτρης χρονομετρητές αντίστροφη μέτρηση ρολόι χρονόμετρο γραμμή μενού ξυπνητήρι ξυπνητήρια αναβολή εστίαση αναγνώριση μουσική shazam μικρόφωνο συντόμευση συντομεύσεις αυτοματισμός"
           }
         },
         "en-AU": {
           "stringUnit": {
             "state": "translated",
-            "value": "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop alarm alarms snooze focus printing printer print jobs print centre recognise recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar"
+            "value": "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airdrop alarm alarms snooze focus recognise recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar"
           }
         },
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airplay airdrop alarm alarms snooze focus printing printer print jobs print centre recognise recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar"
+            "value": "live activity activities music cover waveform closed announce new audio songs battery charging low power plugged devices airpods beats headphones bluetooth airdrop alarm alarms snooze focus recognise recognition shazam microphone shortcut shortcuts workflow run automation timer timers countdown clock stopwatch menu bar"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "actividad en vivo actividades música portada forma de onda cerrado anunciar audio nuevo canciones batería cargando bajo consumo conectado dispositivos airpods beats auriculares bluetooth airplay airdrop temporizador temporizadores cuenta atrás reloj cronómetro barra de menús alarma alarmas posponer concentración impresión impresora centro de impresión reconocer música shazam micrófono atajo atajos automatización"
+            "value": "actividad en vivo actividades música portada forma de onda cerrado anunciar audio nuevo canciones batería cargando bajo consumo conectado dispositivos airpods beats auriculares bluetooth airdrop temporizador temporizadores cuenta atrás reloj cronómetro barra de menús alarma alarmas posponer concentración reconocer música shazam micrófono atajo atajos automatización"
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "livetoiminta toiminnat musiikki kansi aaltomuoto suljettu ilmoita uusi ääni kappaleet akku lataus virransäästö liitetty laitteet airpods beats kuulokkeet bluetooth airplay airdrop ajastin ajastimet lähtölaskenta kello sekuntikello valikkorivi herätys herätykset torkku keskittyminen tulostus tulostin tulostuskeskus tunnista musiikki shazam mikrofoni pikakomento pikakomennot automaatio"
+            "value": "livetoiminta toiminnat musiikki kansi aaltomuoto suljettu ilmoita uusi ääni kappaleet akku lataus virransäästö liitetty laitteet airpods beats kuulokkeet bluetooth airdrop ajastin ajastimet lähtölaskenta kello sekuntikello valikkorivi herätys herätykset torkku keskittyminen tunnista musiikki shazam mikrofoni pikakomento pikakomennot automaatio"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "activité en direct activités musique pochette forme d’onde fermé annoncer nouveau son morceaux batterie charge économie d’énergie branché appareils airpods beats écouteurs casque bluetooth airplay airdrop minuteur minuteurs compte à rebours horloge chronomètre barre des menus alarme alarmes répéter concentration impression imprimante centre d’impression reconnaître musique shazam micro raccourci raccourcis automatisation"
+            "value": "activité en direct activités musique pochette forme d’onde fermé annoncer nouveau son morceaux batterie charge économie d’énergie branché appareils airpods beats écouteurs casque bluetooth airdrop minuteur minuteurs compte à rebours horloge chronomètre barre des menus alarme alarmes répéter concentration reconnaître musique shazam micro raccourci raccourcis automatisation"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "פעילות בזמן אמת פעילויות מוזיקה עטיפה צורת גל סגור הכרזה שמע חדש שירים סוללה טעינה חיסכון בחשמל מחובר מכשירים airpods beats אוזניות בלוטות׳ airplay airdrop טיימר טיימרים ספירה לאחור שעון סטופר שורת תפריטים התראה התראות נודניק ריכוז הדפסה מדפסת מרכז ההדפסה זיהוי מוזיקה shazam מיקרופון קיצור קיצורים אוטומציה"
+            "value": "פעילות בזמן אמת פעילויות מוזיקה עטיפה צורת גל סגור הכרזה שמע חדש שירים סוללה טעינה חיסכון בחשמל מחובר מכשירים airpods beats אוזניות בלוטות׳ airdrop טיימר טיימרים ספירה לאחור שעון סטופר שורת תפריטים התראה התראות נודניק ריכוז זיהוי מוזיקה shazam מיקרופון קיצור קיצורים אוטומציה"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "लाइव ऐक्टिविटी संगीत कवर वेवफ़ॉर्म बंद घोषणा नया ऑडियो गीत बैटरी चार्जिंग कम पावर प्लग इन डिवाइस airpods beats हेडफ़ोन ब्लूटूथ airplay airdrop टाइमर काउंटडाउन घड़ी स्टॉपवॉच मेनू बार अलार्म स्नूज़ फ़ोकस प्रिंट प्रिंटर प्रिंट सेंटर पहचान संगीत shazam माइक्रोफ़ोन शॉर्टकट ऑटोमेशन"
+            "value": "लाइव ऐक्टिविटी संगीत कवर वेवफ़ॉर्म बंद घोषणा नया ऑडियो गीत बैटरी चार्जिंग कम पावर प्लग इन डिवाइस airpods beats हेडफ़ोन ब्लूटूथ airdrop टाइमर काउंटडाउन घड़ी स्टॉपवॉच मेनू बार अलार्म स्नूज़ फ़ोकस पहचान संगीत shazam माइक्रोफ़ोन शॉर्टकट ऑटोमेशन"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "aktivnost uživo aktivnosti glazba omot valni oblik zatvoreno najavi novi zvuk pjesme baterija punjenje niska potrošnja priključeno uređaji airpods beats slušalice bluetooth airplay airdrop timer timeri odbrojavanje sat štoperica traka s izbornicima alarm alarmi odgodi fokus ispis pisač centar za ispis prepoznaj glazba shazam mikrofon prečac prečaci automatizacija"
+            "value": "aktivnost uživo aktivnosti glazba omot valni oblik zatvoreno najavi novi zvuk pjesme baterija punjenje niska potrošnja priključeno uređaji airpods beats slušalice bluetooth airdrop timer timeri odbrojavanje sat štoperica traka s izbornicima alarm alarmi odgodi fokus prepoznaj glazba shazam mikrofon prečac prečaci automatizacija"
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "élő tevékenység tevékenységek zene borító hullámforma zárt új hang bejelentése dalok akkumulátor töltés alacsony fogyasztás csatlakoztatva eszközök airpods beats fejhallgató bluetooth airplay airdrop időzítő időzítők visszaszámlálás óra stopperóra menüsor ébresztő ébresztők szundi fókusz nyomtatás nyomtató nyomtatási központ felismerés zene shazam mikrofon parancs parancsok automatizálás"
+            "value": "élő tevékenység tevékenységek zene borító hullámforma zárt új hang bejelentése dalok akkumulátor töltés alacsony fogyasztás csatlakoztatva eszközök airpods beats fejhallgató bluetooth airdrop időzítő időzítők visszaszámlálás óra stopperóra menüsor ébresztő ébresztők szundi fókusz felismerés zene shazam mikrofon parancs parancsok automatizálás"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "aktivitas langsung musik sampul bentuk gelombang tertutup umumkan audio baru lagu baterai mengisi daya rendah terhubung perangkat airpods beats headphone bluetooth airplay airdrop timer hitung mundur jam stopwatch bar menu alarm tunda fokus cetak printer pusat cetak kenali musik shazam mikrofon pintasan otomatisasi"
+            "value": "aktivitas langsung musik sampul bentuk gelombang tertutup umumkan audio baru lagu baterai mengisi daya rendah terhubung perangkat airpods beats headphone bluetooth airdrop timer hitung mundur jam stopwatch bar menu alarm tunda fokus kenali musik shazam mikrofon pintasan otomatisasi"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "attività live attività musica copertina forma d’onda chiuso annuncia nuovo audio brani batteria carica basso consumo collegato dispositivi airpods beats cuffie bluetooth airplay airdrop timer conto alla rovescia orologio cronometro barra dei menu sveglia sveglie posponi full immersion stampa stampante gestore stampa riconosci musica shazam microfono comando rapido comandi rapidi automazione"
+            "value": "attività live attività musica copertina forma d’onda chiuso annuncia nuovo audio brani batteria carica basso consumo collegato dispositivi airpods beats cuffie bluetooth airdrop timer conto alla rovescia orologio cronometro barra dei menu sveglia sveglie posponi full immersion riconosci musica shazam microfono comando rapido comandi rapidi automazione"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライブアクティビティ 音楽 カバー 波形 閉じる 通知 新しいオーディオ 曲 バッテリー 充電 低電力 電源 デバイス airpods beats ヘッドフォン bluetooth airplay airdrop タイマー カウントダウン 時計 ストップウォッチ メニューバー アラーム スヌーズ 集中モード プリント プリンタ プリントセンター 認識 ミュージック shazam マイク ショートカット オートメーション"
+            "value": "ライブアクティビティ 音楽 カバー 波形 閉じる 通知 新しいオーディオ 曲 バッテリー 充電 低電力 電源 デバイス airpods beats ヘッドフォン bluetooth airdrop タイマー カウントダウン 時計 ストップウォッチ メニューバー アラーム スヌーズ 集中モード 認識 ミュージック shazam マイク ショートカット オートメーション"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "실시간 현황 음악 커버 파형 닫힘 알림 새 오디오 노래 배터리 충전 저전력 전원 기기 airpods beats 헤드폰 bluetooth airplay airdrop 타이머 카운트다운 시계 스톱워치 메뉴 막대 알람 다시 알림 집중 모드 프린트 프린터 프린트 센터 인식 음악 shazam 마이크 단축어 자동화"
+            "value": "실시간 현황 음악 커버 파형 닫힘 알림 새 오디오 노래 배터리 충전 저전력 전원 기기 airpods beats 헤드폰 bluetooth airdrop 타이머 카운트다운 시계 스톱워치 메뉴 막대 알람 다시 알림 집중 모드 인식 음악 shazam 마이크 단축어 자동화"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "aktiviti langsung muzik kulit bentuk gelombang tutup umumkan audio baharu lagu bateri mengecas kuasa rendah dipalamkan peranti airpods beats fon kepala bluetooth airplay airdrop pemasa kira detik jam jam randik bar menu penggera tunda fokus cetak pencetak pusat cetakan kenal pasti muzik shazam mikrofon pintasan automasi"
+            "value": "aktiviti langsung muzik kulit bentuk gelombang tutup umumkan audio baharu lagu bateri mengecas kuasa rendah dipalamkan peranti airpods beats fon kepala bluetooth airdrop pemasa kira detik jam jam randik bar menu penggera tunda fokus kenal pasti muzik shazam mikrofon pintasan automasi"
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "liveaktivitet aktiviteter musikk omslag bølgeform lukket kunngjør ny lyd sanger batteri lading strømsparing tilkoblet enheter airpods beats hodetelefoner bluetooth airplay airdrop timer timere nedtelling klokke stoppeklokke menylinje alarm alarmer slumre fokus utskrift skriver utskriftssenter gjenkjenn musikk shazam mikrofon snarvei snarveier automatisering"
+            "value": "liveaktivitet aktiviteter musikk omslag bølgeform lukket kunngjør ny lyd sanger batteri lading strømsparing tilkoblet enheter airpods beats hodetelefoner bluetooth airdrop timer timere nedtelling klokke stoppeklokke menylinje alarm alarmer slumre fokus gjenkjenn musikk shazam mikrofon snarvei snarveier automatisering"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "live-activiteit activiteiten muziek hoes golfvorm gesloten nieuwe audio aankondigen nummers batterij opladen energiebesparing aangesloten apparaten airpods beats koptelefoon bluetooth airplay airdrop timer timers aftellen klok stopwatch menubalk wekker wekkers snooze focus afdrukken printer printercentrum herken muziek shazam microfoon opdracht opdrachten automatisering"
+            "value": "live-activiteit activiteiten muziek hoes golfvorm gesloten nieuwe audio aankondigen nummers batterij opladen energiebesparing aangesloten apparaten airpods beats koptelefoon bluetooth airdrop timer timers aftellen klok stopwatch menubalk wekker wekkers snooze focus herken muziek shazam microfoon opdracht opdrachten automatisering"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "aktywność na żywo aktywności muzyka okładka fala zamknięty ogłaszaj nowy dźwięk utwory bateria ładowanie niskie zużycie podłączono urządzenia airpods beats słuchawki bluetooth airplay airdrop minutnik minutniki odliczanie zegar stoper pasek menu alarm alarmy drzemka skupienie drukowanie drukarka centrum drukowania rozpoznaj muzyka shazam mikrofon skrót skróty automatyzacja"
+            "value": "aktywność na żywo aktywności muzyka okładka fala zamknięty ogłaszaj nowy dźwięk utwory bateria ładowanie niskie zużycie podłączono urządzenia airpods beats słuchawki bluetooth airdrop minutnik minutniki odliczanie zegar stoper pasek menu alarm alarmy drzemka skupienie rozpoznaj muzyka shazam mikrofon skrót skróty automatyzacja"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "atividade ao vivo atividades música capa forma de onda fechado anunciar novo áudio músicas bateria carregando pouca energia conectado dispositivos airpods beats fones bluetooth airplay airdrop timer timers contagem regressiva relógio cronômetro barra de menus alarme alarmes adiar foco impressão impressora central de impressão reconhecer música shazam microfone atalho atalhos automação"
+            "value": "atividade ao vivo atividades música capa forma de onda fechado anunciar novo áudio músicas bateria carregando pouca energia conectado dispositivos airpods beats fones bluetooth airdrop timer timers contagem regressiva relógio cronômetro barra de menus alarme alarmes adiar foco reconhecer música shazam microfone atalho atalhos automação"
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "atividade em direto atividades música capa forma de onda fechado anunciar novo áudio músicas bateria a carregar baixo consumo ligado dispositivos airpods beats auscultadores bluetooth airplay airdrop temporizador temporizadores contagem decrescente relógio cronómetro barra de menus alarme alarmes adiar foco impressão impressora central de impressão reconhecer música shazam microfone atalho atalhos automatização"
+            "value": "atividade em direto atividades música capa forma de onda fechado anunciar novo áudio músicas bateria a carregar baixo consumo ligado dispositivos airpods beats auscultadores bluetooth airdrop temporizador temporizadores contagem decrescente relógio cronómetro barra de menus alarme alarmes adiar foco reconhecer música shazam microfone atalho atalhos automatização"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "activitate live activități muzică copertă formă de undă închis anunță audio nou melodii baterie încărcare consum redus conectat dispozitive airpods beats căști bluetooth airplay airdrop temporizator temporizatoare numărătoare inversă ceas cronometru bară de meniu alarmă alarme amânare concentrare tipărire imprimantă centru tipărire recunoaște muzică shazam microfon scurtătură scurtături automatizare"
+            "value": "activitate live activități muzică copertă formă de undă închis anunță audio nou melodii baterie încărcare consum redus conectat dispozitive airpods beats căști bluetooth airdrop temporizator temporizatoare numărătoare inversă ceas cronometru bară de meniu alarmă alarme amânare concentrare recunoaște muzică shazam microfon scurtătură scurtături automatizare"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "живое действие действия музыка обложка волна закрыт объявлять новое аудио песни аккумулятор зарядка энергосбережение подключено устройства airpods beats наушники bluetooth airplay airdrop таймер таймеры обратный отсчёт часы секундомер строка меню будильник будильники отложить фокусирование печать принтер центр печати распознать музыка shazam микрофон команда команды автоматизация"
+            "value": "живое действие действия музыка обложка волна закрыт объявлять новое аудио песни аккумулятор зарядка энергосбережение подключено устройства airpods beats наушники bluetooth airdrop таймер таймеры обратный отсчёт часы секундомер строка меню будильник будильники отложить фокусирование распознать музыка shazam микрофон команда команды автоматизация"
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "živá aktivita aktivity hudba obal vlna zatvorený oznamovať nový zvuk skladby batéria nabíjanie úsporný režim pripojené zariadenia airpods beats slúchadlá bluetooth airplay airdrop minútka minútky odpočítavanie hodiny stopky lišta menu budík budíky odložiť sústredenie tlač tlačiareň centrum tlače rozpoznať hudba shazam mikrofón skratka skratky automatizácia"
+            "value": "živá aktivita aktivity hudba obal vlna zatvorený oznamovať nový zvuk skladby batéria nabíjanie úsporný režim pripojené zariadenia airpods beats slúchadlá bluetooth airdrop minútka minútky odpočítavanie hodiny stopky lišta menu budík budíky odložiť sústredenie rozpoznať hudba shazam mikrofón skratka skratky automatizácia"
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "dejavnost v živo dejavnosti glasba naslovnica valovna oblika zaprto najavi nov zvok skladbe baterija polnjenje nizka poraba priključeno naprave airpods beats slušalke bluetooth airplay airdrop časovnik časovniki odštevanje ura štoparica menijska vrstica alarm alarmi dremež fokus tiskanje tiskalnik središče za tiskanje prepoznaj glasba shazam mikrofon bližnjica bližnjice avtomatizacija"
+            "value": "dejavnost v živo dejavnosti glasba naslovnica valovna oblika zaprto najavi nov zvok skladbe baterija polnjenje nizka poraba priključeno naprave airpods beats slušalke bluetooth airdrop časovnik časovniki odštevanje ura štoparica menijska vrstica alarm alarmi dremež fokus prepoznaj glasba shazam mikrofon bližnjica bližnjice avtomatizacija"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "liveaktivitet aktiviteter musik omslag vågform stängd meddela nytt ljud låtar batteri laddning strömsparläge inkopplad enheter airpods beats hörlurar bluetooth airplay airdrop timer timrar nedräkning klocka stoppur menyrad alarm snooza fokus utskrift skrivare utskrifter känn igen musik shazam mikrofon genväg genvägar automatisering"
+            "value": "liveaktivitet aktiviteter musik omslag vågform stängd meddela nytt ljud låtar batteri laddning strömsparläge inkopplad enheter airpods beats hörlurar bluetooth airdrop timer timrar nedräkning klocka stoppur menyrad alarm snooza fokus känn igen musik shazam mikrofon genväg genvägar automatisering"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "กิจกรรมสด เพลง ปก รูปคลื่น ปิด ประกาศ เสียงใหม่ แบตเตอรี่ ชาร์จ พลังงานต่ำ เสียบปลั๊ก อุปกรณ์ airpods beats หูฟัง บลูทูธ airplay airdrop ตัวตั้งเวลา นับถอยหลัง นาฬิกา นาฬิกาจับเวลา แถบเมนู นาฬิกาปลุก เลื่อนปลุก โฟกัส พิมพ์ เครื่องพิมพ์ ศูนย์การพิมพ์ จดจำ เพลง shazam ไมโครโฟน คำสั่งลัด อัตโนมัติ"
+            "value": "กิจกรรมสด เพลง ปก รูปคลื่น ปิด ประกาศ เสียงใหม่ แบตเตอรี่ ชาร์จ พลังงานต่ำ เสียบปลั๊ก อุปกรณ์ airpods beats หูฟัง บลูทูธ airdrop ตัวตั้งเวลา นับถอยหลัง นาฬิกา นาฬิกาจับเวลา แถบเมนู นาฬิกาปลุก เลื่อนปลุก โฟกัส จดจำ เพลง shazam ไมโครโฟน คำสั่งลัด อัตโนมัติ"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "canlı etkinlik etkinlikler müzik kapak dalga biçimi kapalı yeni ses duyur şarkılar pil şarj düşük güç prize takılı aygıtlar airpods beats kulaklık bluetooth airplay airdrop zamanlayıcı zamanlayıcılar geri sayım saat kronometre menü çubuğu alarm alarmlar ertele odak yazdırma yazıcı yazıcı merkezi tanı müzik shazam mikrofon kestirme kestirmeler otomasyon"
+            "value": "canlı etkinlik etkinlikler müzik kapak dalga biçimi kapalı yeni ses duyur şarkılar pil şarj düşük güç prize takılı aygıtlar airpods beats kulaklık bluetooth airdrop zamanlayıcı zamanlayıcılar geri sayım saat kronometre menü çubuğu alarm alarmlar ertele odak tanı müzik shazam mikrofon kestirme kestirmeler otomasyon"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "активність наживо активності музика обкладинка хвиля закритий оголошувати нове аудіо пісні акумулятор заряджання енергозбереження під’єднано пристрої airpods beats навушники bluetooth airplay airdrop таймер таймери зворотний відлік годинник секундомір смуга меню будильник будильники відкласти зосередження друк принтер центр друку розпізнати музика shazam мікрофон команда команди автоматизація"
+            "value": "активність наживо активності музика обкладинка хвиля закритий оголошувати нове аудіо пісні акумулятор заряджання енергозбереження під’єднано пристрої airpods beats навушники bluetooth airdrop таймер таймери зворотний відлік годинник секундомір смуга меню будильник будильники відкласти зосередження розпізнати музика shazam мікрофон команда команди автоматизація"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "hoạt động trực tiếp nhạc bìa dạng sóng đóng thông báo âm thanh mới bài hát pin sạc nguồn điện thấp đã cắm thiết bị airpods beats tai nghe bluetooth airplay airdrop hẹn giờ đếm ngược đồng hồ đồng hồ bấm giờ thanh menu báo thức báo lại tập trung in máy in trung tâm in nhận dạng nhạc shazam micrô phím tắt tự động hóa"
+            "value": "hoạt động trực tiếp nhạc bìa dạng sóng đóng thông báo âm thanh mới bài hát pin sạc nguồn điện thấp đã cắm thiết bị airpods beats tai nghe bluetooth airdrop hẹn giờ đếm ngược đồng hồ đồng hồ bấm giờ thanh menu báo thức báo lại tập trung nhận dạng nhạc shazam micrô phím tắt tự động hóa"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "实时活动 音乐 封面 波形 关闭 播报 新音频 歌曲 电池 充电 低电量 电源 设备 airpods beats 耳机 蓝牙 隔空播放 隔空投送 定时器 倒计时 时钟 秒表 菜单栏 闹钟 稍后提醒 专注模式 打印 打印机 打印中心 识别 音乐 shazam 麦克风 快捷指令 自动化"
+            "value": "实时活动 音乐 封面 波形 关闭 播报 新音频 歌曲 电池 充电 低电量 电源 设备 airpods beats 耳机 蓝牙 隔空投送 定时器 倒计时 时钟 秒表 菜单栏 闹钟 稍后提醒 专注模式 识别 音乐 shazam 麦克风 快捷指令 自动化"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "即時動態 音樂 封面 波形 關閉 播報 新音訊 歌曲 電池 充電 低耗電 電源 裝置 airpods beats 耳機 藍牙 airplay airdrop 計時器 倒數 時鐘 碼錶 選單列 鬧鐘 稍後提醒 專注模式 列印 印表機 列印中心 辨識 音樂 shazam 麥克風 捷徑 自動化"
+            "value": "即時動態 音樂 封面 波形 關閉 播報 新音訊 歌曲 電池 充電 低耗電 電源 裝置 airpods beats 耳機 藍牙 airdrop 計時器 倒數 時鐘 碼錶 選單列 鬧鐘 稍後提醒 專注模式 辨識 音樂 shazam 麥克風 捷徑 自動化"
           }
         }
       }

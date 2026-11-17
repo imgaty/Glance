@@ -13,7 +13,6 @@ struct ActivityEntryTests {
         case .music: model.activity = true
         case .timer: model.timer = .running(until: .now + 60, total: 60)
         case .stopwatch: model.stopwatch = .running(since: .now)
-        case .airplay: model.airplay = AirPlayRoute(name: "Speaker", symbol: "homepod")
         case .airdrop: model.airdrop = AirDropShown(id: "test", sender: "Phone", preview: nil, fraction: 0.3)
         case .call: model.call = CallShown(name: "Alex", over: "Phone", phase: .connected(since: .now))
         case .screenRecording: model.screenRecording = .recording(since: .now)

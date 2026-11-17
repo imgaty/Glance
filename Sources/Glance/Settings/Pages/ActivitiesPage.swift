@@ -38,7 +38,7 @@ struct ActivitiesPage: View {
     /// The page's switches in visible order, including each activity within a group.
     static let previews: [(key: String, shows: PreviewActivity?)] = [
         (Preferences.musicTrackPop, .announcement), (Preferences.activityCharging, .charging), (Preferences.activityLowBattery, .lowBattery),
-        (Preferences.activityDevices, .device), (Preferences.activityDevices, .airplay),
+        (Preferences.activityDevices, .device),
         (Preferences.activityCalls, .call), (Preferences.activityAirDrop, .airDrop),
         (Preferences.activityScreenRecording, .screenRecording), (Preferences.activityVoiceMemos, .voiceMemo),
         (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
@@ -101,7 +101,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $devices) {
                     Text("Devices")
-                    Text("Shows AirPods and Beats as they connect, and sound going to AirPlay.")
+                    Text("Shows AirPods and Beats as they connect.")
                 }
             }
             Section {

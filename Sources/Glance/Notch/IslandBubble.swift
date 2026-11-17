@@ -11,8 +11,8 @@ import SwiftUI
 /// The second activity, detached, as the Dynamic Island's minimal presentation shows one beside
 /// another: only ever off the notch's trailing end, the first staying attached at its leading end.
 /// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
-/// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol, AirDrop's ring or
-/// AirPlay's symbol in it as beside the camera, or a call's time. It leaves the notch's end as a
+/// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol or AirDrop's ring in it
+/// as beside the camera, or a call's time. It leaves the notch's end as a
 /// drop of water does: the end draws back from it on a neck that thins until it parts, and it runs
 /// back into the end as it goes. Opened from the notch, it runs into the notch's end and rides on
 /// it as the notch opens, until the end takes it in; opened from the bubble, it stays where it
@@ -23,8 +23,7 @@ struct IslandBubble: View {
     let shown: Bool
     /// The timer or stopwatch it shows, and the timer's name, as VoiceOver says it.
     let clock: ClockShown?
-    /// Or AirPlay, by its symbol alone, in its blue; or AirDrop, by its ring.
-    var route: AirPlayRoute? = nil
+    /// Or AirDrop, by its ring.
     var airdrop: AirDropShown? = nil
     var alarm: AlarmShown? = nil
     var recognition: MusicRecognitionActivity.State? = nil
@@ -59,7 +58,6 @@ struct IslandBubble: View {
     /// What it showed, kept on as it runs back into the notch, so it fades as it goes rather than
     /// vanishing.
     @State private var kept: ClockShown?
-    @State private var keptRoute: AirPlayRoute?
     @State private var keptAirDrop: AirDropShown?
     @State private var keptAlarm: AlarmShown?
     @State private var keptRecognition: MusicRecognitionActivity.State?
@@ -69,7 +67,7 @@ struct IslandBubble: View {
     @State private var keptMusic = false
     @State private var keptArtwork: NSImage?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0, call: 0, recognition: 0, alarm: 0, shortcut: 0)
+    @State private var changes = (clock: 0, airdrop: 0, music: 0, recording: 0, call: 0, recognition: 0, alarm: 0, shortcut: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -127,10 +125,6 @@ struct IslandBubble: View {
                             ShortcutRunGlyph(state: keptShortcut.run.state, look: keptShortcut.look, minimal: true, restingHeight: h)
                         } else if let keptRecognition {
                             MusicRecognitionCompactView(state: keptRecognition, minimal: true, restingHeight: h)
-                        } else if keptRoute != nil {
-                            Image(systemName: "airplay.audio")
-                                .font(.system(size: h * 0.5, weight: .semibold))
-                                .foregroundStyle(AirPlayLayout.tint)
                         }
                     }
                 }
@@ -192,12 +186,6 @@ struct IslandBubble: View {
                         .accessibilityLabel(name)
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
-                } else if shown, !hidden, let route {
-                    Color.clear
-                        .accessibilityElement()
-                        .accessibilityLabel("AirPlay, playing on \(route.name)")
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityAction(.default, open)
                 }
             }
             .scaleEffect(reduceMotion || !pressed ? 1 : 0.94)
@@ -218,7 +206,8 @@ struct IslandBubble: View {
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
         .animation(.linear(duration: 0.01)) {
             $0.opacity(
-                shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptAlarm != nil || keptRecognition != nil || keptMusic
+                shown || kept != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptAlarm != nil || keptRecognition != nil
+                    || keptShortcut != nil || keptMusic
                     ? 1 : 0)
         }
         .allowsHitTesting(false)
@@ -304,15 +293,6 @@ struct IslandBubble: View {
             Task { @MainActor in
                 try? await Task.sleep(for: SystemActivityView.folding)
                 if changes.recognition == change { keptRecognition = nil }
-            }
-        }
-        .onChange(of: route, initial: true) { _, new in
-            changes.route += 1
-            if let new { return keptRoute = new }
-            let change = changes.route
-            Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
-                if changes.route == change { keptRoute = nil }
             }
         }
     }

@@ -1,6 +1,6 @@
 # Contributing
 
-`Created: 11 October 2026` | `Last updated: 7 November 2026`
+`Created: 11 October 2026` | `Last updated: 17 November 2026`
 
 A guide to contributing to the Glance project.
 
@@ -75,7 +75,7 @@ The scenes are `call`, `callRinging`, `callSwiped`, `callOutgoing`,
 `callOngoing`, `callLong`, `callNumber`, `callOtherApp`, `callUnread`,
 `screenRecording`, `screenCountdown`, `screenSaving`, `screenSaved`,
 `voiceMemo`, `voiceMemoPaused`, `music`, `airdrop`, `airdropSend`,
-`airdropReal`, `timer`, `stopwatch`, `airplay`, `charging`, `lowBattery`,
+`airdropReal`, `timer`, `stopwatch`, `charging`, `lowBattery`,
 `lowBatteryReal`, `headphones`, `deviceBattery` and `caseBattery`. In
 `lowBatteryReal` the button changes the Mac's Low Power Mode. A number after
 the name is how long each round lasts, in seconds, 300 unless said. Open Glance
@@ -83,7 +83,7 @@ again without it to go back.
 
 Alternatively, right-click the notch and choose a scene from
 **Try a Live Activity**, where each has a name of its own under a label for what
-it is: Calls, Recording, Music, AirDrop, Clock, AirPlay and Announced. Choose
+it is: Calls, Recording, Music, AirDrop, Clock and Announced. Choose
 `None` to go back.
 
 ### Why the Share extension hands over on a pasteboard

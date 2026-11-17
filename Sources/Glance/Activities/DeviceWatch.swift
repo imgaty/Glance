@@ -15,11 +15,10 @@ import UniformTypeIdentifiers
 /// for those (see `MenuBarBanners`). None of it needs a permission. What's connected as Glance starts,
 /// or reconnects as the Mac wakes, isn't announced, unless macOS announces it with a banner of its own:
 /// then the notch says it in the banner's place.
-/// The sound going to AirPlay is an activity of its own (see `AirPlayWatch`). A device whose battery
-/// runs down past 20% or 10% is announced the same way, its ring red, as the iPhone announces AirPods
-/// running low; macOS's own banner for it, and AirPods' notification, are taken away (see
-/// `SystemNotices`). A charging case is announced apart from its earbuds, closed. If it is already
-/// low when the earbuds connect, its warning takes the connection announcement's place.
+/// A device whose battery runs down past 20% or 10% is announced the same way, its ring red, as the
+/// iPhone announces AirPods running low; macOS's own banner for it, and AirPods' notification, are
+/// taken away (see `SystemNotices`). A charging case is announced apart from its earbuds, closed. If
+/// it is already low when the earbuds connect, its warning takes the connection announcement's place.
 @MainActor
 final class DeviceWatch {
     /// Sound devices there are, by ID.

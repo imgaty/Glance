@@ -23,7 +23,7 @@ struct PreviewActivitiesTests {
     func everything() {
         #expect(
             PreviewActivity.turnedOn(in: defaults(), hasBattery: true) == [
-                .announcement, .charging, .lowBattery, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .focus, .recognition, .shortcut,
+                .announcement, .charging, .lowBattery, .device, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .focus, .recognition, .shortcut,
             ])
     }
 
@@ -58,6 +58,6 @@ struct PreviewActivitiesTests {
     @Test("The battery's show only on a Mac with one")
     func battery() {
         let shown = PreviewActivity.turnedOn(in: defaults(), hasBattery: false)
-        #expect(shown == [.announcement, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .focus, .recognition, .shortcut])
+        #expect(shown == [.announcement, .device, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .focus, .recognition, .shortcut])
     }
 }

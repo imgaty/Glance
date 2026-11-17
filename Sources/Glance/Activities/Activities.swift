@@ -120,7 +120,6 @@ final class Activities: ObservableObject {
         battery.start()
         devices.start()
         watches = [battery, devices]
-        AirPlayWatch.shared.start()
         AirDropWatch.shared.start()
         CallWatch.shared.start()
         ScreenRecordingWatch.shared.start()

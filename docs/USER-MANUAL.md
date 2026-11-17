@@ -166,7 +166,7 @@ keyboard the same way:
 | Tab or Shift-Tab | On the player, goes from control to control, with a ring around the one it's on, and through the lyrics while they show; on a live activity's own view, from button to button |
 | Space | Presses the control with the ring; otherwise plays or pauses; on the tray, shows the selected items in Quick Look |
 | Left or right arrow | Goes to the song before or after, or with the ring on the progress bar, ten seconds back or ahead; on the tray, selects the item before or after it, or with Shift, a run of them |
-| Up or down arrow | With a timer, the stopwatch, AirDrop, AirPlay or a recording showing, goes from the player to its own view, the ring on its first button, and back; with the ring on the lyrics, goes from line to line, and Space or Return plays from there; with the ring on `Sound Output`, turns the playing app's sound up or down |
+| Up or down arrow | With a timer, the stopwatch, AirDrop or a recording showing, goes from the player to its own view, the ring on its first button, and back; with the ring on the lyrics, goes from line to line, and Space or Return plays from there; with the ring on `Sound Output`, turns the playing app's sound up or down |
 | Return | Presses the control with the ring; on the tray, pastes the selected items where you were typing (with `Accessibility` allowed) |
 | ⌘C | On the tray, copies the selected items |
 | ⌘A | On the tray, selects everything |
@@ -456,14 +456,14 @@ Swipe up with two fingers on the closed notch to swipe away what it shows, as on
 the iPhone: an announcement folds away, a timer that's ringing stops, and a live
 activity steps away for two seconds, then comes back while it's still going. It
 comes back sooner when it changes: music with the next song or when it plays
-again, a timer or the stopwatch when it's started, paused or ended, AirDrop with
-the next file, and AirPlay with the next speaker. A call or a recording is
-something you're doing rather than news, so it isn't swiped away: it stays
-beside the camera for as long as it lasts. On the open notch, swiping up only
-closes it, back to what shows beside the camera. Without swiping, right-click
-the notch and choose **Hide** with what it shows, such as **Hide Music**, **Hide
-Call** or **Hide Low Battery**. That hides a call or a recording too, until a
-call is answered or a voice memo is paused or resumed.
+again, a timer or the stopwatch when it's started, paused or ended, and AirDrop
+with the next file. A call or a recording is something you're doing rather than
+news, so it isn't swiped away: it stays beside the camera for as long as it
+lasts. On the open notch, swiping up only closes it, back to what shows beside
+the camera. Without swiping, right-click the notch and choose **Hide** with what
+it shows, such as **Hide Music**, **Hide Call** or **Hide Low Battery**. That
+hides a call or a recording too, until a call is answered or a voice memo is
+paused or resumed.
 
 Turn both off with `Now Playing` in **Settings > Live Activities**.
 
@@ -786,27 +786,6 @@ stays short of a full ring; check macOS's AirDrop window for the final result.
 Turn both off with `AirDrop` in
 **Settings > Live Activities**.
 
-### AirPlay
-
-**Stop AirPlay** is unavailable if there is no local output to return to. If
-the output changed since the activity appeared, Glance refreshes the activity
-without changing that new choice. If changing the output fails, the button
-says **Try Again** and the current destination stays visible.
-With no return destination, the inactive button says **No Local Output** in
-readable secondary text.
-
-While the sound plays on an AirPlay speaker or TV, the notch shows it as the
-iPhone shows Screen Mirroring: AirPlay's symbol in blue at its left end, and
-what it plays on at its right, a TV, a HomePod or a speaker. It stays for as
-long as the sound plays there. After another activity, it goes in a bubble of
-its own, showing AirPlay's symbol.
-
-Hover over or click the notch while AirPlay has it, or click its bubble, and it
-opens to AirPlay, with the speaker's name. Both symbols move with the opening
-notch from their closed positions. Click **Stop AirPlay** to send the
-sound back to where it played before, or to the Mac's own speakers. Turn it off
-with `Devices` in **Settings > Live Activities**.
-
 ### Screen recording
 
 While you record the screen with macOS's Screenshot (Shift-Command-5), the notch
@@ -1001,7 +980,7 @@ preview stays on what's playing.
 | `Hide native Live Activities` | Hides native Now Playing only while Glance visibly replaces it, with `Accessibility` allowed. Other apps keep their native activities and controls. Glance restores settings it previously changed for unsupported activities, and restores Now Playing when its replacement goes away. Settings Glance did not change stay untouched |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
-| `Devices` | Shows AirPods and Beats as they connect, and sound going to AirPlay |
+| `Devices` | Shows AirPods and Beats as they connect |
 | `Calls` | Shows calls coming in and the call you're on, in place of macOS's popup |
 | `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
 | `Recordings` | Shows the screen being recorded with macOS's Screenshot, until it's saved, and a voice memo being recorded, with its sound, each with a button to stop it |

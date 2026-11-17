@@ -12,9 +12,8 @@ import SwiftUI
 /// iPhone's Dynamic Island draws its own, the two sides read as one: a device beside its battery's
 /// ring; the Mac's battery as a word beside its level; a state's symbol in its
 /// color beside a word. A timer counts down on the right, its ring on the left; the stopwatch counts
-/// up beside its symbol; AirDrop shows its symbol and a ring filling as a file comes in; AirPlay shows
-/// its symbol and the device's; music playing beside them goes in a bubble of its own (see
-/// `IslandBubble`).
+/// up beside its symbol; AirDrop shows its symbol and a ring filling as a file comes in; music
+/// playing beside them goes in a bubble of its own (see `IslandBubble`).
 /// Each side sits at its wing's end, as far in from it as from the top and bottom, concentric with
 /// the round end; any room to spare is beside the camera. With Reduce Motion on, nothing turns or
 /// shakes.
@@ -26,8 +25,6 @@ struct SystemActivityView: View {
     let alert: NotchAlert?
     /// Clock's timer or stopwatch, when it has the notch.
     let clock: ClockShown?
-    /// Where the sound plays over AirPlay, when that has the notch.
-    var route: AirPlayRoute? = nil
     /// A file coming in over AirDrop, when that has the notch.
     var airdrop: AirDropShown? = nil
     var alarm: AlarmShown? = nil
@@ -62,10 +59,9 @@ struct SystemActivityView: View {
     /// start, so it never leaves as well as fading.
     @State private var leaving: NotchAlert?
     @State private var leavingClock: ClockShown?
-    @State private var leavingRoute: AirPlayRoute?
     @State private var leavingAirDrop: AirDropShown?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (alert: 0, clock: 0, route: 0, airdrop: 0, recognition: 0, alarm: 0, shortcut: 0)
+    @State private var changes = (alert: 0, clock: 0, airdrop: 0, recognition: 0, alarm: 0, shortcut: 0)
     @State private var leavingAlarm: AlarmShown?
     @State private var leavingRecognition: MusicRecognitionActivity.State?
     @State private var leavingShortcut: ShortcutShown?
@@ -76,7 +72,6 @@ struct SystemActivityView: View {
         let shownAlert = alert ?? leaving
         let shownClock = shownAlert == nil ? clock ?? leavingClock : nil
         let shownAirDrop = shownAlert == nil && shownClock == nil ? airdrop ?? leavingAirDrop : nil
-        let shownRoute = shownAlert == nil && shownClock == nil && shownAirDrop == nil ? route ?? leavingRoute : nil
         let (inset, outset) = Self.insets(for: shownAlert?.content, restingHeight: restingHeight)
         ZStack {
             if let alert = shownAlert, case .incomingCall(let call) = alert.content {
@@ -249,13 +244,6 @@ struct SystemActivityView: View {
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction(.default, open)
-            } else if let shownRoute {
-                AirPlayMark(route: shownRoute, restingHeight: restingHeight, leadingOnly: leadingOnly)
-                    .modifier(GrownAway(grown: grown))
-                    .islandFade(route != nil)
-                    .transition(IslandMotion.fade)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction(.default, open)
             }
         }
         .frame(maxHeight: .infinity)
@@ -320,18 +308,6 @@ struct SystemActivityView: View {
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
                 if changes.recognition == change { leavingRecognition = nil }
-            }
-        }
-        .onChange(of: route, initial: true) { _, new in
-            changes.route += 1
-            if let new {
-                leavingRoute = new
-                return
-            }
-            let change = changes.route
-            Task { @MainActor in
-                try? await Task.sleep(for: Self.folding)
-                if changes.route == change { leavingRoute = nil }
             }
         }
     }

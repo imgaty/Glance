@@ -117,12 +117,6 @@ struct ActivitiesTests {
         #expect(beats.content == .device(model: .beatsSolo4, battery: 15))
         #expect(beats.spoken == "Beats Solo 4 connected, 15 percent")
         #expect(DeviceWatch.alert(name: "AirPods", model: .airpods).content == .device(model: .airpods, battery: nil))
-        // AirPlay's device, by its name, as Control Center draws it.
-        #expect(AirPlayRoute.symbol(for: "Living Room Apple TV") == "appletv")
-        #expect(AirPlayRoute.symbol(for: "Samsung TV") == "tv")
-        #expect(AirPlayRoute.symbol(for: "Kitchen HomePod") == "homepod")
-        #expect(AirPlayRoute.symbol(for: "Sam's MacBook Pro") == "macbook")
-        #expect(AirPlayRoute.symbol(for: "Bedroom") == "hifispeaker")
         #expect(DeviceWatch.shortName("Sam\u{2019}s AirPods Pro") == "AirPods Pro")
         #expect(DeviceWatch.shortName("Sam's Magic Keyboard") == "Magic Keyboard")
         // Running down past 20% or 10% is announced, its ring red; further down, not again.
@@ -684,14 +678,14 @@ struct ActivitiesTests {
         let transfer = AirDropShown(id: "1", sender: "iPhone", preview: nil, fraction: 0.4)
         model.airdrop = transfer
         model.timer = .running(until: .now + 300, total: 300)
-        model.airplay = AirPlayRoute(name: "Living Room", symbol: "hifispeaker.fill")
-        #expect(model.activities == [.airdrop, .timer, .airplay])
+        model.stopwatch = .stopped(elapsed: 12)
+        #expect(model.activities == [.airdrop, .timer, .stopwatch])
         #expect(model.notchClock == nil)
         #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
         #expect(model.expansion(fromBubble: false) == .airdrop)
         // After music, it's detached.
         model.timer = nil
-        model.airplay = nil
+        model.stopwatch = nil
         model.airdrop = nil
         model.activity = true
         model.airdrop = transfer
@@ -746,38 +740,15 @@ struct ActivitiesTests {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.timer = .running(until: .now + 300, total: 300)
         model.stopwatch = .stopped(elapsed: 12)
-        model.airplay = AirPlayRoute(name: "Living Room", symbol: "hifispeaker.fill")
-        #expect(model.activities == [.timer, .stopwatch, .airplay])
+        model.airdrop = AirDropShown(id: "1", sender: "iPhone", preview: nil, fraction: 0.4)
+        #expect(model.activities == [.timer, .stopwatch, .airdrop])
         model.dismissed.insert(.timer)
-        #expect(model.activities == [.stopwatch, .airplay])
+        #expect(model.activities == [.stopwatch, .airdrop])
         #expect(model.notchClock == .stopwatch(.stopped(elapsed: 12)))
-        #expect(model.detached == .airplay)
-        model.dismissed = [.timer, .stopwatch, .airplay]
+        #expect(model.detached == .airdrop)
+        model.dismissed = [.timer, .stopwatch, .airdrop]
         #expect(model.activities.isEmpty)
         #expect(model.wing == 0)
-    }
-
-    @Test("AirPlay takes its turn: the notch's when it came first, its symbols in the cover's wings")
-    func airPlay() {
-        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
-        let route = AirPlayRoute(name: "Living Room", symbol: "appletv.fill")
-        model.airplay = route
-        #expect(model.activities == [.airplay])
-        #expect(model.wing == LiveActivityView.restingWing(restingHeight: 32))
-        #expect(model.expansion(fromBubble: false) == .airplay)
-        // Behind music that started first, detached, and it opens to it.
-        model.airplay = nil
-        model.activity = true
-        model.airplay = route
-        #expect(model.detached == .airplay)
-        #expect(model.expansion(fromBubble: true) == .airplay)
-        // Opened to it, it's gone once the sound leaves AirPlay.
-        model.expanded = .airplay
-        #expect(!model.expandedGone)
-        model.airplay = nil
-        #expect(model.expandedGone)
-        #expect(ExpandedAirPlayView.width(for: route, restingHeight: 32) == 32 * AirPlayLayout.wide)
-        #expect(AirPlayLayout.height(32) > TimerLayout.tallHeight(32))
     }
 
     @Test("macOS's own timer is read from what macOS keeps: the running one ending first, else the one paused last")
@@ -837,29 +808,29 @@ struct SystemBannersTests {
         #expect(CallShown(name: "", over: "", phase: .ringing).initials == "")
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.activity = true
-        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
+        model.stopwatch = .stopped(elapsed: 12)
         #expect(model.activities.first == .music)
         model.call = connected
-        // Both show, in the order they came: music keeps the notch, AirPlay detached, the call next.
-        #expect(model.activities == [.music, .airplay, .call] && model.musicShown)
-        // Music stops: AirPlay has the notch and the call is detached; music again comes after.
+        // Both show, in the order they came: music keeps the notch, the stopwatch detached, the call next.
+        #expect(model.activities == [.music, .stopwatch, .call] && model.musicShown)
+        // Music stops: the stopwatch has the notch and the call is detached; music again comes after.
         model.activity = false
-        #expect(model.activities == [.airplay, .call] && model.detached == .call)
-        model.airplay = nil
+        #expect(model.activities == [.stopwatch, .call] && model.detached == .call)
+        model.stopwatch = nil
         model.activity = true
-        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
+        model.stopwatch = .stopped(elapsed: 12)
         // The call first, with the notch, music detached in its trailing side's place.
-        #expect(model.activities == [.call, .music, .airplay] && !model.musicShown)
+        #expect(model.activities == [.call, .music, .stopwatch] && !model.musicShown)
         #expect(model.detached == .music)
         #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32) && model.metrics.fold == model.wing - model.pastHousing)
-        // Without music, AirPlay is detached instead; alone, the call has both wings, as wide as it needs.
+        // Without music, the stopwatch is detached instead; alone, the call has both wings, as wide as it needs.
         model.activity = false
-        #expect(model.detached == .airplay)
-        model.airplay = nil
+        #expect(model.detached == .stopwatch)
+        model.stopwatch = nil
         #expect(model.detached == nil)
         #expect(model.wing == CallLayout.wing(for: connected, restingHeight: 32))
         model.activity = true
-        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
+        model.stopwatch = .stopped(elapsed: 12)
         #expect(CallLayout.wing(for: connected, restingHeight: 32) > CallLook.waveWidth)
         // An hour's time takes more room.
         let longer = CallShown(name: "A", over: "F", phase: .connected(since: .now - 3_700))
@@ -957,7 +928,7 @@ struct SystemBannersTests {
     @MainActor
     func fixedHoverFootprint() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
-        model.airplay = AirPlayRoute(name: "HomePod", symbol: "homepod")
+        model.airdrop = AirDropShown(id: "1", sender: "iPhone", preview: nil, fraction: 0.4)
         let rest = model.metrics
         for proximity: CGFloat in [0, 0.5, 1] {
             model.proximity = proximity
@@ -1327,7 +1298,7 @@ struct SystemBannersTests {
         for activity: NotchModel.Activity in [.call, .screenRecording, .voiceMemo] {
             #expect(!NotchController.stepsAway(activity))
         }
-        for activity: NotchModel.Activity in [.music, .airdrop, .timer, .stopwatch, .airplay] {
+        for activity: NotchModel.Activity in [.music, .airdrop, .timer, .stopwatch] {
             #expect(NotchController.stepsAway(activity))
         }
     }
@@ -1335,7 +1306,7 @@ struct SystemBannersTests {
     @Test("What a swipe puts away, and a call or a recording too, can be put away from the menu by name")
     func putAwayFromMenu() {
         #expect(NotchController.putAwayTitle(alert: nil, first: .music) == "Hide Music")
-        #expect(NotchController.putAwayTitle(alert: nil, first: .airplay) == "Hide AirPlay")
+        #expect(NotchController.putAwayTitle(alert: nil, first: .airdrop) == "Hide AirDrop")
         #expect(NotchController.putAwayTitle(alert: .incomingCall, first: .music) == "Hide Call")
         #expect(NotchController.putAwayTitle(alert: .lowBattery, first: nil) == "Hide Low Battery")
         // A rung timer has the menu's own Stop; an announcement that's gone in a moment, nothing.
@@ -1666,7 +1637,7 @@ struct ActivityBenchTests {
     @Test("Two together, and no more, the most the notch shows")
     func pairs() {
         #expect(ActivityBench.parse(["Glance", "--bench", "music+timer", "60"])?.scenes == [.music, .timer])
-        #expect(ActivityBench.parse(["Glance", "--bench", "music+timer+airplay"]) == nil)
+        #expect(ActivityBench.parse(["Glance", "--bench", "music+timer+stopwatch"]) == nil)
         #expect(ActivityBench.parse(["Glance", "--bench", "music+player"]) == nil)
     }
 

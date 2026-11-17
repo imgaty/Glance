@@ -31,7 +31,7 @@ struct ActivityExitTests {
             let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: camera)
             model.activity = true
             model.voiceMemo = .recording(since: .now)
-            model.airplay = AirPlayRoute(name: "Living Room", symbol: "homepod")
+            model.stopwatch = .stopped(elapsed: 12)
             if tall {
                 model.alert = BatteryWatch.lowBattery(.init(percent: 20, onPower: false, charging: false))
                 model.alertWing = 90

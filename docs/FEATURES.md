@@ -49,17 +49,16 @@ hits.
 While something plays, the closed notch shows its cover and a waveform that
 moves with the music. When a new song starts, its name slides out for a moment.
 As on the iPhone, it also shows the battery charging or running low, AirPods
-and Beats connecting, and files coming in or going out over AirDrop and sound
-playing over AirPlay, both with a button to stop them. It counts Clock's timer
-down and its stopwatch up, with their buttons, and shows the screen or a voice
-memo being recorded, with a button to stop it. With several at once, the first
-keeps the left of the notch and the second goes in a bubble of its own off the
-right, as on the iPhone.
+and Beats connecting, and files coming in or going out over AirDrop, with a
+button to stop them. It counts Clock's timer down and its stopwatch up, with
+their buttons, and shows the screen or a voice memo being recorded, with a
+button to stop it. With several at once, the first keeps the left of the notch
+and the second goes in a bubble of its own off the right, as on the iPhone.
 Clock alarms appear when an identifiable ringing alert is available, with the
 actions that alert actually offers. Focus changes appear as short
 announcements. Right-click the notch and choose **Recognize Music** to start a
-ShazamKit session, or **Run Shortcut** to run a shortcut and keep its state and
-result beside the camera.
+ShazamKit session, or **Run Shortcut** to run a shortcut and follow it beside
+the camera, its result kept in the menu.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics

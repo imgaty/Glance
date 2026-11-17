@@ -444,7 +444,7 @@ enum Preferences {
     /// Apps whose copies are never kept, comma separated (see TrayApps).
     static let trayIgnoredApps = "trayIgnoredApps"
     /// What the Mac announces beside the camera (see Activities): plugged in, low on battery, a
-    /// device connecting or the sound going to AirPlay; and files coming in over AirDrop.
+    /// device connecting; and files coming in over AirDrop.
     static let activityCharging = "activityCharging"
     static let activityLowBattery = "activityLowBattery"
     static let activityDevices = "activityDevices"
