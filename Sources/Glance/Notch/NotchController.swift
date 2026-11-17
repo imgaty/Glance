@@ -744,9 +744,12 @@ final class NotchController {
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
+    private var recognitionPresent: Task<Void, Never>?
+
     private func show(recognition state: MusicRecognitionActivity.State, identity: UUID?) {
         let shown = state == .idle ? nil : state
         let wasPresent = model.recognition != nil
+        let wasWorking = model.recognition?.isWorking == true
         if (shown != nil) == wasPresent {
             if identity != model.recognitionIdentity { model.dismissed.remove(.recognition) }
             model.recognitionIdentity = identity
@@ -760,6 +763,19 @@ final class NotchController {
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         if model.expanded == .recognition, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
+        // As the iPhone's: it opens by itself as it starts listening, then settles beside the camera;
+        // and opens again to say no song was found, until it goes.
+        let opensFor: TimeInterval? =
+            !wasWorking && shown?.isWorking == true ? ShazamLook.opensAtStart : wasWorking && shown == .noMatch ? ShazamLook.showsNoMatch : nil
+        if let opensFor {
+            recognitionPresent?.cancel()
+            recognitionPresent = Task { [weak self] in
+                // Once it has taken its place beside the camera.
+                try? await Task.sleep(for: .seconds(NotchMotion.foldDuration))
+                guard let self, !Task.isCancelled, self.model.recognition == shown else { return }
+                self.present(.recognition, for: opensFor, onCollapse: Opening.openingTap)
+            }
+        }
     }
 
     /// Called only by an explicit Recognize Music command; opening an existing activity is inert.

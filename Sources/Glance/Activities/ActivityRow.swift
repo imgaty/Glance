@@ -19,8 +19,11 @@ enum ActivityRowLayout {
     /// under the pointer and to VoiceOver.
     static let widest: CGFloat = 520
 
-    /// Where the words start, from the left end: after the picture, as AirDrop's.
-    static func wordsStart(_ h: CGFloat) -> CGFloat { PlayerLayout.padding + TimerLayout.content(h) + h * AirDropLayout.gap }
+    /// Where the words start, from the left end: after the picture, as AirDrop's; with no picture, as
+    /// far in as Music Recognition's "No song found." sits, by the opened height.
+    static func wordsStart(_ h: CGFloat, pictured: Bool = true) -> CGFloat {
+        pictured ? PlayerLayout.padding + TimerLayout.content(h) + h * AirDropLayout.gap : TimerLayout.tallHeight(h) * 0.381
+    }
 
     /// The buttons at the right end, side by side, as the Timer's.
     static func buttonsWidth(_ count: Int, _ h: CGFloat) -> CGFloat {
@@ -35,14 +38,17 @@ enum ActivityRowLayout {
     /// Either side of the camera as wide as the wider needs: the picture and the name on the left,
     /// against the camera, the buttons on the right; wider, up to a limit, for the line under the name
     /// to run on under the camera as far as the buttons.
+    /// `extra` is what stands before the buttons that isn't one, as Music Recognition's waveform.
     @MainActor
-    static func width(title: String, detail: String, buttons: Int, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
+    static func width(
+        title: String, detail: String, buttons: Int, extra: CGFloat = 0, pictured: Bool = true, restingHeight h: CGFloat, camera: CGFloat
+    ) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let left = wordsStart(h) + min(textWidth(title, weight: .semibold), titleLimit(h)) + gap
-        let right = gap + buttonsWidth(buttons, h) + PlayerLayout.padding
+        let left = wordsStart(h, pictured: pictured) + min(textWidth(title, weight: .semibold), titleLimit(h)) + gap
+        let right = gap + extra + buttonsWidth(buttons, h) + PlayerLayout.padding
         let around = camera + 2 * max(left, right)
-        let line = wordsStart(h) + textWidth(detail, weight: .regular) + (buttons > 0 ? h * AirDropLayout.gap + buttonsWidth(buttons, h) : 0)
-            + PlayerLayout.padding
+        let line = wordsStart(h, pictured: pictured) + textWidth(detail, weight: .regular)
+            + (buttons > 0 ? h * AirDropLayout.gap + extra + buttonsWidth(buttons, h) : 0) + PlayerLayout.padding
         return max(around, min(line, widest))
     }
 }
@@ -57,6 +63,10 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
     /// All there is to say about it, under the pointer and to VoiceOver, when the line is short of it.
     var explanation: String? = nil
     let buttons: Int
+    /// What stands before the buttons that isn't one (see `ActivityRowLayout.width`).
+    var extra: CGFloat = 0
+    /// With a picture at the left end; without, the words start further in.
+    var pictured = true
     /// The notch is open to it.
     var revealed = true
     @ViewBuilder let picture: Picture
@@ -66,9 +76,9 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
         let h = restingHeight
         let gap = LiveActivityView.cameraGap
         let side = max((width - camera) / 2, 0)
-        let start = ActivityRowLayout.wordsStart(h)
+        let start = ActivityRowLayout.wordsStart(h, pictured: pictured)
         let titleRoom = max(side - start - gap, 0)
-        let buttonsRoom = buttons > 0 ? h * AirDropLayout.gap + ActivityRowLayout.buttonsWidth(buttons, h) : 0
+        let buttonsRoom = buttons > 0 ? h * AirDropLayout.gap + extra + ActivityRowLayout.buttonsWidth(buttons, h) : 0
         let lineRoom = max(width - start - buttonsRoom - PlayerLayout.padding, 0)
         ZStack {
             HStack(spacing: h * AirDropLayout.gap) {
@@ -92,7 +102,7 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityHint(explanation ?? "")
             }
-            .padding(.leading, PlayerLayout.padding)
+            .padding(.leading, pictured ? PlayerLayout.padding : start)
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: h * TimerLayout.buttonGap) { trailing }
                 .padding(.trailing, PlayerLayout.padding)

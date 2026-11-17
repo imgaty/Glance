@@ -13,30 +13,49 @@ import SwiftUI
 /// mark white on a blue disc, light running round it, and "Listening…", then "Working on it…" and
 /// "Still trying…" as it goes on.
 enum ShazamLook {
-    /// Shazam's blue, as Apple names it (`ShazamColor`).
+    /// Shazam's blue, as Apple names it (`ShazamColor`), and its buttons' circle: the blue at about a
+    /// quarter, measured on iOS 27.
     static let blue = Color(.sRGB, red: 0, green: 0x88 / 255, blue: 1)
+    static let dim = Color(.sRGB, red: 8 / 255, green: 34 / 255, blue: 67 / 255)
     /// The light passing through the mark, and how long it takes to cross.
     static let light = Color(.sRGB, red: 0x8C / 255, green: 0xE8 / 255, blue: 1)
     static let crossing: TimeInterval = 1.6
-    /// Beside the camera, by the island's height: the mark as large as Shortcuts' icon there and as
-    /// far in, the waveform as Shortcuts' ring is.
-    static let mark: CGFloat = ShortcutRunLook.icon
-    static let markEdge: CGFloat = ShortcutRunLook.iconEdge
-    static let wave: CGFloat = ShortcutRunLook.ring
-    static let waveEdge: CGFloat = ShortcutRunLook.ringEdge
-    static let bars = 5
+    /// Beside the camera, by the island's height, as iOS 27's: the mark's height and how far in it
+    /// starts; the waveform's six bars, their width, pitch, shortest and tallest, and how far in.
+    static let mark: CGFloat = 0.553
+    static let markEdge: CGFloat = 0.237
+    static let bars = 6
+    static let bar: CGFloat = 0.055
+    static let pitch: CGFloat = 0.106
+    static let shortest: CGFloat = 0.109
+    static let tallest: CGFloat = 0.309
+    static let waveEdge: CGFloat = 0.21
+    /// Opened, the same waveform larger, and as far before the ✕ as measured, by the island's height
+    /// beside the camera.
+    static let openScale: CGFloat = 1.42
+    static let waveGap: CGFloat = 0.564
     /// The mark on its disc, by the disc's side.
     static let discMark: CGFloat = 0.55
-    /// How much of its symbol's square the mark fills: the symbol leaves room for a circle round
-    /// it, which isn't drawn.
+    /// How much of its symbol's square the mark fills, tall and wide: the symbol leaves room for a
+    /// circle round it, which isn't drawn.
     static let symbolInk: CGFloat = 0.506
+    static let symbolWidth: CGFloat = 0.468
     /// After how long listening says it's still at it, and then that it's still trying.
     static let workingAfter: TimeInterval = 4
     static let tryingAfter: TimeInterval = 9
+    /// How long the notch opens to it as it starts listening, and to "No song found." before it goes.
+    static let opensAtStart: TimeInterval = 2.5
+    static let showsNoMatch: TimeInterval = 4.7
+
+    /// The waveform's width at that height.
+    static func waveWidth(_ h: CGFloat) -> CGFloat { h * (pitch * CGFloat(bars - 1) + bar) }
+    /// The mark's width at that height.
+    static func markWidth(_ h: CGFloat) -> CGFloat { h * mark * symbolWidth / symbolInk }
 }
 
-/// Music recognition beside the camera: Shazam's mark at the left end, and at the right a waveform
-/// of what it hears while it listens, or the cover of the song it found; in the bubble, the mark.
+/// Music recognition beside the camera, as iOS 27's: Shazam's mark at the left end, and at the right
+/// a waveform of what it hears while it listens, or the cover of the song it found; in the bubble,
+/// the mark.
 struct MusicRecognitionCompactView: View {
     let state: MusicRecognitionActivity.State
     var minimal = false
@@ -46,8 +65,8 @@ struct MusicRecognitionCompactView: View {
 
     static func wing(for state: MusicRecognitionActivity.State, restingHeight h: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let left = h * (ShazamLook.markEdge + ShazamLook.mark) + gap
-        let right = gap + h * (ShazamLook.wave + ShazamLook.waveEdge)
+        let left = h * ShazamLook.markEdge + ShazamLook.markWidth(h) + gap
+        let right = gap + ShazamLook.waveWidth(h) + h * ShazamLook.waveEdge
         return max(left, right)
     }
 
@@ -59,10 +78,10 @@ struct MusicRecognitionCompactView: View {
             } else {
                 ZStack {
                     ShazamMark(listening: state.isWorking, side: h * ShazamLook.mark)
+                        .frame(width: ShazamLook.markWidth(h))
                         .padding(.leading, h * ShazamLook.markEdge)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     trailing(h)
-                        .frame(width: h * ShazamLook.wave, height: h * ShazamLook.wave)
                         .padding(.trailing, h * ShazamLook.waveEdge)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .islandFade(!leadingOnly)
@@ -75,10 +94,11 @@ struct MusicRecognitionCompactView: View {
 
     @ViewBuilder private func trailing(_ h: CGFloat) -> some View {
         if state.isWorking {
-            ShazamWave(levels: activity.levels, height: h * ShazamLook.wave)
+            ShazamWave(levels: activity.levels, height: h)
         } else if case .match(let song) = state, let url = song.artworkURL {
             AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.white.opacity(0.2) }
-                .clipShape(RoundedRectangle(cornerRadius: h * ShazamLook.wave * ArtworkShape.restingRadius, style: .continuous))
+                .frame(width: h * ShazamLook.mark, height: h * ShazamLook.mark)
+                .clipShape(RoundedRectangle(cornerRadius: h * ShazamLook.mark * ArtworkShape.restingRadius, style: .continuous))
         }
     }
 }
@@ -154,26 +174,28 @@ struct ShazamDisc: View {
     }
 }
 
-/// A waveform of what it hears, in Shazam's blue: the loudest of each tenth of a second, newest at
-/// the right.
+/// A waveform of what it hears, in Shazam's blue, as iOS 27's: six bars, newest at the right, dots
+/// when it's quiet. `height` is the island's height beside the camera; opened, it's larger.
 struct ShazamWave: View {
     @ObservedObject var levels: RecordingLevels
     let height: CGFloat
+    var scale: CGFloat = 1
 
     var body: some View {
-        let count = ShazamLook.bars
+        let look = ShazamLook.self
+        let h = height * scale
+        let count = look.bars
         let shown = Array(levels.levels.suffix(count))
         let padded = Array(repeating: CGFloat(0), count: max(count - shown.count, 0)) + shown
-        let bar = height * 0.14
-        HStack(spacing: (height - bar * CGFloat(count)) / CGFloat(count - 1)) {
+        HStack(spacing: h * (look.pitch - look.bar)) {
             ForEach(Array(padded.enumerated()), id: \.offset) { _, level in
                 Capsule()
-                    .fill(ShazamLook.blue)
-                    .frame(width: bar, height: max(bar, height * (0.25 + 0.75 * min(level * 1.6, 1))))
+                    .fill(look.blue)
+                    .frame(width: h * look.bar, height: h * (look.shortest + (look.tallest - look.shortest) * min(level * 1.6, 1)))
                     .animation(.easeOut(duration: 0.12), value: level)
             }
         }
-        .frame(width: height, height: height)
+        .frame(width: look.waveWidth(h), height: h * look.tallest)
         .accessibilityHidden(true)
     }
 }
@@ -214,6 +236,8 @@ struct MusicRecognitionActivityView: View {
         case .match(let song): return song.musicURL != nil || song.webURL != nil ? [.openSong, .done] : [.done]
         case .denied: return [.settings, .done]
         case .restricted, .failure(.configuration): return [.done]
+        // As the iPhone's: Try Again alone, and it goes by itself.
+        case .noMatch: return [.recognize]
         default: return [.recognize, .done]
         }
     }
@@ -226,7 +250,8 @@ struct MusicRecognitionActivityView: View {
     /// name is said under the pointer and to VoiceOver.
     static func title(for state: MusicRecognitionActivity.State) -> String {
         switch state {
-        case .idle, .noMatch: state.title
+        case .idle: state.title
+        case .noMatch: String(localized: "No song found.")
         case .requestingPermission, .denied, .restricted: String(localized: "Microphone")
         case .recognizing: listening(after: 0)
         case .match(let song): song.title
@@ -282,11 +307,21 @@ struct MusicRecognitionActivityView: View {
     static func width(for state: MusicRecognitionActivity.State, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let titles = state == .recognizing ? [0, ShazamLook.workingAfter, ShazamLook.tryingAfter].map(listening(after:)) : [title(for: state)]
         return titles.map {
-            ActivityRowLayout.width(title: $0, detail: detail(for: state), buttons: trailing(for: state).count, restingHeight: h, camera: camera)
+            ActivityRowLayout.width(
+                title: $0, detail: detail(for: state), buttons: trailing(for: state).count, extra: state.isWorking ? waveRoom(h) : 0,
+                pictured: state != .noMatch, restingHeight: h, camera: camera)
         }.max() ?? 0
     }
 
     static func height(restingHeight h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) }
+
+    /// The waveform before the ✕ while it listens, and the room between them, as the iPhone's.
+    static func waveRoom(_ h: CGFloat) -> CGFloat { ShazamLook.waveWidth(h * ShazamLook.openScale) + h * ShazamLook.waveGap }
+
+    /// Its own blue for listening and trying again, as the iPhone's; white otherwise.
+    static func tinted(_ action: Action, in state: MusicRecognitionActivity.State) -> Bool {
+        (action == .cancel && state.isWorking) || (action == .recognize && state == .noMatch)
+    }
 
     var body: some View {
         let h = restingHeight
@@ -301,10 +336,15 @@ struct MusicRecognitionActivityView: View {
             ActivityRow(
                 restingHeight: h, camera: camera, width: Self.width(for: state, restingHeight: h, camera: camera),
                 title: title, detail: failure ?? Self.detail(for: state), explanation: failure ?? Self.explanation(for: state),
-                buttons: Self.trailing(for: state).count, revealed: revealed
+                buttons: Self.trailing(for: state).count, extra: state.isWorking ? Self.waveRoom(h) : 0, pictured: state != .noMatch,
+                revealed: revealed
             ) {
-                picture(h, opens: actions.first == .openSong)
+                if state != .noMatch { picture(h, opens: actions.first == .openSong) }
             } trailing: {
+                if state.isWorking {
+                    ShazamWave(levels: activity.levels, height: h, scale: ShazamLook.openScale)
+                        .padding(.trailing, h * (ShazamLook.waveGap - TimerLayout.buttonGap))
+                }
                 ForEach(Array(actions.enumerated()), id: \.element) { index, action in
                     if action != .openSong { button(action, control: controls[index], h) }
                 }
@@ -362,16 +402,18 @@ struct MusicRecognitionActivityView: View {
     }
 
     private func button(_ action: Action, control: PlayerControl, _ h: CGFloat) -> some View {
-        IslandCircleButton(control: control, height: h, tint: .white, label: title(for: action)) {
+        let tinted = Self.tinted(action, in: state)
+        let ink = tinted ? ShazamLook.blue : .white
+        return IslandCircleButton(control: control, height: h, tint: .white, label: title(for: action), fill: tinted ? ShazamLook.dim : nil) {
             perform(action)
         } glyph: {
             switch action {
             case .cancel, .done:
-                CrossGlyph(height: h)
+                CrossGlyph(height: h, color: ink)
             case .recognize:
                 Image(systemName: state == .idle ? "shazam.logo.fill" : "arrow.clockwise")
                     .font(.system(size: h * (state == .idle ? 0.62 : 0.55), weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(ink)
             case .settings:
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: h * 0.55, weight: .semibold))

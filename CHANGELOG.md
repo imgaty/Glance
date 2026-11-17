@@ -29,10 +29,11 @@
   its color.
 
 - Changed music recognition to show as the iPhone's Music Recognition does:
-  Shazam's mark in its blue with light passing through it and a waveform of
-  what it hears beside the camera, and opened, the mark on a blue disc with
-  `Listening…`, then `Working on it…` and `Still trying…`. A canceled request
-  goes by itself.
+  the notch opens by itself as it starts listening, with Shazam's mark on a
+  blue disc, `Listening…`, a waveform of what it hears and a blue **Cancel**,
+  then settles beside the camera with the mark and the waveform. When no song
+  is found it opens to `No song found.` with **Try Again**, then goes by
+  itself, as a canceled request does.
 
 - Changed shortcuts started from Glance to show as the iPhone shows a shortcut
   running: its own icon beside the camera with a ring in its color, the icon

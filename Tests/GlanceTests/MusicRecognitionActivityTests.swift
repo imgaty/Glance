@@ -162,6 +162,26 @@ struct MusicRecognitionActivityTests {
         activity.dismiss()
     }
 
+    @Test("No song found shows a moment and goes by itself, as the iPhone's does; trying again keeps it")
+    func noMatchClosesByItself() async throws {
+        let source = Source()
+        let activity = MusicRecognitionActivity(backend: source.backend, noMatchDelay: .milliseconds(150))
+        activity.recognize()
+        try await settle { source.sessions.first?.reply != nil }
+        source.sessions[0].complete(.noMatch)
+        try await settle { activity.state == .noMatch }
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(activity.state == .idle)
+        activity.recognize()
+        try await settle { source.sessions.count == 2 && source.sessions[1].reply != nil }
+        source.sessions[1].complete(.noMatch)
+        try await settle { activity.state == .noMatch }
+        activity.recognize()
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(activity.state.isWorking)
+        activity.dismiss()
+    }
+
     @Test("Permission revoked during recognition is shown as denied instead of a successful match")
     func permissionRevoked() async throws {
         let source = Source()
@@ -276,7 +296,7 @@ struct MusicRecognitionActivityTests {
         #expect(MusicRecognitionActivityView.actions(for: .restricted) == [.done])
         #expect(MusicRecognitionActivityView.actions(for: .match(song)) == [.openSong, .done])
         #expect(MusicRecognitionActivityView.actions(for: .match(.init(title: nil, artist: nil))) == [.done])
-        #expect(MusicRecognitionActivityView.actions(for: .noMatch) == [.recognize, .done])
+        #expect(MusicRecognitionActivityView.actions(for: .noMatch) == [.recognize])
         #expect(!NotchController.stepsAway(.recognition))
     }
 

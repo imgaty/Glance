@@ -775,6 +775,8 @@ private struct PauseGlyph: View {
 /// The Timer's and the Alarm's ✕, white, its strokes rounded.
 struct CrossGlyph: View {
     let height: CGFloat
+    /// White, or a color of the activity's own, as Music Recognition's blue.
+    var color: Color = .white
 
     var body: some View {
         let side = height * TimerLayout.cross, line = height * TimerLayout.crossLine
@@ -785,7 +787,7 @@ struct CrossGlyph: View {
             path.move(to: CGPoint(x: b, y: a))
             path.addLine(to: CGPoint(x: a, y: b))
         }
-        .stroke(.white, style: StrokeStyle(lineWidth: line, lineCap: .round))
+        .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
         .frame(width: side, height: side)
     }
 }

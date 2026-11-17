@@ -134,6 +134,8 @@ final class MusicRecognitionActivity: ObservableObject {
             } else {
                 levels.stop()
             }
+            // As the iPhone's: "No song found." shows a moment, then the activity goes.
+            if state == .noMatch { closeLater(after: noMatchDelay) }
         }
     }
     @Published private(set) var actionFailure: String?
@@ -142,8 +144,10 @@ final class MusicRecognitionActivity: ObservableObject {
     @Published private(set) var listeningSince: Date?
     /// How loud what it hears is, for the waveform beside the camera, as the iPhone's.
     let levels = RecordingLevels()
-    /// How long Canceled shows before the activity goes, as the iPhone's leaves once canceled.
+    /// How long Canceled and "No song found." show before the activity goes, as the iPhone's leave
+    /// once canceled, and once nothing was found.
     private let closeDelay: Duration
+    private let noMatchDelay: Duration
     private var closing: Task<Void, Never>?
 
     var isPresented: Bool { state != .idle }
@@ -159,11 +163,26 @@ final class MusicRecognitionActivity: ObservableObject {
     private var session: Session?
     private var request: UUID?
 
-    init(backend: Backend? = nil, closeDelay: Duration = .seconds(1.2), isEnabled: @escaping () -> Bool = { true }) {
+    init(
+        backend: Backend? = nil, closeDelay: Duration = .seconds(1.2), noMatchDelay: Duration = .seconds(ShazamLook.showsNoMatch),
+        isEnabled: @escaping () -> Bool = { true }
+    ) {
         self.backend = backend ?? .native
         self.live = backend == nil
         self.closeDelay = closeDelay
+        self.noMatchDelay = noMatchDelay
         self.isEnabled = isEnabled
+    }
+
+    /// Goes once the state it shows has been seen, unless something else happened meanwhile.
+    private func closeLater(after delay: Duration) {
+        let shown = (state, identity)
+        closing?.cancel()
+        closing = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self, state == shown.0, identity == shown.1 else { return }
+            dismiss()
+        }
     }
 
     /// Observe only lifecycle preferences here. Starting Glance never starts recognition.
@@ -264,13 +283,7 @@ final class MusicRecognitionActivity: ObservableObject {
         endRequest()
         state = .cancelled
         actionFailure = nil
-        let canceled = identity
-        closing?.cancel()
-        closing = Task { [weak self, closeDelay] in
-            try? await Task.sleep(for: closeDelay)
-            guard !Task.isCancelled, let self, state == .cancelled, identity == canceled else { return }
-            dismiss()
-        }
+        closeLater(after: closeDelay)
     }
 
     /// Used for Done, disabling the activity or app shutdown. Collapsing the notch should leave
