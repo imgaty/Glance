@@ -19,15 +19,15 @@ enum ShazamLook {
     static let dim = Color(.sRGB, red: 8 / 255, green: 34 / 255, blue: 67 / 255)
     /// The light passing through the mark, and how long it takes to cross.
     static let light = Color(.sRGB, red: 0x8C / 255, green: 0xE8 / 255, blue: 1)
-    static let crossing: TimeInterval = 1.6
-    /// The opened disc, measured on iOS 27: a deeper blue, a beam of cyan light shining in from its
-    /// rim, going round the other way from a clock's hands once every 4.7 seconds, and sparkles
+    static let crossing: TimeInterval = 1.0033 / 0.7
+    /// The opened disc, from iOS 27's `expanded-listening.ca`: a deeper blue, a cyan arc glow going
+    /// round the other way from a clock's hands once every 5 seconds, the mark breathing, and sparkles
     /// coming and going in it and just outside it.
     static let disc = Color(.sRGB, red: 0, green: 117 / 255, blue: 237 / 255)
     static let discLight = Color(.sRGB, red: 0, green: 215 / 255, blue: 1)
-    static let discTurn: TimeInterval = 4.7
-    /// The beam's spread round the disc, in degrees.
-    static let beam: Double = 80
+    static let discTurn: TimeInterval = 5
+    /// How long the mark takes to breathe out, and again in.
+    static let breath: TimeInterval = 1.0533
     /// Beside the camera, by the island's height, as iOS 27's: the mark's height and how far in it
     /// starts; the waveform's six bars, their width, pitch, shortest and tallest, and how far in.
     static let mark: CGFloat = 0.553
@@ -144,6 +144,8 @@ struct ShazamMark: View {
                 }
             }
             .frame(width: side, height: side)
+            // Breathing as it listens, as the island's own mark does.
+            .modifier(ShazamBreath(on: listening && !reduceMotion))
             .accessibilityHidden(true)
     }
 
@@ -173,31 +175,34 @@ struct ShazamDisc: View {
                     let now = context.date.timeIntervalSinceReferenceDate
                     let turn = now.truncatingRemainder(dividingBy: ShazamLook.discTurn) / ShazamLook.discTurn
                     // Screen angles run with a clock's hands, so a falling one goes the other way.
-                    let middle = -turn * 360
-                    let spread = ShazamLook.beam / 2
-                    // Brightest at the rim, fading towards the middle, softly edged either side.
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                stops: [
-                                    .init(color: ShazamLook.discLight.opacity(0), location: 0.1),
-                                    .init(color: ShazamLook.discLight.opacity(0.55), location: 0.55),
-                                    .init(color: ShazamLook.discLight, location: 0.9),
-                                ],
-                                center: .center, startRadius: 0, endRadius: side / 2)
-                        )
-                        .mask {
-                            AngularGradient(
-                                stops: [.init(color: .clear, location: 0), .init(color: .white, location: 0.5), .init(color: .clear, location: 1)],
-                                center: .center, startAngle: .degrees(middle - spread), endAngle: .degrees(middle + spread))
-                        }
-                        .blur(radius: side * 0.025)
-                        .clipShape(Circle())
+                    let angle = Angle.degrees(-turn * 360)
+                    ZStack {
+                        // Two copies of the arc glow, one sharp and one far softer, cyan at half, added
+                        // onto the blue (`expanded-listening.ca`, "arc glow.png" and its copy).
+                        ShazamArcGlow(side: side).blur(radius: side * 0.023).opacity(0.5)
+                        ShazamArcGlow(side: side).blur(radius: side * 0.117).opacity(0.5)
+                    }
+                    .rotationEffect(angle)
+                    .blendMode(.plusLighter)
+                    .frame(width: side * 0.985, height: side * 0.985)
+                    .clipShape(Circle())
                 }
             }
             ShazamMark(listening: false, side: side * ShazamLook.discMark, tint: .white)
+                .modifier(ShazamBreath(on: listening && !reduceMotion))
         }
         .frame(width: side, height: side)
+        // Its soft blue halo, under it (`Layer 5`: the blue at 40%, blurred, a little off its middle).
+        .background {
+            if listening, !reduceMotion {
+                Circle().fill(ShazamLook.disc)
+                    .frame(width: side * 0.6, height: side * 0.6)
+                    .blur(radius: side * 0.27)
+                    .opacity(0.4)
+                    .offset(x: side * 0.051, y: side * 0.018)
+                    .blendMode(.plusLighter)
+            }
+        }
         // Laid over it, so those past the rim don't make the disc any bigger.
         .overlay {
             if listening, !reduceMotion {
@@ -207,6 +212,68 @@ struct ShazamDisc: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// The light that turns round the disc, redrawn from iOS 27's "arc glow": a soft glow with one hard
+/// straight edge, brightest on that edge at 0.71 of the radius from the middle, fading 0.46 of the
+/// disc across the edge and 0.58 along it, in cyan; mirrored, as its layer is.
+private struct ShazamArcGlow: View {
+    let side: CGFloat
+
+    var body: some View {
+        Canvas { context, size in
+            let d = side
+            let middle = CGPoint(x: size.width / 2, y: size.height / 2)
+            // The brightest point and the edge's way, as the image lies once mirrored.
+            let bright = CGPoint(x: middle.x - 0.207 * d, y: middle.y + 0.287 * d)
+            let along = CGVector(dx: 0.636, dy: 0.771)
+            let into = CGVector(dx: 0.771, dy: -0.636)
+            // Only on the glow's side of its edge.
+            var half = Path()
+            let far = d * 2
+            half.move(to: CGPoint(x: bright.x - along.dx * far, y: bright.y - along.dy * far))
+            half.addLine(to: CGPoint(x: bright.x + along.dx * far, y: bright.y + along.dy * far))
+            half.addLine(to: CGPoint(x: bright.x + along.dx * far + into.dx * far, y: bright.y + along.dy * far + into.dy * far))
+            half.addLine(to: CGPoint(x: bright.x - along.dx * far + into.dx * far, y: bright.y - along.dy * far + into.dy * far))
+            half.closeSubpath()
+            context.clip(to: half)
+            // An ellipse along the edge, fading out from the brightest point.
+            context.translateBy(x: bright.x, y: bright.y)
+            context.rotate(by: .radians(atan2(along.dy, along.dx)))
+            context.scaleBy(x: 0.58 / 0.46, y: 1)
+            let r = 0.46 * d
+            context.fill(
+                Path(ellipseIn: CGRect(x: -r, y: -r, width: r * 2, height: r * 2)),
+                with: .radialGradient(
+                    Gradient(stops: [
+                        .init(color: ShazamLook.discLight, location: 0),
+                        .init(color: ShazamLook.discLight.opacity(0.68), location: 0.25),
+                        .init(color: ShazamLook.discLight.opacity(0.32), location: 0.5),
+                        .init(color: ShazamLook.discLight.opacity(0.1), location: 0.75),
+                        .init(color: ShazamLook.discLight.opacity(0), location: 1),
+                    ]), center: .zero, startRadius: 0, endRadius: r))
+        }
+        .frame(width: side, height: side)
+    }
+}
+
+/// The mark breathing while it listens: 1.02 to 1.06 its size and back, 1.05 seconds each way, eased,
+/// as iOS 27's.
+private struct ShazamBreath: ViewModifier {
+    let on: Bool
+
+    func body(content: Content) -> some View {
+        if on {
+            TimelineView(.animation) { context in
+                let t = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: ShazamLook.breath * 2) / ShazamLook.breath
+                let way = t <= 1 ? t : 2 - t
+                let eased = way * way * (3 - 2 * way)
+                content.scaleEffect(1.02 + 0.04 * eased)
+            }
+        } else {
+            content
+        }
     }
 }
 
