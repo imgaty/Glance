@@ -52,6 +52,22 @@ struct MusicRecognitionActivityTests {
         #expect(source.sessions.isEmpty)
     }
 
+    @Test("Canceled shows a moment, then the activity goes by itself, as the iPhone's does")
+    func cancelClosesByItself() async throws {
+        let source = Source()
+        source.permission = .notDetermined
+        let activity = MusicRecognitionActivity(backend: source.backend, closeDelay: .milliseconds(80))
+        activity.recognize()
+        try await settle { source.permissionReply != nil }
+        #expect(activity.listeningSince != nil)
+        activity.cancel()
+        #expect(activity.state == .cancelled)
+        #expect(activity.listeningSince == nil)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(activity.state == .idle)
+        source.replyToPermission(false)
+    }
+
     @Test("Cancelling a permission prompt prevents recording even if access is later granted")
     func cancelledPermissionPrompt() async throws {
         let source = Source()

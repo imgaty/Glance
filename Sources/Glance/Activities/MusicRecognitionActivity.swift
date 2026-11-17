@@ -123,9 +123,28 @@ final class MusicRecognitionActivity: ObservableObject {
         }
     }
 
-    @Published private(set) var state: State = .idle
+    @Published private(set) var state: State = .idle {
+        didSet {
+            guard state.isWorking != oldValue.isWorking else { return }
+            listeningSince = state.isWorking ? .now : nil
+            if state.isWorking {
+                // Only the real notch listens for its waveform; the bench and tests make one up.
+                levels.madeUp = benched || !live
+                levels.start()
+            } else {
+                levels.stop()
+            }
+        }
+    }
     @Published private(set) var actionFailure: String?
     @Published private(set) var identity: UUID?
+    /// When it began listening, for the words that follow "Listening…" as it goes on.
+    @Published private(set) var listeningSince: Date?
+    /// How loud what it hears is, for the waveform beside the camera, as the iPhone's.
+    let levels = RecordingLevels()
+    /// How long Canceled shows before the activity goes, as the iPhone's leaves once canceled.
+    private let closeDelay: Duration
+    private var closing: Task<Void, Never>?
 
     var isPresented: Bool { state != .idle }
     var isWorking: Bool { state.isWorking }
@@ -140,9 +159,10 @@ final class MusicRecognitionActivity: ObservableObject {
     private var session: Session?
     private var request: UUID?
 
-    init(backend: Backend? = nil, isEnabled: @escaping () -> Bool = { true }) {
+    init(backend: Backend? = nil, closeDelay: Duration = .seconds(1.2), isEnabled: @escaping () -> Bool = { true }) {
         self.backend = backend ?? .native
         self.live = backend == nil
+        self.closeDelay = closeDelay
         self.isEnabled = isEnabled
     }
 
@@ -244,6 +264,13 @@ final class MusicRecognitionActivity: ObservableObject {
         endRequest()
         state = .cancelled
         actionFailure = nil
+        let canceled = identity
+        closing?.cancel()
+        closing = Task { [weak self, closeDelay] in
+            try? await Task.sleep(for: closeDelay)
+            guard !Task.isCancelled, let self, state == .cancelled, identity == canceled else { return }
+            dismiss()
+        }
     }
 
     /// Used for Done, disabling the activity or app shutdown. Collapsing the notch should leave

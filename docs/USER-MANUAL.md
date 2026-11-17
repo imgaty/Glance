@@ -720,19 +720,18 @@ listed under the pointer.
 
 Right-click the notch and choose **Recognize Music**. Glance requests microphone
 permission at that point and uses ShazamKit to identify the song. ShazamKit
-sends an audio signature to Shazam. Beside the camera, Shazam's mark sits at the
-left and the ring at the right, going round while Glance listens. Open the
-activity to see it in one row: Shazam's mark at the left end, or the song's
-cover once it's found, which opens it in Music; what's happening beside the
-camera and what to do under it; and at the right end the ring, with the square
-inside it that cancels listening.
+sends an audio signature to Shazam. It shows as the iPhone's Music Recognition
+does: beside the camera, Shazam's mark in its blue at the left, light passing
+through it while Glance listens, and at the right a waveform of what it hears.
+Open the activity to see the mark on a blue disc, light going round it, with
+`Listening…` beside the camera, then `Working on it…` and `Still trying…` as it
+goes on, and **Cancel** at the right end.
 
-Once it's over, the ring shows how it ended: a check for a song found, an
-exclamation mark when none was found or Glance couldn't listen, and the square
-if you canceled. The ring is then **Done**, with **Try Again** or **Microphone
-Settings** before it when they apply. A match, no-match or failure stays until
-**Done**. Opening or closing the notch never starts a recognition session by
-itself.
+A song found shows its cover, which opens it in Music, with its title and
+artist. When no song was found, **Try Again** sits beside **Done**. A match,
+no-match or failure stays until **Done**; a canceled request goes by itself a
+moment later. Opening or closing the notch never starts a recognition session
+by itself.
 
 Recognition needs a network connection and ShazamKit authorization for this
 build. If that authorization is missing, Glance explains that recognition is

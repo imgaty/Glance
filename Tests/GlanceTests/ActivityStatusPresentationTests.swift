@@ -11,7 +11,6 @@ struct ActivityStatusPresentationTests {
     func runningIdentities() {
         #expect(Set([PrintJobView.app, ShortcutRunView.app]).count == 2)
         #expect(ShortcutRunGlyph.status(for: .running).spinning)
-        #expect(MusicRecognitionGlyph.status(for: .recognizing).spinning)
         #expect(PrintJobGlyph.status(for: ActivityBench.printFixture()) == .counting(ActivityBench.printFixture().job.progress!.fraction))
         // Beside the camera the notch keeps one width however the task stands: no words to fit.
         let wing = TaskCompactMark<EmptyView>.wing(restingHeight: 32)
@@ -19,7 +18,6 @@ struct ActivityStatusPresentationTests {
         #expect(
             ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .running)), restingHeight: 32)
                 == ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .failed)), restingHeight: 32))
-        #expect(MusicRecognitionCompactView.wing(for: .noMatch, restingHeight: 32) == wing)
     }
 
     @Test("Shortcut terminal states remain distinct without animation or a text wing")
@@ -55,12 +53,12 @@ struct ActivityStatusPresentationTests {
         #expect(PrintJobGlyph.word(for: printed) == "Complete")
     }
 
-    @Test("Recognition success, failure and canceling differ from listening")
+    @Test("Listening says it's still at it, as the iPhone does, and the notch holds still as the words change")
     func recognitionStates() {
-        #expect(MusicRecognitionGlyph.status(for: .match(.init(title: "Song", artist: nil))) == .done)
-        #expect(MusicRecognitionGlyph.status(for: .failure(.recognition)) == .failed)
-        #expect(MusicRecognitionGlyph.status(for: .denied) == .failed)
-        #expect(MusicRecognitionGlyph.status(for: .noMatch) == .failed)
-        #expect(MusicRecognitionGlyph.status(for: .cancelled) == .stopped)
+        #expect(MusicRecognitionActivityView.listening(after: 0) == "Listening…")
+        #expect(MusicRecognitionActivityView.listening(after: ShazamLook.workingAfter) == "Working on it…")
+        #expect(MusicRecognitionActivityView.listening(after: ShazamLook.tryingAfter + 5) == "Still trying…")
+        #expect(MusicRecognitionActivityView.detail(for: .recognizing).isEmpty)
+        #expect(MusicRecognitionCompactView.wing(for: .recognizing, restingHeight: 32) == MusicRecognitionCompactView.wing(for: .noMatch, restingHeight: 32))
     }
 }
