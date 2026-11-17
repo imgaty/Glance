@@ -23,6 +23,14 @@
 - Changed a timer sharing the notch with another activity to keep its time
   beside its ring, as `3m` or `27s`, as the iPhone's Clock does.
 
+- Changed the Timer, the Stopwatch and a ringing alarm to the iPhone's own
+  type and round buttons: the Timer's large light digits and medium name, its
+  done alert's large name, and Clock's buttons at the iPhone's size.
+
+- Changed music beside the camera to sit where the iPhone puts it: the cover
+  and the waveform at the iPhone's size and distance from each end, the cover
+  rounded as the iPhone rounds it.
+
 - Changed Focus changes to show as the iPhone and Apple's MacBook Pro do: the
   Focus's symbol and `On` or `Off` in its color, extending for a moment with its
   name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps

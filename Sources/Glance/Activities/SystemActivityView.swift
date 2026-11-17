@@ -170,7 +170,7 @@ struct SystemActivityView: View {
                     if case .timer(let timer) = shown {
                         TimelineView(.periodic(from: .now, by: 0.5)) { context in
                             Text(NotchTimer.squeezed(timer.left(at: context.date)))
-                                .font(.system(size: size, weight: .semibold).monospacedDigit())
+                                .font(.system(size: size, weight: .medium).monospacedDigit())
                                 .foregroundStyle(TimerLayout.ink)
                                 .fixedSize()
                         }
@@ -190,8 +190,9 @@ struct SystemActivityView: View {
                             }
                             switch shown {
                             case .timer:
+                                // Medium, as iOS 27's Clock sets it beside the camera.
                                 Text(reading)
-                                    .font(.system(size: size, weight: .semibold).monospacedDigit())
+                                    .font(.system(size: size, weight: .medium).monospacedDigit())
                                     // The digits roll down as they change, as the Timer's own do.
                                     .contentTransition((clockReduceMotionOverride ?? reduceMotion) ? .identity : .numericText(countsDown: true))
                                     .animation((clockReduceMotionOverride ?? reduceMotion) ? nil : .snappy, value: reading)
@@ -397,7 +398,7 @@ struct SystemActivityView: View {
     /// time, up to the camera. Room for two digits of either unit, so it holds still as it counts.
     @MainActor
     static func squeezedWing(for timer: NotchTimer.State, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
-        let font = NSFont.monospacedDigitSystemFont(ofSize: LiveActivityView.textSize(for: h), weight: .semibold)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: LiveActivityView.textSize(for: h), weight: .medium)
         let widest = [59, 3599, timer.left(at: date)].map { ceil((NotchTimer.squeezed($0) as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
         return squeezedStart(h) + widest + LiveActivityView.cameraGap
     }
@@ -493,7 +494,7 @@ struct SystemActivityView: View {
         switch clock {
         case .timer:
             // As wide as the time is, with nothing to spare: it never scrolls.
-            let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
+            let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .medium)
             time = ceil((shape(reading(clock, at: date)) as NSString).size(withAttributes: [.font: font]).width)
         case .stopwatch(let watch):
             // Its hundredths small after it.

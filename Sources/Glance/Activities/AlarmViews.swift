@@ -214,7 +214,7 @@ struct AlarmRingingView: View {
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight)]).width) + 1
     }
 
-    private static func buttonsWidth(_ h: CGFloat) -> CGFloat { TimerLayout.content(h) * 2 + h * TimerLayout.buttonGap }
+    private static func buttonsWidth(_ h: CGFloat) -> CGFloat { TimerLayout.circle(h) * 2 + TimerLayout.circleGap(h) }
 
     /// Each side of the camera: room for the clock beside it on the left and the two buttons on the
     /// right, each from its end, and for the words under it to reach the buttons.
@@ -227,8 +227,8 @@ struct AlarmRingingView: View {
             max(textWidth(lines.top, size: tall * AlarmLook.timeSize, weight: .regular), textWidth(lines.name, size: tall * AlarmLook.titleSize, weight: .medium)),
             h * TimerLayout.titleLimit)
         let left = tall * AlarmLook.glyphEdge + AlarmClockGlyph.width(forHeight: AlarmLook.glyphInk(h)) + gap
-        let right = gap + buttonsWidth(h) + TimerLayout.buttonEdge(h)
-        let across = tall * AlarmLook.wordsStart + words + h * TimerLayout.buttonGap + buttonsWidth(h) + TimerLayout.buttonEdge(h)
+        let right = gap + buttonsWidth(h) + TimerLayout.circleEdge(h)
+        let across = tall * AlarmLook.wordsStart + words + TimerLayout.circleGap(h) + buttonsWidth(h) + TimerLayout.circleEdge(h)
         return max(left, right, (across - closedWidth) / 2)
     }
 
@@ -253,14 +253,14 @@ struct AlarmRingingView: View {
             }
             .lineLimit(1)
             .truncationMode(.tail)
-            .frame(maxWidth: max(width - tall * AlarmLook.wordsStart - h * TimerLayout.buttonGap - Self.buttonsWidth(h) - TimerLayout.buttonEdge(h), 0), alignment: .leading)
+            .frame(maxWidth: max(width - tall * AlarmLook.wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), alignment: .leading)
             .padding(.leading, tall * AlarmLook.wordsStart)
             .padding(.top, wordsTop)
             .help(shown.failure ?? shown.spoken)
             .accessibilityElement(children: .combine)
             .accessibilityHint(shown.failure ?? "")
             buttons(h)
-                .padding(.trailing, TimerLayout.buttonEdge(h))
+                .padding(.trailing, TimerLayout.circleEdge(h))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         }
         .frame(width: width, height: tall)
@@ -286,30 +286,30 @@ struct AlarmRingingView: View {
 
     private func snoozeGlyph(_ h: CGFloat) -> some View {
         Image(systemName: "zzz")
-            .font(.system(size: TimerLayout.content(h) * AlarmLook.snoozeGlyph, weight: .semibold))
+            .font(.system(size: TimerLayout.circle(h) * AlarmLook.snoozeGlyph, weight: .semibold))
             .foregroundStyle(AlarmLook.ink)
     }
 
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
         let snoozes = shown.alarm.actions.contains(.snooze), stops = shown.alarm.actions.contains(.stop)
-        HStack(spacing: h * TimerLayout.buttonGap) {
+        HStack(spacing: TimerLayout.circleGap(h)) {
             switch mode {
             case .alert(let hovered):
                 if snoozes {
-                    IslandCircle(height: h, tint: AlarmLook.ink, highlighted: hovered == .snooze && shown.canPerform(.snooze)) { snoozeGlyph(h) }
+                    IslandCircle(height: h, tint: AlarmLook.ink, highlighted: hovered == .snooze && shown.canPerform(.snooze), side: TimerLayout.circle(h)) { snoozeGlyph(h) }
                         .reportsFrame(.snooze)
                         .spokenButton(String(localized: "Snooze")) { AlarmActivity.shared.perform(.snooze, expectedID: shown.alarm.id) }
                         .opacity(shown.canPerform(.snooze) ? 1 : 0.45)
                 }
                 if stops {
-                    IslandCircle(height: h, tint: .white, highlighted: hovered == .alarmStop && shown.canPerform(.stop)) { CrossGlyph(height: h) }
+                    IslandCircle(height: h, tint: .white, highlighted: hovered == .alarmStop && shown.canPerform(.stop), side: TimerLayout.circle(h)) { CrossGlyph(height: h) }
                         .reportsFrame(.alarmStop)
                         .spokenButton(String(localized: "Stop")) { AlarmActivity.shared.perform(.stop, expectedID: shown.alarm.id) }
                         .opacity(shown.canPerform(.stop) ? 1 : 0.45)
                 }
             case .open(let perform, _):
                 if snoozes {
-                    IslandCircleButton(control: .activitySecond, height: h, tint: AlarmLook.ink, label: String(localized: "Snooze")) {
+                    IslandCircleButton(control: .activitySecond, height: h, tint: AlarmLook.ink, label: String(localized: "Snooze"), side: TimerLayout.circle(h)) {
                         perform(.snooze, shown.alarm.id)
                     } glyph: {
                         snoozeGlyph(h)
@@ -319,7 +319,7 @@ struct AlarmRingingView: View {
                     .accessibilityIdentifier("snooze-alarm")
                 }
                 if stops {
-                    IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Stop")) {
+                    IslandCircleButton(control: .activityThird, height: h, tint: .white, label: String(localized: "Stop"), side: TimerLayout.circle(h)) {
                         perform(.stop, shown.alarm.id)
                     } glyph: {
                         CrossGlyph(height: h)

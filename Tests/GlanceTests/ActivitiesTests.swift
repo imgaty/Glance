@@ -490,9 +490,11 @@ struct ActivitiesTests {
         model.expanded = .timer
         let open = model.metrics(for: .open)
         #expect(open.height == (32 * TimerLayout.tall).rounded())
-        // Either side of the camera, only as wide as the buttons, wider than "5:00", need.
-        let buttons = TimerLayout.content(32) * 2 + 32 * TimerLayout.buttonGap
-        #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.buttonEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
+        // Either side of the camera, only as wide as the buttons, wider than "5:00", need: iOS 27's
+        // 50-point circles, 8 apart and 17 from the end, by the island's 36.67-point height.
+        let buttons = TimerLayout.circle(32) * 2 + TimerLayout.circleGap(32)
+        #expect(abs(TimerLayout.circle(32) - 32 * 50 / 36.67) < 0.01)
+        #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.circleEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
         // Its top corners in proportion to its height, as the player's are to the player's.
         #expect(abs(open.flare - PlayerLayout.cornerRadius * open.height / 148) < 0.001)
         // Past an hour, the time takes more room.
