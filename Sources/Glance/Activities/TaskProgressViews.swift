@@ -102,6 +102,8 @@ struct TaskRing: View {
     /// in it, the track the color at 37%. Once over, white, as Apple's turns. Without it, white on a
     /// white track at a fifth.
     var tint: Color? = nil
+    /// Its own track, where the activity's asset has one, as AirDrop's dark blue.
+    var track: Color? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -112,7 +114,7 @@ struct TaskRing: View {
         let fill = status.outcome == .done ? 1 : status.fraction ?? 0
         let settle = reduceMotion ? nil : look.settle
         let ink = status.over ? Color.white : tint ?? .white
-        let track = tint.map { $0.opacity(look.tintedTrack) } ?? .white.opacity(look.track)
+        let track = self.track ?? tint.map { $0.opacity(look.tintedTrack) } ?? .white.opacity(look.track)
         ZStack {
             ZStack {
                 Circle().stroke(track, lineWidth: line)
@@ -253,6 +255,7 @@ struct TaskRingButton: View {
     var held = false
     var interactive = true
     var tint: Color? = nil
+    var track: Color? = nil
     /// Its own size, as the activity's row measures it, in place of the Timer's buttons'.
     var side: CGFloat? = nil
     let action: () -> Void
@@ -260,7 +263,7 @@ struct TaskRingButton: View {
 
     var body: some View {
         Button(action: action) { Color.clear }
-            .buttonStyle(TaskRingPress(status: status, side: side ?? TimerLayout.content(height), hovering: hovering, held: held, tint: tint))
+            .buttonStyle(TaskRingPress(status: status, side: side ?? TimerLayout.content(height), hovering: hovering, held: held, tint: tint, track: track))
             .onHover { hovering = $0 }
             .notchControl()
             .keyControl(control, outset: CGSize(width: 3, height: 3), spoken: label, action: action)
@@ -278,9 +281,10 @@ private struct TaskRingPress: ButtonStyle {
     let hovering: Bool
     let held: Bool
     let tint: Color?
+    let track: Color?
 
     func makeBody(configuration: Configuration) -> some View {
-        TaskRingPressBody(status: status, side: side, hovering: hovering, pressed: configuration.isPressed || held, tint: tint)
+        TaskRingPressBody(status: status, side: side, hovering: hovering, pressed: configuration.isPressed || held, tint: tint, track: track)
     }
 }
 
@@ -290,10 +294,11 @@ private struct TaskRingPressBody: View {
     let hovering: Bool
     let pressed: Bool
     let tint: Color?
+    let track: Color?
     @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        TaskRing(status: status, diameter: side, opened: true, pressed: pressed, tint: tint)
+        TaskRing(status: status, diameter: side, opened: true, pressed: pressed, tint: tint, track: track)
             .background(Circle().fill(.white.opacity(enabled && hovering ? 0.08 : 0)).animation(.easeOut(duration: 0.15), value: hovering))
             .contentShape(Circle())
     }

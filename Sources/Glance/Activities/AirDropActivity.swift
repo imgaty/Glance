@@ -247,7 +247,8 @@ enum AirDropLayout {
 
     /// The picture and the ring at the notch's one padding from their ends, as from the top and bottom.
     static func thumbEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
-    static func ringEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
+    /// The opened ring's distance from the end: iOS 27's, as its other activities' round controls.
+    static func ringEdge(_ h: CGFloat) -> CGFloat { TimerLayout.circleEdge(h) }
 
     /// Opened: just wide enough for the picture and AirDrop's name on one side of the camera, against
     /// it, and the same room on the other for the ring.
@@ -255,7 +256,7 @@ enum AirDropLayout {
     static func width(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let left = wordsStart(h) + titleWidth(h) + gap
-        let right = gap + TimerLayout.content(h) + ringEdge(h)
+        let right = gap + TimerLayout.circle(h) + ringEdge(h)
         return camera + max(left, right) * 2
     }
 
@@ -264,7 +265,7 @@ enum AirDropLayout {
 
     /// As far as who it's from can run, under the camera, before the ring.
     static func wordsRoom(_ h: CGFloat, width: CGFloat) -> CGFloat {
-        max(width - wordsStart(h) - ringEdge(h) - TimerLayout.content(h) - h * gap, 0)
+        max(width - wordsStart(h) - ringEdge(h) - TimerLayout.circle(h) - h * gap, 0)
     }
 
     @MainActor
@@ -334,7 +335,6 @@ struct ExpandedAirDropView: View {
     var closedDrop: CGFloat = 0
     /// Isolated render fixtures can exercise the control without touching a real transfer.
     var stop: () -> Void = { AirDropWatch.shared.stop() }
-    @State private var hovering = false
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
 
@@ -375,7 +375,7 @@ struct ExpandedAirDropView: View {
                 ?? (spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h)), height: rise)
         let right = stopButton(h)
             .modifier(
-                GrowsOut(out: out || (closedWidth == nil || !trailingGrows) && bubbleCenter == nil, scale: h * AirDropLayout.ring / TimerLayout.content(h), anchor: .trailing, from: ringFrom)
+                GrowsOut(out: out || (closedWidth == nil || !trailingGrows) && bubbleCenter == nil, scale: h * AirDropLayout.ring / TimerLayout.circle(h), anchor: .trailing, from: ringFrom)
             )
             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows || bubbleCenter != nil))
             .padding(.trailing, AirDropLayout.ringEdge(h))
@@ -395,7 +395,9 @@ struct ExpandedAirDropView: View {
         if shown.offersStop {
             stopControl(h)
         } else {
-            AirDropRing(fraction: shown.fraction, diameter: TimerLayout.content(h), line: h * AirDropLayout.bigRingLine)
+            // As iOS 27's airdrop-progress.ca opened, with no stop button.
+            AirDropRing(fraction: shown.fraction, diameter: TimerLayout.circle(h) * 2 * TaskRingLook.radius, line: TimerLayout.circle(h) * TaskRingLook.openLine)
+                .frame(width: TimerLayout.circle(h), height: TimerLayout.circle(h))
                 .accessibilityHidden(true)
         }
     }
@@ -405,27 +407,12 @@ struct ExpandedAirDropView: View {
         stop()
     }
 
-    /// The ring around a square that stops it, faintly lit under the pointer.
+    /// The ring around a square that stops it: iOS 27's `airdrop-progress.ca` opened, the progress
+    /// ring the iPhone's Shortcuts and background tasks share, in AirDrop's blue on its dark-blue track.
     private func stopControl(_ h: CGFloat) -> some View {
-        Button(action: performStop) {
-            ZStack {
-                Circle().fill(AirDropLayout.tint.opacity(hovering ? 0.12 : 0))
-                AirDropRing(fraction: shown.fraction, diameter: TimerLayout.content(h), line: h * AirDropLayout.bigRingLine)
-                RoundedRectangle(cornerRadius: h * AirDropLayout.stop * 0.22, style: .continuous)
-                    .fill(AirDropLayout.tint)
-                    .frame(width: h * AirDropLayout.stop, height: h * AirDropLayout.stop)
-                    .islandFade(revealed)
-            }
-            .frame(width: TimerLayout.content(h), height: TimerLayout.content(h))
-            .contentShape(Circle())
-            .animation(.easeOut(duration: 0.15), value: hovering)
-        }
-        .buttonStyle(IslandPress(highlight: false, contactSize: nil))
-        .onHover { hovering = $0 }
-        .notchControl()
-        .keyControl(.activityFirst, outset: CGSize(width: 3, height: 3), spoken: String(localized: "Stop AirDrop"), action: performStop)
-        .accessibilityLabel("Stop AirDrop")
-        .help("Stop AirDrop")
+        TaskRingButton(
+            status: .counting(shown.fraction), control: .activityFirst, height: h, label: String(localized: "Stop AirDrop"),
+            tint: AirDropLayout.tint, track: AirDropLayout.track, side: TimerLayout.circle(h), action: performStop)
     }
 
     /// The file, as macOS pictures it, or its kind's icon, with AirDrop's badge, a dark tile with
