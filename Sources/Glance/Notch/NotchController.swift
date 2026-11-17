@@ -122,7 +122,6 @@ final class NotchController {
     private var savedRecordingWatch: AnyCancellable?
     private var recordingRefit: Task<Void, Never>?
     private var airDropWatch: AnyCancellable?
-    private var printWatch: AnyCancellable?
     private var alarmWatch: AnyCancellable?
     private var recognitionWatch: AnyCancellable?
     private var shortcutWatch: AnyCancellable?
@@ -433,10 +432,6 @@ final class NotchController {
             MainActor.assumeIsolated { self?.show(alarm: shown) }
         }
 
-        printWatch = PrintActivity.shared.$shown.removeDuplicates().sink { [weak self] shown in
-            MainActor.assumeIsolated { self?.show(printing: shown) }
-        }
-
         shortcutWatch = ShortcutActivity.shared.$shown.removeDuplicates().sink { [weak self] shown in
             MainActor.assumeIsolated { self?.show(shortcut: shown) }
         }
@@ -566,7 +561,7 @@ final class NotchController {
         [
             playingWatch, titleWatch, settingsWatch, songWatch, alertWatch, timerWatch,
             clockNameWatch, airPlayWatch, callWatch, callMinutes, recordingWatch, savedRecordingWatch,
-            airDropWatch, printWatch, alarmWatch, recognitionWatch, shortcutWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
+            airDropWatch, alarmWatch, recognitionWatch, shortcutWatch, lookWatch, trayWatch, trayNamesWatch, trayTouch,
         ].forEach { $0?.cancel() }
         stopPolling()
         touchWatch = nil
@@ -811,19 +806,6 @@ final class NotchController {
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         if model.expanded == .alarm, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
-    }
-
-    private func show(printing shown: PrintShown?) {
-        if shown?.job.id == model.printing?.job.id {
-            model.printing = shown
-        } else {
-            model.changeActivityPresentation(animation: shown == nil ? IslandMotion.fold : IslandMotion.open) {
-                model.dismissed.remove(.printing)
-                model.printing = shown
-            }
-        }
-        if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
-        if model.expanded == .printing, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
     }
 
     /// The sound went to AirPlay, or left it: AirPlay's wings come, or go. Opened to it as it
@@ -1649,7 +1631,6 @@ final class NotchController {
         case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
         case .airplay: model.airplay?.canStop == true ? [.activityFirst] : []
         case .alarm: model.alarm.map(AlarmActivityView.controls(for:)) ?? []
-        case .printing: model.printing.map(PrintJobView.controls(for:)) ?? []
         case .recognition: model.recognition.map(MusicRecognitionActivityView.controls(for:)) ?? []
         case .shortcut: model.shortcut.map(ShortcutRunView.controls(for:)) ?? []
         case .voiceMemo: [.activityFirst]
@@ -2199,7 +2180,6 @@ final class NotchController {
             case timer(NotchTimer.State)
             case stopwatch(Stopwatch)
             case airplay(output: UInt32?, name: String)
-            case printing(PrintJob.ID)
             case alarm(String)
             case recognition(UUID)
             case shortcut(UUID)
@@ -2230,7 +2210,6 @@ final class NotchController {
             case .stopwatch: content = model.stopwatch.map(PutAwayIdentity.Content.stopwatch)
             case .airplay: content = model.airplay.map { .airplay(output: $0.outputID, name: $0.name) }
             case .alarm: content = model.alarm.map { .alarm($0.alarm.id) }
-            case .printing: content = model.printing.map { .printing($0.job.id) }
             case .recognition: content = model.recognition == nil ? nil : model.recognitionIdentity.map(PutAwayIdentity.Content.recognition)
             case .shortcut: content = model.shortcut.map { .shortcut($0.run.id) }
             }
@@ -2257,7 +2236,6 @@ final class NotchController {
         case .stopwatch: return String(localized: "Hide Stopwatch")
         case .airplay: return String(localized: "Hide AirPlay")
         case .alarm: return String(localized: "Hide Alarm")
-        case .printing: return String(localized: "Hide Printing")
         case .recognition: return String(localized: "Hide Music Recognition")
         case .shortcut: return String(localized: "Hide Shortcut")
         case nil: return nil

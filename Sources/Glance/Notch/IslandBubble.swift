@@ -26,7 +26,6 @@ struct IslandBubble: View {
     /// Or AirPlay, by its symbol alone, in its blue; or AirDrop, by its ring.
     var route: AirPlayRoute? = nil
     var airdrop: AirDropShown? = nil
-    var printing: PrintShown? = nil
     var alarm: AlarmShown? = nil
     var recognition: MusicRecognitionActivity.State? = nil
     var shortcut: ShortcutShown? = nil
@@ -62,7 +61,6 @@ struct IslandBubble: View {
     @State private var kept: ClockShown?
     @State private var keptRoute: AirPlayRoute?
     @State private var keptAirDrop: AirDropShown?
-    @State private var keptPrint: PrintShown?
     @State private var keptAlarm: AlarmShown?
     @State private var keptRecognition: MusicRecognitionActivity.State?
     @State private var keptShortcut: ShortcutShown?
@@ -71,7 +69,7 @@ struct IslandBubble: View {
     @State private var keptMusic = false
     @State private var keptArtwork: NSImage?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0, call: 0, printing: 0, recognition: 0, alarm: 0, shortcut: 0)
+    @State private var changes = (clock: 0, route: 0, airdrop: 0, music: 0, recording: 0, call: 0, recognition: 0, alarm: 0, shortcut: 0)
 
     /// Off the notch's end, by its height.
     static let gap: CGFloat = 0.175
@@ -125,8 +123,6 @@ struct IslandBubble: View {
                             AirDropRing(fraction: keptAirDrop.fraction, diameter: h * AirDropLayout.ring, line: h * AirDropLayout.ringLine)
                         } else if let keptAlarm {
                             AlarmCompactView(shown: keptAlarm, minimal: true, restingHeight: h)
-                        } else if let keptPrint {
-                            PrintJobGlyph(shown: keptPrint, minimal: true, restingHeight: h)
                         } else if let keptShortcut {
                             ShortcutRunGlyph(state: keptShortcut.run.state, look: keptShortcut.look, minimal: true, restingHeight: h)
                         } else if let keptRecognition {
@@ -178,12 +174,6 @@ struct IslandBubble: View {
                         .accessibilityLabel(alarm.spoken)
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
-                } else if shown, !hidden, let printing {
-                    Color.clear
-                        .accessibilityElement()
-                        .accessibilityLabel(printing.spoken)
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityAction(.default, open)
                 } else if shown, !hidden, let shortcut {
                     Color.clear
                         .accessibilityElement()
@@ -228,7 +218,7 @@ struct IslandBubble: View {
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
         .animation(.linear(duration: 0.01)) {
             $0.opacity(
-                shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptPrint != nil || keptAlarm != nil || keptRecognition != nil || keptMusic
+                shown || kept != nil || keptRoute != nil || keptAirDrop != nil || keptRecording != nil || keptCall != nil || keptAlarm != nil || keptRecognition != nil || keptMusic
                     ? 1 : 0)
         }
         .allowsHitTesting(false)
@@ -287,15 +277,6 @@ struct IslandBubble: View {
             Task { @MainActor in
                 try? await Task.sleep(for: SystemActivityView.folding)
                 if changes.call == change { keptCall = nil }
-            }
-        }
-        .onChange(of: printing, initial: true) { _, new in
-            changes.printing += 1
-            if let new { return keptPrint = new }
-            let change = changes.printing
-            Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
-                if changes.printing == change { keptPrint = nil }
             }
         }
         .onChange(of: alarm, initial: true) { _, new in

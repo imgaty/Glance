@@ -30,7 +30,6 @@ struct SystemActivityView: View {
     var route: AirPlayRoute? = nil
     /// A file coming in over AirDrop, when that has the notch.
     var airdrop: AirDropShown? = nil
-    var printing: PrintShown? = nil
     var alarm: AlarmShown? = nil
     /// The alarm ringing, whichever activity shows: its alert takes the notch, as the iPhone's does.
     var ringingAlarm: AlarmShown? = nil
@@ -66,8 +65,7 @@ struct SystemActivityView: View {
     @State private var leavingRoute: AirPlayRoute?
     @State private var leavingAirDrop: AirDropShown?
     /// Counted, so what's kept goes only if nothing has come since.
-    @State private var changes = (alert: 0, clock: 0, route: 0, airdrop: 0, printing: 0, recognition: 0, alarm: 0, shortcut: 0)
-    @State private var leavingPrint: PrintShown?
+    @State private var changes = (alert: 0, clock: 0, route: 0, airdrop: 0, recognition: 0, alarm: 0, shortcut: 0)
     @State private var leavingAlarm: AlarmShown?
     @State private var leavingRecognition: MusicRecognitionActivity.State?
     @State private var leavingShortcut: ShortcutShown?
@@ -237,13 +235,6 @@ struct SystemActivityView: View {
                     .transition(IslandMotion.fade)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction(.default, open)
-            } else if let shownPrint = printing ?? leavingPrint {
-                PrintJobMark(shown: shownPrint, restingHeight: restingHeight, leadingOnly: leadingOnly)
-                    .modifier(GrownAway(grown: grown))
-                    .islandFade(printing != nil)
-                    .transition(IslandMotion.fade)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction(.default, open)
             } else if let shownShortcut = shortcut ?? leavingShortcut {
                 ShortcutRunMark(shown: shownShortcut, restingHeight: restingHeight, leadingOnly: leadingOnly)
                     .modifier(GrownAway(grown: grown))
@@ -302,15 +293,6 @@ struct SystemActivityView: View {
             Task { @MainActor in
                 try? await Task.sleep(for: Self.folding)
                 if changes.airdrop == change { leavingAirDrop = nil }
-            }
-        }
-        .onChange(of: printing, initial: true) { _, new in
-            changes.printing += 1
-            if let new { return leavingPrint = new }
-            let change = changes.printing
-            Task { @MainActor in
-                try? await Task.sleep(for: Self.folding)
-                if changes.printing == change { leavingPrint = nil }
             }
         }
         .onChange(of: alarm, initial: true) { _, new in

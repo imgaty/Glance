@@ -19,7 +19,6 @@ struct ActivityEntryTests {
         case .screenRecording: model.screenRecording = .recording(since: .now)
         case .voiceMemo: model.voiceMemo = .paused(length: 20)
         case .alarm: model.alarm = ActivityBench.alarmFixture()
-        case .printing: model.printing = ActivityBench.printFixture()
         case .shortcut: model.shortcut = .init(run: .fixture())
         case .recognition:
             model.recognitionIdentity = UUID()

@@ -1,6 +1,6 @@
 # Features
 
-`Created: 11 October 2026` | `Last updated: 16 November 2026`
+`Created: 11 October 2026` | `Last updated: 17 November 2026`
 
 Glance's current, planned, and rejected features.
 
@@ -56,10 +56,10 @@ memo being recorded, with a button to stop it. With several at once, the first
 keeps the left of the notch and the second goes in a bubble of its own off the
 right, as on the iPhone.
 Clock alarms appear when an identifiable ringing alert is available, with the
-actions that alert actually offers. Printing shows your active local print
-jobs. Focus changes appear as short announcements. Right-click the notch and
-choose **Recognize Music** to start a ShazamKit session, or **Run Shortcut** to
-run a shortcut and keep its state and result beside the camera.
+actions that alert actually offers. Focus changes appear as short
+announcements. Right-click the notch and choose **Recognize Music** to start a
+ShazamKit session, or **Run Shortcut** to run a shortcut and keep its state and
+result beside the camera.
 See the [User Manual](USER-MANUAL.md#live-activities).
 
 ### Timed lyrics
@@ -102,9 +102,6 @@ notifications with advertised actions offer Stop or Snooze. Glance cannot
 read the scheduled alarm list or infer a snoozed
 countdown. Native Clock alerts remain available when observation or controls
 are unavailable.
-
-**Printing.** Only your active jobs reported by the local CUPS spooler appear.
-Page progress depends on what the printer reports; no percentage is invented.
 
 **Music recognition.** Recognition starts only when requested and requires
 microphone permission, a network connection and ShazamKit service availability.

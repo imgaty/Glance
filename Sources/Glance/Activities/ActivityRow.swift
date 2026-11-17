@@ -104,28 +104,6 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
     }
 }
 
-/// The round picture at the row's left end: a button to the app the activity comes from, if there's
-/// one to open, or only the picture.
-struct ActivityRowPicture<Glyph: View>: View {
-    let restingHeight: CGFloat
-    var tint: Color = .white
-    var control: PlayerControl = .activityFirst
-    /// What opening it does, as VoiceOver and the pointer name it.
-    var label: String? = nil
-    var open: (() -> Void)? = nil
-    @ViewBuilder let glyph: Glyph
-
-    var body: some View {
-        if let open, let label {
-            IslandCircleButton(control: control, height: restingHeight, tint: tint, label: label, action: open) { glyph }
-                .help(label)
-        } else {
-            IslandCircle(height: restingHeight, tint: tint) { glyph }
-                .accessibilityHidden(true)
-        }
-    }
-}
-
 /// An activity beside the camera, as an announcement is: its mark at the left end, a word or two at
 /// the right, each as far in from its end as from the top and bottom, and the notch only as wide as
 /// the wider side needs.

@@ -28,12 +28,6 @@
   name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps
   its color.
 
-- Rebuilt printing as the iPhone shows a task an app finishes in the
-  background: Print Center's icon beside the camera with a ring that fills or
-  goes round, and opened, one row as the timer opens, the ring at its end with a
-  square inside it to cancel the job. A check springs in when it's printed and
-  an exclamation mark when it fails, before the activity goes.
-
 - Changed music recognition to show as the iPhone's Music Recognition does:
   Shazam's mark in its blue with light passing through it and a waveform of
   what it hears beside the camera, and opened, the mark on a blue disc with
@@ -44,8 +38,8 @@
   running: its own icon beside the camera with a ring in its color, the icon
   laid flat when opened, and a white check before the run closes by itself.
 
-- Added every word of alarms, printing, music recognition, shortcuts and Focus
-  in all 34 languages.
+- Added every word of alarms, music recognition, shortcuts and Focus in all 34
+  languages.
 
 - Changed the notch's menu to offer **Recognize Music** and **Run Shortcut**
   only while their Live Activities are on, or while a shortcut run is going.
@@ -74,8 +68,6 @@
 - Shortened alarm panels while leaving room for wrapped status and errors.
 - Added bounded cleanup for temporary shortcut results while preserving
   results you changed or moved elsewhere.
-- Fixed accepted print cancellations being reported as failed while their
-  confirmation was still pending.
 
 - Fixed native music restoration waiting behind failed hiding, and stale
   hiding commands running after the display or preference changed.
@@ -86,9 +78,9 @@
 - Fixed recognition repeatedly offering retry when this build lacks service
   authorization.
 
-- Added ringing Clock alarms, local print jobs, Focus announcements, music
-  recognition and shortcuts started from Glance, with native controls and
-  settings for each activity. Existing system activities stay available.
+- Added ringing Clock alarms, Focus announcements, music recognition and
+  shortcuts started from Glance, with native controls and settings for each
+  activity. Existing system activities stay available.
 - Added isolated cases for pending actions, missing permissions, unavailable
   sources, failures and completed results.
 

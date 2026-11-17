@@ -22,7 +22,6 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityCalls) private var calls = true
     @AppStorage(Preferences.activityAirDrop) private var airDrop = true
     @AppStorage(Preferences.activityFocus) private var focus = true
-    @AppStorage(Preferences.activityPrint) private var printing = true
     @AppStorage(Preferences.activityAlarms) private var alarms = true
     @AppStorage(Preferences.activityRecognition) private var recognition = true
     @AppStorage(Preferences.activityShortcuts) private var shortcuts = true
@@ -43,7 +42,7 @@ struct ActivitiesPage: View {
         (Preferences.activityCalls, .call), (Preferences.activityAirDrop, .airDrop),
         (Preferences.activityScreenRecording, .screenRecording), (Preferences.activityVoiceMemos, .voiceMemo),
         (Preferences.activityClockTimers, .timer), (Preferences.activityStopwatch, .stopwatch),
-        (Preferences.activityAlarms, .alarm), (Preferences.activityPrint, .printing), (Preferences.activityFocus, .focus), (Preferences.activityRecognition, .recognition),
+        (Preferences.activityAlarms, .alarm), (Preferences.activityFocus, .focus), (Preferences.activityRecognition, .recognition),
         (Preferences.activityShortcuts, .shortcut),
     ]
 
@@ -159,12 +158,6 @@ struct ActivitiesPage: View {
                 Toggle(isOn: $alarms) {
                     Text("Alarms")
                     Text("Shows Clock's alarms as they ring, with Snooze and Stop. Needs Accessibility.")
-                }
-            }
-            Section {
-                Toggle(isOn: $printing) {
-                    Text("Printing")
-                    Text("Shows your print jobs as they print, with a button to cancel each.")
                 }
             }
             Section {

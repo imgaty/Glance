@@ -697,25 +697,6 @@ clock, which opens Clock, and the buttons.
 This needs Accessibility permission. Glance does not read scheduled alarms or
 invent a countdown after snoozing, and leaves Clock's native alert available.
 
-### Printing
-
-Your active local print jobs appear beside the camera as the iPhone shows a
-task an app finishes in the background: Print Center's icon at the left, and at
-the right a ring filling as the pages print. The ring goes round while the job
-waits or prints without a page count, and stands still while it's on hold or
-stopped. When the job has printed, a check springs into the ring before the
-activity closes; a job that fails shows an exclamation mark instead.
-
-Open one to see it in one row, as the timer opens: Print Center's icon at the
-left end, which opens Print Center; the job's name beside the camera, with its
-state and printer under it; and at the right end the ring, with the square
-inside it that cancels the job. Cancelling requests that exact job and waits for
-the spooler to confirm it has gone. If confirmation takes longer, it says the
-cancellation is unconfirmed and offers a retry without claiming the request was
-rejected. If the queue cannot be read, Glance keeps the last status, shows an
-exclamation mark in the ring and offers **Try Again**. More jobs waiting are
-listed under the pointer.
-
 ### Music recognition
 
 Right-click the notch and choose **Recognize Music**. Glance requests microphone
@@ -1024,7 +1005,6 @@ preview stays on what's playing.
 | `Recordings` | Shows the screen being recorded with macOS's Screenshot, until it's saved, and a voice memo being recorded, with its sound, each with a button to stop it |
 | `Clock` | Shows Clock's timers counting down beside the camera, saying when one rings, and its stopwatch counting up. Start them in the Clock app, in Control Center or with Siri |
 | `Alarms` | Shows identifiable ringing Clock alerts with their available actions |
-| `Printing` | Shows your active local print jobs |
 | `Focus Changes` | Announces confirmed Focus changes |
 | `Music Recognition` | Enables recognition started from Glance's menu |
 | `Shortcuts` | Shows runs started from Glance's menu; turning this off does not interrupt them |

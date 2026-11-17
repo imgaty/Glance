@@ -340,7 +340,6 @@ enum Preferences {
             activityDevices: true,
             activityCalls: true,
             activityAirDrop: true,
-            activityPrint: true,
             activityAlarms: true,
             activityRecognition: true,
             activityShortcuts: true,
@@ -451,7 +450,6 @@ enum Preferences {
     static let activityDevices = "activityDevices"
     static let activityCalls = "activityCalls"
     static let activityAirDrop = "activityAirDrop"
-    static let activityPrint = "activityPrint"
     static let activityAlarms = "activityAlarms"
     static let activityRecognition = "activityRecognition"
     static let activityShortcuts = "activityShortcuts"

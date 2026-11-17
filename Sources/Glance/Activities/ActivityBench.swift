@@ -30,8 +30,6 @@ final class ActivityBench {
         case screenRecording, screenCountdown, screenSaving, screenSaved
         /// A voice memo recorded until it's stopped, and one paused.
         case voiceMemo, voiceMemoPaused
-        /// Print Center states, with no connection to a printer or the local queue.
-        case printing, printUnknown, printHeld, printStopped, printUnavailable, printCancelFailed, printCancelUnconfirmed, printOpenFailed
         case alarm, alarmNoSnooze, alarmUnavailable, alarmPending, alarmFailed
         /// Local invocation snapshots only; these scenarios never execute a user shortcut.
         case shortcut, shortcutStarting, shortcutStopping, shortcutStopDelayed, shortcutComplete, shortcutStopped, shortcutEndedAfterStop, shortcutFailed, shortcutConcurrent
@@ -93,14 +91,6 @@ final class ActivityBench {
             case .alarmUnavailable: "Alarm Status Unavailable"
             case .alarmPending: "Alarm Action Pending"
             case .alarmFailed: "Alarm Action Failed"
-            case .printing: "Printing"
-            case .printUnknown: "Printing, Unknown Progress"
-            case .printHeld: "Print Job on Hold"
-            case .printStopped: "Printing Stopped"
-            case .printUnavailable: "Print Status Unavailable"
-            case .printCancelFailed: "Cancel Failed"
-            case .printCancelUnconfirmed: "Cancellation Unconfirmed"
-            case .printOpenFailed: "Print Center Unavailable"
             case .charging: "Charging"
             case .lowBattery: "Low Battery"
             case .lowBatteryReal: "Low Battery, Real Button"
@@ -125,7 +115,6 @@ final class ActivityBench {
                     .recognitionCancelled,
                 ]
             ),
-            ("Printing", [.printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printCancelUnconfirmed, .printOpenFailed]),
             ("Shortcuts", [.shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent]),
             ("Announced", [.focus, .charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
         ]
@@ -175,7 +164,7 @@ final class ActivityBench {
         for key in [
             Preferences.liveActivity, Preferences.musicTrackPop, Preferences.lyrics, Preferences.tray, Preferences.swipeToSkip,
             Preferences.activityAlarms, Preferences.activityFocus, Preferences.activityCharging, Preferences.activityLowBattery, Preferences.activityDevices, Preferences.activityAirDrop,
-            Preferences.activityClockTimers, Preferences.activityStopwatch, Preferences.activityScreenRecording, Preferences.activityVoiceMemos, Preferences.activityPrint,
+            Preferences.activityClockTimers, Preferences.activityStopwatch, Preferences.activityScreenRecording, Preferences.activityVoiceMemos,
             Preferences.activityRecognition, Preferences.activityShortcuts,
         ] { off[key] = false }
         if Self.scenes.contains(.airdropReal) { off[Preferences.activityAirDrop] = true }
@@ -231,7 +220,6 @@ final class ActivityBench {
         case .shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent:
             await shortcuts(scene)
         case .alarm, .alarmNoSnooze, .alarmUnavailable, .alarmPending, .alarmFailed: await alarm(scene)
-        case .printing, .printUnknown, .printHeld, .printStopped, .printUnavailable, .printCancelFailed, .printCancelUnconfirmed, .printOpenFailed: await printing(scene)
         case .call: await call()
         case .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread: await callState(scene)
         case .screenRecording: await screenRecording()
@@ -514,38 +502,6 @@ final class ActivityBench {
             }
             watch.bench(shown)
             await round(of: .alarm)
-            watch.bench(nil)
-            await wait(Self.rest)
-        }
-    }
-
-    static func printFixture() -> PrintShown {
-        PrintShown(
-            job: PrintJob(
-                id: .init(printer: "Studio", number: 42, created: 1_000), title: String(localized: "Project Notes"), owner: "preview", state: .printing,
-                progress: .init(completed: 2, total: 6)), additionalJobs: 1)
-    }
-
-    private func printing(_ scene: Scene) async {
-        let watch = PrintActivity.shared
-        while !Task.isCancelled {
-            var shown = Self.printFixture()
-            switch scene {
-            case .printUnknown: shown.job.progress = nil
-            case .printHeld:
-                shown.job.state = .held
-                shown.job.progress = nil
-            case .printStopped:
-                shown.job.state = .stopped
-                shown.job.progress = nil
-            case .printUnavailable: shown.sourceAvailable = false
-            case .printCancelFailed: shown.cancellation = .failed
-            case .printCancelUnconfirmed: shown.cancellation = .unconfirmed
-            case .printOpenFailed: shown.openFailed = true
-            default: break
-            }
-            watch.bench(shown)
-            await round(of: .printing)
             watch.bench(nil)
             await wait(Self.rest)
         }

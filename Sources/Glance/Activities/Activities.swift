@@ -126,7 +126,6 @@ final class Activities: ObservableObject {
         ScreenRecordingWatch.shared.start()
         MenuBarLiveActivities.shared.start()
         VoiceMemoWatch.shared.start()
-        PrintActivity.shared.start()
         AlarmActivity.shared.start()
         MusicRecognitionActivity.shared.start()
         ShortcutActivity.shared.start()

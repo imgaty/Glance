@@ -32,8 +32,6 @@ struct ActivityMenuSnapshotTests {
             model.recognition = .recognizing
         case .alarm: model.alarm = ActivityBench.alarmFixture(id: "alarm-\(variant)")
         case .shortcut: model.shortcut = .init(run: .fixture(ordinal: variant))
-        case .printing:
-            model.printing = PrintShown(job: PrintJob(id: .init(printer: "Fixture", number: Int32(variant + 1), created: 100), title: "Job", owner: "fixture", state: .printing))
         }
     }
 
@@ -50,7 +48,6 @@ struct ActivityMenuSnapshotTests {
         case .stopwatch: model.stopwatch = nil
         case .airplay: model.airplay = nil
         case .alarm: model.alarm = nil
-        case .printing: model.printing = nil
         case .shortcut: model.shortcut = nil
         case .recognition:
             model.recognition = nil

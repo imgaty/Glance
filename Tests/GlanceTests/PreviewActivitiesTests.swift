@@ -23,7 +23,7 @@ struct PreviewActivitiesTests {
     func everything() {
         #expect(
             PreviewActivity.turnedOn(in: defaults(), hasBattery: true) == [
-                .announcement, .charging, .lowBattery, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .printing, .focus, .recognition, .shortcut,
+                .announcement, .charging, .lowBattery, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .focus, .recognition, .shortcut,
             ])
     }
 
@@ -31,7 +31,7 @@ struct PreviewActivitiesTests {
     func turnedOff() {
         let shown = PreviewActivity.turnedOn(
             in: defaults([Preferences.activityDevices: false, Preferences.activityStopwatch: false]), hasBattery: true)
-        #expect(shown == [.announcement, .charging, .lowBattery, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .alarm, .printing, .focus, .recognition, .shortcut])
+        #expect(shown == [.announcement, .charging, .lowBattery, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .alarm, .focus, .recognition, .shortcut])
     }
 
     @Test("The Shortcuts preference excludes only its own inert preview")
@@ -58,6 +58,6 @@ struct PreviewActivitiesTests {
     @Test("The battery's show only on a Mac with one")
     func battery() {
         let shown = PreviewActivity.turnedOn(in: defaults(), hasBattery: false)
-        #expect(shown == [.announcement, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .printing, .focus, .recognition, .shortcut])
+        #expect(shown == [.announcement, .device, .airplay, .call, .airDrop, .screenRecording, .voiceMemo, .timer, .stopwatch, .alarm, .focus, .recognition, .shortcut])
     }
 }
