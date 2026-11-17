@@ -122,7 +122,7 @@ struct IslandBubble: View {
                         } else if let keptAlarm {
                             AlarmCompactView(shown: keptAlarm, minimal: true, restingHeight: h)
                         } else if let keptShortcut {
-                            ShortcutRunGlyph(state: keptShortcut.run.state, look: keptShortcut.look, minimal: true, restingHeight: h)
+                            ShortcutRunGlyph(run: keptShortcut.run, look: keptShortcut.shownLook, restingHeight: h)
                         } else if let keptRecognition {
                             MusicRecognitionCompactView(state: keptRecognition, minimal: true, restingHeight: h)
                         }

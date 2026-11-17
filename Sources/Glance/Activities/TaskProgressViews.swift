@@ -42,10 +42,10 @@ enum TaskRingLook {
     static let openLine: CGFloat = 0.0965
     static let overLine: CGFloat = 0.0781
     static let openOverLine: CGFloat = 0.0567
-    /// The track, white at a fifth, as Apple's; in a task's own color, that color at 36.5%, as
-    /// Shortcuts' ring measured in iOS 27's simulator, where it stays under the arc going round.
+    /// The track, white at a fifth, as Apple's; in a task's own color, that color at 37%, as
+    /// `-[WFProgressAccessoryView tintControlWithColor:animated:]` sets Shortcuts' ring.
     static let track: Double = 0.2
-    static let tintedTrack: Double = 0.365
+    static let tintedTrack: Double = 0.37
     /// The arc going round: most of a turn, once every two seconds.
     static let arc: CGFloat = 0.78
     static let turn: TimeInterval = 2
@@ -99,8 +99,8 @@ struct TaskRing: View {
     var opened = false
     var pressed = false
     /// The task's own color, as Shortcuts gives each shortcut's: the ring, the arc and the square
-    /// in it, the track the color at 36.5%, kept under the arc going round. Once over, white, as
-    /// Apple's turns. Without it, white on a white track at a fifth, the track gone while it spins.
+    /// in it, the track the color at 37%. Once over, white, as Apple's turns. Without it, white on a
+    /// white track at a fifth.
     var tint: Color? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -116,13 +116,13 @@ struct TaskRing: View {
         ZStack {
             ZStack {
                 Circle().stroke(track, lineWidth: line)
-                    .opacity(status.spinning && tint == nil ? 0 : 1)
+                    .opacity(status.spinning ? 0 : 1)
                 Circle()
                     .trim(from: 0, to: max(min(fill, 1), 0))
                     .stroke(ink, style: StrokeStyle(lineWidth: line, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .opacity(status.spinning ? 0 : 1)
-                    .animation(reduceMotion ? nil : .linear(duration: 0.15), value: fill)
+                    .animation(reduceMotion ? nil : .linear(duration: 0.25), value: fill)
                     .animation(settle, value: status.over)
                 TaskSpinner(line: line, shown: status.spinning, ink: ink)
             }

@@ -173,6 +173,8 @@ struct ShortcutRun: Identifiable, Equatable, Sendable {
     var stopRequested = false
     var exit: ShortcutExit?
     var message: String?
+    /// How far it's got, as Shortcuts publishes it (see `ShortcutProgressWatch`); nil until it says.
+    var progress: Double?
 
     var canStop: Bool { state == .running || state == .stopDelayed }
     /// Over with nothing more to see in the notch: done, its result in the Run Shortcut menu, or
@@ -221,6 +223,8 @@ struct ShortcutShown: Equatable {
     var additionalRuns = 0
     /// The shortcut's color and icon, once Shortcuts has given them.
     var look: ShortcutLook? = nil
+    /// What shows: its own look, or a new shortcut's until then.
+    var shownLook: ShortcutLook { look ?? .newShortcut }
     var status: String { run.state.title }
     var spoken: String { run.spoken }
 }
@@ -341,6 +345,8 @@ final class ShortcutActivity: ObservableObject {
     /// Done with a result: gone from the notch, but kept in the Run Shortcut menu with Show Result
     /// until Done, or shown again from there.
     private var putAway: Set<UUID> = []
+    /// Which run each published progress belongs to.
+    private var progressRuns: [Int: UUID] = [:]
 
     init(
         source: (any ShortcutRunning)? = nil, stopDelay: Duration = .seconds(8), closeDelay: Duration = .seconds(1.8),
@@ -376,6 +382,10 @@ final class ShortcutActivity: ObservableObject {
         guard settingsObserver == nil else { return }
         if live, !simulated {
             Task.detached(priority: .utility) { ShortcutRunStorage.cleanupExpired() }
+            ShortcutProgressWatch.shared.changed = { [weak self] publication, shortcut, fraction in
+                self?.progressChanged(publication: publication, shortcut: shortcut, fraction: fraction)
+            }
+            ShortcutProgressWatch.shared.start()
         }
         settingsObserver = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.settingsChanged() }
@@ -451,6 +461,24 @@ final class ShortcutActivity: ObservableObject {
             runs[index].state = .stopDelayed
             publish()
         }
+    }
+
+    /// A run's published progress came out, changed or went away (nil). It belongs to the earliest
+    /// run of that shortcut started from Glance and still going that no other progress is told for.
+    func progressChanged(publication: Int, shortcut: UUID, fraction: Double?) {
+        guard let fraction else {
+            progressRuns[publication] = nil
+            return
+        }
+        guard fraction.isFinite else { return }
+        let id =
+            progressRuns[publication]
+            ?? runs.filter { $0.shortcut.id == shortcut && $0.state.active && !progressRuns.values.contains($0.id) }
+            .min { $0.startedAt < $1.startedAt }?.id
+        guard let id, let index = runs.firstIndex(where: { $0.id == id }), runs[index].state.active else { return }
+        progressRuns[publication] = id
+        runs[index].progress = min(max(fraction, 0), 1)
+        publish()
     }
 
     func select(_ id: UUID) {

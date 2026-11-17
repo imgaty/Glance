@@ -725,9 +725,12 @@ Right-click the notch and choose **Run Shortcut**, then a shortcut. The submenu
 also lists runs already started in Glance; choosing one opens that run without
 starting it again. A run shows as the iPhone shows a shortcut running: beside
 the camera, the shortcut's own icon at the left and a ring in its color at the
-right, going round while it runs. Open the activity to see the icon laid flat at
-the left end, which opens Shortcuts, the shortcut's name beside the camera, and
-at the right end the ring, with the square inside it: **Stop**.
+right, filling from the top as Shortcuts reports how far the run has got. Until
+Shortcuts reports anything, the ring is a dot at the top; beside the camera it
+appears after a second, or as soon as the run moves. Open the activity to see
+the icon laid flat at the left end, which opens Shortcuts, the shortcut's name
+beside the camera, and at the right end the ring, with the square inside it:
+**Stop**. With another activity beside it, the run's bubble shows its icon.
 
 When the shortcut finishes, the ring turns white with a check and the activity
 closes by itself a moment later; one you stopped closes the same way. A run that
@@ -735,8 +738,8 @@ couldn't finish shows an exclamation mark and stays until **Done**. One with a
 result leaves the notch too, but stays in the **Run Shortcut** menu: choose it
 there, then **Show Result**, or **Show Activity** to open it again. The first
 time, macOS asks to let Glance control `Shortcuts Events`, which gives each
-shortcut's icon and color. Without it, runs show in white with Shortcuts'
-layers.
+shortcut's icon and color. Without it, runs show as a new shortcut does, in cyan
+with Shortcuts' layers.
 
 Glance tracks its own launched processes, not runs started elsewhere. **Stop**
 is an interruption request, and the activity keeps showing that request until

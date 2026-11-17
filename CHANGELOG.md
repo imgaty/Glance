@@ -36,9 +36,10 @@
   itself, as a canceled request does.
 
 - Changed shortcuts started from Glance to show as the iPhone shows a shortcut
-  running: its own icon beside the camera with a ring in its color, the icon
-  laid flat when opened, and a white check before the run closes by itself. A
-  result stays in the **Run Shortcut** menu until **Done**.
+  running: its own icon beside the camera with a ring in its color that fills
+  as Shortcuts reports the run's progress, the icon laid flat when opened, and a
+  white check before the run closes by itself. A result stays in the
+  **Run Shortcut** menu until **Done**.
 
 - Added every word of alarms, music recognition, shortcuts and Focus in all 34
   languages.

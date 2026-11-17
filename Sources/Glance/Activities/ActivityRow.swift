@@ -60,13 +60,13 @@ struct ActivityRowMetrics {
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 17 * k, buttonGap: 8 * k)
     }
 
-    /// Shortcuts running, measured: 374 by 83.7 points, the icon's diamond 46 wide 19 in, the name
-    /// in 17-point medium from 82, the ring 48.7 points across its outside, 17.3 from the end.
+    /// Shortcuts running, measured: 374 by 83.7 points; the icon view and the ring's 50-point views,
+    /// the icon's 16.8 in, the ring's 16.7 from the end; the name in 17-point medium from 82.
     static func shortcut(_ h: CGFloat) -> ActivityRowMetrics {
         let k = scale(h)
         return .init(
-            height: 83.7 * k, pictureSide: 46 * k, pictureEdge: 19 * k, wordsStart: 82 * k, wordsDrop: drop * k, titleSize: 17 * k,
-            titleWeight: .medium, titleOpticalSize: 17, buttonSide: 49.3 * k, buttonEdge: 16.9 * k, buttonGap: 8 * k)
+            height: 83.7 * k, pictureSide: 50 * k, pictureEdge: 16.8 * k, wordsStart: 82 * k, wordsDrop: drop * k, titleSize: 17 * k,
+            titleWeight: .medium, titleOpticalSize: 17, buttonSide: 50 * k, buttonEdge: 16.7 * k, buttonGap: 8 * k)
     }
 
     /// The words stand 1.6 points below the row's middle on the iPhone, as it listens and runs.

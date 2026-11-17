@@ -7,9 +7,17 @@ import Testing
 @MainActor
 @Suite("Compact activity status")
 struct ActivityStatusPresentationTests {
-    @Test("A running shortcut's ring goes round, and the notch keeps one width however it stands")
+    @Test("A running shortcut's ring fills as Shortcuts says, from a dot, and the notch keeps one width however it stands")
     func runningIdentities() {
-        #expect(ShortcutRunGlyph.status(for: .running).spinning)
+        // As iOS 27's ShortcutsUI sets it: a dot at the top before any progress, almost all of it at
+        // the end, a little more opened.
+        var run = ShortcutRun.fixture(state: .running)
+        #expect(ShortcutRunGlyph.status(for: run) == .counting(0.001))
+        #expect(!ShortcutRunGlyph.status(for: run).spinning)
+        run.progress = 0.5
+        #expect(ShortcutRunGlyph.status(for: run) == .counting(0.001 + 0.5 * 0.97))
+        run.progress = 1
+        #expect(ShortcutRunGlyph.status(for: run, opened: true) == .counting(0.981))
         // Shortcuts' own measures, the same however the run stands.
         #expect(
             ShortcutRunMark.wing(for: ShortcutShown(run: .fixture(state: .running)), restingHeight: 32)
@@ -18,11 +26,11 @@ struct ActivityStatusPresentationTests {
 
     @Test("Shortcut terminal states remain distinct without animation or a text wing")
     func shortcutStates() {
-        #expect(ShortcutRunGlyph.status(for: .stopping) == .working)
-        #expect(ShortcutRunGlyph.status(for: .completed) == .done)
-        #expect(ShortcutRunGlyph.status(for: .stopped) == .stopped)
-        #expect(ShortcutRunGlyph.status(for: .endedAfterStop) == .stopped)
-        #expect(ShortcutRunGlyph.status(for: .failed) == .failed)
+        #expect(ShortcutRunGlyph.status(for: .fixture(state: .stopping)).outcome == .working)
+        #expect(ShortcutRunGlyph.status(for: .fixture(state: .completed)) == .done)
+        #expect(ShortcutRunGlyph.status(for: .fixture(state: .stopped)) == .stopped)
+        #expect(ShortcutRunGlyph.status(for: .fixture(state: .endedAfterStop)) == .stopped)
+        #expect(ShortcutRunGlyph.status(for: .fixture(state: .failed)) == .failed)
         let finished = ShortcutShown(run: .fixture(state: .completed))
         let detailed = ShortcutShown(run: .fixture(state: .failed), additionalRuns: 1)
         // One row as tall as the Timer's either way; what doesn't fit is said under the pointer.

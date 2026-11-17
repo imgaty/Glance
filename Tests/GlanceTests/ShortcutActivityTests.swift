@@ -71,6 +71,29 @@ struct ShortcutActivityTests {
         #expect(activity.runs.first?.state == .failed)
     }
 
+    @Test("Shortcuts' published progress fills the run it belongs to: the earliest of that shortcut still going")
+    func publishedProgress() {
+        let source = Source()
+        let activity = ShortcutActivity(source: source)
+        let first = activity.run(definition)
+        let second = activity.run(definition)
+        let other = ShortcutDefinition(id: UUID(), name: "Other")
+        activity.progressChanged(publication: 1, shortcut: definition.id, fraction: 0.25)
+        activity.progressChanged(publication: 2, shortcut: definition.id, fraction: 0.5)
+        activity.progressChanged(publication: 3, shortcut: other.id, fraction: 0.9)
+        #expect(activity.runs.first { $0.id == first }?.progress == 0.25)
+        #expect(activity.runs.first { $0.id == second }?.progress == 0.5)
+        activity.progressChanged(publication: 1, shortcut: definition.id, fraction: 0.75)
+        activity.progressChanged(publication: 1, shortcut: definition.id, fraction: .nan)
+        #expect(activity.runs.first { $0.id == first }?.progress == 0.75)
+        // Gone, it frees nothing it didn't hold; a finished run takes no more.
+        activity.progressChanged(publication: 1, shortcut: definition.id, fraction: nil)
+        source.finish(1)
+        activity.progressChanged(publication: 2, shortcut: definition.id, fraction: 1)
+        #expect(activity.runs.first { $0.id == second }?.progress == 0.5)
+        source.finish(0)
+    }
+
     @Test("A run done with a result leaves the notch by itself but stays in the menu until Done")
     func resultStaysInMenu() async throws {
         let source = Source()
