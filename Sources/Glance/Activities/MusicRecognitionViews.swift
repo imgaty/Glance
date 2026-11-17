@@ -8,26 +8,17 @@
 import SwiftUI
 
 /// Music Recognition, as iOS 27 draws it in the Dynamic Island (`MusicRecognition.app`'s own
-/// drawings and its views' names): Shazam's mark alone in Shazam's blue beside the camera, light
-/// passing through it while it listens, and a waveform of what it hears at the right; opened, the
-/// mark white on a blue disc, light running round it, and "Listening…", then "Working on it…" and
-/// "Still trying…" as it goes on.
+/// animation files and its views' names): Shazam's mark alone in Shazam's blue beside the camera,
+/// light tracing it while it listens, and a waveform of what it hears at the right; opened, the mark
+/// white on a blue disc, light turning round it, and "Listening…", then "Working on it…" and "Still
+/// trying…" as it goes on. The mark and the disc are Apple's own files, played (`ShazamAnimation`).
 enum ShazamLook {
     /// Shazam's blue, as Apple names it (`ShazamColor`), and its buttons' circle: the blue at about a
     /// quarter, measured on iOS 27.
     static let blue = Color(.sRGB, red: 0, green: 0x88 / 255, blue: 1)
     static let dim = Color(.sRGB, red: 8 / 255, green: 34 / 255, blue: 67 / 255)
-    /// The light passing through the mark, and how long it takes to cross.
-    static let light = Color(.sRGB, red: 0x8C / 255, green: 0xE8 / 255, blue: 1)
-    static let crossing: TimeInterval = 1.0033 / 0.7
-    /// The opened disc, from iOS 27's `expanded-listening.ca`: a deeper blue, a cyan arc glow going
-    /// round the other way from a clock's hands once every 5 seconds, the mark breathing, and sparkles
-    /// coming and going in it and just outside it.
+    /// The opened disc's blue, where Apple's file can't be played (its `Layer 2`, the blue at 88%).
     static let disc = Color(.sRGB, red: 0, green: 117 / 255, blue: 237 / 255)
-    static let discLight = Color(.sRGB, red: 0, green: 215 / 255, blue: 1)
-    static let discTurn: TimeInterval = 5
-    /// How long the mark takes to breathe out, and again in.
-    static let breath: TimeInterval = 1.0533
     /// Beside the camera, by the island's height, as iOS 27's: the mark's height and how far in it
     /// starts; the waveform's six bars, their width, pitch, shortest and tallest, and how far in.
     static let mark: CGFloat = 0.553
@@ -117,198 +108,64 @@ struct MusicRecognitionCompactView: View {
     }
 }
 
-/// Shazam's mark alone, in Shazam's blue, or white; while it listens, light passes through it.
+/// Shazam's mark alone, in Shazam's blue, as beside the camera: Apple's own `compact-listening`
+/// file, playing while it listens. `side` is the mark's height.
 struct ShazamMark: View {
     let listening: Bool
     let side: CGFloat
-    var tint: Color = ShazamLook.blue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        mark(tint)
-            .overlay {
-                if listening, !reduceMotion {
-                    TimelineView(.animation) { context in
-                        let phase = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: ShazamLook.crossing) / ShazamLook.crossing
-                        mark(ShazamLook.light)
-                            .mask {
-                                LinearGradient(
-                                    stops: [.init(color: .clear, location: 0), .init(color: .white, location: 0.5), .init(color: .clear, location: 1)],
-                                    startPoint: .bottomLeading, endPoint: .topTrailing
-                                )
-                                .frame(width: side * 0.9, height: side * 0.9)
-                                .offset(x: side * (phase * 2.2 - 1.1), y: -side * (phase * 2.2 - 1.1))
-                            }
-                            .blur(radius: side * 0.03)
-                    }
-                }
+        Group {
+            if ShazamAnimation.compact.available {
+                ShazamAnimationView(animation: .compact, playing: listening && !reduceMotion)
+                    .frame(width: side * ShazamAnimation.compact.reach, height: side * ShazamAnimation.compact.reach)
+            } else {
+                ShazamGlyph(side: side, tint: ShazamLook.blue)
             }
-            .frame(width: side, height: side)
-            // Breathing as it listens, as the island's own mark does.
-            .modifier(ShazamBreath(on: listening && !reduceMotion))
-            .accessibilityHidden(true)
-    }
-
-    private func mark(_ color: Color) -> some View {
-        Image(systemName: "shazam.logo")
-            .resizable()
-            .scaledToFit()
-            .symbolRenderingMode(.palette)
-            .foregroundStyle(color, .clear)
-            .frame(width: side / ShazamLook.symbolInk, height: side / ShazamLook.symbolInk)
-            .frame(width: side, height: side)
-    }
-}
-
-/// The mark white on a Shazam blue disc, as opened; while it listens, light runs round its edge.
-struct ShazamDisc: View {
-    let listening: Bool
-    let side: CGFloat
-    var fill: Color = ShazamLook.disc
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        ZStack {
-            Circle().fill(fill)
-            if listening, !reduceMotion {
-                TimelineView(.animation) { context in
-                    let now = context.date.timeIntervalSinceReferenceDate
-                    let turn = now.truncatingRemainder(dividingBy: ShazamLook.discTurn) / ShazamLook.discTurn
-                    // Screen angles run with a clock's hands, so a falling one goes the other way.
-                    let angle = Angle.degrees(-turn * 360)
-                    ZStack {
-                        // Two copies of the arc glow, one sharp and one far softer, cyan at half, added
-                        // onto the blue (`expanded-listening.ca`, "arc glow.png" and its copy).
-                        ShazamArcGlow(side: side).blur(radius: side * 0.023).opacity(0.5)
-                        ShazamArcGlow(side: side).blur(radius: side * 0.117).opacity(0.5)
-                    }
-                    .rotationEffect(angle)
-                    .blendMode(.plusLighter)
-                    .frame(width: side * 0.985, height: side * 0.985)
-                    .clipShape(Circle())
-                }
-            }
-            ShazamMark(listening: false, side: side * ShazamLook.discMark, tint: .white)
-                .modifier(ShazamBreath(on: listening && !reduceMotion))
         }
         .frame(width: side, height: side)
-        // Its soft blue halo, under it (`Layer 5`: the blue at 40%, blurred, a little off its middle).
-        .background {
-            if listening, !reduceMotion {
-                Circle().fill(ShazamLook.disc)
-                    .frame(width: side * 0.6, height: side * 0.6)
-                    .blur(radius: side * 0.27)
-                    .opacity(0.4)
-                    .offset(x: side * 0.051, y: side * 0.018)
-                    .blendMode(.plusLighter)
-            }
-        }
-        // Laid over it, so those past the rim don't make the disc any bigger.
-        .overlay {
-            if listening, !reduceMotion {
-                TimelineView(.animation) { context in
-                    ShazamSparkles(side: side, time: context.date.timeIntervalSinceReferenceDate)
-                }
-            }
-        }
         .accessibilityHidden(true)
     }
 }
 
-/// The light that turns round the disc, redrawn from iOS 27's "arc glow": a soft glow with one hard
-/// straight edge, brightest on that edge at 0.71 of the radius from the middle, fading 0.46 of the
-/// disc across the edge and 0.58 along it, in cyan; mirrored, as its layer is.
-private struct ShazamArcGlow: View {
+/// The mark white on Shazam's blue disc, as opened: Apple's own `expanded-listening` file, playing
+/// while it listens. `side` is the disc's.
+struct ShazamDisc: View {
+    let listening: Bool
     let side: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Canvas { context, size in
-            let d = side
-            let middle = CGPoint(x: size.width / 2, y: size.height / 2)
-            // The brightest point and the edge's way, as the image lies once mirrored.
-            let bright = CGPoint(x: middle.x - 0.207 * d, y: middle.y + 0.287 * d)
-            let along = CGVector(dx: 0.636, dy: 0.771)
-            let into = CGVector(dx: 0.771, dy: -0.636)
-            // Only on the glow's side of its edge.
-            var half = Path()
-            let far = d * 2
-            half.move(to: CGPoint(x: bright.x - along.dx * far, y: bright.y - along.dy * far))
-            half.addLine(to: CGPoint(x: bright.x + along.dx * far, y: bright.y + along.dy * far))
-            half.addLine(to: CGPoint(x: bright.x + along.dx * far + into.dx * far, y: bright.y + along.dy * far + into.dy * far))
-            half.addLine(to: CGPoint(x: bright.x - along.dx * far + into.dx * far, y: bright.y - along.dy * far + into.dy * far))
-            half.closeSubpath()
-            context.clip(to: half)
-            // An ellipse along the edge, fading out from the brightest point.
-            context.translateBy(x: bright.x, y: bright.y)
-            context.rotate(by: .radians(atan2(along.dy, along.dx)))
-            context.scaleBy(x: 0.58 / 0.46, y: 1)
-            let r = 0.46 * d
-            context.fill(
-                Path(ellipseIn: CGRect(x: -r, y: -r, width: r * 2, height: r * 2)),
-                with: .radialGradient(
-                    Gradient(stops: [
-                        .init(color: ShazamLook.discLight, location: 0),
-                        .init(color: ShazamLook.discLight.opacity(0.68), location: 0.25),
-                        .init(color: ShazamLook.discLight.opacity(0.32), location: 0.5),
-                        .init(color: ShazamLook.discLight.opacity(0.1), location: 0.75),
-                        .init(color: ShazamLook.discLight.opacity(0), location: 1),
-                    ]), center: .zero, startRadius: 0, endRadius: r))
+        Group {
+            if ShazamAnimation.expanded.available {
+                ShazamAnimationView(animation: .expanded, playing: listening && !reduceMotion)
+                    .frame(width: side * ShazamAnimation.expanded.reach, height: side * ShazamAnimation.expanded.reach)
+            } else {
+                ZStack {
+                    Circle().fill(ShazamLook.disc)
+                    ShazamGlyph(side: side * ShazamLook.discMark, tint: .white)
+                }
+            }
         }
         .frame(width: side, height: side)
+        .accessibilityHidden(true)
     }
 }
 
-/// The mark breathing while it listens: 1.02 to 1.06 its size and back, 1.05 seconds each way, eased,
-/// as iOS 27's.
-private struct ShazamBreath: ViewModifier {
-    let on: Bool
-
-    func body(content: Content) -> some View {
-        if on {
-            TimelineView(.animation) { context in
-                let t = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: ShazamLook.breath * 2) / ShazamLook.breath
-                let way = t <= 1 ? t : 2 - t
-                let eased = way * way * (3 - 2 * way)
-                content.scaleEffect(1.02 + 0.04 * eased)
-            }
-        } else {
-            content
-        }
-    }
-}
-
-/// Small soft points of light coming and going on the disc while it listens, a few faint ones just
-/// past its rim, as iOS 27's.
-private struct ShazamSparkles: View {
+/// The mark still, for a Mac without Apple's files: `shazam.logo`, its ink `side` tall.
+private struct ShazamGlyph: View {
     let side: CGFloat
-    let time: TimeInterval
-    /// Where each is, by its angle and its distance out as a share of the radius, how long it takes to
-    /// come and go, and when.
-    private static let points: [(angle: Double, out: CGFloat, period: Double, phase: Double)] = [
-        (20, 0.62, 1.7, 0.1), (75, 0.88, 2.3, 0.55), (130, 0.45, 1.9, 0.3), (160, 0.93, 2.6, 0.8),
-        (205, 0.7, 2.1, 0.15), (250, 0.35, 1.6, 0.65), (300, 0.82, 2.4, 0.4), (340, 0.5, 2.0, 0.9),
-        (110, 1.14, 2.8, 0.2), (230, 1.12, 3.1, 0.7),
-    ]
+    let tint: Color
 
     var body: some View {
-        Canvas { context, size in
-            let r = side / 2
-            let dot = side * 0.045
-            context.addFilter(.blur(radius: side * 0.01))
-            for point in Self.points {
-                let wave = sin((time / point.period + point.phase) * 2 * .pi)
-                let shown = max(wave, 0) * (point.out > 1 ? 0.4 : 1)
-                guard shown > 0.01 else { continue }
-                let a = point.angle * .pi / 180
-                let center = CGPoint(x: size.width / 2 + r * point.out * cos(a), y: size.height / 2 - r * point.out * sin(a))
-                context.opacity = shown
-                context.fill(
-                    Path(ellipseIn: CGRect(x: center.x - dot / 2, y: center.y - dot / 2, width: dot, height: dot)),
-                    with: .color(ShazamLook.discLight))
-            }
-        }
-        .frame(width: side * 1.3, height: side * 1.3)
-        .allowsHitTesting(false)
+        Image(systemName: "shazam.logo")
+            .resizable()
+            .scaledToFit()
+            .symbolRenderingMode(.palette)
+            .foregroundStyle(tint, .clear)
+            .frame(width: side / ShazamLook.symbolInk, height: side / ShazamLook.symbolInk)
+            .frame(width: side, height: side)
     }
 }
 
