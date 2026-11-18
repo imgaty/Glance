@@ -9,8 +9,8 @@ import AppKit
 import SwiftUI
 
 /// An activity opened in one row, as iOS 27 opens Shortcuts and Music Recognition: a picture at
-/// the left end, round buttons at the right end, each where the iPhone puts it, and its words set
-/// just under the camera, so they run on beneath it. Measured from the iPhone by the island's height
+/// the left end, round buttons at the right end, each where the iPhone puts it, and its words as
+/// high as they go under the camera, so they run on beneath it. Measured from the iPhone by the island's height
 /// beside the camera, so the notch's height scales them all.
 struct ActivityRowMetrics {
     /// The row's height.
@@ -20,8 +20,6 @@ struct ActivityRowMetrics {
     var pictureEdge: CGFloat
     /// Where the words start, from the left end.
     var wordsStart: CGFloat
-    /// How far below the middle the words sit, as the iPhone's do.
-    var wordsDrop: CGFloat
     var titleSize: CGFloat
     var titleWeight: NSFont.Weight
     /// The size the iPhone sets it at: its letters are drawn for that size, then scaled, so they're
@@ -46,20 +44,21 @@ struct ActivityRowMetrics {
     static func island(_ h: CGFloat) -> CGFloat { 374 * scale(h) }
 
     /// Music Recognition listening, measured on iOS 27: 374 by 84 points, a 51-point disc 18.2 in,
-    /// "Listening…" in 16-point semibold from 81.5, 51-point buttons 16 from the end.
+    /// "Listening…" in 16-point semibold from 81.5, 51-point buttons 16 from the end. The words stand
+    /// as high as they go under the camera (see `UnderCamera`).
     static func recognition(_ h: CGFloat) -> ActivityRowMetrics {
         let k = scale(h)
         return .init(
-            height: 84 * k, pictureSide: 51 * k, pictureEdge: 18.2 * k, wordsStart: 81.5 * k, wordsDrop: drop * k, titleSize: 16 * k,
+            height: 84 * k, pictureSide: 51 * k, pictureEdge: 18.2 * k, wordsStart: 81.5 * k, titleSize: 16 * k,
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 16.3 * k, buttonGap: 8 * k)
     }
 
-    /// "No song found.", measured: taller, 92.7 points, no picture, the words from 33.9 and only half a
-    /// point below the middle, its one button 17 from the end.
+    /// "No song found.", measured: taller, 92.7 points, no picture, the words from 33.9, its one button
+    /// 17 from the end.
     static func noMatch(_ h: CGFloat) -> ActivityRowMetrics {
         let k = scale(h)
         return .init(
-            height: 92.7 * k, pictureSide: 0, pictureEdge: 0, wordsStart: 33.9 * k, wordsDrop: 0.5 * k, titleSize: 16 * k,
+            height: 92.7 * k, pictureSide: 0, pictureEdge: 0, wordsStart: 33.9 * k, titleSize: 16 * k,
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 17 * k, buttonGap: 8 * k)
     }
 
@@ -68,17 +67,12 @@ struct ActivityRowMetrics {
     static func shortcut(_ h: CGFloat) -> ActivityRowMetrics {
         let k = scale(h)
         return .init(
-            height: 83.7 * k, pictureSide: 50 * k, pictureEdge: 16.8 * k, wordsStart: 82 * k, wordsDrop: drop * k, titleSize: 17 * k,
+            height: 83.7 * k, pictureSide: 50 * k, pictureEdge: 16.8 * k, wordsStart: 82 * k, titleSize: 17 * k,
             titleWeight: .medium, titleOpticalSize: 17, buttonSide: 50 * k, buttonEdge: 16.7 * k, buttonGap: 8 * k)
     }
-
-    /// The words stand 1.6 points below the row's middle on the iPhone, as it listens and runs.
-    private static let drop: CGFloat = 1.6
 }
 
 enum ActivityRowLayout {
-    /// How far under the camera the words' line starts.
-    static let underCamera: CGFloat = 1
     /// The most the row grows for its line under the name; past this it's cut short, and said in full
     /// under the pointer and to VoiceOver.
     static let widest: CGFloat = 520
@@ -121,15 +115,46 @@ enum ActivityRowLayout {
         buttons > 0 || extra > 0 ? m.buttonGap + extra + buttonsWidth(buttons, m) : 0
     }
 
-    /// How far below the row's middle the words go: as far as the iPhone's, or further, for their top
-    /// to clear the camera.
-    @MainActor
-    static func drop(title: Bool = true, detail: Bool, metrics m: ActivityRowMetrics, restingHeight h: CGFloat) -> CGFloat {
-        let lines = (title ? lineHeight(m.titleNSFont) : 0) + (detail ? lineHeight(NSFont.systemFont(ofSize: NotchType.size)) : 0)
-        return max(m.wordsDrop, h + underCamera - (m.height - lines) / 2)
+}
+
+/// Words under the camera stand as high as they go, in every activity alike: the tops of their
+/// tallest letters just clear of its lower edge. Pictures, buttons and large digits, as tall as the
+/// camera, stand beside it instead.
+enum UnderCamera {
+    /// Between the camera's lower edge and the letters' tops.
+    static let clearance: CGFloat = 1
+
+    /// How far above their baseline these words reach, set on one line in this font: as high as a
+    /// capital, or higher where their own letters are, as tall lowercase letters and accents are.
+    static func reach(_ words: [String], font: NSFont) -> CGFloat {
+        words.reduce(top("H", font)) { max($0, top($1, font)) }
     }
 
-    static func lineHeight(_ font: NSFont) -> CGFloat { font.ascender - font.descender + font.leading }
+    private static func top(_ text: String, _ font: NSFont) -> CGFloat {
+        guard !text.isEmpty else { return 0 }
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+        let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        return bounds.isNull ? 0 : bounds.maxY
+    }
+
+    /// Where the first line's baseline falls, down from the notch's top, for these words to stand
+    /// just under a camera `h` tall.
+    static func baseline(_ words: [String], font: NSFont, restingHeight h: CGFloat) -> CGFloat {
+        h + clearance + reach(words, font: font)
+    }
+
+    /// From one baseline to the next, as a line follows another in this font.
+    static func lineStep(_ font: NSFont) -> CGFloat { ceil(font.ascender - font.descender + font.leading) }
+}
+
+extension View {
+    /// Sets these words with their first baseline `y` down from the top of what holds them, from its
+    /// leading or trailing edge.
+    func firstBaseline(_ y: CGFloat, alignment: HorizontalAlignment = .leading) -> some View {
+        Color.clear.overlay(alignment: Alignment(horizontal: alignment, vertical: .top)) {
+            self.alignmentGuide(.top) { $0[.firstTextBaseline] - y }
+        }
+    }
 }
 
 struct ActivityRow<Picture: View, Buttons: View>: View {
@@ -177,9 +202,8 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
             .help(explanation ?? detail)
             .accessibilityElement(children: .combine)
             .accessibilityHint(explanation ?? "")
-            .offset(y: ActivityRowLayout.drop(detail: !detail.isEmpty, metrics: m, restingHeight: restingHeight))
+            .firstBaseline(UnderCamera.baseline([title], font: m.titleNSFont, restingHeight: restingHeight))
             .padding(.leading, m.wordsStart)
-            .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: m.buttonGap) { trailing }
                 .padding(.trailing, m.buttonEdge)
                 .frame(maxWidth: .infinity, alignment: .trailing)

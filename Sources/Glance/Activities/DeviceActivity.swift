@@ -33,10 +33,12 @@ enum ExpandedDeviceLayout {
         return min(h * size / looks, room / across, room / usual.picture)
     }
 
-    /// What's happened, and the device's name under it, by their baselines: as high as they go, their
-    /// letters just under the camera.
-    static let saidBaseline: CGFloat = 1.35
-    static let nameBaseline: CGFloat = 1.88
+    /// What's happened, as high as it goes under the camera, and the device's name under it, this far
+    /// further down, by the notch's height.
+    static func saidBaseline(_ said: String, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([said], font: .systemFont(ofSize: NotchType.size), restingHeight: h)
+    }
+    static let nameStep: CGFloat = 0.53
 
     /// Each wing: as wide as the ring needs against the camera, or wider for a long name, under the
     /// camera, to reach the ring.
@@ -130,9 +132,11 @@ struct DeviceActivityView: View {
         let wing = layout.wing(name: name, restingHeight: h, closedWidth: closedWidth)
         let large = DeviceLayout(height: h, low: low, extended: true)
         let width = closedWidth + wing * 2 - large.ring - large.trailing - LiveActivityView.cameraGap
+        let said = low ? String(localized: "Low Battery") : String(localized: "Connected")
+        let saidBaseline = layout.saidBaseline(said, restingHeight: h)
         return ZStack(alignment: .topLeading) {
-            line(low ? String(localized: "Low Battery") : String(localized: "Connected"), font: NotchType.detail, baseline: h * layout.saidBaseline, color: NotchType.detailColor)
-            line(name, font: NotchType.title, baseline: h * layout.nameBaseline, color: .white)
+            line(said, font: NotchType.detail, baseline: saidBaseline, color: NotchType.detailColor)
+            line(name, font: NotchType.title, baseline: saidBaseline + h * layout.nameStep, color: .white)
         }
         .padding(.leading, AirDropLayout.wordsStart(h))
         .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)
@@ -146,6 +150,6 @@ struct DeviceActivityView: View {
             .foregroundStyle(color)
             .lineLimit(1)
             .truncationMode(.tail)
-            .padding(.top, baseline - NSFont.systemFont(ofSize: NotchType.size, weight: .semibold).ascender)
+            .firstBaseline(baseline)
     }
 }

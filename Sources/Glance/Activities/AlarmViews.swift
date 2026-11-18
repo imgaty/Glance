@@ -25,14 +25,35 @@ enum AlarmLook {
     static let wordsStart: CGFloat = 83 / alert
     static let timeSize: CGFloat = 13.5 / alert
     static let titleSize: CGFloat = 16.5 / alert
-    /// The time's and the name's baselines, measured on iOS 27's ringing alarm.
-    static let timeBaseline: CGFloat = 49.3 / alert
-    static let nameBaseline: CGFloat = 68.7 / alert
+    /// From the time's baseline to the name's, measured on iOS 27's ringing alarm (49.3 and 68.7).
+    static let nameStep: CGFloat = 19.4 / alert
     /// The zz's share of its circle.
     static let snoozeGlyph: CGFloat = 25.5 / 50
 
     /// The clock's ink at the alert's height `h`, as tall as `glyphHeight` of it.
     static func glyphInk(_ h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) * glyphHeight }
+
+    /// A time of day as the iPhone's alarm writes it, in the Mac's own hours: 07:18 where the day has
+    /// 24 hours, 7:18 AM where it has 12.
+    static func time(_ date: Date) -> String { clock.string(from: date) }
+
+    /// macOS's way of writing the time, as the iPhone's: "7:18" becomes "07:18" where the day has 24
+    /// hours. What isn't a time of day, or is written with AM or PM, stays as it is.
+    static func written(_ text: String) -> String {
+        guard clock.dateFormat.hasPrefix("HH"),
+            let match = text.wholeMatch(of: #/(\d{1,2})[:.h](\d{2})/#),
+            let hour = Int(match.1), let minute = Int(match.2), hour < 24, minute < 60,
+            let date = Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: .now)
+        else { return text }
+        return time(date)
+    }
+
+    /// Hours and minutes in the Mac's locale and its 12 or 24 hour setting.
+    private nonisolated(unsafe) static let clock: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("jmm")
+        return formatter
+    }()
 }
 
 /// The alarm clock Clock rings in the Dynamic Island, which isn't `alarm.fill`: a fuller face with
@@ -206,7 +227,7 @@ struct AlarmRingingView: View {
             else if shown.failure != nil { String(localized: "Not confirmed") }
             else { nil }
         let titleIsTime = shown.alarm.title.range(of: #"^\d{1,2}[:.h]\d{2}"#, options: .regularExpression) != nil
-        let time = shown.alarm.time ?? (titleIsTime ? shown.alarm.title : rangAt.formatted(date: .omitted, time: .shortened))
+        let time = AlarmLook.written(shown.alarm.time ?? (titleIsTime ? shown.alarm.title : AlarmLook.time(rangAt)))
         return (status ?? time, titleIsTime ? String(localized: "Alarm") : shown.alarm.title)
     }
 
@@ -241,8 +262,9 @@ struct AlarmRingingView: View {
             glyph(h)
                 .padding(.leading, tall * AlarmLook.glyphEdge)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            // Each line on the iPhone's baseline, from the row's top, running on under the camera up
-            // to the buttons.
+            // The time as high as it goes under the camera, the name under it as on the iPhone, both
+            // running on beneath it up to the buttons.
+            let timeBaseline = UnderCamera.baseline([lines.top], font: .systemFont(ofSize: tall * AlarmLook.timeSize), restingHeight: h)
             Color.clear
                 .frame(width: max(width - tall * AlarmLook.wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), height: tall)
                 .overlay(alignment: .topLeading) {
@@ -251,7 +273,7 @@ struct AlarmRingingView: View {
                         .foregroundStyle(AlarmLook.ink.opacity(0.5))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .alignmentGuide(.top) { $0[.firstTextBaseline] - tall * AlarmLook.timeBaseline }
+                        .alignmentGuide(.top) { $0[.firstTextBaseline] - timeBaseline }
                 }
                 .overlay(alignment: .topLeading) {
                     Text(lines.name)
@@ -259,7 +281,7 @@ struct AlarmRingingView: View {
                         .foregroundStyle(AlarmLook.ink)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .alignmentGuide(.top) { $0[.firstTextBaseline] - tall * AlarmLook.nameBaseline }
+                        .alignmentGuide(.top) { $0[.firstTextBaseline] - timeBaseline - tall * AlarmLook.nameStep }
                 }
             .padding(.leading, tall * AlarmLook.wordsStart)
             .help(shown.failure ?? shown.spoken)

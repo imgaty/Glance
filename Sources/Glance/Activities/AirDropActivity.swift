@@ -251,8 +251,8 @@ enum AirDropLayout {
     static func ringEdge(_ h: CGFloat) -> CGFloat { TimerLayout.circleEdge(h) }
 
     /// Opened: as wide as the iPhone's island, or wider where the camera needs it: the picture and the
-    /// ring stand as high as the camera, so beside it, and the words, set just under it, run on
-    /// beneath it.
+    /// ring stand as high as the camera, so beside it, and the words, as high as they go under it,
+    /// run on beneath it.
     @MainActor
     static func width(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
@@ -261,11 +261,9 @@ enum AirDropLayout {
         return max(ActivityRowMetrics.island(h), camera + max(left, right) * 2).rounded(.up)
     }
 
-    /// How far below the row's middle the words go, for their top to clear the camera.
-    static func wordsDrop(_ h: CGFloat) -> CGFloat {
-        let lines = ActivityRowLayout.lineHeight(NSFont.systemFont(ofSize: NotchType.size, weight: .semibold))
-            + ActivityRowLayout.lineHeight(NSFont.systemFont(ofSize: NotchType.size))
-        return max(0, h + ActivityRowLayout.underCamera - (TimerLayout.tallHeight(h) - lines) / 2)
+    /// Where the words' first line, "AirDrop", stands: as high as it goes under the camera.
+    static func wordsBaseline(_ h: CGFloat) -> CGFloat {
+        UnderCamera.baseline(["AirDrop"], font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
     }
 
     /// Where the words start, from the left end.
@@ -355,22 +353,21 @@ struct ExpandedAirDropView: View {
 
     var body: some View {
         let h = restingHeight
-        let left = HStack(spacing: h * AirDropLayout.gap) {
-            preview(h)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("AirDrop")
-                    .font(NotchType.title)
-                    .foregroundStyle(.white)
-                Text(Self.from(shown))
-                    .font(NotchType.detail)
-                    .foregroundStyle(NotchType.detailColor)
-            }
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .frame(maxWidth: AirDropLayout.wordsRoom(h, width: width), alignment: .leading)
-            .offset(y: AirDropLayout.wordsDrop(h))
+        let left = preview(h).padding(.leading, AirDropLayout.thumbEdge(h))
+        // The words, as high as they go under the camera, run on beneath it to the ring.
+        let words = VStack(alignment: .leading, spacing: 0) {
+            Text("AirDrop")
+                .font(NotchType.title)
+                .foregroundStyle(.white)
+            Text(Self.from(shown))
+                .font(NotchType.detail)
+                .foregroundStyle(NotchType.detailColor)
         }
-        .padding(.leading, AirDropLayout.thumbEdge(h))
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .frame(maxWidth: AirDropLayout.wordsRoom(h, width: width), alignment: .leading)
+        .firstBaseline(AirDropLayout.wordsBaseline(h))
+        .padding(.leading, AirDropLayout.wordsStart(h))
         // The ring grows out of where it shows beside the camera, as the Timer's does.
         let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
@@ -384,9 +381,9 @@ struct ExpandedAirDropView: View {
             )
             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows || bubbleCenter != nil))
             .padding(.trailing, AirDropLayout.ringEdge(h))
-        // The words, under the camera, run on beneath it to the ring.
         ZStack {
             left.modifier(IslandReveal(hidden: !revealed)).frame(maxWidth: .infinity, alignment: .leading)
+            words.modifier(IslandReveal(hidden: !revealed))
             right.frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(width: width, height: TimerLayout.tallHeight(h))

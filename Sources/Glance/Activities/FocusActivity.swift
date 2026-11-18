@@ -317,7 +317,8 @@ final class FocusWatch: @unchecked Sendable {
 /// A Focus changing, extended, as the iPhone shows it for a moment after it changes, measured from a
 /// recording: the symbol in a circle at the left end, white with the symbol in its color when it's on,
 /// the color faintly behind it when it's off; the Focus's name in white beside it; the state's word at
-/// the right end, in the color. The words are set just under the camera, so they run on beneath it.
+/// the right end, in the color. The words stand as high as they go under the camera, so they run on
+/// beneath it.
 struct FocusExtendedView: View {
     let symbol: String
     let tint: Color
@@ -333,28 +334,30 @@ struct FocusExtendedView: View {
         let h = restingHeight
         let tall = TimerLayout.tallHeight(h)
         let side = TimerLayout.content(h)
-        let drop = Self.wordsDrop(h)
-        HStack(spacing: h * AirDropLayout.gap) {
+        ZStack {
             SystemSymbol.glyph(symbol, size: side * 0.5)
                 .foregroundStyle(on ? tint : .white)
                 .frame(width: side, height: side)
                 .background(Circle().fill(on ? Color.white : tint.opacity(0.29)))
-            Text(name)
-                .font(NotchType.title)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .offset(y: drop)
+                .padding(.leading, PlayerLayout.padding)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(state)
-                .font(NotchType.title)
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .fixedSize()
-                .offset(y: drop)
+            // The name and its state on one line, as high as they go under the camera.
+            HStack(alignment: .firstTextBaseline, spacing: h * AirDropLayout.gap) {
+                Text(name)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(state)
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .font(NotchType.title)
+            .firstBaseline(Self.wordsBaseline(name: name, state: state, restingHeight: h))
+            .padding(.leading, PlayerLayout.padding + side + h * AirDropLayout.gap)
+            .padding(.trailing, tall * Self.stateEdge)
         }
-        .padding(.leading, PlayerLayout.padding)
-        .padding(.trailing, tall * Self.stateEdge)
         .frame(height: tall)
     }
 
@@ -367,9 +370,8 @@ struct FocusExtendedView: View {
         return max(circle, (ActivityRowMetrics.island(h) - closedWidth) / 2).rounded(.up)
     }
 
-    /// How far below the row's middle the words go, for their top to clear the camera.
-    static func wordsDrop(_ h: CGFloat) -> CGFloat {
-        let line = ActivityRowLayout.lineHeight(NSFont.systemFont(ofSize: NotchType.size, weight: .semibold))
-        return max(0, h + ActivityRowLayout.underCamera - (TimerLayout.tallHeight(h) - line) / 2)
+    /// Where the name and its state stand: as high as they go under the camera.
+    static func wordsBaseline(name: String, state: String, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([name, state], font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
     }
 }
