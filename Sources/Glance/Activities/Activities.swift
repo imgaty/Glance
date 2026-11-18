@@ -13,7 +13,7 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus, alarm, listeningMode
+        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus, alarm
 
         /// A device or its case running low: its ring red.
         var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
@@ -35,9 +35,6 @@ struct NotchAlert: Identifiable, Equatable {
         /// the state's word in the same color on the right. On, the symbol sits on white when it
         /// extends; off, on its color, faintly.
         case status(symbol: String, tint: Color, text: String, on: Bool = true)
-        /// Two symbols, as macOS 27's island shows AirPods changing their listening mode: the
-        /// AirPods on the left, the mode on the right, both white.
-        case symbols(leading: String, trailing: String)
         /// A call coming in, as tall as the Alarm: the caller, and to decline or accept it.
         case incomingCall(CallShown)
         /// A timer that's done, as the Alarm goes off: its symbol shaking, its length and its name, and
@@ -138,23 +135,6 @@ final class Activities: ObservableObject {
             else { return }
             self?.post(change.alert(kind: .focus))
         }
-        // AirPods' listening mode, read from the AirPods and from macOS's banners, with the other
-        // headphones news.
-        FocusWatch.shared.startListening { [weak self] change in self?.announce(change) }
-        ListeningModeWatch.shared.start { [weak self] change in self?.announce(change) }
-    }
-
-    /// The last listening mode told, from either source, which both tell of the same change.
-    private var toldListening: (mode: ListeningMode, at: Date)?
-
-    private func announce(_ change: ListeningModeChange) {
-        guard ActivityBench.scene == nil,
-            UserDefaults.standard.bool(forKey: Preferences.notchEnabled),
-            UserDefaults.standard.bool(forKey: Preferences.activityDevices)
-        else { return }
-        if let told = toldListening, told.mode == change.mode, Date.now.timeIntervalSince(told.at) < 4 { return }
-        toldListening = (change.mode, .now)
-        post(change.alert)
     }
 
     /// Just woken, things reconnecting are expected, not announced.
