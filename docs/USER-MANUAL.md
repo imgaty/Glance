@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 17 November 2026`
+`Created: 11 October 2026` | `Last updated: 18 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -569,16 +569,14 @@ tray controls hidden behind it.
 On compact music, activate **Open Player** to reach its playback controls.
 In a call, Tab also reaches **Show in [app]** when the calling app can be opened.
 
-Right-click the notch and choose **Live Activities** to open an ongoing
-activity, including one waiting behind the first two. An announcement waiting
-behind an already-open page does not block the menu or keyboard navigation.
-The **Hide** command names the activity currently open. Hiding it closes the
-notch and puts that activity away without stopping it. If the activity ends or
-changes while the menu is open, the old command leaves its replacement alone.
-Reopen the menu to hide the replacement.
-The selected activity keeps its place in arrival order. Screen-recording
-countdowns have no expanded view and are skipped; completed or hidden
-activities leave the menu.
+The notch's right-click menu keeps to the core: **Hide**, then
+**Recognize Music** and **Run Shortcut**, which only the notch starts, then
+Check for Updates…, Settings and Quit. What an activity does once it shows, such
+as pausing a timer, is on the activity itself. The **Hide** command names the
+activity currently open. Hiding it closes the notch and puts that activity away
+without stopping it. If the activity ends or changes while the menu is open, the
+old command leaves its replacement alone. Reopen the menu to hide the
+replacement.
 
 ### Timer and stopwatch
 
@@ -639,7 +637,6 @@ Its buttons work as Clock's own do, and what they do shows at once: Glance opens
 Clock hidden, shows it for a moment behind every other window, and, if it wasn't
 open, quits it half a minute after the last press. Without `Accessibility`,
 they're dimmed, and pressing one asks for it (see [Permissions](#permissions)).
-The notch's right-click menu has the same buttons.
 
 When a timer rings, the notch grows as tall as the iPhone's Timer to say so,
 and rings with the timer's sound, as chosen in Clock, in place of macOS's own
@@ -763,6 +760,15 @@ goes. Apple's own Focuses keep their colors; a Focus of your own takes your
 Mac's accent color. Glance observes the system's actual announcement; it does
 not infer Focus from preferences or show a persistent state that may be out of
 date. macOS keeps its own Focus controls.
+
+### AirPods listening mode
+
+When AirPods change their listening mode and macOS announces it, the notch
+shows it beside the camera as Apple's own island does: the AirPods at the left
+end and the mode's symbol at the right, both white, for Noise Cancellation,
+Transparency, Adaptive or Off. VoiceOver says the mode's name. It follows
+`Devices` in **Settings > Live Activities**, and like Focus it shows only what
+macOS announces: Glance doesn't ask the AirPods for their mode.
 
 ### AirDrop
 
@@ -983,7 +989,7 @@ preview stays on what's playing.
 | `Hide native Live Activities` | Hides native Now Playing only while Glance visibly replaces it, with `Accessibility` allowed. Other apps keep their native activities and controls. Glance restores settings it previously changed for unsupported activities, and restores Now Playing when its replacement goes away. Settings Glance did not change stay untouched |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
-| `Devices` | Shows AirPods and Beats as they connect |
+| `Devices` | Shows AirPods and Beats as they connect, and AirPods changing their listening mode |
 | `Calls` | Shows calls coming in and the call you're on, in place of macOS's popup |
 | `AirDrop` | Shows files coming in and going out over AirDrop, as they go |
 | `Recordings` | Shows the screen being recorded with macOS's Screenshot, until it's saved, and a voice memo being recorded, with its sound, each with a button to stop it |

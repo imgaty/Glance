@@ -55,7 +55,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.nowPlaying = nowPlaying
         notches.contextMenu = statusBar.menu
         statusBar.putAway = { [notches] in notches.putAwayCommand }
-        statusBar.activityChoices = { [notches] in notches.activityChoices }
         notches.start()
         MenuBarLiveActivities.shared.replacements = { [notches] in notches.nativeActivityReplacements }
         Tray.shared.start()
@@ -752,7 +751,6 @@ final class NotchManager {
 
     /// What the menu offers to put away on that notch, and putting it away.
     var putAwayCommand: (title: String, action: () -> Void)? { pointed?.putAwayCommand }
-    var activityChoices: [(title: String, action: () -> Void)] { pointed?.activityChoices ?? [] }
 
     /// Explicit menu entry point; no available notch means no microphone session is started.
     func recognizeMusic() { pointed?.recognizeMusic() }

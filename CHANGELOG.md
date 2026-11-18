@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 17 November 2026`
+`Created: 11 October 2026` | `Last updated: 18 November 2026`
 
 <br>
 
@@ -36,6 +36,17 @@
   name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps
   its color.
 
+- Added AirPods changing their listening mode, as Apple's own island shows it:
+  the AirPods beside the camera and the mode's symbol, for Noise Cancellation,
+  Transparency, Adaptive or Off.
+
+- Changed opened activities to the iPhone's own sizes for their round buttons,
+  pictures and words, their words standing just under the camera, and each
+  only as wide as what stands beside the camera needs.
+
+- Changed a time beside the camera to slide the notch wider a moment before it
+  gains a digit, such as 59:59 to 1:00:00, rather than running under the camera.
+
 - Changed music recognition to show as the iPhone's Music Recognition does:
   the notch opens by itself as it starts listening, with Shazam's mark on a
   blue disc, `Listening…`, a waveform of what it hears and a blue **Cancel**,
@@ -52,8 +63,10 @@
 - Added every word of alarms, music recognition, shortcuts and Focus in all 34
   languages.
 
-- Changed the notch's menu to offer **Recognize Music** and **Run Shortcut**
-  only while their Live Activities are on, or while a shortcut run is going.
+- Changed the notch's menu to keep to the core: **Hide**, **Recognize Music**
+  and **Run Shortcut**, the last two only while their Live Activities are on or
+  a shortcut run is going. The Live Activities list and the timer and stopwatch
+  controls were removed: those are on the activities themselves.
 
 - Restored the menu bar menu as Control Center draws its menus, with the
   `Glance` switch at the top. Recognize Music and Run Shortcut moved to the

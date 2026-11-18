@@ -1664,14 +1664,6 @@ final class NotchController {
         return true
     }
 
-    /// The context menu reaches waiting activities without changing their arrival order.
-    var activityChoices: [(title: String, action: () -> Void)] {
-        guard !tucked else { return [] }
-        return model.openableActivities.map { activity in
-            (title: model.name(of: activity), action: { [weak self] in self?.openActivity(activity) })
-        }
-    }
-
     private func openActivity(_ activity: NotchModel.Activity) {
         guard !tucked, model.openableActivities.contains(activity) else { return }
         model.keys.clear()

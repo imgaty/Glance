@@ -38,8 +38,6 @@ final class StatusBarController: NSObject {
     /// A named command captured from the notch under the pointer when the menu opens.
     var putAway: (() -> (title: String, action: () -> Void)?)?
     private var offeredPutAway: (() -> Void)?
-    var activityChoices: (() -> [(title: String, action: () -> Void)])?
-    private var offeredActivities: [(title: String, action: () -> Void)] = []
 
     /// Square, as an icon in the menu bar is: macOS's pill around it comes out the size of the
     /// system's own icons', and the icons beside it as far away. Any wider, the pill is wider still.
@@ -170,12 +168,6 @@ final class StatusBarController: NSObject {
         guard canLaunchActivity?() == true, UserDefaults.standard.bool(forKey: Preferences.activityRecognition) else { return }
         onRecognizeMusic?()
     }
-    @objc private func pauseOrResumeTimer() { ClockActivity.shared.toggleTimer() }
-    @objc private func cancelTimer() { ClockActivity.shared.cancelTimer() }
-    @objc private func repeatTimer() { ClockActivity.shared.repeatTimer() }
-    @objc private func stopTimer() { ClockActivity.shared.dismissRing() }
-    @objc private func startStopStopwatch() { ClockActivity.shared.startStopStopwatch() }
-    @objc private func resetStopwatch() { ClockActivity.shared.resetStopwatch() }
     @objc private func rebuildFromMenu() { rebuild() }
 
     /// Each live activity to try alone, in a build from source (see `ActivityBench`), and none.
@@ -311,12 +303,11 @@ final class StatusBarController: NSObject {
 }
 
 extension StatusBarController: NSMenuDelegate {
-    /// The notch's right-click menu starts with hiding what it shows, as a swipe up does, then
-    /// Clock's timer and stopwatch, while they show: Pause and Cancel, or, once the timer has rung,
-    /// Repeat and Stop; Start or Stop, and Lap or Reset. Made afresh each time it opens.
+    /// The notch's right-click menu keeps to the core: hiding what it shows, as a swipe up does, and
+    /// starting what only the notch starts, Music Recognition and a shortcut. What an activity does
+    /// once it shows is on the activity itself. Made afresh each time it opens.
     func menuNeedsUpdate(_ menu: NSMenu) {
-        for item in menu.items where item.tag == Self.timerItem { menu.removeItem(item) }
-        let clock = ClockActivity.shared
+        for item in menu.items where item.tag == Self.activityItem { menu.removeItem(item) }
         var items: [NSMenuItem] = []
         func add(_ title: String, _ action: Selector) {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
@@ -326,20 +317,6 @@ extension StatusBarController: NSMenuDelegate {
         let hide = putAway?()
         offeredPutAway = hide?.action
         if let hide { add(hide.title, #selector(putAwayActivity)) }
-        offeredActivities = activityChoices?() ?? []
-        if !offeredActivities.isEmpty {
-            let item = NSMenuItem(title: String(localized: "Live Activities"), action: nil, keyEquivalent: "")
-            let choices = NSMenu()
-            choices.autoenablesItems = false
-            for (index, choice) in offeredActivities.enumerated() {
-                let row = NSMenuItem(title: choice.title, action: #selector(openActivityFromMenu), keyEquivalent: "")
-                row.target = self
-                row.tag = index
-                choices.addItem(row)
-            }
-            item.submenu = choices
-            items.append(item)
-        }
         // Each only with its switch on in Live Activities, so the menu offers nothing that can't run.
         if UserDefaults.standard.bool(forKey: Preferences.activityRecognition) {
             let recognize = NSMenuItem(title: String(localized: "Recognize Music"), action: #selector(recognizeMusicFromMenu), keyEquivalent: "")
@@ -358,34 +335,18 @@ extension StatusBarController: NSMenuDelegate {
             )
             items.append(shortcuts)
         }
-        if let timer = clock.timer {
-            add(timer.isRunning ? String(localized: "Pause Timer") : String(localized: "Resume Timer"), #selector(pauseOrResumeTimer))
-            add(String(localized: "Cancel Timer"), #selector(cancelTimer))
-        } else if clock.rang != nil {
-            add(String(localized: "Repeat Timer"), #selector(repeatTimer))
-            add(String(localized: "Stop Timer"), #selector(stopTimer))
-        }
-        if let watch = clock.stopwatch {
-            add(watch.isRunning ? String(localized: "Stop Stopwatch") : String(localized: "Start Stopwatch"), #selector(startStopStopwatch))
-            add(watch.isRunning ? String(localized: "Restart Stopwatch") : String(localized: "Reset Stopwatch"), #selector(resetStopwatch))
-        }
         guard !items.isEmpty else { return }
         items.append(.separator())
         for (index, item) in items.enumerated() {
-            item.tag = Self.timerItem
+            item.tag = Self.activityItem
             menu.insertItem(item, at: index)
         }
     }
 
     @objc private func putAwayActivity() { offeredPutAway?() }
 
-    @objc private func openActivityFromMenu(_ item: NSMenuItem) {
-        guard offeredActivities.indices.contains(item.tag) else { return }
-        offeredActivities[item.tag].action()
-    }
-
-    /// Marks the timer's items in the menu, to take them out before it's made again.
-    private static let timerItem = 7_000
+    /// Marks the items made for what the notch shows, to take them out before it's made again.
+    private static let activityItem = 7_000
 }
 
 extension NSStatusItem {
