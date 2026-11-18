@@ -181,7 +181,6 @@ enum RecordingLook {
     /// Between Voice Memos' time and its button.
     static let openTimeGap: CGFloat = 14.3 / island
     /// Voice Memos' time, by the size of the notch's words: larger than its title would be.
-    static let memoTime: CGFloat = 1.16
     /// The stop button: its square, its ring's line, by its size, and the square's corners.
     static let memoSquare: CGFloat = 0.432
     static let memoRing: CGFloat = 0.045
@@ -199,26 +198,31 @@ enum RecordingLook {
     /// What brings the second line's baseline as close under the first's as the iPhone's.
     static var lineGap: CGFloat { NotchType.size * lines - LiveActivityView.lineHeight(NotchType.size) }
 
-    /// Opened to Voice Memos: as wide, for its height, as the iPhone's island, and wider if need be for
-    /// the bars recorded so far to end beside the camera housing, as the iPhone's end beside its
-    /// camera: under the housing they'd rise out of sight, and only the dots still to come, low in
-    /// the middle, pass beneath it.
+    /// Opened to Voice Memos: only as wide as the camera needs for the button beside it. The bars
+    /// recorded so far end beside the camera housing, as the iPhone's end beside its camera: under
+    /// the housing they'd rise out of sight, so only as many show as fit beside it, and the dots still
+    /// to come, low in the middle, pass beneath it, then the time, as high as it goes under it.
     static func memoWidth(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
-        let tall = TimerLayout.tallHeight(h)
-        let recorded = tall * (openPitch * CGFloat(openRecorded - 1) + openBarWidth)
-        let beside = PlayerLayout.padding + recorded + LiveActivityView.cameraGap
-        return max(tall * openWidth, camera + 2 * beside).rounded(.up)
+        (camera + 2 * (LiveActivityView.cameraGap + TimerLayout.content(h) + TimerLayout.buttonEdge(h))).rounded(.up)
     }
 
-    /// Opened to the screen recording: as wide as the iPhone's island, or wider where the camera
-    /// needs it, the button beside it and the dot, the time and the name, as high as they go under
-    /// it, running on beneath it, the time however long it reads.
+    /// How many recorded bars show, opened: as many of the iPhone's 15 as fit beside the camera.
+    static func memoRecorded(restingHeight h: CGFloat, camera: CGFloat) -> Int {
+        let tall = TimerLayout.rowHeight(h)
+        let room = (memoWidth(restingHeight: h, camera: camera) - camera) / 2 - TimerLayout.buttonEdge(h) - LiveActivityView.cameraGap
+        let fits = Int(((room - tall * openBarWidth) / (tall * openPitch)).rounded(.down)) + 1
+        return min(max(fits, 1), openRecorded)
+    }
+
+    /// Opened to the screen recording: only as wide as the camera needs for the button beside it,
+    /// the dot, the time and the name, as high as they go under it, running on beneath it, the time
+    /// however long it reads.
     @MainActor
     static func screenWidth(restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now, length: TimeInterval = 0) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let right = TimerLayout.content(h) + TimerLayout.buttonEdge(h)
-        let line = PlayerLayout.padding + firstLineWidth(length) + gap + right
-        return max(ActivityRowMetrics.island(h), camera + (gap + right) * 2, line).rounded(.up)
+        let line = TimerLayout.buttonEdge(h) + firstLineWidth(length) + gap + right
+        return max(camera + (gap + right) * 2, line).rounded(.up)
     }
 
     /// Where the screen recording's first line, its time, stands: as high as it goes under the camera.
@@ -228,8 +232,11 @@ enum RecordingLook {
 
     /// Where Voice Memos' time stands: as high as it goes under the camera.
     static func memoBaseline(_ reading: String, restingHeight h: CGFloat) -> CGFloat {
-        UnderCamera.baseline([reading], font: .monospacedDigitSystemFont(ofSize: NotchType.size * memoTime, weight: .semibold), restingHeight: h)
+        UnderCamera.baseline([reading], font: .monospacedDigitSystemFont(ofSize: memoTimeSize(h), weight: .semibold), restingHeight: h)
     }
+
+    /// Voice Memos' time opened, the iPhone's 21 points on its 84-point island.
+    static func memoTimeSize(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) * 21 / island }
 
     /// The dot and the time, as long as it reads then.
     @MainActor
@@ -275,7 +282,7 @@ enum RecordingLook {
     static func waveWidth(_ h: CGFloat) -> CGFloat { h * (barPitch * CGFloat(bars - 1) + barWidth) }
     /// Opened, end to end, dots still to come and all.
     static func openWaveWidth(_ h: CGFloat) -> CGFloat {
-        let tall = TimerLayout.tallHeight(h)
+        let tall = TimerLayout.rowHeight(h)
         return tall * (openPitch * CGFloat(openBars - 1) + openBarWidth)
     }
 }
@@ -319,7 +326,7 @@ struct RecordingMark: View {
                     .padding(.leading, h * RecordingLook.waveEdge)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 RecordingTime(memo: memo)
-                    .font(.system(size: text, weight: .semibold).monospacedDigit())
+                    .font(IslandType.font(text, weight: .semibold, restingHeight: h, digits: true))
                     .foregroundStyle(RecordingLook.memoRed)
                     .fixedSize()
                     .padding(.trailing, LiveActivityView.textEdge(restingHeight: h))
@@ -335,7 +342,7 @@ struct RecordingMark: View {
                     .padding(.leading, SystemActivityView.ringEdge(h))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 CountdownNumber(from: from, until: until)
-                    .font(.system(size: text * RecordingLook.countdown, weight: .regular).monospacedDigit())
+                    .font(IslandType.font(text * RecordingLook.countdown, restingHeight: h, digits: true))
                     .foregroundStyle(.white)
                     .fixedSize()
                     .padding(.trailing, LiveActivityView.textEdge(restingHeight: h))
@@ -755,7 +762,7 @@ struct ExpandedRecordingView: View {
 
     @ViewBuilder private var drawing: some View {
         let h = restingHeight
-        let tall = TimerLayout.tallHeight(h)
+        let tall = TimerLayout.rowHeight(h)
         let out = revealed
         let rise = (h - tall) / 2 + closedDrop
         let spread = ((closedWidth ?? width) - width) / 2
@@ -774,14 +781,15 @@ struct ExpandedRecordingView: View {
     @ViewBuilder
     private func memoRow(_ memo: VoiceMemo, h: CGFloat, tall: CGFloat, grows: Bool, rise: CGFloat, spread: CGFloat) -> some View {
         let canControl = controlPermissionOverride ?? memoWatch.canControl
-        let edge = PlayerLayout.padding
-        let open = MemoBars.Spec(slots: RecordingLook.openBars, recorded: RecordingLook.openRecorded, height: tall * RecordingLook.openBarMost, scale: tall, open: true)
+        let edge = TimerLayout.buttonEdge(h)
+        let recorded = RecordingLook.memoRecorded(restingHeight: h, camera: camera)
+        let open = MemoBars.Spec(slots: RecordingLook.openBars, recorded: recorded, height: tall * RecordingLook.openBarMost, scale: tall, open: true)
         let closed = MemoBars.Spec(slots: RecordingLook.bars, recorded: RecordingLook.bars, height: h * RecordingLook.barMost, scale: h, open: false)
         let waveFrom = CGSize(
             width: bubbleCenter.map { $0 + width / 2 - edge - closed.pitch * (CGFloat(open.recorded) - 2.5) }
                 ?? (h * RecordingLook.waveEdge - edge - spread), height: rise)
         let text = LiveActivityView.textSize(for: h)
-        let size = NotchType.size * RecordingLook.memoTime
+        let size = RecordingLook.memoTimeSize(h)
         // The time as high as it goes under the camera, growing out of the closed notch's middle.
         let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
         let baseline = RecordingLook.memoBaseline(Recording.reading(memo.length(), memo: true), restingHeight: h)
@@ -795,7 +803,7 @@ struct ExpandedRecordingView: View {
                 )
             } else {
                 Text("Needs Accessibility")
-                    .font(NotchType.title)
+                    .font(IslandType.title(restingHeight))
                     .foregroundStyle(.white)
                     .frame(width: open.width, height: open.height, alignment: .leading)
             }
@@ -805,7 +813,7 @@ struct ExpandedRecordingView: View {
         .padding(.leading, edge)
         .frame(maxWidth: .infinity, alignment: .leading)
         RecordingTime(memo: memo)
-            .font(.system(size: size, weight: .semibold).monospacedDigit())
+            .font(IslandType.font(size, weight: .semibold, restingHeight: h, digits: true))
             .foregroundStyle(RecordingLook.memoRed)
             .fixedSize()
             .modifier(GrowsOut(out: grows || !trailingGrows, scale: text / size, anchor: .trailing, from: timeFrom))
@@ -822,7 +830,7 @@ struct ExpandedRecordingView: View {
 
     /// From the right end to Voice Memos' time: past the button.
     static func memoTimeEdge(_ h: CGFloat) -> CGFloat {
-        TimerLayout.buttonEdge(h) + TimerLayout.content(h) + TimerLayout.tallHeight(h) * RecordingLook.openTimeGap
+        TimerLayout.buttonEdge(h) + TimerLayout.content(h) + TimerLayout.rowHeight(h) * RecordingLook.openTimeGap
     }
 
     @ViewBuilder
@@ -831,7 +839,7 @@ struct ExpandedRecordingView: View {
         let needsPermission = !canControl && !screen.isSaving && !screen.isSaved
         let savedFileState = savedFileStateOverride ?? screenWatch.savedFileState
         let title = ScreenRecordingButton.title(for: screen, needsPermission: needsPermission, savedFileState: savedFileState)
-        let edge = PlayerLayout.padding
+        let edge = TimerLayout.buttonEdge(h)
         // Keep the full folder name for accessibility while its visible line truncates before
         // the button, with the same inset between them as around the content.
         let wordsWidth = max(width - edge - TimerLayout.buttonEdge(h) - TimerLayout.content(h) - edge, 0)
@@ -845,12 +853,12 @@ struct ExpandedRecordingView: View {
         // the first line to the closed notch's middle.
         let dotFrom = CGSize(
             width: bubbleCenter.map { $0 + width / 2 - edge - closedDot / 2 }
-                ?? (LiveActivityView.concentric(closedDot, in: h) - edge - spread), height: rise + TimerLayout.tallHeight(h) / 2 - lineMiddle)
+                ?? (LiveActivityView.concentric(closedDot, in: h) - edge - spread), height: rise + TimerLayout.rowHeight(h) / 2 - lineMiddle)
         VStack(alignment: .leading, spacing: 0) {
             // Recording, the dot and the time fade and come back together, as on the iPhone. The dot
             // stands on the time's line, so the line is the time's, by its baseline.
             ScreenTime(screen: screen)
-                .font(NotchType.title.monospacedDigit())
+                .font(IslandType.title(restingHeight).monospacedDigit())
                 .foregroundStyle(RecordingLook.screenRed)
                 .modifier(IslandReveal(hidden: !revealed))
                 .padding(.leading, dot + NotchType.size * RecordingLook.openDotGap)
@@ -862,7 +870,7 @@ struct ExpandedRecordingView: View {
                 }
                 .modifier(RecordingBlink(recording: screen.isRecording, faded: !screen.isRecording && !screen.isSaved, shown: revealed))
             Text(title)
-                .font(NotchType.title)
+                .font(IslandType.title(restingHeight))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .truncationMode(.middle)

@@ -269,7 +269,7 @@ struct AlarmRingingView: View {
                 .frame(width: max(width - tall * AlarmLook.wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), height: tall)
                 .overlay(alignment: .topLeading) {
                     Text(lines.top)
-                        .font(.system(size: tall * AlarmLook.timeSize))
+                        .font(IslandType.font(tall * AlarmLook.timeSize, restingHeight: h))
                         .foregroundStyle(AlarmLook.ink.opacity(0.5))
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -277,7 +277,7 @@ struct AlarmRingingView: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(lines.name)
-                        .font(.system(size: tall * AlarmLook.titleSize, weight: .medium))
+                        .font(IslandType.font(tall * AlarmLook.titleSize, weight: .medium, restingHeight: h))
                         .foregroundStyle(AlarmLook.ink)
                         .lineLimit(1)
                         .truncationMode(.tail)

@@ -40,8 +40,6 @@ struct ActivityRowMetrics {
     /// By the iPhone's island height beside the camera, 36.7 points.
     static func scale(_ h: CGFloat) -> CGFloat { h / 36.7 }
 
-    /// The iPhone's island opened to any of them is 374 points wide.
-    static func island(_ h: CGFloat) -> CGFloat { 374 * scale(h) }
 
     /// Music Recognition listening, measured on iOS 27: 374 by 84 points, a 51-point disc 18.2 in,
     /// "Listening…" in 16-point semibold from 81.5, 51-point buttons 16 from the end. The words stand
@@ -53,12 +51,13 @@ struct ActivityRowMetrics {
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 16.3 * k, buttonGap: 8 * k)
     }
 
-    /// "No song found.", measured: taller, 92.7 points, no picture, the words from 33.9, its one button
-    /// 17 from the end.
+    /// "No song found.", measured: no picture, the words from 33.9, its one button 17 from the end; as
+    /// tall as it listens, the iPhone's 84 points, its words standing under the camera rather than in
+    /// the middle of the iPhone's taller 92.7.
     static func noMatch(_ h: CGFloat) -> ActivityRowMetrics {
         let k = scale(h)
         return .init(
-            height: 92.7 * k, pictureSide: 0, pictureEdge: 0, wordsStart: 33.9 * k, titleSize: 16 * k,
+            height: 84 * k, pictureSide: 0, pictureEdge: 0, wordsStart: 33.9 * k, titleSize: 16 * k,
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 17 * k, buttonGap: 8 * k)
     }
 
@@ -92,9 +91,9 @@ enum ActivityRowLayout {
         ceil((text as NSString).size(withAttributes: [.font: font]).width) + 1
     }
 
-    /// As wide as the iPhone's island, or wider where the camera needs it: what stands as high as the
-    /// camera, the picture at the left and the buttons at the right, sits beside it, and the words run
-    /// on beneath it, so a long name is cut short, as the iPhone's is, rather than widening the notch.
+    /// Only as wide as the camera needs: what stands as high as the camera, the picture at the left and
+    /// the buttons at the right, sits beside it, and the words run on beneath it, so a long name is
+    /// cut short, as the iPhone's is, rather than widening the notch.
     /// A line under the name widens it, up to a limit, to run as far as the buttons. `extra` is what
     /// stands before the buttons that isn't one, as Music Recognition's waveform.
     @MainActor
@@ -106,7 +105,7 @@ enum ActivityRowLayout {
         let right = gap + extra + buttonsWidth(buttons, m) + m.buttonEdge
         let around = camera + 2 * max(left, right)
         let line = m.wordsStart + textWidth(detail, weight: .regular) + trailingRoom(buttons: buttons, extra: extra, m) + m.buttonEdge
-        return max(ActivityRowMetrics.island(h), around, detail.isEmpty ? 0 : min(line, widest)).rounded(.up)
+        return max(around, detail.isEmpty ? 0 : min(line, widest)).rounded(.up)
     }
 
     /// What stands at the right end before its edge: the buttons, what's before them, and the gap
@@ -115,6 +114,26 @@ enum ActivityRowLayout {
         buttons > 0 || extra > 0 ? m.buttonGap + extra + buttonsWidth(buttons, m) : 0
     }
 
+}
+
+/// Type in an activity as the iPhone sets it, at the notch's scale: drawn for the size the iPhone sets
+/// it at, then made smaller with the notch, so its letters are as narrow as the iPhone's rather than as
+/// wide as small type's, and words take the same share of the notch as of the island.
+enum IslandType {
+    static func nsFont(_ size: CGFloat, weight: NSFont.Weight = .regular, restingHeight h: CGFloat, digits: Bool = false) -> NSFont {
+        let base = digits ? NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight) : NSFont.systemFont(ofSize: size, weight: weight)
+        let optical = size / ActivityRowMetrics.scale(h)
+        let descriptor = base.fontDescriptor.addingAttributes([.init(kCTFontOpticalSizeAttribute as String): optical])
+        return NSFont(descriptor: descriptor, size: size) ?? base
+    }
+
+    static func font(_ size: CGFloat, weight: NSFont.Weight = .regular, restingHeight h: CGFloat, digits: Bool = false) -> Font {
+        Font(nsFont(size, weight: weight, restingHeight: h, digits: digits))
+    }
+
+    /// Most activities' words: a name, semibold, and what it's about, regular.
+    static func title(_ h: CGFloat) -> Font { font(NotchType.size, weight: .semibold, restingHeight: h) }
+    static func detail(_ h: CGFloat) -> Font { font(NotchType.size, restingHeight: h) }
 }
 
 /// Words under the camera stand as high as they go, in every activity alike: the tops of their
@@ -192,7 +211,7 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
                 // A name alone, as the iPhone's, sits on the middle.
                 if !detail.isEmpty {
                     Text(detail)
-                        .font(NotchType.detail)
+                        .font(IslandType.detail(restingHeight))
                         .foregroundStyle(NotchType.detailColor)
                         .frame(maxWidth: room, alignment: .leading)
                 }

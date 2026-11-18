@@ -245,20 +245,19 @@ enum AirDropLayout {
     static let bigRingLine: CGFloat = 0.127
     static let stop: CGFloat = 0.43
 
-    /// The picture and the ring at the notch's one padding from their ends, as from the top and bottom.
-    static func thumbEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
+    /// The picture as far in from its end as the ring is from the other, the iPhone's 17 points.
+    static func thumbEdge(_ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
     /// The opened ring's distance from the end: iOS 27's, as its other activities' round controls.
     static func ringEdge(_ h: CGFloat) -> CGFloat { TimerLayout.circleEdge(h) }
 
-    /// Opened: as wide as the iPhone's island, or wider where the camera needs it: the picture and the
-    /// ring stand as high as the camera, so beside it, and the words, as high as they go under it,
-    /// run on beneath it.
+    /// Opened: only as wide as the camera needs it: the picture and the ring stand as high as the
+    /// camera, so beside it, and the words, as high as they go under it, run on beneath it.
     @MainActor
     static func width(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let left = thumbEdge(h) + TimerLayout.content(h) + gap
         let right = gap + TimerLayout.circle(h) + ringEdge(h)
-        return max(ActivityRowMetrics.island(h), camera + max(left, right) * 2).rounded(.up)
+        return (camera + max(left, right) * 2).rounded(.up)
     }
 
     /// Where the words' first line, "AirDrop", stands: as high as it goes under the camera.
@@ -357,10 +356,10 @@ struct ExpandedAirDropView: View {
         // The words, as high as they go under the camera, run on beneath it to the ring.
         let words = VStack(alignment: .leading, spacing: 0) {
             Text("AirDrop")
-                .font(NotchType.title)
+                .font(IslandType.title(restingHeight))
                 .foregroundStyle(.white)
             Text(Self.from(shown))
-                .font(NotchType.detail)
+                .font(IslandType.detail(restingHeight))
                 .foregroundStyle(NotchType.detailColor)
         }
         .lineLimit(1)
@@ -371,7 +370,7 @@ struct ExpandedAirDropView: View {
         // The ring grows out of where it shows beside the camera, as the Timer's does.
         let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
-        let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
+        let rise = (h - TimerLayout.rowHeight(h)) / 2 + closedDrop
         let ringFrom = CGSize(
             width: bubbleCenter.map { $0 - width / 2 + AirDropLayout.ringEdge(h) + h * AirDropLayout.ring / 2 }
                 ?? (spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h)), height: rise)
@@ -386,7 +385,7 @@ struct ExpandedAirDropView: View {
             words.modifier(IslandReveal(hidden: !revealed))
             right.frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(width: width, height: TimerLayout.tallHeight(h))
+        .frame(width: width, height: TimerLayout.rowHeight(h))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Self.spoken(shown))
     }

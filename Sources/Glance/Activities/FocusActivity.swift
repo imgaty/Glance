@@ -329,17 +329,20 @@ struct FocusExtendedView: View {
 
     /// The state's word, this far in from the right end, by the extended notch's height (18 of 84).
     static let stateEdge: CGFloat = 18 / 84
+    /// The circle, 56 points across and 14 in from its end on the iPhone's 84-point island.
+    static func circle(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) * 56 / 84 }
+    static func circleEdge(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) * 14 / 84 }
 
     var body: some View {
         let h = restingHeight
-        let tall = TimerLayout.tallHeight(h)
-        let side = TimerLayout.content(h)
+        let tall = TimerLayout.rowHeight(h)
+        let side = Self.circle(h)
         ZStack {
             SystemSymbol.glyph(symbol, size: side * 0.5)
                 .foregroundStyle(on ? tint : .white)
                 .frame(width: side, height: side)
                 .background(Circle().fill(on ? Color.white : tint.opacity(0.29)))
-                .padding(.leading, PlayerLayout.padding)
+                .padding(.leading, Self.circleEdge(h))
                 .frame(maxWidth: .infinity, alignment: .leading)
             // The name and its state on one line, as high as they go under the camera.
             HStack(alignment: .firstTextBaseline, spacing: h * AirDropLayout.gap) {
@@ -353,21 +356,19 @@ struct FocusExtendedView: View {
                     .lineLimit(1)
                     .fixedSize()
             }
-            .font(NotchType.title)
+            .font(IslandType.title(restingHeight))
             .firstBaseline(Self.wordsBaseline(name: name, state: state, restingHeight: h))
-            .padding(.leading, PlayerLayout.padding + side + h * AirDropLayout.gap)
+            .padding(.leading, Self.circleEdge(h) + side + h * AirDropLayout.gap)
             .padding(.trailing, tall * Self.stateEdge)
         }
         .frame(height: tall)
     }
 
     /// Each side of the camera: the circle beside it, as it stands as high as the camera, and the words
-    /// under it, so the notch is as wide as the iPhone's island, a long name cut short, as the
-    /// iPhone's is.
+    /// under it, a long name cut short, as the iPhone's is.
     @MainActor
     static func wing(restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
-        let circle = PlayerLayout.padding + TimerLayout.content(h) + LiveActivityView.cameraGap
-        return max(circle, (ActivityRowMetrics.island(h) - closedWidth) / 2).rounded(.up)
+        (circleEdge(h) + circle(h) + LiveActivityView.cameraGap).rounded(.up)
     }
 
     /// Where the name and its state stand: as high as they go under the camera.

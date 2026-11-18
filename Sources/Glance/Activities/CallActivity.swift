@@ -187,13 +187,13 @@ struct CallBar: Equatable, Sendable {
 enum CallLayout {
     /// Opened in one row, each wing: what stands as high as the camera beside it, the caller's picture
     /// at the left end and the buttons at the right, and the words, as high as they go under the
-    /// camera, running on beneath it, so the notch is as wide as the iPhone's island, or wider where
-    /// the camera needs it, a long name cut short.
+    /// camera, running on beneath it, so the notch is only as wide as the camera needs, a long name
+    /// cut short.
     static func rowWing(buttons: CGFloat, picture: Bool, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let left = picture ? roundEdge(h) + round(h) + gap : 0
         let right = buttons > 0 ? gap + round(h) * buttons + roundGap(h) * (buttons - 1) + roundEdge(h) : 0
-        return max(left, right, (ActivityRowMetrics.island(h) - closedWidth) / 2)
+        return max(left, right, gap)
     }
 
     /// From the right end to where the words stop, before the buttons.
@@ -515,7 +515,7 @@ struct CallMark: View {
                     .rotationEffect(.degrees(CallLook.phoneTilt))
                     .padding(.trailing, CallLook.timeGap)
                 CallTime(since: since)
-                    .font(.system(size: LiveActivityView.textSize(for: h), weight: .semibold))
+                    .font(IslandType.font(LiveActivityView.textSize(for: h), weight: .semibold, restingHeight: h))
                     .foregroundStyle(CallLook.green)
                 Spacer(minLength: 0)
                 CallWaveform(height: h * CallLook.waveHeight, core: h * CallLook.core)
@@ -553,10 +553,10 @@ struct IncomingCallView: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 Text(call.line ?? call.over)
-                    .font(NotchType.detail)
+                    .font(IslandType.detail(restingHeight))
                     .foregroundStyle(NotchType.detailColor)
                 Text(call.name)
-                    .font(NotchType.title)
+                    .font(IslandType.title(restingHeight))
                     .foregroundStyle(.white)
             }
             .lineLimit(1)
@@ -686,7 +686,7 @@ struct ExpandedCallView: View {
                     CallAvatar(call: call, side: side)
                         .modifier(IslandReveal(hidden: !revealed))
                     Text(call.name)
-                        .font(NotchType.title)
+                        .font(IslandType.title(restingHeight))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -695,7 +695,7 @@ struct ExpandedCallView: View {
                         .firstBaseline(nameBaseline)
                         .padding(.leading, side + CallLayout.wordsGap(h))
                     CallTime(since: since, bubble: bubbleCenter != nil)
-                        .font(NotchType.detail)
+                        .font(IslandType.detail(restingHeight))
                         .foregroundStyle(out || closedWidth == nil && bubbleCenter == nil ? NotchType.detailColor : CallLook.green)
                         .modifier(
                             GrowsOut(
@@ -724,17 +724,17 @@ struct ExpandedCallView: View {
     /// picture.
     private var inline: some View {
         let h = restingHeight
-        let size = TimerLayout.tallHeight(h) * CallLook.name
+        let size = TimerLayout.rowHeight(h) * CallLook.name
         return HStack(spacing: CallLayout.wordsGap(h)) {
             sourceButton {
                 Text(call.name)
-                    .font(.system(size: size, weight: .semibold))
+                    .font(IslandType.font(size, weight: .semibold, restingHeight: h))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .firstBaseline(UnderCamera.baseline([call.name], font: .systemFont(ofSize: size, weight: .semibold), restingHeight: h))
-                    .padding(.leading, TimerLayout.tallHeight(h) * CallLook.nameEdge - CallLayout.roundEdge(h))
+                    .padding(.leading, TimerLayout.rowHeight(h) * CallLook.nameEdge - CallLayout.roundEdge(h))
                     .contentShape(Rectangle())
                     .modifier(IslandReveal(hidden: !revealed))
             }
@@ -742,7 +742,7 @@ struct ExpandedCallView: View {
                 .modifier(IslandReveal(hidden: !revealed))
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
-        .frame(width: width, height: TimerLayout.tallHeight(h))
+        .frame(width: width, height: TimerLayout.rowHeight(h))
     }
 
     /// The sound output, and a red cross to end it where the app's own button can be pressed.
@@ -764,11 +764,11 @@ struct ExpandedCallView: View {
         let side = CallLayout.round(h)
         let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
-        let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
+        let rise = (h - TimerLayout.rowHeight(h)) / 2 + closedDrop
         let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)
         // The words as high as they go under the camera, from the top of the caller's row, as tall as
         // the picture, in the row's middle.
-        let baseline = CallLayout.wordsBaseline(for: call, restingHeight: h) - (TimerLayout.tallHeight(h) - side) / 2
+        let baseline = CallLayout.wordsBaseline(for: call, restingHeight: h) - (TimerLayout.rowHeight(h) - side) / 2
         return HStack(spacing: CallLayout.wordsGap(h)) {
             sourceButton {
                 ZStack(alignment: .leading) {
@@ -781,10 +781,10 @@ struct ExpandedCallView: View {
                     }
                     VStack(alignment: .leading, spacing: 0) {
                         Text(call.line ?? call.over)
-                            .font(NotchType.detail)
+                            .font(IslandType.detail(restingHeight))
                             .foregroundStyle(NotchType.detailColor)
                         Text(call.name)
-                            .font(NotchType.title)
+                            .font(IslandType.title(restingHeight))
                             .foregroundStyle(.white)
                     }
                     .modifier(IslandReveal(hidden: !revealed))
@@ -801,7 +801,7 @@ struct ExpandedCallView: View {
                 .modifier(IslandReveal(hidden: !revealed))
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
-        .frame(width: width, height: TimerLayout.tallHeight(h))
+        .frame(width: width, height: TimerLayout.rowHeight(h))
     }
 
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
@@ -979,7 +979,7 @@ struct ExpandedCallView: View {
     /// Connected over FaceTime or Phone, the caller's row, as tall as the circle, and the buttons'
     /// with a gap between, the padding under them; otherwise as tall as the Alarm.
     static func height(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
-        guard call.isConnected, call.throughApple else { return TimerLayout.tallHeight(h) }
+        guard call.isConnected, call.throughApple else { return TimerLayout.rowHeight(h) }
         // To a whole point, the rest of it under the buttons.
         return (circleTop(for: call, restingHeight: h) + CallLayout.round(h) + rowGap(restingHeight: h) + CallLayout.round(h) + CallLayout.roundEdge(h)).rounded(.up)
     }

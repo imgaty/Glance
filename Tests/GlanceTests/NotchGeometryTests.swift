@@ -151,7 +151,10 @@ struct PlayerLayoutTests {
 
     @Test("The open corners are concentric with what's round at the ends")
     func cornerRadius() {
-        #expect(PlayerLayout.cornerRadius == PlayerLayout.padding + TimerLayout.content(32) / 2)
+        // Half what opens tallest, so a row the iPhone's height ends in half circles, its round
+        // buttons concentric with them.
+        #expect(PlayerLayout.cornerRadius == TimerLayout.tallHeight(32) / 2)
+        #expect(abs(TimerLayout.rowHeight(32) / 2 - (TimerLayout.buttonEdge(32) + TimerLayout.content(32) / 2)) < 0.5)
     }
 
     @Test("Cover on top, around the usual notch")

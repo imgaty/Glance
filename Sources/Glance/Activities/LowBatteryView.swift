@@ -172,14 +172,13 @@ enum LowBatteryLayout {
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
     }
 
-    /// Each wing: the capsule against the camera, the words running on beneath it, as wide as the
-    /// iPhone's island, or wider should the words otherwise not reach the capsule.
+    /// Each wing: the capsule against the camera, the words running on beneath it, wider only should
+    /// they otherwise not reach the capsule.
     @MainActor
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
-        let right = capsule(h).width + PlayerLayout.padding
+        let right = capsule(h).width + TimerLayout.buttonEdge(h)
         let words = ([LowBatteryView.title(percent), LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure].map { width($0) }.max() ?? 0)
-        let island = ActivityRowMetrics.island(h)
-        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2, (island - closedWidth) / 2)
+        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
     }
 
     /// Where the level's line stands: as high as it goes under the camera.
@@ -229,7 +228,7 @@ struct LowBatteryView: View {
                     }
                 }
             }
-            .font(NotchType.title)
+            .font(IslandType.title(restingHeight))
             .lineLimit(1)
             .fixedSize()
             .accessibilityElement(children: .combine)
@@ -246,7 +245,7 @@ struct LowBatteryView: View {
             .reportsFrame(.lowPower)
             .spokenButton(on ? String(localized: "Turn off Low Power Mode") : String(localized: "Turn on Low Power Mode")) { lowPower.toggle() }
             .disabled(lowPower.isChanging)
-            .padding(.trailing, PlayerLayout.padding)
+            .padding(.trailing, TimerLayout.buttonEdge(h))
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxHeight: .infinity)

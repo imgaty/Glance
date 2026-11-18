@@ -588,7 +588,14 @@ final class NotchModel: ObservableObject {
     var restingTall: Bool { alert.map { $0.tall || alertExtended } == true && !folded }
 
     /// The closed notch's height: more than twice as tall while what's announced is.
-    var restingHeight: CGFloat { restingTall ? TimerLayout.tallHeight(closedSize.height) : closedSize.height }
+    var restingHeight: CGFloat {
+        guard restingTall else { return closedSize.height }
+        // A call coming in and a Focus extended stand as tall as the iPhone's island for them; the
+        // rest as tall as its Clock.
+        if case .incomingCall = alert?.content { return TimerLayout.rowHeight(closedSize.height) }
+        if alertExtended, alert?.kind == .focus { return TimerLayout.rowHeight(closedSize.height) }
+        return TimerLayout.tallHeight(closedSize.height)
+    }
 
     /// Open on an activity's own view, rather than the player or the tray.
     var expandedShown: Bool { state == .open && expanded != nil && !activityFolded }
@@ -614,7 +621,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
-                    TimerLayout.tallHeight(closedSize.height) + pull
+                    TimerLayout.rowHeight(closedSize.height) + pull
                 )
             case .open where expanded == .call:
                 (
@@ -641,7 +648,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded.flatMap(recording(of:)) != nil:
                 (
                     expanded.flatMap(recording(of:)).map(openWidth(of:)).map { $0 + pull * 0.35 + across } ?? 0,
-                    TimerLayout.tallHeight(closedSize.height) + pull
+                    TimerLayout.rowHeight(closedSize.height) + pull
                 )
             case .open where expanded != nil:
                 (

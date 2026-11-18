@@ -42,12 +42,13 @@ enum TimerLayout {
     // Done, as the iPhone's Timer: its name, large.
     /// Opened and done, as tall as the iPhone's, for a notch this tall.
     static func tallHeight(_ h: CGFloat) -> CGFloat { (h * tall).rounded() }
-    /// Opened and done, how far in from its end each side sits, buttons and words alike: the notch's
-    /// one padding, as they are from the top and bottom.
-    static func buttonEdge(_ h: CGFloat) -> CGFloat { PlayerLayout.padding }
-    /// What stands at the ends of anything this tall, as tall as the padding leaves: round, it's
-    /// concentric with the notch's round end.
-    static func content(_ h: CGFloat) -> CGFloat { tallHeight(h) - PlayerLayout.padding * 2 }
+    /// The iPhone's island opened to most activities, 84 points to its 36.67 at rest: AirDrop,
+    /// Focus, a recording, a call.
+    static func rowHeight(_ h: CGFloat) -> CGFloat { (h * 84 / 36.67).rounded() }
+    /// Opened and done, how far in from its end each side sits: the iPhone's 17 points.
+    static func buttonEdge(_ h: CGFloat) -> CGFloat { circleEdge(h) }
+    /// What stands at the ends, round buttons and pictures alike: the iPhone's 50 points.
+    static func content(_ h: CGFloat) -> CGFloat { circle(h) }
 
     // As iOS 27's Clock lays its opened and done rows, by the island's 36.67-point height,
     // measured from the simulator and fitted glyph by glyph: round buttons 50 across, 17 from the
@@ -386,7 +387,7 @@ struct ExpandedTimerView: View {
             if case .timer = shown {
                 let label = max(min(Self.titleWidth(name, h), room), 0)
                 Text(name)
-                    .font(.system(size: TimerLayout.labelSize(h), weight: .medium))
+                    .font(IslandType.font(TimerLayout.labelSize(h), weight: .medium, restingHeight: h))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(width: label, alignment: .trailing)
@@ -549,7 +550,7 @@ struct TimerDoneView: View {
         ZStack {
             VStack(alignment: .leading, spacing: 1) {
                 Text(name)
-                    .font(.system(size: TimerLayout.doneSize(h), weight: .medium))
+                    .font(IslandType.font(TimerLayout.doneSize(h), weight: .medium, restingHeight: h))
                     .foregroundStyle(TimerLayout.ink)
                 if let status = repeatState.status {
                     Text(status)
@@ -594,8 +595,8 @@ struct TimerDoneView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Each wing: the buttons against the camera, the name running on beneath it to them, as wide as
-    /// the iPhone's island, or wider for the name, up to its limit, beyond which it's cut short.
+    /// Each wing: the buttons against the camera, the name running on beneath it to them, wider only
+    /// for the name, up to its limit, beyond which it's cut short.
     static func wing(length: TimeInterval, name: String = String(localized: "Timer"), restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let titleWidth = min(
@@ -609,7 +610,7 @@ struct TimerDoneView: View {
         let words = max(titleWidth, statusWidth)
         let right = buttonsWidth(h) + TimerLayout.circleEdge(h)
         let across = nameEdge(h) + words + TimerLayout.circleGap(h) + right
-        return max(gap + right, (across - closedWidth) / 2, (ActivityRowMetrics.island(h) - closedWidth) / 2)
+        return max(gap + right, (across - closedWidth) / 2)
     }
 
     /// From the left end to its name, as iOS 27's.

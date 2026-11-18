@@ -43,7 +43,7 @@ enum ExpandedDeviceLayout {
     /// Each wing: as wide as the ring needs against the camera, or wider for a long name, under the
     /// camera, to reach the ring.
     static func wing(name: String, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
-        let right = TimerLayout.content(h) + PlayerLayout.padding
+        let right = TimerLayout.content(h) + TimerLayout.buttonEdge(h)
         let words = ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
         let needs = AirDropLayout.wordsStart(h) + words + h * AirDropLayout.gap + right
         return max(LiveActivityView.cameraGap + right, (needs - closedWidth) / 2)
@@ -89,7 +89,7 @@ struct DeviceActivityView: View {
         let largeWidth = SystemActivityView.deviceWidth(model: model, layout: large)
         // Turning about the middle of its place, as wide as the ring's, from the padding.
         let largeAxis = SystemActivityView.deviceAxis(model: model, layout: large)
-        let middle = PlayerLayout.padding + TimerLayout.content(h) / 2 - (largeAxis - largeWidth / 2)
+        let middle = TimerLayout.buttonEdge(h) + TimerLayout.content(h) / 2 - (largeAxis - largeWidth / 2)
         let smallMiddle = small.edge + max(reach - axis, 0) + smallWidth / 2
         let ringScale = small.ring / large.ring
         // Hung from the notch's top middle, which never moves, each is moved out to its end, and
@@ -135,8 +135,8 @@ struct DeviceActivityView: View {
         let said = low ? String(localized: "Low Battery") : String(localized: "Connected")
         let saidBaseline = layout.saidBaseline(said, restingHeight: h)
         return ZStack(alignment: .topLeading) {
-            line(said, font: NotchType.detail, baseline: saidBaseline, color: NotchType.detailColor)
-            line(name, font: NotchType.title, baseline: saidBaseline + h * layout.nameStep, color: .white)
+            line(said, font: IslandType.detail(h), baseline: saidBaseline, color: NotchType.detailColor)
+            line(name, font: IslandType.title(h), baseline: saidBaseline + h * layout.nameStep, color: .white)
         }
         .padding(.leading, AirDropLayout.wordsStart(h))
         .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)

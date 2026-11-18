@@ -170,7 +170,7 @@ struct SystemActivityView: View {
                     if case .timer(let timer) = shown {
                         TimelineView(.periodic(from: .now, by: 0.5)) { context in
                             Text(NotchTimer.squeezed(timer.left(at: context.date)))
-                                .font(.system(size: size, weight: .medium).monospacedDigit())
+                                .font(IslandType.font(size, weight: .medium, restingHeight: restingHeight, digits: true))
                                 .foregroundStyle(TimerLayout.ink)
                                 .fixedSize()
                         }
@@ -192,7 +192,7 @@ struct SystemActivityView: View {
                             case .timer:
                                 // Medium, as iOS 27's Clock sets it beside the camera.
                                 Text(reading)
-                                    .font(.system(size: size, weight: .medium).monospacedDigit())
+                                    .font(IslandType.font(size, weight: .medium, restingHeight: restingHeight, digits: true))
                                     // The digits roll down as they change, as the Timer's own do.
                                     .contentTransition((clockReduceMotionOverride ?? reduceMotion) ? .identity : .numericText(countsDown: true))
                                     .animation((clockReduceMotionOverride ?? reduceMotion) ? nil : .snappy, value: reading)
@@ -343,7 +343,7 @@ struct SystemActivityView: View {
             EmptyView()
         case .battery(let title, _):
             Text(title)
-                .font(.system(size: size, weight: .semibold))
+                .font(IslandType.font(size, weight: .semibold, restingHeight: restingHeight))
                 .foregroundStyle(.white)
                 .lineLimit(1)
         case .status(let symbol, let tint, _, _):
@@ -361,7 +361,7 @@ struct SystemActivityView: View {
         case .battery(_, let level):
             HStack(spacing: restingHeight * BatteryGlyph.gap) {
                 Text(level.percent.formatted(.percent))
-                    .font(.system(size: size, weight: .semibold).monospacedDigit())
+                    .font(IslandType.font(size, weight: .semibold, restingHeight: restingHeight, digits: true))
                     .foregroundStyle(level.color)
                     .fixedSize()
                 BatteryGlyph(level: level, color: level.color, height: restingHeight * BatteryGlyph.height)
@@ -567,7 +567,7 @@ struct DeviceLayout {
     var number: CGFloat { extended ? height * ExpandedDeviceLayout.number : max(ring * 0.42, 10) }
     /// From the left end to the device, as it reaches furthest turning.
     var edge: CGFloat { LiveActivityView.concentric(picture, in: height) }
-    var trailing: CGFloat { extended ? PlayerLayout.padding : LiveActivityView.concentric(ring, in: height) }
+    var trailing: CGFloat { extended ? TimerLayout.buttonEdge(height) : LiveActivityView.concentric(ring, in: height) }
 }
 
 /// AirPods or Beats arriving, in 3D, facing you as they arrive and turning steadily about their
