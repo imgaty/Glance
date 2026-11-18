@@ -208,6 +208,13 @@ struct MenuBarLiveActivitiesTests {
         await manager.reconcile()
         #expect(settings.opens == 2)
         #expect(settings.writes.isEmpty)
+        // Failing again, it waits twice as long before the next.
+        settings.now += 60
+        await manager.reconcile()
+        #expect(settings.opens == 2)
+        settings.now += 60
+        await manager.reconcile()
+        #expect(settings.opens == 3)
     }
 
     @Test("An acknowledged hide with missing readback remains owned for restoration")

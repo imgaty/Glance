@@ -756,8 +756,14 @@ final class NotchManager {
     func recognizeMusic() { pointed?.recognizeMusic() }
     func openShortcut(runID: UUID) { pointed?.openShortcut(runID: runID) }
     var canLaunchActivity: Bool { pointed?.canLaunchActivity == true }
+    /// macOS's Now Playing pill is replaced for as long as the notch shows what's playing at all: on,
+    /// on a display with a notch, its music Live Activity on. Not only while music plays and shows
+    /// there, as that changes with every pause, announcement and opening, and each change has
+    /// System Settings opened, hidden, to switch the pill back on or off.
     var nativeActivityReplacements: Set<String> {
-        controllers.contains(where: \.replacesNativeMusic) ? [MenuBarLiveActivities.nowPlayingName] : []
+        let defaults = UserDefaults.standard
+        let shows = !controllers.isEmpty && defaults.bool(forKey: Preferences.notchEnabled) && defaults.bool(forKey: Preferences.liveActivity)
+        return shows ? [MenuBarLiveActivities.nowPlayingName] : []
     }
 
     func perform(_ action: Shortcuts.Action) {

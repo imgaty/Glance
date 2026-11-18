@@ -271,7 +271,10 @@ final class MenuBarLiveActivities {
         var hideAfter = Date.distantPast
         private var restoreAfter: [String: Date] = [:]
         private var allPending = true
-        private static let delay: TimeInterval = 60
+        /// Passes that failed in a row: each waits twice as long as the last before the next, from a
+        /// minute up to half an hour, so System Settings isn't opened again and again for nothing.
+        private var failures = 0
+        private var delay: TimeInterval { min(60 * pow(2, Double(max(failures - 1, 0))), 30 * 60) }
 
         mutating func changed(from previous: Intent?, to current: Intent) {
             allPending = true
@@ -294,12 +297,14 @@ final class MenuBarLiveActivities {
         }
 
         mutating func finished(_ plan: Plan, remaining: [String], failed: Bool, now: Date) {
+            let unrestored = plan.restoring.contains { remaining.contains($0) }
+            failures = failed || unrestored ? failures + 1 : 0
             for name in plan.restoring {
-                restoreAfter[name] = remaining.contains(name) ? now + Self.delay : nil
+                restoreAfter[name] = remaining.contains(name) ? now + delay : nil
             }
             if !plan.hiding.isEmpty {
                 allPending = failed
-                hideAfter = failed ? now + Self.delay : .distantPast
+                hideAfter = failed ? now + delay : .distantPast
             }
         }
     }
