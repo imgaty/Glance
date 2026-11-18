@@ -892,18 +892,9 @@ final class NotchController {
         if !openZone.contains(NSEvent.mouseLocation) { close(holdUntilExit: false) }
     }
 
-    /// Refits the notch as a recording's time gains a digit: at ten minutes, and at an hour.
-    private func refitAsRecordingCounts() {
-        recordingRefit?.cancel()
-        let lengths = [model.screenRecording.map { $0.length() }, model.voiceMemo.flatMap { $0.isRecording ? $0.length() : nil }].compactMap { $0 }
-        guard let next = lengths.flatMap({ length in [600.0, 3600].map { $0 - length } }).filter({ $0 > 0 }).min() else { return }
-        recordingRefit = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(next + 0.05))
-            guard let self, !Task.isCancelled else { return }
-            withAnimation(IslandMotion.open) { self.model.objectWillChange.send() }
-            self.refitAsRecordingCounts()
-        }
-    }
+    /// Refits the notch as a recording's time gains a digit, at ten minutes and at an hour (see
+    /// `refitAsTimesChange`).
+    private func refitAsRecordingCounts() { refitAsTimesChange() }
 
     /// A call came in, connected or ended: its wings come, change, or go.
     private func show(call: CallShown?) {
@@ -912,34 +903,50 @@ final class NotchController {
             model.call = call
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
+        refitAsTimesChange()
     }
 
-    /// Refits the notch whenever what it shows of a timer or the stopwatch gains or loses a digit,
-    /// closed or opened, so it's never wider than they need: a timer from hours to minutes and from
-    /// minutes to seconds, the stopwatch from minutes to hours.
-    private func refitAsTimersCount() {
+    /// Refits the notch whenever what it shows of a timer or the stopwatch gains or loses a digit
+    /// (see `refitAsTimesChange`).
+    private func refitAsTimersCount() { refitAsTimesChange() }
+
+    /// Refits the notch, closed or opened, whenever a time it shows gains or loses a digit: a timer,
+    /// the stopwatch, a recording or a call. It slides wider a moment before the time grows, the time
+    /// staying at the end it rides out with, so the longer time steps into room already there and
+    /// never runs under the camera; it slides narrower once the time is shorter. Never wider than
+    /// what it shows needs, and never popping.
+    private func refitAsTimesChange() {
         timerWingTask?.cancel()
+        recordingRefit?.cancel()
         let now = Date.now
         let clocks = [model.timer.map(ClockShown.timer), model.stopwatch.map(ClockShown.stopwatch)].compactMap { $0 }
-        guard let next = clocks.compactMap({ SystemActivityView.widthChange(after: now, of: $0) }).min() else { return }
-        let wait = next.timeIntervalSince(now) + 0.05
+        var changes = clocks.compactMap { SystemActivityView.widthChange(after: now, of: $0) }
+        // A recording's time, and a call's, gain a digit at ten minutes and at an hour.
+        var starts: [Date] = []
+        if case .recording(let since)? = model.screenRecording { starts.append(since) }
+        if case .recording(let since)? = model.voiceMemo { starts.append(since) }
+        if case .connected(let since)? = model.call?.phase { starts.append(since) }
+        changes += starts.flatMap { since in [600.0, 3600].map { since + $0 } }.filter { $0 > now }
+        guard let next = changes.min() else { return }
+        // Ahead of the change, to make room for it; or, inside that moment, just after it.
+        let ahead = next - NotchModel.widthLead
+        let wait = ahead.timeIntervalSince(now) > 0.01 ? ahead.timeIntervalSince(now) : next.timeIntervalSince(now) + 0.05
         timerWingTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(wait))
             guard let self, !Task.isCancelled else { return }
-            withAnimation(IslandMotion.open) {
+            withAnimation(IslandMotion.resize) {
                 self.fitTimerWing()
-                // Opened to a timer, the notch is as wide as its time is now.
                 self.model.objectWillChange.send()
             }
-            self.refitAsTimersCount()
+            self.refitAsTimesChange()
         }
     }
 
-    /// The wings as wide as the time for the notch needs: the first one's, in the notch once nothing
-    /// plays.
+    /// The wings as wide as the time for the notch needs, now or a moment from now: the first one's,
+    /// in the notch once nothing plays.
     private func fitTimerWing() {
         guard let clock = model.firstClock else { return }
-        model.timerWing = SystemActivityView.wing(for: clock, restingHeight: model.closedSize.height)
+        model.timerWing = model.ahead { SystemActivityView.wing(for: clock, restingHeight: model.closedSize.height, at: $0) }
     }
 
     /// A new song: the closed notch's wings widen for a few seconds to show its title and artist.

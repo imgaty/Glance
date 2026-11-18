@@ -395,12 +395,12 @@ struct SystemActivityView: View {
     static func squeezedStart(_ h: CGFloat) -> CGFloat { ringEdge(h) + h * TimerLayout.ring + h * 0.27 }
 
     /// The notch's leading side for a timer with another activity detached: its ring and squeezed
-    /// time, up to the camera. Room for two digits of either unit, so it holds still as it counts.
+    /// time, up to the camera, as wide as the time is, sliding as it gains or loses a digit.
     @MainActor
     static func squeezedWing(for timer: NotchTimer.State, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
         let font = NSFont.monospacedDigitSystemFont(ofSize: LiveActivityView.textSize(for: h), weight: .medium)
-        let widest = [59, 3599, timer.left(at: date)].map { ceil((NotchTimer.squeezed($0) as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
-        return squeezedStart(h) + widest + LiveActivityView.cameraGap
+        let time = ceil((NotchTimer.squeezed(timer.left(at: date)) as NSString).size(withAttributes: [.font: font]).width)
+        return squeezedStart(h) + time + LiveActivityView.cameraGap
     }
 
     /// A symbol's square, as the cover's beside the camera.
@@ -518,7 +518,12 @@ struct SystemActivityView: View {
     /// minutes to hours. Within a day; none while paused or stopped.
     static func widthChange(after date: Date, of clock: ClockShown) -> Date? {
         guard clock.isRunning else { return nil }
-        func shapes(_ at: Date) -> [String] { [shape(reading(clock, at: at)), shape(clock.reading(at: at))] }
+        func shapes(_ at: Date) -> [String] {
+            var all = [shape(reading(clock, at: at)), shape(clock.reading(at: at))]
+            // Squeezed beside its ring, with another activity detached.
+            if case .timer(let timer) = clock { all.append(shape(NotchTimer.squeezed(timer.left(at: at)))) }
+            return all
+        }
         let now = shapes(date)
         // Second by second, to the next change, for up to an hour; then minute by minute.
         var step = 1.0, at = date
@@ -641,6 +646,11 @@ struct GrownAway: ViewModifier {
 enum IslandMotion {
     static var open: Animation { NotchMotion.expand }
     static var fold: Animation { NotchMotion.fold }
+    /// The wings sliding wider or narrower as what they show grows or shrinks: smooth, with no
+    /// travel past where they stop, done before the time that needs the room arrives.
+    static var resize: Animation {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? .easeInOut(duration: 0.3).paced : .spring(duration: 0.4, bounce: 0).paced
+    }
     /// What comes and goes with the wings, as `islandFade` shows and hides it.
     static let fade = AnyTransition(IslandFade())
 }

@@ -546,17 +546,19 @@ final class NotchModel: ObservableObject {
     /// needs, against the camera too.
     var wing: CGFloat {
         let resting = LiveActivityView.restingWing(restingHeight: closedSize.height)
+        let h = closedSize.height
         if folded { return 0 }
         if alert != nil { return max(alertExtended ? alertExtendedWing : alertWing, resting) }
         // With another detached, the first keeps its own side as it is; its trailing side folds away
-        // (see `NotchMetrics.fold`), the other taking its place in a bubble.
-        if activities.first == .call, let call { return CallLayout.wing(for: call, restingHeight: closedSize.height) }
-        if let recording = activities.first.flatMap(recording(of:)) { return RecordingLook.wing(for: recording, restingHeight: closedSize.height) }
+        // (see `NotchMetrics.fold`), the other taking its place in a bubble. A time is made room for
+        // a moment before it gains a digit (see `ahead`).
+        if activities.first == .call, let call { return ahead { CallLayout.wing(for: call, restingHeight: h, at: $0) } }
+        if let recording = activities.first.flatMap(recording(of:)) { return ahead { RecordingLook.wing(for: recording, restingHeight: h, at: $0) } }
         if activity, pop { return max(popWing, resting) }
         // A timer or the stopwatch with the notch. A timer with another activity detached keeps its
         // time beside its ring, squeezed.
         if case .timer(let timer)? = notchClock, detached != nil {
-            return max(SystemActivityView.squeezedWing(for: timer, restingHeight: closedSize.height), resting)
+            return max(ahead { SystemActivityView.squeezedWing(for: timer, restingHeight: h, at: $0) }, resting)
         }
         if notchClock != nil { return max(timerWing, resting) }
         if activities.first == .alarm, let alarm { return max(AlarmCompactView.wing(for: alarm, restingHeight: closedSize.height), resting) }
@@ -565,6 +567,17 @@ final class NotchModel: ObservableObject {
         }
         if activities.first == .shortcut, let shortcut { return max(ShortcutRunMark.wing(for: shortcut, restingHeight: closedSize.height), resting) }
         return activities.isEmpty ? 0 : resting
+    }
+
+    /// How long before a time it shows gains a digit the notch slides wider for it: about as long
+    /// as the slide takes, so the longer time steps into room already there.
+    static let widthLead: TimeInterval = 0.45
+
+    /// As wide as what's shown needs, now or a moment from now, whichever's wider: a time about to
+    /// gain a digit has room made for it as it slides (see `NotchController.refitAsTimesChange`).
+    func ahead(_ width: (Date) -> CGFloat) -> CGFloat {
+        let now = Date.now
+        return max(width(now), width(now + Self.widthLead))
     }
 
     /// The closed notch's width, with the activity's wings while music plays, a timer runs, or
@@ -632,9 +645,11 @@ final class NotchModel: ObservableObject {
                 )
             case .open where expanded != nil:
                 (
-                    ExpandedTimerView.width(
-                        for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? String(localized: "Timer"),
-                        restingHeight: closedSize.height, camera: camera)
+                    ahead { date in
+                        ExpandedTimerView.width(
+                            for: expandedClock ?? .timer(.paused(left: 0, total: 0)), name: expanded.map(name(of:)) ?? String(localized: "Timer"),
+                            restingHeight: closedSize.height, camera: camera, at: date)
+                    }
                         + pull * 0.35 + across,
                     TimerLayout.tallHeight(closedSize.height) + pull
                 )
@@ -1259,7 +1274,7 @@ struct NotchView: View {
             if let clock = model.clock(of: activity) {
                 let h = model.closedSize.height
                 let name = model.name(of: activity)
-                let width = ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera)
+                let width = model.ahead { ExpandedTimerView.width(for: clock, name: name, restingHeight: h, camera: model.camera, at: $0) }
                 let visible = shown && model.expanded == activity
                 ExpandedTimerView(
                     shown: clock, name: name, restingHeight: h, camera: model.camera, width: width,

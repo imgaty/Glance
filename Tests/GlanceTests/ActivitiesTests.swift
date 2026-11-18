@@ -1834,6 +1834,24 @@ struct RecordingTests {
         #expect(long > memo)
     }
 
+    @Test("A time about to gain a digit has room made for it a moment ahead, so it never runs under the camera")
+    @MainActor
+    func widthAhead() {
+        let h: CGFloat = 32
+        let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
+        // Within the moment before the hour, the wing is already as wide as 1:00:00 needs.
+        model.voiceMemo = .recording(since: .now - 3600 + NotchModel.widthLead / 2)
+        let hour = RecordingLook.wing(for: .voiceMemo(.recording(since: .now - 3601)), restingHeight: h)
+        #expect(isClose(model.wing, hour, tolerance: 0.01))
+        // Before that moment, only as wide as 59:58 needs.
+        model.voiceMemo = .recording(since: .now - 3598)
+        #expect(model.wing < hour)
+        // A call's time the same.
+        model.voiceMemo = nil
+        model.call = CallShown(name: "A", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now - 600 + NotchModel.widthLead / 2))
+        #expect(isClose(model.wing, CallLayout.wing(for: model.call!, restingHeight: h, at: .now + 1), tolerance: 0.01))
+    }
+
     @Test("Opened, Voice Memos is as wide as the iPhone's island for its height, or more, for its recorded bars to end beside the camera housing; the screen as the island")
     func openWidths() {
         let h: CGFloat = 32
