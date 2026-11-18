@@ -415,10 +415,19 @@ final class AlarmActivity: ObservableObject {
             }
         }
 
+        /// What carries out each action: the element and the Accessibility action to perform on it.
         struct Handle {
             var alarm: Alarm
-            var element: AXUIElement
-            var actions: [String]
+            var presses: [Action: (element: AXUIElement, action: String)]
+        }
+
+        /// A ringing alarm as macOS 27.3 shows it: an expanded Clock activity in the menu bar, its
+        /// group named by the alarm's identifier, holding Snooze and Dismiss buttons, the alarm's
+        /// name and its time.
+        struct Ringing {
+            var id: String
+            var title: String
+            var buttons: [Action: AXUIElement]
         }
 
         struct Readback {
@@ -436,7 +445,22 @@ final class AlarmActivity: ObservableObject {
         private func snapshot() -> Readback {
             guard AXIsProcessTrusted(), !Task.isCancelled else { return Readback(reading: .unavailable) }
             let menu: Reading
-            do { menu = pills.read(try collectPills()) } catch { menu = pills.read(nil) }
+            var ringing: [Ringing] = []
+            do {
+                let found = try collectPills()
+                ringing = found.ringing
+                menu = pills.read(found.pills)
+            } catch { menu = pills.read(nil) }
+            if !ringing.isEmpty {
+                // The expanded activity is the alarm itself, with its own Snooze and Dismiss.
+                lastSource = .menu
+                let handles = ringing.map { found in
+                    Handle(
+                        alarm: Alarm(id: "menu-alarm:\(found.id)", title: found.title, actions: Set(found.buttons.keys)),
+                        presses: found.buttons.mapValues { ($0, kAXPressAction as String) })
+                }
+                return Readback(reading: .available(handles.map(\.alarm)), handles: handles)
+            }
             if case .available(let alarms, _) = menu, !alarms.isEmpty {
                 lastSource = .menu
                 return Readback(reading: menu)
@@ -458,10 +482,10 @@ final class AlarmActivity: ObservableObject {
             return Readback(reading: lastSource == .notification ? .unavailable : menu)
         }
 
-        private func collectPills() throws -> [(String, AlarmPillSnapshot)] {
+        private func collectPills() throws -> (pills: [(String, AlarmPillSnapshot)], ringing: [Ringing]) {
             let budget = Budget()
             try budget.check()
-            guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return [] }
+            guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return ([], []) }
             let app = AXUIElementCreateApplication(agent.processIdentifier)
             // The observed alarm pill is a direct application child, not a NotificationCenter
             // window. Also include the menu extras tree used by other display arrangements.
@@ -482,6 +506,7 @@ final class AlarmActivity: ObservableObject {
             var pending = roots.reversed().map { ($0, 0) }
             var seen = Set<AXUIElement>()
             var found: [(String, AlarmPillSnapshot)] = []
+            var ringing: [Ringing] = []
             while let (element, depth) = pending.popLast() {
                 try budget.check()
                 guard seen.insert(element).inserted else { continue }
@@ -499,6 +524,14 @@ final class AlarmActivity: ObservableObject {
                     // Other apps' rich live activity subtrees are unrelated to an alarm.
                     continue
                 }
+                if try value(element, kAXSubroleAttribute, budget: budget) as? String == "AXLiveActivity" {
+                    // An expanded activity: a ringing alarm's, or another app's, whose unreadable or
+                    // large tree says nothing about an alarm.
+                    if let alarm = (try? ringingAlarm(element, budget: budget)) ?? nil, !ringing.contains(where: { $0.id == alarm.id }) {
+                        ringing.append(alarm)
+                    }
+                    continue
+                }
                 let children = try children(element, budget: budget)
                 guard children.isEmpty || depth < 12, seen.count + pending.count + children.count <= 1024 else { throw Unavailable.limit }
                 pending += children.reversed().map { ($0, depth + 1) }
@@ -506,8 +539,43 @@ final class AlarmActivity: ObservableObject {
             try budget.check()
             // An optional tree failing cannot hide the alarm found in the observed app root.
             // Without a found pill, however, that failure is not proof of source disappearance.
-            if incomplete && found.isEmpty { throw Unavailable.attribute }
-            return found
+            if incomplete && found.isEmpty && ringing.isEmpty { throw Unavailable.attribute }
+            return (found, ringing)
+        }
+
+        /// The ringing alarm in an expanded activity, by its buttons' fixed identifiers, or nil when
+        /// it has neither Snooze nor Dismiss.
+        private func ringingAlarm(_ activity: AXUIElement, budget: Budget) throws -> Ringing? {
+            var buttons: [Action: AXUIElement] = [:]
+            var texts: [String] = []
+            var id: String?
+            var pending = [(activity, 0)]
+            var seen = Set<AXUIElement>()
+            while let (element, depth) = pending.popLast() {
+                try budget.check()
+                guard seen.insert(element).inserted else { continue }
+                guard seen.count <= 64 else { throw Unavailable.limit }
+                var owner: pid_t = 0
+                guard AXUIElementGetPid(element, &owner) == .success else { throw Unavailable.attribute }
+                if owner == getpid() { continue }
+                let identifier = try value(element, kAXIdentifierAttribute, budget: budget) as? String
+                switch try value(element, kAXRoleAttribute, budget: budget) as? String {
+                case kAXButtonRole:
+                    if identifier == "Snooze" { buttons[.snooze] = element }
+                    if identifier == "Dismiss" { buttons[.stop] = element }
+                case kAXStaticTextRole:
+                    if let text = try value(element, kAXValueAttribute, budget: budget) as? String { texts.append(text) }
+                default:
+                    if let identifier, UUID(uuidString: identifier) != nil { id = identifier }
+                }
+                let children = try children(element, budget: budget)
+                guard children.isEmpty || depth < 6 else { throw Unavailable.limit }
+                pending += children.reversed().map { ($0, depth + 1) }
+            }
+            guard !buttons.isEmpty, let id else { return nil }
+            // The name, then the time it was set for.
+            let title = texts.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return Ringing(id: id, title: title.isEmpty ? String(localized: "Alarm") : title, buttons: buttons)
         }
 
         private func children(_ element: AXUIElement, budget: Budget) throws -> [AXUIElement] {
@@ -600,7 +668,14 @@ final class AlarmActivity: ObservableObject {
                             id: identifier, description: words, appName: appName, actionNames: actions,
                             snoozeNames: snoozeNames, stopNames: stopNames, repeatNames: repeatNames, alarmNames: alarmNames)
                         {
-                            handles.append(Handle(alarm: alarm, element: element, actions: actions))
+                            var presses: [Action: (element: AXUIElement, action: String)] = [:]
+                            for action in alarm.actions {
+                                let labels = action == .snooze ? snoozeNames : stopNames
+                                if let name = actions.first(where: { actionLabel($0).map(labels.contains) == true }) {
+                                    presses[action] = (element, name)
+                                }
+                            }
+                            handles.append(Handle(alarm: alarm, presses: presses))
                         }
                     }
                     // The alert itself advertises its actions. Its descendants add no capabilities
@@ -627,12 +702,11 @@ final class AlarmActivity: ObservableObject {
                 let handle = fresh.handles.first(where: { $0.alarm == target }),
                 handle.alarm.actions.contains(action)
             else { return false }
-            let labels = action == .snooze ? snoozeNames : stopNames
-            guard let name = handle.actions.first(where: { actionLabel($0).map(labels.contains) == true }),
-                AXUIElementSetMessagingTimeout(handle.element, 0.1) == .success,
+            guard let press = handle.presses[action],
+                AXUIElementSetMessagingTimeout(press.element, 0.1) == .success,
                 !Task.isCancelled
             else { return false }
-            return AXUIElementPerformAction(handle.element, name as CFString) == .success
+            return AXUIElementPerformAction(press.element, press.action as CFString) == .success
         }
     }
 }
