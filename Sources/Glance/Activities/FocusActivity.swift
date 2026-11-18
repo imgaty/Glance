@@ -134,14 +134,16 @@ struct FocusBannerLedger<ID: Hashable> {
     }
 }
 
-/// Observes only real Focus banner creation. It does not open Control Center, request permission,
-/// infer Off from absence, read private Focus preferences, or suppress macOS's banner.
+/// Observes only real Focus banner creation, and AirPods' listening mode banners with it. It does not
+/// open Control Center, request permission, infer Off from absence, read private Focus preferences, or
+/// suppress macOS's banner.
 final class FocusWatch: @unchecked Sendable {
     static let shared = FocusWatch()
     private static let menuBarAgent = "com.apple.MenuBarAgent"
 
     private let lock = NSLock()
     private var onChange: (@MainActor @Sendable (FocusChange) -> Void)?
+    private var onListening: (@MainActor @Sendable (ListeningModeChange) -> Void)?
     private var generation: UInt64 = 0
     @MainActor private var following: Task<Void, Never>?
 
@@ -150,6 +152,7 @@ final class FocusWatch: @unchecked Sendable {
     private var agent: pid_t = 0
     private var observer: AXObserver?
     private var words: FocusStateWords?
+    private var listeningWords: [ListeningMode: String] = [:]
     private var ledger = FocusBannerLedger<AXUIElement>()
 
     private init() {}
@@ -190,12 +193,26 @@ final class FocusWatch: @unchecked Sendable {
         }
     }
 
+    /// AirPods' listening mode changing, told as macOS announces it.
+    @MainActor
+    func startListening(onChange: @escaping @MainActor @Sendable (ListeningModeChange) -> Void) {
+        let words = ListeningMode.words()
+        lock.withLock {
+            onListening = onChange
+            generation &+= 1
+        }
+        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.defaultMode.rawValue) { [self] in listeningWords = words }
+        CFRunLoopWakeUp(runLoop)
+        follow()
+    }
+
     @MainActor
     func stop() {
         following?.cancel()
         following = nil
         lock.withLock {
             onChange = nil
+            onListening = nil
             generation &+= 1
         }
         CFRunLoopPerformBlock(runLoop, CFRunLoopMode.defaultMode.rawValue) { [self] in detach() }
@@ -204,7 +221,7 @@ final class FocusWatch: @unchecked Sendable {
 
     @MainActor
     func follow() {
-        guard lock.withLock({ onChange != nil }) else { return }
+        guard lock.withLock({ onChange != nil || onListening != nil }) else { return }
         guard AXIsProcessTrusted(),
             let agent = NSRunningApplication.runningApplications(withBundleIdentifier: Self.menuBarAgent).first?.processIdentifier,
             let words = FocusStateWords.system()
@@ -218,7 +235,7 @@ final class FocusWatch: @unchecked Sendable {
     }
 
     private func attach(to agent: pid_t, words: FocusStateWords) {
-        guard lock.withLock({ onChange != nil }) else { return }
+        guard lock.withLock({ onChange != nil || onListening != nil }) else { return }
         guard agent != self.agent || words != self.words else { return }
         detach()
         let app = AXUIElementCreateApplication(agent)
@@ -253,15 +270,34 @@ final class FocusWatch: @unchecked Sendable {
             let windows = SystemNotices.value(app, kAXWindowsAttribute) as? [AXUIElement]
         else { return }
         let candidates = windows.filter {
-            SystemNotices.value($0, kAXIdentifierAttribute) as? String == FocusBannerSnapshot.identifier
+            let identifier = SystemNotices.value($0, kAXIdentifierAttribute) as? String
+            return identifier == FocusBannerSnapshot.identifier || identifier == ListeningMode.banner
         }
         let fresh = ledger.newlyCreated(active: windows, candidates: candidates)
         let version = lock.withLock { generation }
-        for window in fresh {
+        for window in fresh where SystemNotices.value(window, kAXIdentifierAttribute) as? String == ListeningMode.banner {
+            // As for Focus, waiting a moment for its contents to be readable.
+            for _ in 0..<25 {
+                guard lock.withLock({ onListening != nil && generation == version }) else { break }
+                if let snapshot = Self.snapshot(window), let change = ListeningMode.read(snapshot, words: listeningWords) {
+                    DispatchQueue.main.async { [weak self] in
+                        MainActor.assumeIsolated {
+                            guard let self, AXIsProcessTrusted(),
+                                let callback = self.lock.withLock({ self.generation == version ? self.onListening : nil })
+                            else { return }
+                            callback(change)
+                        }
+                    }
+                    break
+                }
+                usleep(20_000)
+            }
+        }
+        for window in fresh where SystemNotices.value(window, kAXIdentifierAttribute) as? String == FocusBannerSnapshot.identifier {
             // The creation notification can precede its children. Wait briefly on this AX thread,
             // leaving the native banner in place while its complete content is becoming readable.
             for _ in 0..<25 {
-                guard lock.withLock({ onChange != nil && generation == version }) else { return }
+                guard lock.withLock({ onChange != nil && generation == version }) else { break }
                 if let snapshot = Self.snapshot(window),
                     FocusChange.read(snapshot, words: words, symbolExists: { _ in true }) != nil
                 {
@@ -287,7 +323,7 @@ final class FocusWatch: @unchecked Sendable {
     /// A small, bounded walk of this one banner, using the same safe AX accessor as other notices.
     private static func snapshot(_ window: AXUIElement) -> FocusBannerSnapshot? {
         guard let identifier = SystemNotices.value(window, kAXIdentifierAttribute) as? String,
-            identifier == FocusBannerSnapshot.identifier
+            identifier == FocusBannerSnapshot.identifier || identifier == ListeningMode.banner
         else { return nil }
         var texts: [String] = []
         var images: [FocusBannerSnapshot.Image] = []

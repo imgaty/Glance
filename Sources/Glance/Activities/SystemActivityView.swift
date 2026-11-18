@@ -348,6 +348,8 @@ struct SystemActivityView: View {
                 .lineLimit(1)
         case .status(let symbol, let tint, _, _):
             ArrivingSymbol(symbol: symbol, color: tint, size: size + 2, side: side)
+        case .symbols(let symbol, _):
+            ArrivingSymbol(symbol: symbol, color: .white, size: size + 2, side: side)
         // Laid out on their own (see `TimerDoneView`, `LowBatteryView` and `IncomingCallView`).
         case .timerDone, .lowBattery, .incomingCall, .alarm:
             EmptyView()
@@ -367,8 +369,10 @@ struct SystemActivityView: View {
                 BatteryGlyph(level: level, color: level.color, height: restingHeight * BatteryGlyph.height)
             }
         case .status(_, let tint, let text, _):
-            MarqueeText(text: text, font: .system(size: size, weight: .semibold), active: true, alignment: .trailing)
+            MarqueeText(text: text, font: IslandType.font(size, weight: .semibold, restingHeight: restingHeight), active: true, alignment: .trailing)
                 .foregroundStyle(tint)
+        case .symbols(_, let symbol):
+            ArrivingSymbol(symbol: symbol, color: .white, size: size + 2, side: side)
         case .timerDone, .lowBattery, .incomingCall, .alarm:
             EmptyView()
         }
@@ -454,6 +458,8 @@ struct SystemActivityView: View {
                 )
             case .status(_, _, let text, _):
                 (inset + side + gap, gap + width(text, size, .semibold) + outset)
+            case .symbols:
+                (inset + side + gap, gap + side + outset)
             }
         return min(max(left, right), maxWing)
     }

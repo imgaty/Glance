@@ -20,6 +20,8 @@ final class ActivityBench {
 
     enum Scene: String, CaseIterable {
         case focus
+        /// AirPods' listening mode changing, through each mode in turn.
+        case listeningMode
         case music, airdrop, airdropSend, timer, stopwatch, call, charging, lowBattery, headphones, deviceBattery, caseBattery
         /// A call in one state, held for the round: coming in, swiped away while it rings, going out,
         /// going on, with someone whose name is too long and for over an hour, with a number, in an app
@@ -40,12 +42,13 @@ final class ActivityBench {
         case lowBatteryReal
 
         /// Said for a moment, with no view of its own to open to.
-        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery, .focus].contains(self) }
+        var announces: Bool { [.charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery, .focus, .listeningMode].contains(self) }
 
         /// How the menu names it, in English, as the menu is only in builds made from source.
         var title: String {
             switch self {
             case .focus: "Focus Change"
+            case .listeningMode: "Listening Mode"
             case .music: "Music"
             case .call: "Whole Call"
             case .callRinging: "Ringing"
@@ -114,7 +117,7 @@ final class ActivityBench {
                 ]
             ),
             ("Shortcuts", [.shortcut, .shortcutStarting, .shortcutStopping, .shortcutStopDelayed, .shortcutComplete, .shortcutStopped, .shortcutEndedAfterStop, .shortcutFailed, .shortcutConcurrent]),
-            ("Announced", [.focus, .charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
+            ("Announced", [.focus, .listeningMode, .charging, .lowBattery, .lowBatteryReal, .headphones, .deviceBattery, .caseBattery]),
         ]
 
         /// What can be tried beside another: all but those that touch something real.
@@ -225,11 +228,19 @@ final class ActivityBench {
         case .voiceMemo: await voiceMemo(paused: false)
         case .voiceMemoPaused: await voiceMemo(paused: true)
         case .focus: await announce([{ Self.focus() }], every: 6)
+        case .listeningMode: await announce(Self.listeningModes(), every: 4)
         case .charging: await announce(Self.charging(), every: 6)
         case .lowBattery, .lowBatteryReal: await announce(Self.lowBatteries(), every: 10)
         case .headphones: await announce(Self.headphones(), every: 6)
         case .deviceBattery: await announce(Self.deviceBatteries(), every: 6)
         case .caseBattery: await announce(Self.caseBatteries(), every: 6)
+        }
+    }
+
+    /// Each listening mode in turn, named as macOS names it.
+    private static func listeningModes() -> [@MainActor () async -> NotchAlert] {
+        ListeningMode.allCases.map { mode in
+            { ListeningModeChange(mode: mode, word: ListeningMode.words()[mode] ?? mode.key).alert }
         }
     }
 

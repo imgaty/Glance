@@ -13,7 +13,7 @@ import SwiftUI
 /// comes back.
 struct NotchAlert: Identifiable, Equatable {
     enum Kind: Equatable {
-        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus, alarm
+        case charging, lowBattery, device, deviceBattery, caseBattery, timerDone, incomingCall, focus, alarm, listeningMode
 
         /// A device or its case running low: its ring red.
         var runsLow: Bool { self == .deviceBattery || self == .caseBattery }
@@ -35,6 +35,9 @@ struct NotchAlert: Identifiable, Equatable {
         /// the state's word in the same color on the right. On, the symbol sits on white when it
         /// extends; off, on its color, faintly.
         case status(symbol: String, tint: Color, text: String, on: Bool = true)
+        /// Two symbols, as macOS 27's island shows AirPods changing their listening mode: the
+        /// AirPods on the left, the mode on the right, both white.
+        case symbols(leading: String, trailing: String)
         /// A call coming in, as tall as the Alarm: the caller, and to decline or accept it.
         case incomingCall(CallShown)
         /// A timer that's done, as the Alarm goes off: its symbol shaking, its length and its name, and
@@ -134,6 +137,14 @@ final class Activities: ObservableObject {
                 UserDefaults.standard.bool(forKey: Preferences.activityFocus)
             else { return }
             self?.post(change.alert(kind: .focus))
+        }
+        // AirPods' listening mode, from the same banners, with the other headphones news.
+        FocusWatch.shared.startListening { [weak self] change in
+            guard ActivityBench.scene == nil,
+                UserDefaults.standard.bool(forKey: Preferences.notchEnabled),
+                UserDefaults.standard.bool(forKey: Preferences.activityDevices)
+            else { return }
+            self?.post(change.alert)
         }
     }
 
