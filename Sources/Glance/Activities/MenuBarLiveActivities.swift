@@ -36,6 +36,8 @@ final class MenuBarLiveActivities {
 
     private var timer: Timer?
     private var working = false
+    /// The System Settings Glance has open, hidden, if any: quit with Glance if Glance quits first.
+    private static var opened: NSRunningApplication?
     private var settingObserver: NSObjectProtocol?
     private var spaceObserver: NSObjectProtocol?
     /// How long System Settings' switches are waited for.
@@ -63,6 +65,9 @@ final class MenuBarLiveActivities {
                 guard on != MenuBarLiveActivities.shared.intent?.hiding else { return }
                 MenuBarLiveActivities.shared.check()
             }
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { Self.opened?.forceTerminate() }
         }
         // Off a full-screen app, System Settings' window opens where it can be seen.
         spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { _ in
@@ -211,6 +216,7 @@ final class MenuBarLiveActivities {
         configuration.createsNewApplicationInstance = true
         guard let instance = try? await NSWorkspace.shared.open([Self.pane], withApplicationAt: settings, configuration: configuration) else { return nil }
         instance.hide()
+        opened = instance
         let pid = instance.processIdentifier
         let rows = await Task.detached { () -> [(name: String, box: AXUIElement)] in
             let clock = ContinuousClock()
@@ -223,15 +229,28 @@ final class MenuBarLiveActivities {
             return []
         }.value
         guard !rows.isEmpty else {
-            instance.terminate()
+            await quit(instance)
             return nil
         }
         return SettingsSession(
             rows: rows.map { settingRow(name: $0.name, box: $0.box) },
             close: {
                 try? await Task.sleep(for: .milliseconds(300))
-                instance.terminate()
+                await quit(instance)
             })
+    }
+
+    /// Quits the System Settings Glance opened, and makes sure it's gone: one still loading can let
+    /// the request to quit pass, and would stay open, hidden, for good.
+    private static func quit(_ instance: NSRunningApplication) async {
+        defer { if opened == instance { opened = nil } }
+        instance.terminate()
+        for _ in 0..<12 {
+            if instance.isTerminated { return }
+            try? await Task.sleep(for: .milliseconds(250))
+            if !instance.isTerminated { instance.terminate() }
+        }
+        if !instance.isTerminated { instance.forceTerminate() }
     }
 
     private nonisolated static func settingRow(name: String, box: AXUIElement) -> SettingsRow {
