@@ -272,6 +272,90 @@ struct PreferencesTests {
         #expect(stored(Preferences.musicAppBadge) == false as NSNumber)
     }
 
+    @Test("A new install starts haptic feedback and the animated cover as the Mac has its own, once, never over a value already there")
+    func newInstallFollowsMac() throws {
+        let name = "dev.vibe.Glance.tests.install-defaults"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        func stored(_ key: String) -> NSObject? { defaults.persistentDomain(forName: name)?[key] as? NSObject }
+        defaults.removePersistentDomain(forName: name)
+        defer { defaults.removePersistentDomain(forName: name) }
+
+        // Reduce motion and haptic feedback both on.
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: MacSettings(reducesMotion: true, hapticFeedback: true))
+        #expect(stored(Preferences.haptics) == true as NSNumber)
+        #expect(stored(Preferences.musicAnimatedArtwork) == false as NSNumber)
+        #expect(stored(Preferences.defaultsVersion) == Preferences.earlierDefaults.keys.max()! as NSNumber)
+
+        // Once only: the next launch leaves them, whatever the Mac has by then.
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: MacSettings(reducesMotion: false, hapticFeedback: false))
+        #expect(stored(Preferences.haptics) == true as NSNumber)
+        #expect(stored(Preferences.musicAnimatedArtwork) == false as NSNumber)
+
+        // Both off.
+        defaults.removePersistentDomain(forName: name)
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: MacSettings(reducesMotion: false, hapticFeedback: false))
+        #expect(stored(Preferences.haptics) == false as NSNumber)
+        #expect(stored(Preferences.musicAnimatedArtwork) == true as NSNumber)
+
+        // A value there before the first launch stays.
+        defaults.removePersistentDomain(forName: name)
+        defaults.set(false, forKey: Preferences.haptics)
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: MacSettings(reducesMotion: true, hapticFeedback: true))
+        #expect(stored(Preferences.haptics) == false as NSNumber)
+        #expect(stored(Preferences.musicAnimatedArtwork) == false as NSNumber)
+    }
+
+    @Test("An update keeps what it had, and doesn't read the Mac's settings")
+    func updateIgnoresMac() throws {
+        let name = "dev.vibe.Glance.tests.install-defaults-update"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        func stored(_ key: String) -> NSObject? { defaults.persistentDomain(forName: name)?[key] as? NSObject }
+        defaults.removePersistentDomain(forName: name)
+        defer { defaults.removePersistentDomain(forName: name) }
+        var read = false
+        func mac() -> MacSettings {
+            read = true
+            return MacSettings(reducesMotion: true, hapticFeedback: true)
+        }
+
+        // Up to date: the welcome tour closed, and every change of first values gone through.
+        defaults.set(true, forKey: Preferences.onboardingDone)
+        defaults.set(Preferences.earlierDefaults.keys.max()!, forKey: Preferences.defaultsVersion)
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: mac())
+        #expect(stored(Preferences.haptics) == nil)
+        #expect(stored(Preferences.musicAnimatedArtwork) == nil)
+
+        // From before changes of first values were kept: a display's look kept, and nothing else.
+        defaults.removePersistentDomain(forName: name)
+        defaults.set(0.4, forKey: Preferences.key(Preferences.glassDarkness, for: "display"))
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: mac())
+        #expect(stored(Preferences.haptics) == nil)
+        #expect(stored(Preferences.musicAnimatedArtwork) == nil)
+
+        // Through an earlier change of first values, with the welcome tour still open.
+        defaults.removePersistentDomain(forName: name)
+        defaults.set(1, forKey: Preferences.defaultsVersion)
+        Preferences.keepEarlierDefaults(defaults, domain: name, mac: mac())
+        #expect(stored(Preferences.haptics) == nil)
+        #expect(stored(Preferences.musicAnimatedArtwork) == nil)
+        #expect(!read)
+    }
+
+    @Test(
+        "Haptic feedback is read as Trackpad settings keeps it, on until it's turned off",
+        arguments: [
+            ([:], true),
+            (["ActuateDetents": 1], true),
+            (["ActuateDetents": 0], false),
+            (["ActuateDetents": 0, "ForceSuppressed": 1], false),
+            (["ActuateDetents": 1, "ForceSuppressed": 0], true),
+            (["ForceSuppressed": 1], false),
+            (["ForceSuppressed": 0], true),
+        ] as [([String: Int], Bool)])
+    func trackpadHaptics(kept: [String: Int], on: Bool) {
+        #expect(MacSettings.trackpadHaptics { kept[$0].map(NSNumber.init(value:)) } == on)
+    }
+
     @Test("The layout falls back to the cover on top")
     func currentLayout() {
         preservingDefaults([Preferences.musicLayout]) {

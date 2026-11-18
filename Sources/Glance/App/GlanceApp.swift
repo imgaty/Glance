@@ -279,10 +279,15 @@ enum Preferences {
 
     /// Writes down, for someone who had Glance before, the first value of each setting that has
     /// since changed and that they never set, so a new first value doesn't change it under them.
+    /// On a new install, it writes down instead each setting the Mac has one of its own of, as the
+    /// Mac has it (see `MacSettings`), read only then; from there on it's changed in Glance alone.
     /// It goes by what's stored in `domain` alone, as the values registered at launch would hide
     /// which were never set. Someone had Glance before if the welcome tour was closed once, or a
-    /// display's look was kept, which every launch does.
-    static func keepEarlierDefaults(_ defaults: UserDefaults = .standard, domain: String? = Bundle.main.bundleIdentifier) {
+    /// display's look was kept, which every launch does; an install is new if neither was, and
+    /// it has never been through a change of first values.
+    static func keepEarlierDefaults(
+        _ defaults: UserDefaults = .standard, domain: String? = Bundle.main.bundleIdentifier, mac: @autoclosure () -> MacSettings = .current
+    ) {
         guard let domain else { return }
         let stored = defaults.persistentDomain(forName: domain) ?? [:]
         let done = stored[defaultsVersion] as? Int ?? 0
@@ -292,6 +297,8 @@ enum Preferences {
             for (version, values) in earlierDefaults where version > done {
                 for (key, value) in values where stored[key] == nil { defaults.set(value, forKey: key) }
             }
+        } else if done == 0 {
+            for (key, value) in mac().firstValues where stored[key] == nil { defaults.set(value, forKey: key) }
         }
         defaults.set(latest, forKey: defaultsVersion)
     }
