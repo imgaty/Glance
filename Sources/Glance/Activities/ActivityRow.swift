@@ -51,13 +51,14 @@ struct ActivityRowMetrics {
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 16.3 * k, buttonGap: 8 * k)
     }
 
-    /// "No song found.", measured: no picture, the words from 33.9, its one button 17 from the end; as
+    /// "No song found.": no picture, its one button 17 from the end and its words as far in from the
+    /// other, rather than the iPhone's 33.9, which on the notch's flat-sided end looked set in; as
     /// tall as it listens, the iPhone's 84 points, its words standing under the camera rather than in
     /// the middle of the iPhone's taller 92.7.
     static func noMatch(_ h: CGFloat) -> ActivityRowMetrics {
         let k = scale(h)
         return .init(
-            height: 84 * k, pictureSide: 0, pictureEdge: 0, wordsStart: 33.9 * k, titleSize: 16 * k,
+            height: 84 * k, pictureSide: 0, pictureEdge: 0, wordsStart: 17 * k, titleSize: 16 * k,
             titleWeight: .semibold, titleOpticalSize: 16, buttonSide: 51 * k, buttonEdge: 17 * k, buttonGap: 8 * k)
     }
 
