@@ -317,7 +317,7 @@ final class FocusWatch: @unchecked Sendable {
 /// A Focus changing, extended, as the iPhone shows it for a moment after it changes, measured from a
 /// recording: the symbol in a circle at the left end, white with the symbol in its color when it's on,
 /// the color faintly behind it when it's off; the Focus's name in white beside it; the state's word at
-/// the right end, in the color.
+/// the right end, in the color. The words are set just under the camera, so they run on beneath it.
 struct FocusExtendedView: View {
     let symbol: String
     let tint: Color
@@ -333,40 +333,43 @@ struct FocusExtendedView: View {
         let h = restingHeight
         let tall = TimerLayout.tallHeight(h)
         let side = TimerLayout.content(h)
-        ZStack {
-            HStack(spacing: h * AirDropLayout.gap) {
-                SystemSymbol.glyph(symbol, size: side * 0.5)
-                    .foregroundStyle(on ? tint : .white)
-                    .frame(width: side, height: side)
-                    .background(Circle().fill(on ? Color.white : tint.opacity(0.29)))
-                Text(name)
-                    .font(NotchType.title)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .padding(.leading, PlayerLayout.padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        let drop = Self.wordsDrop(h)
+        HStack(spacing: h * AirDropLayout.gap) {
+            SystemSymbol.glyph(symbol, size: side * 0.5)
+                .foregroundStyle(on ? tint : .white)
+                .frame(width: side, height: side)
+                .background(Circle().fill(on ? Color.white : tint.opacity(0.29)))
+            Text(name)
+                .font(NotchType.title)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .offset(y: drop)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(state)
                 .font(NotchType.title)
                 .foregroundStyle(tint)
                 .lineLimit(1)
-                .padding(.trailing, tall * Self.stateEdge)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .fixedSize()
+                .offset(y: drop)
         }
+        .padding(.leading, PlayerLayout.padding)
+        .padding(.trailing, tall * Self.stateEdge)
         .frame(height: tall)
     }
 
-    /// Each side of the camera, as wide as the wider needs: the circle and the name beside the camera on
-    /// the left, the word on the right.
+    /// Each side of the camera: the circle beside it, as it stands as high as the camera, and the words
+    /// under it, so the notch is as wide as the iPhone's island, a long name cut short, as the
+    /// iPhone's is.
     @MainActor
-    static func wing(name: String, state: String, restingHeight h: CGFloat) -> CGFloat {
-        func width(_ text: String) -> CGFloat {
-            ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width) + 1
-        }
-        let gap = LiveActivityView.cameraGap
-        let left = PlayerLayout.padding + TimerLayout.content(h) + h * AirDropLayout.gap + min(width(name), h * TimerLayout.titleLimit) + gap
-        let right = gap + width(state) + TimerLayout.tallHeight(h) * stateEdge
-        return max(left, right)
+    static func wing(restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
+        let circle = PlayerLayout.padding + TimerLayout.content(h) + LiveActivityView.cameraGap
+        return max(circle, (ActivityRowMetrics.island(h) - closedWidth) / 2).rounded(.up)
+    }
+
+    /// How far below the row's middle the words go, for their top to clear the camera.
+    static func wordsDrop(_ h: CGFloat) -> CGFloat {
+        let line = ActivityRowLayout.lineHeight(NSFont.systemFont(ofSize: NotchType.size, weight: .semibold))
+        return max(0, h + ActivityRowLayout.underCamera - (TimerLayout.tallHeight(h) - line) / 2)
     }
 }

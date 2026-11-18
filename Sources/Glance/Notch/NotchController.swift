@@ -1330,11 +1330,11 @@ final class NotchController {
     /// beside the camera, as the iPhone's does.
     private func extendFocus(_ alert: NotchAlert?) {
         focusExtension?.cancel()
-        guard let alert, alert.kind == .focus, case .status(_, _, let state, _) = alert.content else { return }
+        guard let alert, alert.kind == .focus, case .status = alert.content else { return }
         focusExtension = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(FocusChange.extendsAfter))
             guard let self, !Task.isCancelled, self.model.alert?.id == alert.id, self.model.state == .closed else { return }
-            self.model.alertExtendedWing = FocusExtendedView.wing(name: alert.name ?? "", state: state, restingHeight: self.model.closedSize.height)
+            self.model.alertExtendedWing = FocusExtendedView.wing(restingHeight: self.model.closedSize.height, closedWidth: self.model.closedSize.width)
             self.model.changeActivityPresentation(animation: NotchMotion.expand) { self.model.alertExtended = true }
             try? await Task.sleep(for: .seconds(FocusChange.extendsFor))
             guard !Task.isCancelled, self.model.alert?.id == alert.id, self.model.alertExtended else { return }
