@@ -25,8 +25,9 @@ enum AlarmLook {
     static let wordsStart: CGFloat = 83 / alert
     static let timeSize: CGFloat = 13.5 / alert
     static let titleSize: CGFloat = 16.5 / alert
-    /// The time's capitals start this far down.
-    static let timeTop: CGFloat = 39 / alert
+    /// The time's and the name's baselines, measured on iOS 27's ringing alarm.
+    static let timeBaseline: CGFloat = 49.3 / alert
+    static let nameBaseline: CGFloat = 68.7 / alert
     /// The zz's share of its circle.
     static let snoozeGlyph: CGFloat = 25.5 / 50
 
@@ -205,7 +206,7 @@ struct AlarmRingingView: View {
             else if shown.failure != nil { String(localized: "Not confirmed") }
             else { nil }
         let titleIsTime = shown.alarm.title.range(of: #"^\d{1,2}[:.h]\d{2}"#, options: .regularExpression) != nil
-        let time = titleIsTime ? shown.alarm.title : rangAt.formatted(date: .omitted, time: .shortened)
+        let time = shown.alarm.time ?? (titleIsTime ? shown.alarm.title : rangAt.formatted(date: .omitted, time: .shortened))
         return (status ?? time, titleIsTime ? String(localized: "Alarm") : shown.alarm.title)
     }
 
@@ -236,26 +237,31 @@ struct AlarmRingingView: View {
         let h = restingHeight
         let tall = TimerLayout.tallHeight(h)
         let lines = Self.lines(for: shown, rangAt: rangAt)
-        let timeFont = NSFont.systemFont(ofSize: tall * AlarmLook.timeSize)
-        // The time's line starts above its capitals by the font's ascent over them.
-        let wordsTop = tall * AlarmLook.timeTop - (timeFont.ascender - timeFont.capHeight)
         ZStack(alignment: .topLeading) {
             glyph(h)
                 .padding(.leading, tall * AlarmLook.glyphEdge)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(lines.top)
-                    .font(.system(size: tall * AlarmLook.timeSize))
-                    .foregroundStyle(AlarmLook.ink.opacity(0.5))
-                Text(lines.name)
-                    .font(.system(size: tall * AlarmLook.titleSize, weight: .medium))
-                    .foregroundStyle(AlarmLook.ink)
-            }
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .frame(maxWidth: max(width - tall * AlarmLook.wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), alignment: .leading)
+            // Each line on the iPhone's baseline, from the row's top, running on under the camera up
+            // to the buttons.
+            Color.clear
+                .frame(width: max(width - tall * AlarmLook.wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), height: tall)
+                .overlay(alignment: .topLeading) {
+                    Text(lines.top)
+                        .font(.system(size: tall * AlarmLook.timeSize))
+                        .foregroundStyle(AlarmLook.ink.opacity(0.5))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .alignmentGuide(.top) { $0[.firstTextBaseline] - tall * AlarmLook.timeBaseline }
+                }
+                .overlay(alignment: .topLeading) {
+                    Text(lines.name)
+                        .font(.system(size: tall * AlarmLook.titleSize, weight: .medium))
+                        .foregroundStyle(AlarmLook.ink)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .alignmentGuide(.top) { $0[.firstTextBaseline] - tall * AlarmLook.nameBaseline }
+                }
             .padding(.leading, tall * AlarmLook.wordsStart)
-            .padding(.top, wordsTop)
             .help(shown.failure ?? shown.spoken)
             .accessibilityElement(children: .combine)
             .accessibilityHint(shown.failure ?? "")

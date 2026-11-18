@@ -97,6 +97,8 @@ final class AlarmActivity: ObservableObject {
         let id: String
         let title: String
         let actions: Set<Action>
+        /// The time it was set for, as macOS writes it, where macOS shows it.
+        var time: String? = nil
     }
 
     enum Reading: Equatable, Sendable {
@@ -427,6 +429,7 @@ final class AlarmActivity: ObservableObject {
         struct Ringing {
             var id: String
             var title: String
+            var time: String?
             var buttons: [Action: AXUIElement]
         }
 
@@ -456,7 +459,7 @@ final class AlarmActivity: ObservableObject {
                 lastSource = .menu
                 let handles = ringing.map { found in
                     Handle(
-                        alarm: Alarm(id: "menu-alarm:\(found.id)", title: found.title, actions: Set(found.buttons.keys)),
+                        alarm: Alarm(id: "menu-alarm:\(found.id)", title: found.title, actions: Set(found.buttons.keys), time: found.time),
                         presses: found.buttons.mapValues { ($0, kAXPressAction as String) })
                 }
                 return Readback(reading: .available(handles.map(\.alarm)), handles: handles)
@@ -575,7 +578,8 @@ final class AlarmActivity: ObservableObject {
             guard !buttons.isEmpty, let id else { return nil }
             // The name, then the time it was set for.
             let title = texts.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return Ringing(id: id, title: title.isEmpty ? String(localized: "Alarm") : title, buttons: buttons)
+            let time = texts.dropFirst().first?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return Ringing(id: id, title: title.isEmpty ? String(localized: "Alarm") : title, time: time?.isEmpty == false ? time : nil, buttons: buttons)
         }
 
         private func children(_ element: AXUIElement, budget: Budget) throws -> [AXUIElement] {
