@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import CoreBluetooth
 import SwiftUI
 
 /// The permissions Glance can ask for, read and requested without side effects. One set for the
@@ -26,6 +27,20 @@ final class Permissions: ObservableObject {
     @Published private(set) var accessibility: State = SpotifyMenu.allowed ? .granted : .notDetermined
 
     @Published private(set) var powerControl: State = PowerModeSettings.isReady ? .granted : .notDetermined
+    /// Bluetooth, for AirPods' listening mode, read from the AirPods.
+    @Published private(set) var bluetooth = Permissions.bluetoothState
+
+    /// macOS's answer for Bluetooth, read without asking.
+    nonisolated static var bluetoothState: State {
+        switch CBManager.authorization {
+        case .allowedAlways: .granted
+        case .denied, .restricted: .denied
+        default: .notDetermined
+        }
+    }
+    nonisolated static var bluetoothAllowed: Bool { bluetoothState == .granted }
+    /// Kept while macOS asks, which it does as one is made.
+    private var bluetoothAsker: BluetoothAsker?
 
     private var watching = false
     private let defaults: UserDefaults
@@ -93,6 +108,7 @@ final class Permissions: ObservableObject {
 
     func refresh() {
         powerControl = PowerModeSettings.isReady ? .granted : .notDetermined
+        bluetooth = Self.bluetoothState
         Task {
             let fresh = await Self.recheck()
             audio = fresh.audio
@@ -124,6 +140,15 @@ final class Permissions: ObservableObject {
         guard spotifyControl != .granted else { return askForAccessibility() }
         requestControl(of: PlayerScripting.spotify) { [weak self] in
             if self?.spotifyControl == .granted { self?.askForAccessibility() }
+        }
+    }
+
+    /// macOS asks for Bluetooth the first time Glance uses it; after that, Settings is the way.
+    func requestBluetooth() {
+        guard bluetooth == .notDetermined, bluetoothAsker == nil else { return openSettings(for: \.bluetooth) }
+        bluetoothAsker = BluetoothAsker { [weak self] in
+            self?.bluetoothAsker = nil
+            self?.refresh()
         }
     }
 
@@ -159,7 +184,8 @@ final class Permissions: ObservableObject {
     }
 
     func openSettings(for state: KeyPath<Permissions, State>) {
-        let pane = state == \.audio ? "Privacy_ScreenCapture" : state == \.accessibility ? "Privacy_Accessibility" : "Privacy_Automation"
+        let pane =
+            state == \.audio ? "Privacy_ScreenCapture" : state == \.accessibility ? "Privacy_Accessibility" : state == \.bluetooth ? "Privacy_Bluetooth" : "Privacy_Automation"
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
     }
 
@@ -239,5 +265,24 @@ final class Permissions: ObservableObject {
             }
             do { try process.run() } catch { answered.resume(returning: nil) }
         }
+    }
+}
+
+/// Makes macOS ask for Bluetooth, which it does as Glance first starts using it, and says when it
+/// has its answer.
+private final class BluetoothAsker: NSObject, CBCentralManagerDelegate {
+    private var manager: CBCentralManager?
+    private let answered: @MainActor () -> Void
+
+    @MainActor
+    init(answered: @escaping @MainActor () -> Void) {
+        self.answered = answered
+        super.init()
+        manager = CBCentralManager(delegate: self, queue: .main)
+    }
+
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        guard CBManager.authorization != .notDetermined else { return }
+        MainActor.assumeIsolated { answered() }
     }
 }

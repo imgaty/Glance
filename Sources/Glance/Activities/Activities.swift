@@ -138,14 +138,23 @@ final class Activities: ObservableObject {
             else { return }
             self?.post(change.alert(kind: .focus))
         }
-        // AirPods' listening mode, from the same banners, with the other headphones news.
-        FocusWatch.shared.startListening { [weak self] change in
-            guard ActivityBench.scene == nil,
-                UserDefaults.standard.bool(forKey: Preferences.notchEnabled),
-                UserDefaults.standard.bool(forKey: Preferences.activityDevices)
-            else { return }
-            self?.post(change.alert)
-        }
+        // AirPods' listening mode, read from the AirPods and from macOS's banners, with the other
+        // headphones news.
+        FocusWatch.shared.startListening { [weak self] change in self?.announce(change) }
+        ListeningModeWatch.shared.start { [weak self] change in self?.announce(change) }
+    }
+
+    /// The last listening mode told, from either source, which both tell of the same change.
+    private var toldListening: (mode: ListeningMode, at: Date)?
+
+    private func announce(_ change: ListeningModeChange) {
+        guard ActivityBench.scene == nil,
+            UserDefaults.standard.bool(forKey: Preferences.notchEnabled),
+            UserDefaults.standard.bool(forKey: Preferences.activityDevices)
+        else { return }
+        if let told = toldListening, told.mode == change.mode, Date.now.timeIntervalSince(told.at) < 4 { return }
+        toldListening = (change.mode, .now)
+        post(change.alert)
     }
 
     /// Just woken, things reconnecting are expected, not announced.

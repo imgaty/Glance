@@ -763,12 +763,13 @@ date. macOS keeps its own Focus controls.
 
 ### AirPods listening mode
 
-When AirPods change their listening mode and macOS announces it, the notch
-shows it beside the camera as Apple's own island does: the AirPods at the left
-end and the mode's symbol at the right, both white, for Noise Cancellation,
-Transparency, Adaptive or Off. VoiceOver says the mode's name. It follows
-`Devices` in **Settings > Live Activities**, and like Focus it shows only what
-macOS announces: Glance doesn't ask the AirPods for their mode.
+When AirPods change their listening mode, from the stem, Control Center or the
+Sound menu, the notch shows it beside the camera as Apple's own island does: the
+AirPods at the left end and the mode's symbol at the right, both white, for
+Noise Cancellation, Transparency, Adaptive or Off. VoiceOver says the mode's
+name. It follows `Devices` in **Settings > Live Activities**. Glance reads the
+mode from the AirPods, which takes `Bluetooth` (see [Permissions](#permissions));
+without it, it shows only the changes macOS announces in its own banner.
 
 ### AirDrop
 
@@ -1060,6 +1061,7 @@ macOS asks for each of these the first time Glance needs it. Review them in
 | `Accessibility` | Opening the current song in its source in `Spotify`; repeating one song there, through its own Repeat command; pasting from the tray; three-finger swipes on the notch; pressing Clock's buttons for its timer and stopwatch; taking away macOS's own alert when a timer rings, to ring in its place, and its Low Battery notification; hiding macOS's own banner for AirPods under the menu bar; taking macOS's own timer out of the menu bar while the notch shows it; finding the button in the menu bar that stops a screen recording, and pressing it; telling a paused voice memo from one that's done, and pressing Voice Memos' **Done**; and switching to the tab that's playing in other browsers |
 | `Screen & System Audio Recording` (screen) | Reading macOS's popup for a FaceTime or phone call during one: the caller, the time, its waveform and where its buttons are. macOS also asks to let Glance skip its window picker: only that popup is read |
 | `Microphone` | Your half of the waveform on calls in other apps, during those calls, and the waveform of a voice memo while Voice Memos records it |
+| `Bluetooth` | Reading your AirPods' listening mode, to show it in the notch as it changes. Glance changes nothing on your devices. Asked for on the welcome tour's last page, or in **Settings > General > Permissions** |
 | `Contacts` | The caller's photo during a FaceTime or phone call, asked for during your first one. Glance looks up only the name or number macOS's popup shows; if two of your contacts have that name, it tells them apart by the picture in the popup. Without it, the caller shows their initial |
 | `Paste from Other Apps` (only if macOS asks) | Keeping what you copy in the tray |
 

@@ -451,6 +451,11 @@ private struct PermissionsPage: View {
                 state: permissions.accessibility, allow: permissions.requestAccessibility,
                 openSettings: { permissions.openSettings(for: \.accessibility) })
             PermissionRow(
+                symbol: "airpods.pro", title: String(localized: "Bluetooth"),
+                detail: String(localized: "To show AirPods changing their listening mode, read from the AirPods. Glance changes nothing."),
+                state: permissions.bluetooth, allow: permissions.requestBluetooth,
+                openSettings: { permissions.openSettings(for: \.bluetooth) })
+            PermissionRow(
                 symbol: "battery.100percent", title: String(localized: "Power control"),
                 detail: String(localized: "One-time approval for the battery button. Changes only Low Power Mode."),
                 state: permissions.powerControl, allow: PowerModeSettings.requestAuthorization,

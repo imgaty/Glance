@@ -70,6 +70,8 @@
 	<string>Glance changes shuffle, repeat, favorites and volume in Music and Spotify, and finds the browser tab that's playing. It also reads each shortcut's color and icon from Shortcuts.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Glance measures how loud the playing app is to move the waveform, and turns apps down for the volume slider. Nothing is recorded or leaves your Mac.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Glance reads your AirPods&apos; listening mode to show it in the notch as it changes. It changes nothing on your devices.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Glance looks up who&apos;s calling in your contacts during FaceTime and phone calls only, to show their photo. Nothing leaves your Mac.</string>
 	<key>NSMicrophoneUsageDescription</key>

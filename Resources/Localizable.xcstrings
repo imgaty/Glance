@@ -12523,6 +12523,214 @@
         }
       }
     },
+    "Bluetooth": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "بلوتوث"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ब्लूटूथ"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "บลูทูธ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bluetooth"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "蓝牙"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "藍牙"
+          }
+        }
+      }
+    },
     "Blur": {
       "localizations": {
         "ar": {
@@ -89233,6 +89441,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "用於從托盤貼上、滑動到托盤、按下時鐘和 AirDrop 的按鈕、尋找正在播放歌曲的標籤頁，以及隱藏 macOS 本身的橫幅和計時器。"
+          }
+        }
+      }
+    },
+    "To show AirPods changing their listening mode, read from the AirPods. Glance changes nothing.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "لعرض تغيّر وضع الاستماع في AirPods، كما تقرأه من AirPods. لا يغيّر Glance أي شيء."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Per mostrar el canvi del mode d’escolta dels AirPods, llegit dels mateixos AirPods. Glance no canvia res."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "K zobrazení změny režimu poslechu AirPods, načtené přímo z AirPods. Glance nic nemění."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "For at vise, når AirPods skifter lyttetilstand, læst fra AirPods. Glance ændrer intet."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Um zu zeigen, wenn AirPods ihren Hörmodus wechseln, direkt von den AirPods gelesen. Glance ändert nichts."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Για να εμφανίζεται η αλλαγή της λειτουργίας ακρόασης των AirPods, όπως διαβάζεται από τα AirPods. Το Glance δεν αλλάζει τίποτα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Para mostrar cuándo los AirPods cambian de modo de escucha, leído desde los propios AirPods. Glance no cambia nada."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Näyttää, kun AirPodsien kuuntelutila vaihtuu, AirPodseista luettuna. Glance ei muuta mitään."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pour afficher le changement de mode d’écoute des AirPods, lu depuis les AirPods. Glance ne modifie rien."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "כדי להציג את שינוי מצב ההאזנה של AirPods, כפי שנקרא מה-AirPods. Glance לא משנה דבר."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "AirPods का सुनने का मोड बदलने पर उसे दिखाने के लिए, सीधे AirPods से पढ़ा जाता है। Glance कुछ नहीं बदलता।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Za prikaz promjene načina slušanja AirPodsa, očitano s AirPodsa. Glance ništa ne mijenja."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Az AirPods hallgatási módjának változását mutatja, közvetlenül az AirPodsból olvasva. A Glance semmit sem módosít."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Untuk menampilkan perubahan mode mendengarkan AirPods, dibaca dari AirPods. Glance tidak mengubah apa pun."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Per mostrare il cambio di modalità di ascolto degli AirPods, letto dagli AirPods. Glance non modifica nulla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "AirPodsのリスニングモードの変化を表示するため、AirPodsから読み取ります。Glanceは何も変更しません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "AirPods의 듣기 모드 변경을 표시하기 위해 AirPods에서 읽어옵니다. Glance는 아무것도 변경하지 않습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Untuk menunjukkan perubahan mod mendengar AirPods, dibaca daripada AirPods. Glance tidak mengubah apa-apa."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "For å vise når AirPods bytter lyttemodus, lest fra AirPods. Glance endrer ingenting."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Om te tonen wanneer AirPods van luistermodus wisselen, uitgelezen van de AirPods. Glance verandert niets."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aby pokazywać zmianę trybu słuchania AirPods, odczytaną z AirPods. Glance niczego nie zmienia."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Para mostrar a mudança do modo de audição dos AirPods, lido dos próprios AirPods. O Glance não altera nada."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Para mostrar a mudança do modo de audição dos AirPods, lido dos próprios AirPods. O Glance não altera nada."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pentru a arăta schimbarea modului de ascultare al AirPods, citit de pe AirPods. Glance nu modifică nimic."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Чтобы показывать смену режима прослушивания AirPods, считанную с самих AirPods. Glance ничего не меняет."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Na zobrazenie zmeny režimu počúvania AirPods, načítanej priamo z AirPods. Glance nič nemení."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Za prikaz spremembe načina poslušanja AirPods, prebrano iz AirPods. Glance ničesar ne spreminja."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "För att visa när AirPods byter lyssningsläge, läst från AirPods. Glance ändrar ingenting."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "เพื่อแสดงการเปลี่ยนโหมดการฟังของ AirPods โดยอ่านจาก AirPods Glance ไม่เปลี่ยนแปลงสิ่งใด"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "AirPods’un dinleme modunun değiştiğini göstermek için AirPods’tan okunur. Glance hiçbir şeyi değiştirmez."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Щоб показувати зміну режиму прослуховування AirPods, зчитану з самих AirPods. Glance нічого не змінює."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Để hiển thị khi AirPods đổi chế độ nghe, đọc trực tiếp từ AirPods. Glance không thay đổi gì."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "从 AirPods 读取，以显示 AirPods 聆听模式的变化。Glance 不会更改任何内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "從 AirPods 讀取，以顯示 AirPods 聆聽模式的變化。Glance 不會變更任何內容。"
           }
         }
       }

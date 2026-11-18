@@ -38,7 +38,8 @@
 
 - Added AirPods changing their listening mode, as Apple's own island shows it:
   the AirPods beside the camera and the mode's symbol, for Noise Cancellation,
-  Transparency, Adaptive or Off.
+  Transparency, Adaptive or Off. Glance reads the mode from the AirPods, asking
+  for `Bluetooth` on the welcome tour or in Settings.
 
 - Changed opened activities to the iPhone's own sizes for their round buttons,
   pictures and words, their words standing just under the camera, and each
@@ -75,6 +76,10 @@
 - Changed `Haptic feedback` to the trackpad's alignment tap when something drops
   onto AirDrop or the notch turns between the player and the tray, and to its
   plain tap everywhere else.
+
+- Fixed a hidden second System Settings opening again and again, each time music
+  paused, something was announced or the notch opened elsewhere, to switch
+  macOS's own Now Playing pill on and off.
 
 - Fixed the `Work`, `Gaming` and `Mindfulness` Focus changes never showing, and
   Focus symbols missing beside the camera.

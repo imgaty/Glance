@@ -34,4 +34,13 @@ struct ListeningModeTests {
         // Every mode's symbol draws, private ones included.
         for mode in ListeningMode.allCases { #expect(SystemSymbol.exists(mode.symbol)) }
     }
+
+    @Test("The AirPods' own numbers for each mode, over Bluetooth")
+    func bluetoothValues() {
+        #expect(ListeningMode(bluetooth: 1) == .off)
+        #expect(ListeningMode(bluetooth: 2) == .noiseCancellation)
+        #expect(ListeningMode(bluetooth: 3) == .transparency)
+        #expect(ListeningMode(bluetooth: 4) == .adaptive)
+        #expect(ListeningMode(bluetooth: 0) == nil)
+    }
 }
