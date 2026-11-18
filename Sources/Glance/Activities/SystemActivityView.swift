@@ -100,7 +100,7 @@ struct SystemActivityView: View {
                     .id(alert.id)
                     .transition(IslandMotion.fade)
             } else if let alert = shownAlert, case .timerDone(let length, let name) = alert.content {
-                TimerDoneView(length: length, name: name, restingHeight: restingHeight, wing: wing, hovered: hoveredButton)
+                TimerDoneView(length: length, name: name, restingHeight: restingHeight, hovered: hoveredButton)
                     .modifier(IslandReveal(hidden: self.alert == nil))
                     .id(alert.id)
                     .transition(IslandMotion.fade)
@@ -429,13 +429,15 @@ struct SystemActivityView: View {
             return min(max(device, gap + end), maxWing)
         }
         if case .incomingCall(let call) = alert.content {
-            return IncomingCallView.wing(for: call, restingHeight: restingHeight)
+            return IncomingCallView.wing(for: call, restingHeight: restingHeight, closedWidth: closedWidth)
         }
         if case .lowBattery(let percent) = alert.content {
             return LowBatteryLayout.wing(percent: percent, restingHeight: restingHeight, closedWidth: closedWidth)
         }
         // As tall as the Alarm, as wide as its words or its buttons.
-        if case .timerDone(let length, let name) = alert.content { return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight) }
+        if case .timerDone(let length, let name) = alert.content {
+            return TimerDoneView.wing(length: length, name: name, restingHeight: restingHeight, closedWidth: closedWidth)
+        }
         if case .alarm(let title) = alert.content {
             return AlarmRingingView.wing(for: AlarmShown(alarm: .init(id: "", title: title, actions: [.snooze, .stop])), restingHeight: restingHeight, closedWidth: closedWidth)
         }

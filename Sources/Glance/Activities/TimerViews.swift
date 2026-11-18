@@ -531,8 +531,6 @@ struct TimerDoneView: View {
     /// Timer, or the label it was given in Clock.
     var name = String(localized: "Timer")
     let restingHeight: CGFloat
-    /// Each wing's width beside the camera (see `wing(length:name:restingHeight:)`).
-    var wing: CGFloat = 0
     /// Which button the pointer is on.
     let hovered: AlertButton?
     var actions = ClockActions()
@@ -545,9 +543,9 @@ struct TimerDoneView: View {
 
     var body: some View {
         let h = restingHeight
-        let gap = LiveActivityView.cameraGap
         let nameEdge = Self.nameEdge(h)
-        // Each from its end, as far as from the top and bottom; to spare, beside the camera.
+        // The name as high as it goes under the camera, running on beneath it up to the buttons,
+        // which stand beside it.
         ZStack {
             VStack(alignment: .leading, spacing: 1) {
                 Text(name)
@@ -561,9 +559,10 @@ struct TimerDoneView: View {
             }
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .frame(width: max(wing - nameEdge - gap, 0), alignment: .leading)
-                .padding(.leading, nameEdge)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .firstBaseline(Self.nameBaseline(name, restingHeight: h))
+                .padding(.leading, nameEdge)
+                .padding(.trailing, TimerLayout.circleGap(h) + Self.buttonsWidth(h) + TimerLayout.circleEdge(h))
                 .accessibilityHidden(true)
             HStack(spacing: TimerLayout.circleGap(h)) {
                 IslandCircle(height: h, tint: TimerLayout.ink, highlighted: hovered == .again && repeatState != .pending, side: TimerLayout.circle(h)) {
@@ -595,9 +594,9 @@ struct TimerDoneView: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// Each wing: as wide as the wider side, the name or the buttons, each from its end. A long
-    /// label is cut short at its limit.
-    static func wing(length: TimeInterval, name: String = String(localized: "Timer"), restingHeight h: CGFloat) -> CGFloat {
+    /// Each wing: the buttons against the camera, the name running on beneath it to them, as wide as
+    /// the iPhone's island, or wider for the name, up to its limit, beyond which it's cut short.
+    static func wing(length: TimeInterval, name: String = String(localized: "Timer"), restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let titleWidth = min(
             ceil((name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: TimerLayout.doneSize(h), weight: .medium)]).width) + 2,
@@ -608,13 +607,21 @@ struct TimerDoneView: View {
             ceil(($0 as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: statusSize, weight: .medium)]).width) + 2
         }.max() ?? 0
         let words = max(titleWidth, statusWidth)
-        let left = nameEdge(h) + words + gap
-        let right = gap + TimerLayout.circle(h) * 2 + TimerLayout.circleGap(h) + TimerLayout.circleEdge(h)
-        return max(left, right)
+        let right = buttonsWidth(h) + TimerLayout.circleEdge(h)
+        let across = nameEdge(h) + words + TimerLayout.circleGap(h) + right
+        return max(gap + right, (across - closedWidth) / 2, (ActivityRowMetrics.island(h) - closedWidth) / 2)
     }
 
     /// From the left end to its name, as iOS 27's.
     static func nameEdge(_ h: CGFloat) -> CGFloat { TimerLayout.doneEdge(h) }
+
+    /// Where the name stands: as high as it goes under the camera.
+    static func nameBaseline(_ name: String, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([name], font: .systemFont(ofSize: TimerLayout.doneSize(h), weight: .medium), restingHeight: h)
+    }
+
+    /// Its two buttons, side by side.
+    static func buttonsWidth(_ h: CGFloat) -> CGFloat { TimerLayout.circle(h) * 2 + TimerLayout.circleGap(h) }
 }
 
 /// The buttons a timer that's done, and Low Battery, have in the closed notch.

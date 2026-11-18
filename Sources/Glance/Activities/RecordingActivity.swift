@@ -210,14 +210,25 @@ enum RecordingLook {
         return max(tall * openWidth, camera + 2 * beside).rounded(.up)
     }
 
-    /// Opened to the screen recording: the dot and the time beside the camera, its name running on
-    /// under it, and on the other side, the same room for the button.
+    /// Opened to the screen recording: as wide as the iPhone's island, or wider where the camera
+    /// needs it, the button beside it and the dot, the time and the name, as high as they go under
+    /// it, running on beneath it, the time however long it reads.
     @MainActor
     static func screenWidth(restingHeight h: CGFloat, camera: CGFloat, at date: Date = .now, length: TimeInterval = 0) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let left = PlayerLayout.padding + firstLineWidth(length) + gap
-        let right = gap + TimerLayout.content(h) + TimerLayout.buttonEdge(h)
-        return camera + max(left, right) * 2
+        let right = TimerLayout.content(h) + TimerLayout.buttonEdge(h)
+        let line = PlayerLayout.padding + firstLineWidth(length) + gap + right
+        return max(ActivityRowMetrics.island(h), camera + (gap + right) * 2, line).rounded(.up)
+    }
+
+    /// Where the screen recording's first line, its time, stands: as high as it goes under the camera.
+    static func screenBaseline(_ reading: String, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([reading], font: .monospacedDigitSystemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
+    }
+
+    /// Where Voice Memos' time stands: as high as it goes under the camera.
+    static func memoBaseline(_ reading: String, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([reading], font: .monospacedDigitSystemFont(ofSize: NotchType.size * memoTime, weight: .semibold), restingHeight: h)
     }
 
     /// The dot and the time, as long as it reads then.
@@ -703,8 +714,9 @@ final class MemoBarsView: NSView {
 // MARK: - Opened
 
 /// Opened to a recording, as the iPhone's expands. Voice Memos: the waveform from the left end, the
-/// red time and the button to stop it at the right. The screen: its red dot and time beside the
-/// camera, its name under them, running on under the camera, and the button to stop it. What shows
+/// red time, as high as it goes under the camera, and the button to stop it at the right. The
+/// screen: its red dot and time, and its name under them, as high as they go under the camera,
+/// running on beneath it, and the button to stop it. What shows
 /// beside the camera slides out to its place here, as the Timer's does.
 struct ExpandedRecordingView: View {
     let recording: Recording
@@ -770,7 +782,11 @@ struct ExpandedRecordingView: View {
                 ?? (h * RecordingLook.waveEdge - edge - spread), height: rise)
         let text = LiveActivityView.textSize(for: h)
         let size = NotchType.size * RecordingLook.memoTime
-        let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.memoTimeEdge(h), height: rise)
+        // The time as high as it goes under the camera, growing out of the closed notch's middle.
+        let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
+        let baseline = RecordingLook.memoBaseline(Recording.reading(memo.length(), memo: true), restingHeight: h)
+        let timeMiddle = baseline - (font.ascender + font.descender) / 2
+        let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.memoTimeEdge(h), height: rise + tall / 2 - timeMiddle)
         Group {
             if canControl {
                 MemoWaveform(
@@ -794,8 +810,8 @@ struct ExpandedRecordingView: View {
             .fixedSize()
             .modifier(GrowsOut(out: grows || !trailingGrows, scale: text / size, anchor: .trailing, from: timeFrom))
             .modifier(GrownFade(shown: revealed, grows: closedWidth != nil && trailingGrows))
+            .firstBaseline(baseline, alignment: .trailing)
             .padding(.trailing, Self.memoTimeEdge(h))
-            .frame(maxWidth: .infinity, alignment: .trailing)
         StopRecordingButton(memo: true, h: h, canControl: canControl) {
             if let stopAction { stopAction() } else { memoWatch.stop() }
         }
@@ -821,24 +837,30 @@ struct ExpandedRecordingView: View {
         let wordsWidth = max(width - edge - TimerLayout.buttonEdge(h) - TimerLayout.content(h) - edge, 0)
         let dot = NotchType.size * RecordingLook.openDot
         let closedDot = h * RecordingLook.dot
+        // The first line as high as it goes under the camera.
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NotchType.size, weight: .semibold)
+        let baseline = RecordingLook.screenBaseline(Recording.reading(screen.length(), memo: false), restingHeight: h)
+        let lineMiddle = baseline - (font.ascender + font.descender) / 2
         // The dot slides out from beside the camera to before the time, the same size: down from
         // the first line to the closed notch's middle.
         let dotFrom = CGSize(
             width: bubbleCenter.map { $0 + width / 2 - edge - closedDot / 2 }
-                ?? (LiveActivityView.concentric(closedDot, in: h) - edge - spread), height: rise + Self.firstLineRise(h))
+                ?? (LiveActivityView.concentric(closedDot, in: h) - edge - spread), height: rise + TimerLayout.tallHeight(h) / 2 - lineMiddle)
         VStack(alignment: .leading, spacing: 0) {
-            // Recording, the dot and the time fade and come back together, as on the iPhone.
-            HStack(spacing: NotchType.size * RecordingLook.openDotGap) {
-                Circle().fill(RecordingLook.screenRed)
-                    .frame(width: dot, height: dot)
-                    .modifier(GrowsOut(out: grows, scale: closedDot / dot, anchor: .leading, from: dotFrom))
-                    .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
-                ScreenTime(screen: screen)
-                    .font(NotchType.title.monospacedDigit())
-                    .foregroundStyle(RecordingLook.screenRed)
-                    .modifier(IslandReveal(hidden: !revealed))
-            }
-            .modifier(RecordingBlink(recording: screen.isRecording, faded: !screen.isRecording && !screen.isSaved, shown: revealed))
+            // Recording, the dot and the time fade and come back together, as on the iPhone. The dot
+            // stands on the time's line, so the line is the time's, by its baseline.
+            ScreenTime(screen: screen)
+                .font(NotchType.title.monospacedDigit())
+                .foregroundStyle(RecordingLook.screenRed)
+                .modifier(IslandReveal(hidden: !revealed))
+                .padding(.leading, dot + NotchType.size * RecordingLook.openDotGap)
+                .overlay(alignment: .leading) {
+                    Circle().fill(RecordingLook.screenRed)
+                        .frame(width: dot, height: dot)
+                        .modifier(GrowsOut(out: grows, scale: closedDot / dot, anchor: .leading, from: dotFrom))
+                        .modifier(GrownFade(shown: revealed, grows: closedWidth != nil || bubbleCenter != nil))
+                }
+                .modifier(RecordingBlink(recording: screen.isRecording, faded: !screen.isRecording && !screen.isSaved, shown: revealed))
             Text(title)
                 .font(NotchType.title)
                 .foregroundStyle(.white)
@@ -851,8 +873,8 @@ struct ExpandedRecordingView: View {
         }
         .frame(width: wordsWidth, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+        .firstBaseline(baseline)
         .padding(.leading, edge)
-        .frame(maxWidth: .infinity, alignment: .leading)
         // Being saved, the spinner beside the camera grows into the ring around the square.
         let ringFrom = CGSize(width: spread - SystemActivityView.ringEdge(h) + TimerLayout.buttonEdge(h), height: rise)
         ScreenRecordingButton(
@@ -870,8 +892,6 @@ struct ExpandedRecordingView: View {
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
-    /// How far above the open notch's middle the first line's middle is.
-    static func firstLineRise(_ h: CGFloat) -> CGFloat { NotchType.size * RecordingLook.lines / 2 }
 }
 
 /// Recording, what it's on fades and comes back; counting down or being saved, it stays faded; saved,

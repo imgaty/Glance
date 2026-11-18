@@ -77,11 +77,12 @@ final class LowPowerMode: ObservableObject {
 }
 
 /// Low Battery as the iPhone's Dynamic Island shows it, measured from it, by the island's height,
-/// as tall as the Alarm: its level beside the camera and the offer to turn on Low Power Mode under it,
-/// and at the right end a capsule holding a large battery, a ripple running out of its level. Its colors are the iPhone's own, in Display P3: red, and yellow
-/// once Low Power Mode is on.
+/// as tall as the Alarm: its level, and the offer to turn on Low Power Mode under it, as high as they
+/// go under the camera, and at the right end a capsule holding a large battery, a ripple running out
+/// of its level. Its colors are the iPhone's own, in Display P3: red, and yellow once Low Power Mode
+/// is on.
 enum LowBatteryLayout {
-    /// From the left end to the words: their letters as far from it as from the top and bottom.
+    /// From the left end to the words.
     static let wordsEdge: CGFloat = 0.75
     /// From the words to the capsule, at the least.
     static let wordsGap: CGFloat = 0.33
@@ -171,14 +172,19 @@ enum LowBatteryLayout {
         ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)]).width)
     }
 
-    /// Each wing: the capsule, or the level, against the camera, or wider, should the offer, running
-    /// on beneath the camera, otherwise reach the capsule.
+    /// Each wing: the capsule against the camera, the words running on beneath it, as wide as the
+    /// iPhone's island, or wider should the words otherwise not reach the capsule.
     @MainActor
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let right = capsule(h).width + PlayerLayout.padding
-        let left = h * wordsEdge + width(LowBatteryView.title(percent))
-        let words = [LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure].map { width($0) }.max() ?? 0
-        return max(LiveActivityView.cameraGap + max(left, right), (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
+        let words = ([LowBatteryView.title(percent), LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure].map { width($0) }.max() ?? 0)
+        let island = ActivityRowMetrics.island(h)
+        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2, (island - closedWidth) / 2)
+    }
+
+    /// Where the level's line stands: as high as it goes under the camera.
+    static func wordsBaseline(percent: Int, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([LowBatteryView.title(percent)], font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
     }
 }
 
@@ -226,10 +232,10 @@ struct LowBatteryView: View {
             .font(NotchType.title)
             .lineLimit(1)
             .fixedSize()
-            .padding(.leading, h * layout.wordsEdge)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: TimerLayout.tallHeight(h))
             .accessibilityElement(children: .combine)
+            .firstBaseline(layout.wordsBaseline(percent: percent, restingHeight: h))
+            .padding(.leading, h * layout.wordsEdge)
+            .frame(height: TimerLayout.tallHeight(h))
             ZStack {
                 if on {
                     capsule(h, on: true).transition(layout.change)
