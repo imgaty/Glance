@@ -217,7 +217,7 @@ struct ShortcutRunView: View {
 
     @MainActor
     static func width(for shown: ShortcutShown, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
-        ActivityRowLayout.width(title: shown.run.shortcut.name, detail: "", buttons: 1, metrics: .shortcut(h), restingHeight: h, camera: camera)
+        ActivityRowLayout.width(detail: "", buttons: 1, metrics: .shortcut(h), restingHeight: h, camera: camera)
     }
 
     static func height(restingHeight h: CGFloat) -> CGFloat { ActivityRowMetrics.shortcut(h).height }

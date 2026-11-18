@@ -301,15 +301,13 @@ struct MusicRecognitionActivityView: View {
 
     private static func trailing(for state: MusicRecognitionActivity.State) -> [Action] { actions(for: state).filter { $0 != .openSong } }
 
-    /// While it listens, as wide as the longest of its words, so the notch holds still as they change.
+    /// As wide as the iPhone's island: its words run on under the camera, so the notch holds still as
+    /// they change.
     @MainActor
     static func width(for state: MusicRecognitionActivity.State, restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
-        let titles = state == .recognizing ? [0, ShazamLook.workingAfter, ShazamLook.tryingAfter].map(listening(after:)) : [title(for: state)]
-        return titles.map {
-            ActivityRowLayout.width(
-                title: $0, detail: detail(for: state), buttons: trailing(for: state).count, extra: state.isWorking ? waveRoom(h) : 0,
-                metrics: metrics(for: state, restingHeight: h), restingHeight: h, camera: camera)
-        }.max() ?? 0
+        ActivityRowLayout.width(
+            detail: detail(for: state), buttons: trailing(for: state).count, extra: state.isWorking ? waveRoom(h) : 0,
+            metrics: metrics(for: state, restingHeight: h), restingHeight: h, camera: camera)
     }
 
     /// As the iPhone measures it: "No song found." on its own, taller row.

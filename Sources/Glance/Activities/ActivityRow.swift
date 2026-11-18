@@ -9,9 +9,9 @@ import AppKit
 import SwiftUI
 
 /// An activity opened in one row, as iOS 27 opens Shortcuts and Music Recognition: a picture at
-/// the left end, its words beside the camera, round buttons at the right end, each where the
-/// iPhone puts it. Measured from the iPhone by the island's height beside the camera, so the
-/// notch's height scales them all.
+/// the left end, round buttons at the right end, each where the iPhone puts it, and its words set
+/// just under the camera, so they run on beneath it. Measured from the iPhone by the island's height
+/// beside the camera, so the notch's height scales them all.
 struct ActivityRowMetrics {
     /// The row's height.
     var height: CGFloat
@@ -41,6 +41,9 @@ struct ActivityRowMetrics {
 
     /// By the iPhone's island height beside the camera, 36.7 points.
     static func scale(_ h: CGFloat) -> CGFloat { h / 36.7 }
+
+    /// The iPhone's island opened to any of them is 374 points wide.
+    static func island(_ h: CGFloat) -> CGFloat { 374 * scale(h) }
 
     /// Music Recognition listening, measured on iOS 27: 374 by 84 points, a 51-point disc 18.2 in,
     /// "Listening…" in 16-point semibold from 81.5, 51-point buttons 16 from the end.
@@ -74,8 +77,8 @@ struct ActivityRowMetrics {
 }
 
 enum ActivityRowLayout {
-    /// The most a name takes beside the camera before it's cut short, as the Timer's label.
-    static func titleLimit(_ h: CGFloat) -> CGFloat { h * TimerLayout.titleLimit }
+    /// How far under the camera the words' line starts.
+    static let underCamera: CGFloat = 1
     /// The most the row grows for its line under the name; past this it's cut short, and said in full
     /// under the pointer and to VoiceOver.
     static let widest: CGFloat = 520
@@ -95,21 +98,38 @@ enum ActivityRowLayout {
         ceil((text as NSString).size(withAttributes: [.font: font]).width) + 1
     }
 
-    /// Either side of the camera as wide as the wider needs: the picture and the name on the left,
-    /// against the camera, the buttons on the right; wider, up to a limit, for the line under the name
-    /// to run on under the camera as far as the buttons. `extra` is what stands before the buttons
-    /// that isn't one, as Music Recognition's waveform.
+    /// As wide as the iPhone's island, or wider where the camera needs it: what stands as high as the
+    /// camera, the picture at the left and the buttons at the right, sits beside it, and the words run
+    /// on beneath it, so a long name is cut short, as the iPhone's is, rather than widening the notch.
+    /// A line under the name widens it, up to a limit, to run as far as the buttons. `extra` is what
+    /// stands before the buttons that isn't one, as Music Recognition's waveform.
     @MainActor
     static func width(
-        title: String, detail: String, buttons: Int, extra: CGFloat = 0, metrics m: ActivityRowMetrics, restingHeight h: CGFloat, camera: CGFloat
+        detail: String, buttons: Int, extra: CGFloat = 0, metrics m: ActivityRowMetrics, restingHeight h: CGFloat, camera: CGFloat
     ) -> CGFloat {
         let gap = LiveActivityView.cameraGap
-        let left = m.wordsStart + min(textWidth(title, font: m.titleNSFont), titleLimit(h)) + gap
+        let left = m.pictureSide > 0 ? m.pictureEdge + m.pictureSide + gap : 0
         let right = gap + extra + buttonsWidth(buttons, m) + m.buttonEdge
         let around = camera + 2 * max(left, right)
-        let line = m.wordsStart + textWidth(detail, weight: .regular) + (buttons > 0 ? m.buttonGap + extra + buttonsWidth(buttons, m) : 0) + m.buttonEdge
-        return max(around, min(line, widest))
+        let line = m.wordsStart + textWidth(detail, weight: .regular) + trailingRoom(buttons: buttons, extra: extra, m) + m.buttonEdge
+        return max(ActivityRowMetrics.island(h), around, detail.isEmpty ? 0 : min(line, widest)).rounded(.up)
     }
+
+    /// What stands at the right end before its edge: the buttons, what's before them, and the gap
+    /// the words keep from them.
+    static func trailingRoom(buttons: Int, extra: CGFloat, _ m: ActivityRowMetrics) -> CGFloat {
+        buttons > 0 || extra > 0 ? m.buttonGap + extra + buttonsWidth(buttons, m) : 0
+    }
+
+    /// How far below the row's middle the words go: as far as the iPhone's, or further, for their top
+    /// to clear the camera.
+    @MainActor
+    static func drop(title: Bool = true, detail: Bool, metrics m: ActivityRowMetrics, restingHeight h: CGFloat) -> CGFloat {
+        let lines = (title ? lineHeight(m.titleNSFont) : 0) + (detail ? lineHeight(NSFont.systemFont(ofSize: NotchType.size)) : 0)
+        return max(m.wordsDrop, h + underCamera - (m.height - lines) / 2)
+    }
+
+    static func lineHeight(_ font: NSFont) -> CGFloat { font.ascender - font.descender + font.leading }
 }
 
 struct ActivityRow<Picture: View, Buttons: View>: View {
@@ -132,11 +152,8 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
 
     var body: some View {
         let m = metrics
-        let gap = LiveActivityView.cameraGap
-        let side = max((width - camera) / 2, 0)
-        let titleRoom = max(side - m.wordsStart - gap, 0)
-        let buttonsRoom = buttons > 0 ? m.buttonGap + extra + ActivityRowLayout.buttonsWidth(buttons, m) : 0
-        let lineRoom = max(width - m.wordsStart - buttonsRoom - m.buttonEdge, 0)
+        // The words run on under the camera, as far as what stands at the right end.
+        let room = max(width - m.wordsStart - ActivityRowLayout.trailingRoom(buttons: buttons, extra: extra, m) - m.buttonEdge, 0)
         ZStack {
             picture
                 .frame(width: m.pictureSide, height: m.pictureSide)
@@ -146,13 +163,13 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
                 Text(title)
                     .font(m.titleFont)
                     .foregroundStyle(titleColor)
-                    .frame(maxWidth: titleRoom, alignment: .leading)
+                    .frame(maxWidth: room, alignment: .leading)
                 // A name alone, as the iPhone's, sits on the middle.
                 if !detail.isEmpty {
                     Text(detail)
                         .font(NotchType.detail)
                         .foregroundStyle(NotchType.detailColor)
-                        .frame(maxWidth: lineRoom, alignment: .leading)
+                        .frame(maxWidth: room, alignment: .leading)
                 }
             }
             .lineLimit(1)
@@ -160,7 +177,7 @@ struct ActivityRow<Picture: View, Buttons: View>: View {
             .help(explanation ?? detail)
             .accessibilityElement(children: .combine)
             .accessibilityHint(explanation ?? "")
-            .offset(y: m.wordsDrop)
+            .offset(y: ActivityRowLayout.drop(detail: !detail.isEmpty, metrics: m, restingHeight: restingHeight))
             .padding(.leading, m.wordsStart)
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: m.buttonGap) { trailing }
