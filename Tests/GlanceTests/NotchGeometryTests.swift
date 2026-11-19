@@ -51,6 +51,34 @@ struct GlassLookTests {
         let steps = stride(from: 0.0, through: 1, by: 0.05).map(GlassLook.black)
         #expect(zip(steps, steps.dropFirst()).allSatisfy { $0 < $1 })
     }
+
+    @Test("The Liquid Glass slider has black on the left and clear on the right")
+    func glassSliderEnds() {
+        #expect(GlassSlider.position(darkness: 1) == 0)
+        #expect(GlassSlider.position(darkness: 0) == 1)
+        #expect(GlassSlider.darkness(position: 0) == 1)
+        #expect(GlassSlider.darkness(position: 1) == 0)
+    }
+
+    @Test("A Liquid Glass setting saved before keeps its look", arguments: [0.0, 0.1, 0.25, 0.5, 0.73, 1])
+    func glassSliderKeepsSaved(darkness: Double) {
+        // What's stored is still the darkness: read through the slider and back, it's unchanged.
+        let position = GlassSlider.position(darkness: darkness)
+        #expect(isClose(GlassSlider.darkness(position: position), darkness))
+        #expect(isClose(GlassLook.black(GlassSlider.darkness(position: position)), GlassLook.black(darkness)))
+    }
+
+    @Test("Further right on the Liquid Glass slider is clearer")
+    func glassSliderClearerToTheRight() {
+        let looks = stride(from: 0.0, through: 1, by: 0.05).map { GlassLook.black(GlassSlider.darkness(position: $0)) }
+        #expect(zip(looks, looks.dropFirst()).allSatisfy { $0 > $1 })
+    }
+
+    @Test("The Liquid Glass slider stays within its ends", arguments: [-1.0, -0.01, 1.01, 2])
+    func glassSliderClamped(value: Double) {
+        #expect((0...1).contains(GlassSlider.position(darkness: value)))
+        #expect((0...1).contains(GlassSlider.darkness(position: value)))
+    }
 }
 
 /// The notch's corners, closed and open.
@@ -160,8 +188,38 @@ struct PlayerLayoutTests {
     @Test("Cover on top, around the usual notch")
     func topSize() {
         // Wide enough to keep the cover clear of the camera: 185 + 2 × (14 + 60 + 8) = 349, made even.
-        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 12 + 16 + 8 + 40 + 14.
-        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 164))
+        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 4 + 16 + 8 + 40 + 14.
+        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 156))
+    }
+
+    @Test(
+        "The timeline hangs as far under the artist in both layouts",
+        arguments: [CGSize(width: 185, height: 32), CGSize(width: 100, height: 20), CGSize(width: 185, height: 60)])
+    func sameGapUnderArtist(camera: CGSize) {
+        let top = NowPlayingView.rows(.top, closed: camera)
+        let side = NowPlayingView.rows(.side, closed: camera)
+        #expect(top.timeline - top.header == side.timeline - side.header)
+        #expect(top.timeline - (top.header + PlayerLayout.headerHeight) == PlayerLayout.rowGap)
+    }
+
+    @Test("Around the usual notch, what's beside the cover ends on its bottom edge")
+    func besideCoverEndsWithIt() {
+        let top = NowPlayingView.rows(.top, closed: closed)
+        let side = NowPlayingView.rows(.side, closed: closed)
+        #expect(top.header + PlayerLayout.headerHeight == PlayerLayout.top.artwork)
+        #expect(side.controls + NowPlayingView.hitbox == PlayerLayout.side.artwork)
+        // Clear of the camera: 32 + 4 under the top, less the padding.
+        #expect(top.header >= 22 && side.header == 22)
+    }
+
+    @Test("Each layout's rows fit the notch it opens to", arguments: PlayerLayout.allCases)
+    func rowsFit(layout: PlayerLayout) {
+        for camera in [CGSize(width: 185, height: 32), CGSize(width: 100, height: 20), CGSize(width: 185, height: 60)] {
+            let rows = NowPlayingView.rows(layout, closed: camera)
+            let height = layout.size(closed: camera).height
+            #expect(rows.controls + NowPlayingView.hitbox + PlayerLayout.padding * 2 <= height)
+            #expect(rows.controls >= rows.timeline + PlayerLayout.timelineHeight)
+        }
     }
 
     @Test("Cover on the side, around the usual notch")

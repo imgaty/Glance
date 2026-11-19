@@ -9,7 +9,7 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// How the notch looks: Liquid Glass from clear to black, how much it blurs what's behind it, the
+/// How the notch looks: Liquid Glass from black to clear, how much it blurs what's behind it, the
 /// accent color, and the background while music plays. With more than one display, each keeps its
 /// own look unless they share one; the preview above shows the display being edited.
 struct AppearancePage: View {
@@ -55,6 +55,14 @@ struct AppearancePage: View {
     }
 }
 
+/// The Liquid Glass slider runs from black on the left to clear on the right, more glass the further
+/// right it goes. The setting it changes is still the glass's darkness, from 0 for clear to 1 for
+/// black, so a look chosen before reads the same.
+enum GlassSlider {
+    static func position(darkness: Double) -> Double { 1 - min(max(darkness, 0), 1) }
+    static func darkness(position: Double) -> Double { 1 - min(max(position, 0), 1) }
+}
+
 /// The look's settings for one display, or the shared one.
 private struct LookEditor: View {
     let display: String
@@ -83,9 +91,11 @@ private struct LookEditor: View {
                 Text("Uses the style set in Appearance settings.")
             }
             if !followsSystem {
+                // More glass to the right; what's kept is still how dark it is.
                 slider(
-                    $darkness, title: String(localized: "Liquid Glass"), from: "capsule.on.rectangle.liquid.glass", String(localized: "Clear"), to: "capsule.on.rectangle.fill",
-                    String(localized: "Black"))
+                    Binding(get: { GlassSlider.position(darkness: darkness) }, set: { darkness = GlassSlider.darkness(position: $0) }),
+                    title: String(localized: "Liquid Glass"), from: "capsule.on.rectangle.fill", String(localized: "Black"),
+                    to: "capsule.on.rectangle.liquid.glass", String(localized: "Clear"))
                 slider($blur, title: String(localized: "Blur"), from: "circle.fill", String(localized: "None"), to: "circle.fill", String(localized: "Full"), highBlur: 2)
             }
         } footer: {

@@ -86,7 +86,10 @@ struct TrayPage: View {
                     Text("Clear tray")
                     Text("Removes everything in it. Files stay where they are.")
                 } trailing: {
-                    Button("Clear…") { confirmingClear = true }
+                    // Destructive, and red as its button in the alert: in a form, macOS draws the role
+                    // alone like any other button.
+                    Button("Clear…", role: .destructive) { confirmingClear = true }
+                        .foregroundStyle(.red)
                         .disabled(tray.items.isEmpty)
                 }
             }
