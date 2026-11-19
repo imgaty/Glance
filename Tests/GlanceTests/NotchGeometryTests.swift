@@ -51,6 +51,34 @@ struct GlassLookTests {
         let steps = stride(from: 0.0, through: 1, by: 0.05).map(GlassLook.black)
         #expect(zip(steps, steps.dropFirst()).allSatisfy { $0 < $1 })
     }
+
+    @Test("The Liquid Glass slider has black on the left and clear on the right")
+    func glassSliderEnds() {
+        #expect(GlassSlider.position(darkness: 1) == 0)
+        #expect(GlassSlider.position(darkness: 0) == 1)
+        #expect(GlassSlider.darkness(position: 0) == 1)
+        #expect(GlassSlider.darkness(position: 1) == 0)
+    }
+
+    @Test("A Liquid Glass setting saved before keeps its look", arguments: [0.0, 0.1, 0.25, 0.5, 0.73, 1])
+    func glassSliderKeepsSaved(darkness: Double) {
+        // What's stored is still the darkness: read through the slider and back, it's unchanged.
+        let position = GlassSlider.position(darkness: darkness)
+        #expect(isClose(GlassSlider.darkness(position: position), darkness))
+        #expect(isClose(GlassLook.black(GlassSlider.darkness(position: position)), GlassLook.black(darkness)))
+    }
+
+    @Test("Further right on the Liquid Glass slider is clearer")
+    func glassSliderClearerToTheRight() {
+        let looks = stride(from: 0.0, through: 1, by: 0.05).map { GlassLook.black(GlassSlider.darkness(position: $0)) }
+        #expect(zip(looks, looks.dropFirst()).allSatisfy { $0 > $1 })
+    }
+
+    @Test("The Liquid Glass slider stays within its ends", arguments: [-1.0, -0.01, 1.01, 2])
+    func glassSliderClamped(value: Double) {
+        #expect((0...1).contains(GlassSlider.position(darkness: value)))
+        #expect((0...1).contains(GlassSlider.darkness(position: value)))
+    }
 }
 
 /// The notch's corners, closed and open.
