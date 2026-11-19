@@ -14,7 +14,7 @@ import SwiftUI
 struct NowPlayingView: View {
     /// Every button's contact area. The glyphs inside it differ in size; the contact areas don't.
     static let hitbox: CGFloat = 40
-    static let sideColumnHeight = PlayerLayout.headerHeight + 4 + PlayerLayout.timelineHeight + 4 + hitbox
+    static let sideColumnHeight = PlayerLayout.headerHeight + PlayerLayout.rowGap + PlayerLayout.timelineHeight + PlayerLayout.rowGap + hitbox
 
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var output = AudioOutput.shared
@@ -63,19 +63,31 @@ struct NowPlayingView: View {
         hasMedia && duration.isFinite && duration > 0 && !djTalking
     }
 
-    var body: some View {
+    /// Where the title and artist, the timeline and the controls start, below the padding. What's
+    /// beside the artwork ends on its bottom edge in both layouts, and the timeline hangs the same
+    /// gap under the artist in both, so the two read alike.
+    static func rows(_ layout: PlayerLayout, closed: CGSize) -> (header: CGFloat, timeline: CGFloat, controls: CGFloat) {
         // How far below the artwork's top the camera housing ends; what's under it starts there.
-        let clearance = closedNotch.height + PlayerLayout.cameraGap - PlayerLayout.padding
-        // Where the title starts: centered on the artwork, unless that puts it under the camera.
-        let headerTop = layout == .top ? max((layout.artwork - PlayerLayout.headerHeight) / 2, clearance) : clearance
+        let clearance = closed.height + PlayerLayout.cameraGap - PlayerLayout.padding
+        // On top, the artist's line ends level with the artwork, unless that puts the title under
+        // the camera; on the side, the column starts right below the camera.
+        let header = layout == .top ? max(layout.artwork - PlayerLayout.headerHeight, clearance) : clearance
+        let timeline = header + PlayerLayout.headerHeight + PlayerLayout.rowGap
+        // On the side, the controls end on the artwork's bottom edge.
+        let sideHeight = max(layout.artwork - clearance, sideColumnHeight)
+        let controls = layout == .top ? timeline + PlayerLayout.timelineHeight + 8 : clearance + sideHeight - hitbox
+        return (header, timeline, controls)
+    }
+
+    var body: some View {
+        let rows = Self.rows(layout, closed: closedNotch)
+        let headerTop = rows.header
         let content = layout.size(closed: closedNotch)
         let width = content.width - PlayerLayout.padding * 2
         let beside = layout.artwork + PlayerLayout.besideArtwork
         let column = width - beside
-        let topRow = max(layout.artwork, headerTop + PlayerLayout.headerHeight)
-        let sideHeight = max(layout.artwork - clearance, Self.sideColumnHeight)
-        let timelineTop = layout == .top ? topRow + 12 : clearance + sideHeight - Self.hitbox - 4 - PlayerLayout.timelineHeight
-        let controlsTop = timelineTop + PlayerLayout.timelineHeight + (layout == .top ? 8 : 4)
+        let timelineTop = rows.timeline
+        let controlsTop = rows.controls
         let rowLeading = layout == .top ? 0 : beside
         let rowWidth = layout == .top ? width : column
         ZStack(alignment: .topLeading) {

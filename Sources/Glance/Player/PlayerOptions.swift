@@ -48,6 +48,9 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     /// Between the artwork and what sits beside it.
     static let besideArtwork: CGFloat = 17
     static let timelineHeight: CGFloat = 16
+    /// Between the artist's line and the timeline in both layouts, and between the timeline and the
+    /// controls beside the artwork on the side.
+    static let rowGap: CGFloat = 4
     /// Play and pause are the largest glyphs, back and forward next, the two option buttons smallest.
     static let playGlyph: CGFloat = 28
     static let skipGlyph: CGFloat = 18
@@ -85,7 +88,7 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
                 // ones do from the sides.
                 (
                     max(p * 2 + 280, besideCamera),
-                    p + max(artwork, closed.height + Self.cameraGap - p + Self.headerHeight) + 12 + Self.timelineHeight + 8
+                    p + max(artwork, closed.height + Self.cameraGap - p + Self.headerHeight) + Self.rowGap + Self.timelineHeight + 8
                         + NowPlayingView.hitbox + p
                 )
             case .side:

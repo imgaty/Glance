@@ -160,8 +160,38 @@ struct PlayerLayoutTests {
     @Test("Cover on top, around the usual notch")
     func topSize() {
         // Wide enough to keep the cover clear of the camera: 185 + 2 × (14 + 60 + 8) = 349, made even.
-        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 12 + 16 + 8 + 40 + 14.
-        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 164))
+        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 4 + 16 + 8 + 40 + 14.
+        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 156))
+    }
+
+    @Test(
+        "The timeline hangs as far under the artist in both layouts",
+        arguments: [CGSize(width: 185, height: 32), CGSize(width: 100, height: 20), CGSize(width: 185, height: 60)])
+    func sameGapUnderArtist(camera: CGSize) {
+        let top = NowPlayingView.rows(.top, closed: camera)
+        let side = NowPlayingView.rows(.side, closed: camera)
+        #expect(top.timeline - top.header == side.timeline - side.header)
+        #expect(top.timeline - (top.header + PlayerLayout.headerHeight) == PlayerLayout.rowGap)
+    }
+
+    @Test("Around the usual notch, what's beside the cover ends on its bottom edge")
+    func besideCoverEndsWithIt() {
+        let top = NowPlayingView.rows(.top, closed: closed)
+        let side = NowPlayingView.rows(.side, closed: closed)
+        #expect(top.header + PlayerLayout.headerHeight == PlayerLayout.top.artwork)
+        #expect(side.controls + NowPlayingView.hitbox == PlayerLayout.side.artwork)
+        // Clear of the camera: 32 + 4 under the top, less the padding.
+        #expect(top.header >= 22 && side.header == 22)
+    }
+
+    @Test("Each layout's rows fit the notch it opens to", arguments: PlayerLayout.allCases)
+    func rowsFit(layout: PlayerLayout) {
+        for camera in [CGSize(width: 185, height: 32), CGSize(width: 100, height: 20), CGSize(width: 185, height: 60)] {
+            let rows = NowPlayingView.rows(layout, closed: camera)
+            let height = layout.size(closed: camera).height
+            #expect(rows.controls + NowPlayingView.hitbox + PlayerLayout.padding * 2 <= height)
+            #expect(rows.controls >= rows.timeline + PlayerLayout.timelineHeight)
+        }
     }
 
     @Test("Cover on the side, around the usual notch")
