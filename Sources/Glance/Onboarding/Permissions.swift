@@ -70,9 +70,10 @@ final class Permissions: ObservableObject {
     /// Passed to a copy of Glance started only to read the permissions afresh; see `recheck()`.
     nonisolated static let statusArgument = "--privacy-status"
 
-    /// What TCC answers that copy, for audio capture and Accessibility.
+    /// What TCC answers that copy, for audio capture, Accessibility and Screen Recording, which reads
+    /// a FaceTime or phone call off macOS's popup.
     nonisolated static func printStatus() {
-        print(preflight(audioService), preflight(accessibilityService))
+        print(preflight(audioService), preflight(accessibilityService), preflight(screenService))
     }
 
     /// Reads audio capture and Accessibility again. TCC's answers in this app never change, so it
@@ -204,6 +205,7 @@ final class Permissions: ObservableObject {
 
     nonisolated private static let audioService = "kTCCServiceAudioCapture"
     nonisolated private static let accessibilityService = "kTCCServiceAccessibility"
+    nonisolated private static let screenService = "kTCCServiceScreenCapture"
 
     private static func state(_ code: Int32) -> State {
         switch code {
@@ -235,7 +237,7 @@ final class Permissions: ObservableObject {
             process.terminationHandler = { _ in
                 let codes = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
                     .split(whereSeparator: \.isWhitespace).compactMap { Int32($0) }
-                answered.resume(returning: codes.count == 2 ? (codes[0], codes[1]) : nil)
+                answered.resume(returning: codes.count >= 2 ? (codes[0], codes[1]) : nil)
             }
             do { try process.run() } catch { answered.resume(returning: nil) }
         }

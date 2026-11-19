@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import os
 
 enum NotchState {
     case closed  // resting: exactly the size of the hardware notch
@@ -340,12 +341,18 @@ final class NotchModel: ObservableObject {
         saveOrder()
     }
 
+    /// What starts and ends in the notch on the screen, to tell an activity never found from one
+    /// found but not seen: `log stream --predicate 'subsystem == "dev.vibe.Glance"'`.
+    nonisolated static let log = Logger(subsystem: "dev.vibe.Glance", category: "activities")
+
     private func arrived(_ activity: Activity, _ present: Bool) {
         guard present else {
+            if keepsOrder, arrivals[activity] != nil { Self.log.notice("\(activity.rawValue, privacy: .public) ended") }
             arrivals[activity] = nil
             return saveOrder()
         }
         guard arrivals[activity] == nil else { return }
+        if keepsOrder { Self.log.notice("\(activity.rawValue, privacy: .public) started") }
         if Date.now < restoredUntil, let place = restoredOrder.removeValue(forKey: activity) {
             arrivals[activity] = place
         } else {
