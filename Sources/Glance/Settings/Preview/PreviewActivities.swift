@@ -35,7 +35,8 @@ enum PreviewActivity: CaseIterable {
     /// Those to show now: what's turned on, a new song's name only with the cover and waveform, and
     /// the battery's only on a Mac with one.
     static func turnedOn(in defaults: UserDefaults = .standard, hasBattery: Bool) -> [PreviewActivity] {
-        func on(_ key: String) -> Bool { defaults.object(forKey: key) as? Bool ?? true }
+        // In the menu bar, what macOS shows there itself isn't in the notch's picture.
+        func on(_ key: String) -> Bool { (defaults.object(forKey: key) as? Bool ?? true) && LiveActivityPlace.allows(key, in: defaults) }
         return allCases.filter { activity in
             switch activity {
             case .announcement: on(activity.key) && on(Preferences.liveActivity)

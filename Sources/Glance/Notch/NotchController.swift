@@ -513,7 +513,7 @@ final class NotchController {
                 }
         }
         settingsWatch = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
-            .map { _ in UserDefaults.standard.bool(forKey: Preferences.liveActivity) }
+            .map { _ in UserDefaults.standard.bool(forKey: Preferences.liveActivity) && LiveActivityPlace.allows(Preferences.liveActivity) }
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] _ in
@@ -634,7 +634,9 @@ final class NotchController {
     /// it folds away, as on the iPhone, so skipping between tracks doesn't make it blink.
     private func showActivity(_ playing: Bool, immediately: Bool = false) {
         activityTask?.cancel()
-        let shown = playing && UserDefaults.standard.bool(forKey: Preferences.liveActivity) && !musicDismissed
+        let shown =
+            playing && UserDefaults.standard.bool(forKey: Preferences.liveActivity) && LiveActivityPlace.allows(Preferences.liveActivity)
+            && !musicDismissed
         activityTask = Task { [weak self] in
             guard !Task.isCancelled else { return }
             // A pause folds it away after a moment; turning it off in Settings, at once.
@@ -953,7 +955,7 @@ final class NotchController {
     private func announceTrack() {
         let defaults = UserDefaults.standard
         guard Date.now.timeIntervalSince(createdAt) > 2, defaults.bool(forKey: Preferences.liveActivity),
-            defaults.bool(forKey: Preferences.musicTrackPop)
+            defaults.bool(forKey: Preferences.musicTrackPop), LiveActivityPlace.allows(Preferences.musicTrackPop, in: defaults)
         else { return }
         popTask?.cancel()
         popTask = Task { [weak self] in

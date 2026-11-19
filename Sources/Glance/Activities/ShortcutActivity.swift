@@ -325,9 +325,9 @@ final class ShortcutCLI: ShortcutRunning {
 /// identities, handles, exit states, and Stop actions. No input-wait state is inferred.
 @MainActor
 final class ShortcutActivity: ObservableObject {
-    static let shared = ShortcutActivity(isEnabled: {
-        UserDefaults.standard.object(forKey: Preferences.activityShortcuts) as? Bool ?? true
-    })
+    static let shared = ShortcutActivity(
+        isEnabled: { UserDefaults.standard.object(forKey: Preferences.activityShortcuts) as? Bool ?? true },
+        showsElsewhere: { LiveActivityPlace.allowsShortcutsElsewhere() })
     @Published private(set) var runs: [ShortcutRun] = []
     @Published private(set) var shown: ShortcutShown?
     private let source: any ShortcutRunning

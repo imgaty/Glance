@@ -152,7 +152,7 @@ final class AirDropWatch: NSObject, ObservableObject {
     /// The first under way, read again: shown from once it's accepted until it's in, which shows
     /// a moment full; gone once cancelled or failed.
     private func refresh() {
-        let enabled = UserDefaults.standard.bool(forKey: Preferences.activityAirDrop)
+        let enabled = UserDefaults.standard.bool(forKey: Preferences.activityAirDrop) && LiveActivityPlace.allows(Preferences.activityAirDrop)
         let incoming = enabled ? Dictionary(uniqueKeysWithValues: transfers.values.compactMap(shown).map { ($0.id, $0) }) : [:]
         let current = transfer?.sending == false ? transfer?.id : nil
         let first = order.first(in: Set(incoming.keys), keeping: current).flatMap { incoming[$0] }

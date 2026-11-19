@@ -186,6 +186,7 @@ final class VoiceMemoWatch: ObservableObject {
     private static var enabled: Bool {
         let defaults = UserDefaults.standard
         return defaults.bool(forKey: Preferences.activityVoiceMemos) && defaults.bool(forKey: Preferences.notchEnabled)
+            && LiveActivityPlace.allows(Preferences.activityVoiceMemos, in: defaults)
     }
 
     private func look() {
@@ -385,6 +386,7 @@ final class ScreenRecordingWatch: ObservableObject {
     private static var enabled: Bool {
         let defaults = UserDefaults.standard
         return defaults.bool(forKey: Preferences.activityScreenRecording) && defaults.bool(forKey: Preferences.notchEnabled)
+            && LiveActivityPlace.allows(Preferences.activityScreenRecording, in: defaults)
     }
 
     func refresh() {

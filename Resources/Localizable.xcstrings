@@ -4377,6 +4377,422 @@
         }
       }
     },
+    "**Menu Bar:** Now Playing, Clock, recordings, AirDrop and shortcuts run elsewhere stay in the menu bar, as macOS shows them. The notch keeps calls, battery, devices, Focus, and what you start from its menu.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**شريط القائمة:** يبقى «قيد التشغيل» والساعة والتسجيلات وAirDrop والاختصارات المشغّلة من مكان آخر في شريط القائمة كما يعرضها macOS. وتحتفظ النوتش بالمكالمات والبطارية والأجهزة والتركيز وما تبدؤه من قائمتها."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Barra de menús:** Ara sona, Rellotge, les gravacions, AirDrop i les dreceres executades des d’altres llocs es queden a la barra de menús, tal com les mostra el macOS. El notch conserva les trucades, la bateria, els dispositius, Concentració i el que inicies des del seu menú."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Řádek nabídek:** Právě hraje, Hodiny, záznamy, AirDrop a zkratky spuštěné jinde zůstávají na řádku nabídek, jak je zobrazuje macOS. Výřez si ponechá hovory, baterii, zařízení, Soustředění a to, co spustíte z jeho nabídky."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menulinje:** Afspiller nu, Ur, optagelser, AirDrop og genveje, der køres andre steder, bliver i menulinjen, som macOS viser dem. Notchen beholder opkald, batteri, enheder, Fokus og det, du starter fra dens menu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menüleiste:** „Jetzt läuft“, Uhr, Aufnahmen, AirDrop und anderswo gestartete Kurzbefehle bleiben in der Menüleiste, wie macOS sie zeigt. Die Notch behält Anrufe, Batterie, Geräte, Fokus und was du über ihr Menü startest."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Γραμμή μενού:** Το «Παίζει τώρα», το Ρολόι, οι εγγραφές, το AirDrop και οι συντομεύσεις που εκτελούνται αλλού μένουν στη γραμμή μενού, όπως τα δείχνει το macOS. Η εγκοπή κρατά τις κλήσεις, την μπαταρία, τις συσκευές, την Εστίαση και ό,τι ξεκινάτε από το μενού της."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Barra de menús:** Ahora suena, Reloj, las grabaciones, AirDrop y los atajos ejecutados desde otros sitios se quedan en la barra de menús, como los muestra macOS. El notch conserva las llamadas, la batería, los dispositivos, Concentración y lo que inicias desde su menú."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Valikkorivi:** Toistossa nyt, Kello, tallenteet, AirDrop ja muualta käynnistetyt pikakomennot pysyvät valikkorivillä, kuten macOS ne näyttää. Lovi pitää puhelut, akun, laitteet, keskittymisen ja sen, minkä käynnistät sen valikosta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Barre des menus :** À l’écoute, Horloge, les enregistrements, AirDrop et les raccourcis lancés ailleurs restent dans la barre des menus, comme macOS les affiche. L’encoche garde les appels, la batterie, les appareils, Concentration et ce que vous lancez depuis son menu."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**שורת התפריטים:** «מופעל כעת», שעון, הקלטות, AirDrop וקיצורים שמופעלים ממקום אחר נשארים בשורת התפריטים, כפי ש‑macOS מציג אותם. המגרעת שומרת את השיחות, הסוללה, המכשירים, הריכוז ומה שמפעילים מהתפריט שלה."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**मेनू बार:** अभी चल रहा है, घड़ी, रिकॉर्डिंग, AirDrop और कहीं और से चलाए गए शॉर्टकट मेनू बार में रहते हैं, जैसे macOS उन्हें दिखाता है। नॉच में कॉल, बैटरी, डिवाइस, फ़ोकस और उसके मेनू से शुरू की गई चीज़ें रहती हैं।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Traka s izbornicima:** Izvodi se, Sat, snimke, AirDrop i prečaci pokrenuti drugdje ostaju u traci s izbornicima, kako ih prikazuje macOS. Urez zadržava pozive, bateriju, uređaje, Fokus i ono što pokrenete iz njegova izbornika."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menüsor:** A Lejátszás alatt, az Óra, a felvételek, az AirDrop és a máshonnan futtatott parancsok a menüsoron maradnak, ahogy a macOS mutatja őket. A notch megtartja a hívásokat, az akkumulátort, az eszközöket, a Fókuszt és azt, amit a menüjéből indítasz."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Bar Menu:** Sedang Diputar, Jam, rekaman, AirDrop, dan pintasan yang dijalankan dari tempat lain tetap di bar menu, seperti yang ditampilkan macOS. Notch tetap menampilkan panggilan, baterai, perangkat, Fokus, dan apa yang Anda mulai dari menunya."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Barra dei menu:** In riproduzione, Orologio, le registrazioni, AirDrop e i comandi rapidi eseguiti altrove restano nella barra dei menu, come li mostra macOS. Il notch mantiene le chiamate, la batteria, i dispositivi, Full immersion e ciò che avvii dal suo menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**メニューバー:** 再生中、時計、録画と録音、AirDrop、ほかの場所から実行したショートカットは、macOSの表示どおりメニューバーに残ります。ノッチには通話、バッテリー、デバイス、集中モード、ノッチのメニューから始めたものが表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**메뉴 막대:** 지금 재생 중, 시계, 녹화 및 녹음, AirDrop, 다른 곳에서 실행한 단축어는 macOS가 보여주는 대로 메뉴 막대에 남습니다. 노치에는 통화, 배터리, 기기, 집중 모드와 노치 메뉴에서 시작한 항목이 남습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Bar Menu:** Kini Dimainkan, Jam, rakaman, AirDrop dan pintasan yang dijalankan dari tempat lain kekal dalam bar menu, seperti yang ditunjukkan macOS. Notch mengekalkan panggilan, bateri, peranti, Fokus dan apa yang anda mulakan daripada menunya."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menylinje:** Spilles nå, Klokke, opptak, AirDrop og snarveier som kjøres andre steder, blir i menylinjen slik macOS viser dem. Notchen beholder anrop, batteri, enheter, Fokus og det du starter fra menyen dens."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menubalk:** Huidig onderdeel, Klok, opnamen, AirDrop en elders gestarte opdrachten blijven in de menubalk, zoals macOS ze toont. De notch houdt gesprekken, batterij, apparaten, Focus en wat je vanuit het menu ervan start."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Pasek menu:** Odtwarzane, Zegar, nagrania, AirDrop i skróty uruchomione gdzie indziej zostają na pasku menu, tak jak pokazuje je macOS. Wycięcie zachowuje połączenia, baterię, urządzenia, Skupienie i to, co uruchomisz z jego menu."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Barra de Menus:** Reproduzindo, Relógio, gravações, AirDrop e atalhos executados em outros lugares ficam na barra de menus, como o macOS os mostra. O notch mantém chamadas, bateria, dispositivos, Foco e o que você inicia pelo menu dele."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Barra de menus:** A reproduzir, Relógio, gravações, AirDrop e atalhos executados noutros sítios ficam na barra de menus, tal como o macOS os mostra. O entalhe mantém as chamadas, a bateria, os dispositivos, o Foco e o que inicia a partir do respetivo menu."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Bara de meniuri:** În redare, Ceas, înregistrările, AirDrop și scurtăturile rulate din altă parte rămân în bara de meniuri, așa cum le arată macOS. Notch-ul păstrează apelurile, bateria, dispozitivele, Concentrarea și ce pornești din meniul lui."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Строка меню:** «Исполняется», Часы, записи, AirDrop и команды, запущенные в другом месте, остаются в строке меню, как их показывает macOS. В вырезе остаются звонки, аккумулятор, устройства, фокусирование и то, что вы запускаете из его меню."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Lišta s ponukami:** Práve hrá, Hodiny, nahrávky, AirDrop a skratky spustené inde zostávajú na lište s ponukami, ako ich zobrazuje macOS. Výrez si ponechá hovory, batériu, zariadenia, Sústredenie a to, čo spustíte z jeho ponuky."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menijska vrstica:** Predvaja se, Ura, posnetki, AirDrop in bližnjice, zagnane drugje, ostanejo v menijski vrstici, kot jih prikaže macOS. Zareza obdrži klice, baterijo, naprave, Fokus in to, kar zaženete iz njenega menija."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menyrad:** Spelas nu, Klocka, inspelningar, AirDrop och genvägar som körs någon annanstans stannar i menyraden, så som macOS visar dem. Notchen behåller samtal, batteri, enheter, Fokus och det du startar från dess meny."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**แถบเมนู:** กำลังเล่นอยู่ นาฬิกา การบันทึก AirDrop และคำสั่งลัดที่เรียกใช้จากที่อื่นจะอยู่ในแถบเมนูตามที่ macOS แสดง รอยบากยังคงแสดงการโทร แบตเตอรี่ อุปกรณ์ โฟกัส และสิ่งที่คุณเริ่มจากเมนูของรอยบาก"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Menü Çubuğu:** Şu An Çalınan, Saat, kayıtlar, AirDrop ve başka yerden çalıştırılan kestirmeler, macOS’in gösterdiği gibi menü çubuğunda kalır. Çentik aramaları, pili, aygıtları, Odak’ı ve menüsünden başlattıklarınızı tutar."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Смуга меню:** «Зараз грає», Годинник, записи, AirDrop і команди, запущені деінде, лишаються на смузі меню, як їх показує macOS. Виріз зберігає дзвінки, акумулятор, пристрої, Зосередження і те, що ви запускаєте з його меню."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Thanh menu:** Đang phát, Đồng hồ, bản ghi, AirDrop và phím tắt chạy từ nơi khác vẫn ở thanh menu, như macOS hiển thị. Phần khuyết giữ cuộc gọi, pin, thiết bị, Tập trung và những gì bạn bắt đầu từ menu của nó."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**菜单栏：**播放中、时钟、录制、隔空投送和从其他地方运行的快捷指令会按 macOS 的方式留在菜单栏。刘海保留通话、电池、设备、专注模式，以及你从刘海菜单启动的内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**選單列：**播放中、時鐘、錄製、AirDrop 和從其他地方執行的捷徑會依 macOS 的方式留在選單列。瀏海保留通話、電池、裝置、專注模式，以及你從瀏海選單開始的項目。"
+          }
+        }
+      }
+    },
+    "**Notch:** all Live Activities show beside the camera.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**النوتش:** تظهر كل الأنشطة المباشرة بجانب الكاميرا."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** totes les activitats en directe es mostren al costat de la càmera."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Výřez:** všechny živé aktivity se zobrazují vedle kamery."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** alle liveaktiviteter vises ved siden af kameraet."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** Alle Live-Aktivitäten erscheinen neben der Kamera."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Εγκοπή:** όλες οι ζωντανές δραστηριότητες εμφανίζονται δίπλα στην κάμερα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** todas las actividades en directo se muestran junto a la cámara."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Lovi:** kaikki liveseuranta näkyy kameran vieressä."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Encoche :** toutes les activités en direct s’affichent à côté de la caméra."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**מגרעת:** כל הפעילויות בזמן אמת מוצגות ליד המצלמה."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**नॉच:** सारी लाइव ऐक्टिविटी कैमरा के पास दिखती हैं।"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Urez:** sve aktivnosti uživo prikazuju se pored kamere."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** minden élő tevékenység a kamera mellett jelenik meg."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** semua Aktivitas Langsung tampil di samping kamera."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** tutte le attività in tempo reale appaiono accanto alla fotocamera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**ノッチ:** すべてのライブアクティビティをカメラの横に表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**노치:** 모든 실시간 현황이 카메라 옆에 표시됩니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** semua Aktiviti Langsung ditunjukkan di sebelah kamera."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** alle løpende oppdateringer vises ved siden av kameraet."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** alle live activiteiten verschijnen naast de camera."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Wycięcie:** wszystkie wydarzenia na żywo pojawiają się obok kamery."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** todas as Atividades ao Vivo aparecem ao lado da câmera."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Entalhe:** todas as atividades em tempo real aparecem ao lado da câmara."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** toate activitățile live apar lângă cameră."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Вырез:** весь эфир активности показывается рядом с камерой."
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Výrez:** všetky aktivity naživo sa zobrazujú vedľa kamery."
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Zareza:** vse aktivnosti v živo so prikazane poleg kamere."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Notch:** alla liveaktiviteter visas bredvid kameran."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**รอยบาก:** กิจกรรมสดทั้งหมดแสดงข้างกล้อง"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Çentik:** tüm Canlı Etkinlikler kameranın yanında gösterilir."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Виріз:** усі дії наживо показуються поруч із камерою."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Phần khuyết:** tất cả Hoạt động trực tiếp hiển thị bên cạnh camera."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**刘海：**所有实时活动都显示在相机旁。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**瀏海：**所有即時動態都顯示在相機旁。"
+          }
+        }
+      }
+    },
     ", paused": {
       "localizations": {
         "ar": {
@@ -45031,6 +45447,214 @@
         }
       }
     },
+    "Menu Bar": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شريط القوائم"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de menús"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Řádek nabídek"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menulinje"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menüleiste"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Γραμμή μενού"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de menús"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valikkorivi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre des menus"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שורת התפריטים"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेन्यू बार"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traka s izbornicima"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menüsor"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bar Menu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra dei menu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bar Menu"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menylinje"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menubalk"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasek menu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de Menus"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de menus"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bară de meniu"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Строка меню"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lišta"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menijska vrstica"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menyrad"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แถบเมนู"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menü Çubuğu"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Смуга меню"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thanh menu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单栏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選單列"
+          }
+        }
+      }
+    },
     "Microphone": {
       "localizations": {
         "ar": {
@@ -51487,6 +52111,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "未安裝"
+          }
+        }
+      }
+    },
+    "Notch": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النوتش"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Výřez"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εγκοπή"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lovi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encoche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מגרעת"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नॉच"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Urez"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノッチ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노치"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wycięcie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entalhe"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вырез"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Výrez"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zareza"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "รอยบาก"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çentik"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Виріз"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phần khuyết"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刘海"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瀏海"
           }
         }
       }
@@ -76107,6 +76939,214 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示音訊的來源"
+          }
+        }
+      }
+    },
+    "Show in": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار في"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra a"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobrazit v"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis i"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anzeigen in"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εμφάνιση σε"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar en"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näytä kohteessa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher dans"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגה ב"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यहाँ दिखाएँ"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prikaži u"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Megjelenítés itt"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tampilkan di"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra in"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示場所"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표시 위치"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tunjukkan dalam"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis i"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toon in"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuj w"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar em"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar em"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afișează în"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать в"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobraziť v"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prikaži v"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visa i"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แสดงใน"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gösterme yeri"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показувати в"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiển thị trong"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示位置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示位置"
           }
         }
       }
