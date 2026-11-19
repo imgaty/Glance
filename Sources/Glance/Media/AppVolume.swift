@@ -13,7 +13,8 @@ import os
 /// output menu. Music and Spotify have a volume of their own, which their scripting sets. Any other
 /// app, Safari say, is turned down through a Core Audio process tap: the app is quieted and its
 /// sound played on, softer. Only while it's turned down: at full volume nothing stands between an
-/// app and the speakers, and if Glance quits, macOS gives the app its sound back.
+/// app and the speakers, and if Glance quits, macOS gives the app its sound back. Never while it
+/// records, as an app on a call does: then it's left at full volume.
 @MainActor
 final class AppVolume: ObservableObject {
     static let shared = AppVolume()
@@ -115,7 +116,19 @@ final class AppVolume: ObservableObject {
             Self.log.notice("No tap for \(app, privacy: .public): pid \(self.pid, privacy: .public), audio capture \(String(describing: Permissions.audioCapture), privacy: .public)")
             return
         }
-        taps[app] = VolumeTap(pid: pid, gain: Float(levels[app] ?? 1))
+        taps[app] = VolumeTap(pid: pid, gain: Float(levels[app] ?? 1)) { [weak self] in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.recording(app) } }
+        }
+    }
+
+    /// An app recording, on a call most likely, isn't turned down here: its tap would mute it where
+    /// it plays and play it on through the Mac's output, which needn't be where the call plays, as
+    /// Discord keeps devices of its own. It plays as loud as it likes, and the slider says so.
+    func recording(_ app: String) {
+        Self.log.notice("\(app, privacy: .public) is recording: left at full volume")
+        taps.removeValue(forKey: app)?.stop()
+        levels[app] = nil
+        if app == self.app { level = 1 }
     }
 
     /// Every app turned down, made again for the device now playing.
@@ -160,6 +173,10 @@ private final class VolumeTap: @unchecked Sendable {
     private var tapID = AudioObjectID(0)
     private var aggregateID = AudioObjectID(0)
     private var ioProc: AudioDeviceIOProcID?
+    /// Looks once a second for its app recording, which lets it go.
+    private var watch: DispatchSourceTimer?
+    /// Told, off the main thread, when it lets go of its app, or never taps it, as it's recording.
+    private let recording: @Sendable () -> Void
     private let endedLock = NSLock()
     private var endedValue = false
     /// Stopped, by itself or asked to: its app plays straight to the speakers again.
@@ -170,14 +187,22 @@ private final class VolumeTap: @unchecked Sendable {
         set { gainBox.pointee = newValue }
     }
 
-    init(pid: pid_t, gain: Float) {
+    init(pid: pid_t, gain: Float, recording: @escaping @Sendable () -> Void) {
         gainBox.initialize(to: gain)
         heard.initialize(to: false)
+        self.recording = recording
         queue.async { [self] in
-            guard start(pid) else {
+            let processes = AudioProperty.processes(of: pid)
+            // An app recording, on a call most likely, is never quieted (see `AppVolume.recording`).
+            guard !AudioProperty.recording(processes) else {
+                tearDown()
+                return recording()
+            }
+            guard start(processes) else {
                 AppVolume.log.error("Couldn't tap pid \(pid, privacy: .public)")
                 return tearDown()
             }
+            watchForRecording(processes)
             // Quieted but never heard, the app would go silent: without the tap's sound, it's let go.
             queue.asyncAfter(deadline: .now() + 0.5) { [self] in
                 guard !heard.pointee else { return }
@@ -185,6 +210,19 @@ private final class VolumeTap: @unchecked Sendable {
                 tearDown()
             }
         }
+    }
+
+    /// Turned down, an app that starts recording, as a call starts, is let go of within a second.
+    private func watchForRecording(_ processes: [AudioObjectID]) {
+        let watch = DispatchSource.makeTimerSource(queue: queue)
+        watch.schedule(deadline: .now() + 1, repeating: 1, leeway: .milliseconds(200))
+        watch.setEventHandler { [weak self] in
+            guard let self, AudioProperty.recording(processes) else { return }
+            tearDown()
+            recording()
+        }
+        watch.resume()
+        self.watch = watch
     }
 
     deinit {
@@ -196,8 +234,7 @@ private final class VolumeTap: @unchecked Sendable {
         queue.async { [self] in tearDown() }
     }
 
-    private func start(_ pid: pid_t) -> Bool {
-        let processes = AudioProperty.processes(of: pid)
+    private func start(_ processes: [AudioObjectID]) -> Bool {
         guard !processes.isEmpty, let output = Self.output() else { return false }
         let description = CATapDescription(stereoMixdownOfProcesses: processes)
         description.name = "Glance volume"
@@ -230,12 +267,14 @@ private final class VolumeTap: @unchecked Sendable {
         guard created == noErr, let ioProc else { return false }
         // Only the tap's sound is wanted in. The output device's own microphone (AirPods have one)
         // stays off, so playing through them never switches them to headset mode.
-        Self.leaveOff(inputStreams: output.inputStreams, of: aggregateID, for: ioProc)
+        AudioProperty.leaveOff(kAudioObjectPropertyScopeInput, first: output.inputStreams, of: aggregateID, for: ioProc)
         return AudioDeviceStart(aggregateID, ioProc) == noErr
     }
 
     private func tearDown() {
         endedLock.withLock { endedValue = true }
+        watch?.cancel()
+        watch = nil
         if aggregateID != 0 {
             if let ioProc {
                 AudioDeviceStop(aggregateID, ioProc)
@@ -294,24 +333,5 @@ private final class VolumeTap: @unchecked Sendable {
         guard let uid = AudioProperty.uid(of: device) else { return nil }
         let streams = AudioProperty.size(of: device, kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput)
         return (uid, Int(streams) / MemoryLayout<AudioStreamID>.size)
-    }
-
-    /// Turns off the aggregate's first input streams for this IO, the output device's own, which
-    /// come before the tap's.
-    private static func leaveOff(inputStreams count: Int, of aggregate: AudioObjectID, for ioProc: AudioDeviceIOProcID) {
-        guard count > 0 else { return }
-        var address = AudioProperty.address(kAudioDevicePropertyIOProcStreamUsage, scope: kAudioObjectPropertyScopeInput)
-        var size: UInt32 = 0
-        guard AudioObjectGetPropertyDataSize(aggregate, &address, 0, nil, &size) == noErr, size > 0 else { return }
-        // An AudioHardwareIOProcStreamUsage: the IO, how many streams, and an on or off for each.
-        let usage = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: 8)
-        defer { usage.deallocate() }
-        usage.storeBytes(of: unsafeBitCast(ioProc, to: UnsafeMutableRawPointer.self), as: UnsafeMutableRawPointer.self)
-        guard AudioObjectGetPropertyData(aggregate, &address, 0, nil, &size, usage) == noErr else { return }
-        let streams = Int(usage.load(fromByteOffset: 8, as: UInt32.self))
-        for stream in 0..<min(count, streams) {
-            usage.storeBytes(of: UInt32(0), toByteOffset: 12 + stream * 4, as: UInt32.self)
-        }
-        AudioObjectSetPropertyData(aggregate, &address, 0, nil, size, usage)
     }
 }

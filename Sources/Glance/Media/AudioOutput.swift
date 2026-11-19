@@ -965,8 +965,10 @@ enum AudioProperty {
         return AudioObjectGetPropertyData(object, &address, 0, nil, &size, &value) == noErr
     }
 
-    static func readArray(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector) -> [AudioObjectID] {
-        var address = address(selector)
+    static func readArray(
+        _ object: AudioObjectID, _ selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal
+    ) -> [AudioObjectID] {
+        var address = address(selector, scope: scope)
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(object, &address, 0, nil, &size) == noErr else { return [] }
         var objects = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
@@ -1017,6 +1019,36 @@ enum AudioProperty {
         var address = address(kAudioHardwarePropertyTranslatePIDToProcessObject)
         let status = AudioObjectGetPropertyData(system, &address, UInt32(MemoryLayout<pid_t>.size), &pid, &size, &object)
         return status == noErr && object != 0 ? [object] : []
+    }
+
+    /// Whether any of these audio processes is recording: from a microphone, most likely, as an app
+    /// on a call does.
+    static func recording(_ processes: [AudioObjectID]) -> Bool {
+        processes.contains { process in
+            var running: UInt32 = 0
+            return read(process, kAudioProcessPropertyIsRunningInput, &running) && running != 0
+        }
+    }
+
+    /// Turns off a device's first `count` streams in one direction for one IO of Glance's, so that
+    /// IO neither reads nor plays through them, and the device runs them for no one new.
+    static func leaveOff(
+        _ scope: AudioObjectPropertyScope, first count: Int = .max, of device: AudioObjectID, for ioProc: AudioDeviceIOProcID
+    ) {
+        guard count > 0 else { return }
+        var address = address(kAudioDevicePropertyIOProcStreamUsage, scope: scope)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr, size > 0 else { return }
+        // An AudioHardwareIOProcStreamUsage: the IO, how many streams, and an on or off for each.
+        let usage = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: 8)
+        defer { usage.deallocate() }
+        usage.storeBytes(of: unsafeBitCast(ioProc, to: UnsafeMutableRawPointer.self), as: UnsafeMutableRawPointer.self)
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, usage) == noErr else { return }
+        let streams = Int(usage.load(fromByteOffset: 8, as: UInt32.self))
+        for stream in 0..<min(count, streams) {
+            usage.storeBytes(of: UInt32(0), toByteOffset: 12 + stream * 4, as: UInt32.self)
+        }
+        AudioObjectSetPropertyData(device, &address, 0, nil, size, usage)
     }
 
     /// The app answerable for a process (Safari for its WebKit helpers), from libSystem.
