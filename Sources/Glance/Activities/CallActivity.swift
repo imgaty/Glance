@@ -11,6 +11,8 @@ import ApplicationServices
 import Combine
 import CoreAudio
 import SwiftUI
+import Synchronization
+import os
 
 /// A call, as the notch shows it.
 struct CallShown: Equatable {
@@ -1070,8 +1072,8 @@ final class CallMicrophone: ObservableObject {
 /// How loud each voice on the call is, for the waveform. On a phone or FaceTime call, read off macOS's
 /// own popup's bars, with nothing listened to: the other person's on its left, yours on its right.
 /// Otherwise, the other person from the sound the call's app makes, through the same process tap as
-/// the music's waveform, and you from the microphone, once it's allowed. Nothing is recorded or
-/// kept. It runs only during a call.
+/// the music's waveform, and you from the microphone the call's app records from, once it's allowed
+/// (see `CallVoiceLevel`). Nothing is recorded or kept. It runs only during a call.
 @MainActor
 final class CallVoices: ObservableObject {
     static let shared = CallVoices()
@@ -1090,7 +1092,7 @@ final class CallVoices: ObservableObject {
     private var theirHistory = [CGFloat](repeating: 0, count: CallLook.bars)
     private var yourHistory = [CGFloat](repeating: 0, count: CallLook.bars)
     private var pipeline: TapPipeline?
-    private var engine: AVAudioEngine?
+    private var voice: CallVoiceLevel?
     private var clock: Timer?
     /// At the bench: both voices made up, turn about, with nothing listened to.
     var madeUp = false
@@ -1103,7 +1105,8 @@ final class CallVoices: ObservableObject {
         self.yours = yours
     }
 
-    func start(listeningTo pid: pid_t?, microphone: Bool) {
+    /// `pid` makes the call's sound, and `bundle` is the call's app, whose microphone is listened to.
+    func start(listeningTo pid: pid_t?, callIn bundle: String?, microphone: Bool) {
         guard clock == nil else { return }
         if !madeUp, microphone, let pid, pid > 0, Permissions.audioCapture == .granted {
             pipeline = TapPipeline(target: .player(pid)) { [weak self] reading in
@@ -1116,7 +1119,7 @@ final class CallVoices: ObservableObject {
                 }
             }
         }
-        if !madeUp, microphone { startMicrophone() }
+        if !madeUp, microphone { startMicrophone(callIn: bundle) }
         let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -1130,9 +1133,8 @@ final class CallVoices: ObservableObject {
         clock = nil
         pipeline?.stop()
         pipeline = nil
-        engine?.inputNode.removeTap(onBus: 0)
-        engine?.stop()
-        engine = nil
+        voice?.stop()
+        voice = nil
         theirs = 0
         yours = 0
         shownTheirs = 0
@@ -1155,6 +1157,8 @@ final class CallVoices: ObservableObject {
             // The popup sends its bars only as they change: unchanged a while, nobody's speaking.
             theirs = 0
             yours = 0
+        } else if let voice {
+            yours = voice.take()
         }
         shownTheirs = Self.eased(shownTheirs, towards: theirs)
         shownYours = Self.eased(shownYours, towards: yours)
@@ -1204,40 +1208,152 @@ final class CallVoices: ObservableObject {
         return rippleFloor + (1 - rippleFloor) * CGFloat((slow + fast) / 4 + 0.5)
     }
 
-    private func startMicrophone() {
+    private func startMicrophone(callIn bundle: String?) {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
-            listenToMicrophone()
+            listenToMicrophone(callIn: bundle)
         case .notDetermined:
             Task { [weak self] in
                 guard await AVCaptureDevice.requestAccess(for: .audio), self?.clock != nil else { return }
-                self?.listenToMicrophone()
+                self?.listenToMicrophone(callIn: bundle)
             }
         default:
             break
         }
     }
 
-    private func listenToMicrophone() {
-        guard engine == nil else { return }
-        let engine = AVAudioEngine()
-        let input = engine.inputNode
-        input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { [weak self] buffer, _ in
-            guard let channel = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
-            let count = Int(buffer.frameLength)
-            var sum: Float = 0
-            for index in 0..<count { sum += channel[index] * channel[index] }
-            let level = CGFloat(min((sum / Float(count)).squareRoot() * 7, 1))
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated { self?.yours = level }
+    private func listenToMicrophone(callIn bundle: String?) {
+        guard voice == nil else { return }
+        voice = CallVoiceLevel(callIn: bundle)
+    }
+}
+
+/// How loud you are on a call in an app other than FaceTime or Phone, for the waveform: the level of
+/// the microphone the call's own app records from, opened by itself and only ever that one.
+///
+/// Never the Mac's default input. On 18 November a Discord call recorded from the MacBook's
+/// microphone while it played through AirPods; Glance opened the default input, the AirPods' own,
+/// macOS switched them to their headset mode for it, and Discord's sound stopped, so the other
+/// person went unheard for the rest of the call. A microphone the call already records from is
+/// already as the call needs it, so listening to it changes no device. Nor is anything opened beside
+/// it, as an output would be with an audio engine.
+///
+/// It looks once a second, on a queue of its own, as Core Audio's answers wait on macOS's sound
+/// service: the call can change microphones, and the one it stops recording from is let go of.
+final class CallVoiceLevel: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "Glance.CallVoiceLevel")
+    private let call: String?
+    private let loudest = Loudest()
+    private var device = AudioObjectID(0)
+    private var ioProc: AudioDeviceIOProcID?
+    private var timer: DispatchSourceTimer?
+    nonisolated static let log = Logger(subsystem: "dev.vibe.Glance", category: "call")
+
+    /// For the call in `bundle`'s app, or in any calling app.
+    init(callIn bundle: String?) {
+        call = bundle
+        queue.async { [self] in
+            let timer = DispatchSource.makeTimerSource(queue: queue)
+            timer.schedule(deadline: .now(), repeating: 1, leeway: .milliseconds(200))
+            timer.setEventHandler { [weak self] in self?.follow() }
+            timer.resume()
+            self.timer = timer
+        }
+    }
+
+    func stop() {
+        queue.async { [self] in
+            timer?.cancel()
+            timer = nil
+            close()
+        }
+    }
+
+    /// 0...1: how loud you've been since it was last asked.
+    func take() -> CGFloat {
+        CGFloat(min(loudest.take() * 7, 1))
+    }
+
+    /// Listens to the microphone the call records from now, or to none.
+    private func follow() {
+        let wanted = CallAudio.microphone(ofCallIn: call) ?? 0
+        guard wanted != device else { return }
+        close()
+        guard wanted != 0 else {
+            return Self.log.notice("Your voice: the call records from no microphone Glance can listen to")
+        }
+        open(wanted)
+    }
+
+    private func open(_ microphone: AudioObjectID) {
+        guard Self.isFloat(microphone) else {
+            return Self.log.notice("Your voice: device \(microphone, privacy: .public) doesn't give floating point samples")
+        }
+        let loudest = loudest
+        var created: AudioDeviceIOProcID?
+        let status = AudioDeviceCreateIOProcIDWithBlock(&created, microphone, nil) { _, input, _, output, _ in
+            // A device with outputs of its own plays nothing of Glance's.
+            for buffer in UnsafeMutableAudioBufferListPointer(output) {
+                if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) }
             }
+            let buffers = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input))
+            guard let buffer = buffers.first, let samples = buffer.mData?.assumingMemoryBound(to: Float.self) else { return }
+            let count = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size
+            guard count > 0 else { return }
+            var sum: Float = 0
+            for index in 0..<count { sum += samples[index] * samples[index] }
+            loudest.offer((sum / Float(count)).squareRoot())
         }
-        do {
-            try engine.start()
-            self.engine = engine
-        } catch {
-            input.removeTap(onBus: 0)
+        guard status == noErr, let created else {
+            return Self.log.error("Your voice: couldn't listen to device \(microphone, privacy: .public), \(status, privacy: .public)")
         }
+        AudioProperty.leaveOff(kAudioObjectPropertyScopeOutput, of: microphone, for: created)
+        guard AudioDeviceStart(microphone, created) == noErr else {
+            AudioDeviceDestroyIOProcID(microphone, created)
+            return Self.log.error("Your voice: device \(microphone, privacy: .public) didn't start")
+        }
+        device = microphone
+        ioProc = created
+        Self.log.notice("Your voice from device \(microphone, privacy: .public), as the call records from it")
+    }
+
+    private func close() {
+        guard device != 0 else { return }
+        if let ioProc {
+            AudioDeviceStop(device, ioProc)
+            AudioDeviceDestroyIOProcID(device, ioProc)
+        }
+        ioProc = nil
+        device = 0
+        _ = loudest.take()
+    }
+
+    /// Whether the microphone's samples come as 32-bit floating point, as the level is read.
+    private static func isFloat(_ device: AudioObjectID) -> Bool {
+        guard let stream = AudioProperty.readArray(device, kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput).first
+        else { return false }
+        var format = AudioStreamBasicDescription()
+        guard AudioProperty.read(stream, kAudioStreamPropertyVirtualFormat, &format) else { return false }
+        return format.mFormatID == kAudioFormatLinearPCM && format.mFormatFlags & kAudioFormatFlagIsFloat != 0 && format.mBitsPerChannel == 32
+    }
+}
+
+/// The loudest a microphone has been since last asked, as a float's bits: offered on the audio
+/// thread, which mustn't wait on a lock, and taken thirty times a second.
+private final class Loudest: Sendable {
+    private let bits = Atomic<UInt32>(0)
+
+    func offer(_ level: Float) {
+        var current = bits.load(ordering: .relaxed)
+        while Float(bitPattern: current) < level {
+            let (exchanged, original) = bits.compareExchange(expected: current, desired: level.bitPattern, ordering: .relaxed)
+            if exchanged { return }
+            current = original
+        }
+    }
+
+    func take() -> Float {
+        Float(bitPattern: bits.exchange(0, ordering: .relaxed))
     }
 }
 
@@ -1370,7 +1486,9 @@ final class CallWatch: ObservableObject {
         }
         if next?.isConnected == true {
             // The popup's waveform has both voices; without one, they're listened to.
-            CallVoices.shared.start(listeningTo: popup?.readable == true ? nil : CallAudio.pid(ofCallIn: microphone?.bundle), microphone: popup?.readable != true)
+            let listens = popup?.readable != true
+            CallVoices.shared.start(
+                listeningTo: listens ? CallAudio.pid(ofCallIn: microphone?.bundle) : nil, callIn: microphone?.bundle, microphone: listens)
             if minuteTimer == nil {
                 let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
                     MainActor.assumeIsolated { self?.minutes += 1 }
@@ -1791,11 +1909,61 @@ enum CallAudio {
         callApps.first { bundle.hasPrefix($0.prefix) }.map { App(bundle: bundle, name: $0.name) }
     }
 
-    private struct Process {
+    struct Process: Equatable {
         var pid: pid_t
         var bundle: String
         var input: Bool
         var output: Bool
+        /// The input devices it's recording from, read only for the processes recording: the real
+        /// devices, as Core Audio reports them, even behind an aggregate device of the app's own.
+        var microphones: [AudioObjectID] = []
+    }
+
+    /// A device the call's app records from, as far as listening to it goes.
+    struct Microphone: Equatable {
+        var id: AudioObjectID
+        /// On the Mac's list of devices: another app's private devices aren't, and can't be opened.
+        var listed: Bool
+        var hasInput: Bool
+        /// One of the devices Glance makes for its own taps.
+        var ours: Bool
+    }
+
+    /// The call's processes: of its app, by name, so with its helpers; or, not knowing the app, of
+    /// any calling app. Never Glance's own, though its taps record.
+    nonisolated static func ofCall(_ processes: [Process], in bundle: String?) -> [Process] {
+        let all = processes.filter { callApp(of: $0.bundle) != nil }
+        guard let bundle, let app = callApp(of: bundle) else { return all }
+        return all.filter { callApp(of: $0.bundle)?.name == app.name }
+    }
+
+    /// Which microphone your voice is heard from on the call: one its own app is recording from, as
+    /// it is, or none. Never the Mac's default input, which the call needn't be using: Discord
+    /// records from the MacBook's microphone while playing through AirPods, and opening theirs
+    /// switched them to their headset mode, which stopped the call's sound. A device the call
+    /// already records from is already as it needs to be.
+    nonisolated static func microphone(among recordedFrom: [Microphone]) -> AudioObjectID? {
+        recordedFrom.first { $0.listed && $0.hasInput && !$0.ours }?.id
+    }
+
+    /// The microphone the call records from now that Glance can listen to as it is, if any. Each
+    /// process is asked first only whether it's recording, as each question waits on macOS's sound
+    /// service; so it's asked away from the thread that draws the notch.
+    nonisolated static func microphone(ofCallIn bundle: String?) -> AudioObjectID? {
+        let recording = processIDs().filter { flag($0, kAudioProcessPropertyIsRunningInput) }.compactMap { id -> Process? in
+            guard let pid = pid(of: id), let recorder = Self.bundle(of: id), callApp(of: recorder) != nil else { return nil }
+            return Process(
+                pid: pid, bundle: recorder, input: true, output: flag(id, kAudioProcessPropertyIsRunningOutput),
+                microphones: AudioProperty.readArray(id, kAudioProcessPropertyDevices, scope: kAudioObjectPropertyScopeInput))
+        }
+        let listed = Set(AudioProperty.readArray(AudioProperty.system, kAudioHardwarePropertyDevices))
+        let devices = ofCall(recording, in: bundle).flatMap(\.microphones).map { id in
+            Microphone(
+                id: id, listed: listed.contains(id),
+                hasInput: AudioProperty.size(of: id, kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput) > 0,
+                ours: AudioProperty.uid(of: id)?.hasPrefix(AudioProperty.ownDevicePrefix) ?? false)
+        }
+        return microphone(among: devices)
     }
 
     private static func processes() -> [Process] {
@@ -1866,8 +2034,7 @@ enum CallAudio {
 
     /// The process making the call's sound: of the app, or of any calling app.
     static func pid(ofCallIn bundle: String?) -> pid_t? {
-        let all = processes().filter { callApp(of: $0.bundle) != nil }
-        let same = bundle.flatMap { wanted in callApp(of: wanted).map { app in all.filter { callApp(of: $0.bundle)?.name == app.name } } } ?? all
+        let same = ofCall(processes(), in: bundle)
         return (same.first(where: \.output) ?? same.first(where: \.input) ?? same.first)?.pid
     }
 }
