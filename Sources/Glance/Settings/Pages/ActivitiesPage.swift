@@ -175,7 +175,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $shortcuts) {
                     Text("Shortcuts")
-                    Text("Shows shortcuts you run from the notch's menu, with a button to stop each.")
+                    Text("Shows shortcuts as they run, wherever you start them, with a button to stop each.")
                 }
             }
         }

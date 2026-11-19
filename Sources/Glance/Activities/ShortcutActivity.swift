@@ -166,9 +166,15 @@ struct ShortcutRun: Identifiable, Equatable, Sendable {
     }
 
     let id: UUID
-    let shortcut: ShortcutDefinition
+    /// The shortcut; for one started elsewhere, its name once Shortcuts' catalog has given it.
+    var shortcut: ShortcutDefinition
     let startedAt: Date
     var processIdentifier: Int32?
+    /// Started outside Glance (Terminal, the Shortcuts app, the menu bar, an automation): the
+    /// published progress it's followed by (see `ShortcutProgressWatch`), which also stops it.
+    var elsewhere: Int?
+    /// Whether Shortcuts said which shortcut it is; one started elsewhere may not.
+    var identified = true
     var state: State = .starting
     var stopRequested = false
     var exit: ShortcutExit?
@@ -314,8 +320,9 @@ final class ShortcutCLI: ShortcutRunning {
     }
 }
 
-/// Tracks only runs started from Glance. Concurrent invocations of the same shortcut have distinct
-/// identities, handles, exit states, and Stop actions. No percentage or input-wait state is inferred.
+/// Tracks the runs started from Glance, and those started anywhere else, as Shortcuts publishes them
+/// (see `ShortcutProgressWatch`). Concurrent invocations of the same shortcut have distinct
+/// identities, handles, exit states, and Stop actions. No input-wait state is inferred.
 @MainActor
 final class ShortcutActivity: ObservableObject {
     static let shared = ShortcutActivity(isEnabled: {
@@ -326,6 +333,10 @@ final class ShortcutActivity: ObservableObject {
     private let source: any ShortcutRunning
     private let live: Bool
     private let isEnabled: () -> Bool
+    /// Whether runs started outside Glance show in the notch.
+    private let showsElsewhere: () -> Bool
+    /// Stops a run started elsewhere, by its published progress.
+    private let cancelPublication: @MainActor (Int) -> Void
     private let stopDelay: Duration
     private var settingsObserver: NSObjectProtocol?
     private var benched = false
@@ -350,13 +361,16 @@ final class ShortcutActivity: ObservableObject {
 
     init(
         source: (any ShortcutRunning)? = nil, stopDelay: Duration = .seconds(8), closeDelay: Duration = .seconds(1.8),
-        isEnabled: @escaping () -> Bool = { true }
+        isEnabled: @escaping () -> Bool = { true }, showsElsewhere: @escaping () -> Bool = { true },
+        cancelPublication: (@MainActor (Int) -> Void)? = nil
     ) {
         self.source = source ?? ShortcutCLI()
         live = source == nil
         self.stopDelay = stopDelay
         self.closeDelay = closeDelay
         self.isEnabled = isEnabled
+        self.showsElsewhere = showsElsewhere
+        self.cancelPublication = cancelPublication ?? { ShortcutProgressWatch.shared.cancel($0) }
     }
 
     /// Closes a run that's over by itself, if it should (see `closeDelay`).
@@ -382,9 +396,7 @@ final class ShortcutActivity: ObservableObject {
         guard settingsObserver == nil else { return }
         if live, !simulated {
             Task.detached(priority: .utility) { ShortcutRunStorage.cleanupExpired() }
-            ShortcutProgressWatch.shared.changed = { [weak self] publication, shortcut, fraction in
-                self?.progressChanged(publication: publication, shortcut: shortcut, fraction: fraction)
-            }
+            ShortcutProgressWatch.shared.changed = { [weak self] event in self?.progress(event) }
             ShortcutProgressWatch.shared.start()
         }
         settingsObserver = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -445,17 +457,25 @@ final class ShortcutActivity: ObservableObject {
             closeLater(id)
             return
         }
-        guard let handle = handles[id], handle.isRunning else { return }
-        runs[index].stopRequested = true
-        runs[index].state = .stopping
-        publish()
-        handle.requestStop()
+        if let publication = runs[index].elsewhere {
+            // As Shortcuts' own Stop: the run's progress cancelled, which it ends on.
+            runs[index].stopRequested = true
+            runs[index].state = .stopping
+            publish()
+            cancelPublication(publication)
+        } else {
+            guard let handle = handles[id], handle.isRunning else { return }
+            runs[index].stopRequested = true
+            runs[index].state = .stopping
+            publish()
+            handle.requestStop()
+        }
         guard runs.first(where: { $0.id == id })?.state == .stopping else { return }
         pendingStops[id]?.cancel()
         pendingStops[id] = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(for: stopDelay)
-            guard !Task.isCancelled, handles[id]?.isRunning == true,
+            guard !Task.isCancelled, handles[id]?.isRunning == true || runs.first(where: { $0.id == id })?.elsewhere != nil,
                 let index = runs.firstIndex(where: { $0.id == id }), runs[index].state == .stopping
             else { return }
             runs[index].state = .stopDelayed
@@ -463,22 +483,91 @@ final class ShortcutActivity: ObservableObject {
         }
     }
 
-    /// A run's published progress came out, changed or went away (nil). It belongs to the earliest
-    /// run of that shortcut started from Glance and still going that no other progress is told for.
-    func progressChanged(publication: Int, shortcut: UUID, fraction: Double?) {
-        guard let fraction else {
-            progressRuns[publication] = nil
-            return
+    /// What Shortcuts published about a run, wherever it was started.
+    func progress(_ event: ShortcutProgressWatch.Event) {
+        switch event {
+        case .began(let publication, let shortcut, let fraction): progressChanged(publication: publication, shortcut: shortcut, fraction: fraction)
+        case .progressed(let publication, let fraction):
+            // Only one already told for: one left out as it began stays out.
+            guard progressRuns[publication] != nil else { return }
+            progressChanged(publication: publication, shortcut: nil, fraction: fraction)
+        case .ended(let publication, let cancelled): progressEnded(publication: publication, cancelled: cancelled)
         }
+    }
+
+    /// A run's published progress came out, changed or went away (nil). It belongs to the earliest
+    /// run of that shortcut started from Glance and still going that no other progress is told for;
+    /// without the shortcut's name, to one started from Glance a moment ago. Otherwise it was started
+    /// elsewhere, and shows as its own run.
+    func progressChanged(publication: Int, shortcut: UUID?, fraction: Double?) {
+        guard let fraction else { return progressEnded(publication: publication, cancelled: false) }
         guard fraction.isFinite else { return }
-        let id =
-            progressRuns[publication]
-            ?? runs.filter { $0.shortcut.id == shortcut && $0.state.active && !progressRuns.values.contains($0.id) }
-            .min { $0.startedAt < $1.startedAt }?.id
-        guard let id, let index = runs.firstIndex(where: { $0.id == id }), runs[index].state.active else { return }
-        progressRuns[publication] = id
-        runs[index].progress = min(max(fraction, 0), 1)
+        let shown = min(max(fraction, 0), 1)
+        if let id = progressRuns[publication] {
+            guard let index = runs.firstIndex(where: { $0.id == id }), runs[index].state.active else { return }
+            runs[index].progress = shown
+            return publish()
+        }
+        let unclaimed = runs.filter { $0.elsewhere == nil && $0.state.active && !progressRuns.values.contains($0.id) }
+        let candidates =
+            shortcut.map { shortcut in unclaimed.filter { $0.shortcut.id == shortcut } }
+            ?? unclaimed.filter { Date.now.timeIntervalSince($0.startedAt) < Self.ownRunWindow }
+        if let id = candidates.min(by: { $0.startedAt < $1.startedAt })?.id, let index = runs.firstIndex(where: { $0.id == id }) {
+            progressRuns[publication] = id
+            runs[index].progress = shown
+            return publish()
+        }
+        beganElsewhere(publication: publication, shortcut: shortcut, fraction: shown)
+    }
+
+    /// How soon after Glance starts a run its progress, unnamed, is taken for it.
+    static let ownRunWindow: TimeInterval = 5
+
+    /// A run started outside Glance: shown as one of its own, by its name once Shortcuts' catalog
+    /// gives it, stopped through its progress.
+    private func beganElsewhere(publication: Int, shortcut: UUID?, fraction: Double) {
+        guard !benched, showsElsewhere() else { return }
+        let name = shortcut.flatMap { id in catalogCache.first { $0.id == id }?.name } ?? String(localized: "Shortcut")
+        var run = ShortcutRun(id: UUID(), shortcut: ShortcutDefinition(id: shortcut ?? UUID(), name: name), startedAt: .now, state: .running)
+        run.elsewhere = publication
+        run.identified = shortcut != nil
+        run.progress = fraction
+        runs.append(run)
+        progressRuns[publication] = run.id
+        // It takes the notch from a run that's over; one still going keeps it.
+        if selected.flatMap({ id in runs.first { $0.id == id } })?.state.active != true { selected = run.id }
         publish()
+        if let shortcut, !catalogCache.contains(where: { $0.id == shortcut }) { loadName(of: shortcut) }
+    }
+
+    /// Reads Shortcuts' catalog again for a shortcut it didn't have, and names its runs.
+    private func loadName(of shortcut: UUID) {
+        Task { [weak self] in
+            guard let self, let entries = try? await source.catalog() else { return }
+            catalogCache = entries
+            guard let name = entries.first(where: { $0.id == shortcut })?.name else { return }
+            for index in runs.indices where runs[index].elsewhere != nil && runs[index].shortcut.id == shortcut {
+                runs[index].shortcut = ShortcutDefinition(id: shortcut, name: name)
+            }
+            publish()
+        }
+    }
+
+    /// A run's progress went away: one started elsewhere is over, stopped if it was cancelled, done
+    /// otherwise. One started from Glance ends with its process instead.
+    func progressEnded(publication: Int, cancelled: Bool) {
+        guard let id = progressRuns.removeValue(forKey: publication), let index = runs.firstIndex(where: { $0.id == id }),
+            runs[index].elsewhere != nil, runs[index].state.active
+        else { return }
+        if cancelled {
+            runs[index].state = .stopped
+        } else {
+            runs[index].state = .completed
+            runs[index].progress = 1
+        }
+        pendingStops.removeValue(forKey: id)?.cancel()
+        publish()
+        closeLater(id)
     }
 
     func select(_ id: UUID) {
@@ -563,12 +652,13 @@ final class ShortcutActivity: ObservableObject {
             shown = nil
             return
         }
-        let showing = runs.filter { !putAway.contains($0.id) }
+        let elsewhere = showsElsewhere()
+        let showing = runs.filter { !putAway.contains($0.id) && ($0.elsewhere == nil || elsewhere) }
         let run =
             selected.flatMap { id in showing.first { $0.id == id } }
             ?? showing.first(where: { $0.state.active }) ?? showing.last
         selected = run?.id
-        shown = run.map { ShortcutShown(run: $0, additionalRuns: max(0, showing.count - 1), look: look(for: $0.shortcut)) }
+        shown = run.map { ShortcutShown(run: $0, additionalRuns: max(0, showing.count - 1), look: $0.identified ? look(for: $0.shortcut) : nil) }
     }
 
     /// The shortcut's look: one of Shortcuts' colors on the bench, never asking Shortcuts; read from
@@ -625,7 +715,7 @@ private final class ShortcutRunMenu: NSMenu, NSMenuDelegate {
 
     private func populate(loading: Bool, failed: Bool = false) {
         removeAllItems()
-        if let runs = activity?.runs, !runs.isEmpty {
+        if let runs = activity?.runs.filter({ $0.elsewhere == nil }), !runs.isEmpty {
             disabled(String(localized: "Runs Started in Glance"))
             for run in runs {
                 let item = NSMenuItem(title: "\(run.shortcut.name) — \(run.state.title)", action: nil, keyEquivalent: "")

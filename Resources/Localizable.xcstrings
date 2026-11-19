@@ -73199,6 +73199,214 @@
         }
       }
     },
+    "Shortcut": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الاختصار"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drecera"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zkratka"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genvej"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurzbefehl"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Συντόμευση"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atajo"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pikakomento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccourci"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצור"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शॉर्टकट"
+          }
+        },
+        "hr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prečac"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parancs"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pintasan"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comando rapido"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축어"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pintasan"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snarvei"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdracht"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrót"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atalho"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atalho"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scurtătură"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Быстрая команда"
+          }
+        },
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skratka"
+          }
+        },
+        "sl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bližnjica"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genväg"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "คำสั่งลัด"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kestirme"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Швидка команда"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phím tắt"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷指令"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "捷徑"
+          }
+        }
+      }
+    },
     "Shortcut Complete": {
       "localizations": {
         "ar": {
@@ -77989,210 +78197,210 @@
         }
       }
     },
-    "Shows shortcuts you run from the notch's menu, with a button to stop each.": {
+    "Shows shortcuts as they run, wherever you start them, with a button to stop each.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يعرض الاختصارات التي تشغلها من قائمة النوتش، مع زر لإيقاف كل منها."
+            "value": "يعرض الاختصارات أثناء تشغيلها، أينما بدأتها، مع زر لإيقاف كل منها."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra les dreceres que executes des del menú del notch, amb un botó per aturar-les."
+            "value": "Mostra les dreceres mentre s’executen, les iniciïs on les iniciïs, amb un botó per aturar-les."
           }
         },
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí zkratky spuštěné z nabídky výřezu, s tlačítkem k zastavení každé z nich."
+            "value": "Zobrazí zkratky, když běží, ať je spustíte odkudkoli, s tlačítkem k zastavení každé z nich."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser genveje, du kører fra notchens menu, med en knap til at stoppe hver."
+            "value": "Viser genveje, mens de kører, uanset hvor du starter dem, med en knap til at stoppe hver."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeigt Kurzbefehle, die du über das Menü der Notch ausführst, mit einer Taste zum Stoppen."
+            "value": "Zeigt Kurzbefehle, während sie laufen, egal wo du sie startest, mit einer Taste zum Stoppen."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Εμφανίζει τις συντομεύσεις που εκτελείτε από το μενού της εγκοπής, με κουμπί διακοπής για την καθεμία."
+            "value": "Εμφανίζει τις συντομεύσεις όσο εκτελούνται, από όπου κι αν τις ξεκινάτε, με κουμπί διακοπής για την καθεμία."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra los atajos que ejecutas desde el menú del notch, con un botón para detener cada uno."
+            "value": "Muestra los atajos mientras se ejecutan, los inicies donde los inicies, con un botón para detener cada uno."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Näyttää loven valikosta suorittamasi pikakomennot, ja painikkeen kunkin pysäyttämiseen."
+            "value": "Näyttää pikakomennot niiden ollessa käynnissä, mistä tahansa ne käynnistät, ja painikkeen kunkin pysäyttämiseen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Affiche les raccourcis que vous lancez depuis le menu de l’encoche, avec un bouton pour arrêter chacun."
+            "value": "Affiche les raccourcis pendant leur exécution, où que vous les lanciez, avec un bouton pour arrêter chacun."
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "מציג קיצורים שמפעילים מהתפריט של המגרעת, עם כפתור לעצירת כל אחד."
+            "value": "מציג קיצורים בזמן שהם פועלים, מכל מקום שבו מפעילים אותם, עם כפתור לעצירת כל אחד."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "नॉच के मेनू से चलाए गए शॉर्टकट दिखाता है, हर एक को रोकने के बटन के साथ।"
+            "value": "शॉर्टकट चलते समय दिखाता है, आप उन्हें कहीं से भी शुरू करें, हर एक को रोकने के बटन के साथ।"
           }
         },
         "hr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikazuje prečace koje pokrenete iz izbornika ureza, uz tipku za zaustavljanje svakog."
+            "value": "Prikazuje prečace dok se izvode, odakle god ih pokrenete, uz tipku za zaustavljanje svakog."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "Megjeleníti a notch menüjéből futtatott parancsokat, mindegyikhez egy leállítás gombbal."
+            "value": "Megjeleníti a parancsokat futás közben, bárhonnan indítod őket, mindegyikhez egy leállítás gombbal."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menampilkan pintasan yang Anda jalankan dari menu notch, dengan tombol untuk menghentikan masing-masing."
+            "value": "Menampilkan pintasan saat berjalan, dari mana pun Anda memulainya, dengan tombol untuk menghentikan masing-masing."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra i comandi rapidi che esegui dal menu del notch, con un pulsante per interrompere ciascuno."
+            "value": "Mostra i comandi rapidi mentre vengono eseguiti, ovunque tu li avvii, con un pulsante per interrompere ciascuno."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ノッチのメニューから実行したショートカットを、それぞれを停止するボタンとともに表示します。"
+            "value": "ショートカットを、どこから実行しても実行中に表示し、それぞれを停止するボタンを付けます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노치 메뉴에서 실행한 단축어를 각각 중단하는 버튼과 함께 보여줍니다."
+            "value": "단축어를 어디에서 실행하든 실행되는 동안 각각 중단하는 버튼과 함께 보여줍니다."
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menunjukkan pintasan yang anda jalankan daripada menu notch, dengan butang untuk menghentikan setiap satu."
+            "value": "Menunjukkan pintasan semasa ia berjalan, dari mana-mana anda memulakannya, dengan butang untuk menghentikan setiap satu."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viser snarveier du kjører fra notchens meny, med en knapp for å stoppe hver av dem."
+            "value": "Viser snarveier mens de kjører, uansett hvor du starter dem, med en knapp for å stoppe hver av dem."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toont opdrachten die je vanuit het menu van de notch uitvoert, met een knop om elke opdracht te stoppen."
+            "value": "Toont opdrachten terwijl ze worden uitgevoerd, waar je ze ook start, met een knop om elke opdracht te stoppen."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokazuje skróty uruchomione z menu wycięcia, z przyciskiem zatrzymania każdego z nich."
+            "value": "Pokazuje skróty podczas działania, skądkolwiek je uruchomisz, z przyciskiem zatrzymania każdego z nich."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra os atalhos que você executa no menu do notch, com um botão para parar cada um."
+            "value": "Mostra os atalhos enquanto são executados, de onde quer que você os inicie, com um botão para parar cada um."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra os atalhos que executa a partir do menu do entalhe, com um botão para parar cada um."
+            "value": "Mostra os atalhos enquanto são executados, onde quer que os inicie, com um botão para parar cada um."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arată scurtăturile pe care le rulezi din meniul notch-ului, cu un buton pentru a o opri pe fiecare."
+            "value": "Arată scurtăturile cât timp rulează, oriunde le-ai porni, cu un buton pentru a o opri pe fiecare."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывает команды, запущенные из меню выреза, с кнопкой остановки для каждой."
+            "value": "Показывает команды во время выполнения, откуда бы вы их ни запустили, с кнопкой остановки для каждой."
           }
         },
         "sk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zobrazí skratky spustené z ponuky výrezu, s tlačidlom na zastavenie každej z nich."
+            "value": "Zobrazí skratky počas behu, nech ich spustíte odkiaľkoľvek, s tlačidlom na zastavenie každej z nich."
           }
         },
         "sl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prikaže bližnjice, ki jih zaženete iz menija zareze, z gumbom za zaustavitev vsake."
+            "value": "Prikaže bližnjice med izvajanjem, od koder koli jih zaženete, z gumbom za zaustavitev vsake."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visar genvägar du kör från notchens meny, med en knapp för att stoppa var och en."
+            "value": "Visar genvägar medan de körs, var du än startar dem, med en knapp för att stoppa var och en."
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "แสดงคำสั่งลัดที่คุณเรียกใช้จากเมนูของรอยบาก พร้อมปุ่มหยุดแต่ละคำสั่ง"
+            "value": "แสดงคำสั่งลัดขณะทำงาน ไม่ว่าคุณจะเริ่มจากที่ใด พร้อมปุ่มหยุดแต่ละคำสั่ง"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Çentiğin menüsünden çalıştırdığınız kestirmeleri, her birini durdurmak için bir düğmeyle gösterir."
+            "value": "Kestirmeleri, nereden başlatırsanız başlatın çalışırken, her birini durdurmak için bir düğmeyle gösterir."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показує команди, запущені з меню вирізу, з кнопкою зупинки для кожної."
+            "value": "Показує команди під час виконання, звідки б ви їх не запустили, з кнопкою зупинки для кожної."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hiển thị các phím tắt bạn chạy từ menu của phần khuyết, với một nút để dừng từng phím tắt."
+            "value": "Hiển thị các phím tắt khi đang chạy, dù bạn bắt đầu chúng từ đâu, với một nút để dừng từng phím tắt."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示你从刘海菜单运行的快捷指令，每个都有停止按钮。"
+            "value": "在快捷指令运行时显示它们，无论从哪里启动，每个都有停止按钮。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "顯示你從瀏海選單執行的捷徑，每個都有停止按鈕。"
+            "value": "在捷徑執行時顯示它們，無論從哪裡啟動，每個都有停止按鈕。"
           }
         }
       }
