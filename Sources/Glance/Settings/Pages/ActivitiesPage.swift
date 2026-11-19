@@ -31,6 +31,7 @@ struct ActivitiesPage: View {
     @AppStorage(Preferences.activityVoiceMemos) private var voiceMemos = true
     @AppStorage(Preferences.clockTimerHidesMenuBar) private var hidesMenuBar = false
     @AppStorage(Preferences.hideMenuBarLiveActivities) private var hidesSystemActivities = true
+    @AppStorage(Preferences.liveActivityPlace) private var place = LiveActivityPlace.notch
     /// Taking macOS's timer out of the menu bar takes Accessibility.
     @State private var accessibilityAllowed = AXIsProcessTrusted()
     private let hasBattery = BatteryWatch.hasBattery
@@ -56,6 +57,16 @@ struct ActivitiesPage: View {
             })
     }
 
+    /// With Menu Bar chosen, what macOS shows there itself isn't in the notch: its switches step aside,
+    /// kept as they are for the notch.
+    private var inMenuBar: Bool { place == .menuBar }
+
+    /// What each place includes, one after the other, under the choice.
+    static var placesFootnote: AttributedString {
+        let text = LiveActivityPlace.allCases.map(\.includes).joined(separator: "\n")
+        return (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
+    }
+
     /// Each switch, on or off, in that order; read on every change of one of them, as each is kept
     /// here.
     private var switches: [Bool] { Self.previews.map { UserDefaults.standard.object(forKey: $0.key) as? Bool ?? true } }
@@ -65,29 +76,42 @@ struct ActivitiesPage: View {
             Section {
                 PageIntro(.activities, String(localized: "Shows what's going on beside the camera while the notch is closed."))
             }
+            // Where they show, and under it what each place includes, as a section's footnote.
             Section {
-                Toggle(isOn: $hidesSystemActivities) {
-                    Text("Hide native Live Activities")
-                    Text("Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.")
+                Picker("Show in", selection: $place.animation(.easeInOut(duration: 0.25))) {
+                    ForEach(LiveActivityPlace.allCases) { Text($0.title).tag($0) }
                 }
-                // Said only when it's in the way.
-                if hidesSystemActivities, !accessibilityAllowed {
-                    CenteredRow {
-                        Text("Glance can't turn them off")
-                        Text("Allow it in Privacy & Security, under Accessibility.")
-                    } trailing: {
-                        Button("Open Privacy & Security…") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+            } footer: {
+                Text(Self.placesFootnote)
+            }
+            // In the menu bar, macOS's own stay as they are: there's nothing to hide.
+            if place == .notch {
+                Section {
+                    Toggle(isOn: $hidesSystemActivities) {
+                        Text("Hide native Live Activities")
+                        Text("Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.")
+                    }
+                    // Said only when it's in the way.
+                    if hidesSystemActivities, !accessibilityAllowed {
+                        CenteredRow {
+                            Text("Glance can't turn them off")
+                            Text("Allow it in Privacy & Security, under Accessibility.")
+                        } trailing: {
+                            Button("Open Privacy & Security…") {
+                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                            }
                         }
                     }
                 }
             }
             // One switch for each kind, as Menu Bar settings lists its Live Activities, each turning
             // on or off everything of that kind.
-            Section {
-                Toggle(isOn: kind($liveActivity, $trackPop)) {
-                    Text("Now Playing")
-                    Text("Shows the cover and a waveform beside the camera, and briefly shows what starts playing.")
+            if !inMenuBar {
+                Section {
+                    Toggle(isOn: kind($liveActivity, $trackPop)) {
+                        Text("Now Playing")
+                        Text("Shows the cover and a waveform beside the camera, and briefly shows what starts playing.")
+                    }
                 }
             }
             if hasBattery {
@@ -110,54 +134,62 @@ struct ActivitiesPage: View {
                     Text("Shows calls coming in and the call you're on, in place of macOS's popup.")
                 }
             }
-            Section {
-                Toggle(isOn: $airDrop) {
-                    Text("AirDrop")
-                    Text("Shows files coming in and going out over AirDrop, as they go.")
-                }
-            }
-            Section {
-                Toggle(isOn: kind($screenRecording, $voiceMemos)) {
-                    Text("Recordings")
-                    Text("Shows the screen or a voice memo being recorded, with a button to stop it.")
-                }
-            }
-            Section {
-                Toggle(isOn: kind($timers, $stopwatch)) {
-                    Text("Clock")
-                    Text("Counts Clock's timers down and its stopwatch up beside the camera, and says when a timer is done.")
-                }
-                Toggle(isOn: $hidesMenuBar) {
-                    Text("Hide in menu bar")
-                    Text("Takes macOS's timer out of the menu bar while the notch shows it.")
-                }
-                .disabled(!timers)
-                // Said only when it's in the way, as the Tray page says Glance can't see copies.
-                if timers, hidesMenuBar, !accessibilityAllowed {
-                    CenteredRow {
-                        Text("Glance can't take macOS's timer out")
-                        Text("Allow it in Privacy & Security, under Accessibility.")
-                    } trailing: {
-                        Button("Open Privacy & Security…") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                        }
+            if !inMenuBar {
+                Section {
+                    Toggle(isOn: $airDrop) {
+                        Text("AirDrop")
+                        Text("Shows files coming in and going out over AirDrop, as they go.")
                     }
                 }
-            } footer: {
-                // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
-                // Read as Markdown, so its link is one.
-                Text(
-                    (try? AttributedString(
-                        markdown: String(
-                            localized:
-                                "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
-                        ))) ?? ""
-                )
             }
-            Section {
-                Toggle(isOn: $alarms) {
-                    Text("Alarms")
-                    Text("Shows Clock's alarms as they ring, with Snooze and Stop. Needs Accessibility.")
+            if !inMenuBar {
+                Section {
+                    Toggle(isOn: kind($screenRecording, $voiceMemos)) {
+                        Text("Recordings")
+                        Text("Shows the screen or a voice memo being recorded, with a button to stop it.")
+                    }
+                }
+            }
+            if !inMenuBar {
+                Section {
+                    Toggle(isOn: kind($timers, $stopwatch)) {
+                        Text("Clock")
+                        Text("Counts Clock's timers down and its stopwatch up beside the camera, and says when a timer is done.")
+                    }
+                    Toggle(isOn: $hidesMenuBar) {
+                        Text("Hide in menu bar")
+                        Text("Takes macOS's timer out of the menu bar while the notch shows it.")
+                    }
+                    .disabled(!timers)
+                    // Said only when it's in the way, as the Tray page says Glance can't see copies.
+                    if timers, hidesMenuBar, !accessibilityAllowed {
+                        CenteredRow {
+                            Text("Glance can't take macOS's timer out")
+                            Text("Allow it in Privacy & Security, under Accessibility.")
+                        } trailing: {
+                            Button("Open Privacy & Security…") {
+                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                            }
+                        }
+                    }
+                } footer: {
+                    // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
+                    // Read as Markdown, so its link is one.
+                    Text(
+                        (try? AttributedString(
+                            markdown: String(
+                                localized:
+                                    "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
+                            ))) ?? ""
+                    )
+                }
+            }
+            if !inMenuBar {
+                Section {
+                    Toggle(isOn: $alarms) {
+                        Text("Alarms")
+                        Text("Shows Clock's alarms as they ring, with Snooze and Stop. Needs Accessibility.")
+                    }
                 }
             }
             Section {
@@ -175,7 +207,7 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: $shortcuts) {
                     Text("Shortcuts")
-                    Text("Shows shortcuts you run from the notch's menu, with a button to stop each.")
+                    Text("Shows shortcuts as they run, wherever you start them, with a button to stop each.")
                 }
             }
         }

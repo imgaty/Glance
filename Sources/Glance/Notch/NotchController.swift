@@ -513,7 +513,7 @@ final class NotchController {
                 }
         }
         settingsWatch = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
-            .map { _ in UserDefaults.standard.bool(forKey: Preferences.liveActivity) }
+            .map { _ in UserDefaults.standard.bool(forKey: Preferences.liveActivity) && LiveActivityPlace.allows(Preferences.liveActivity) }
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] _ in
@@ -634,7 +634,9 @@ final class NotchController {
     /// it folds away, as on the iPhone, so skipping between tracks doesn't make it blink.
     private func showActivity(_ playing: Bool, immediately: Bool = false) {
         activityTask?.cancel()
-        let shown = playing && UserDefaults.standard.bool(forKey: Preferences.liveActivity) && !musicDismissed
+        let shown =
+            playing && UserDefaults.standard.bool(forKey: Preferences.liveActivity) && LiveActivityPlace.allows(Preferences.liveActivity)
+            && !musicDismissed
         activityTask = Task { [weak self] in
             guard !Task.isCancelled else { return }
             // A pause folds it away after a moment; turning it off in Settings, at once.
@@ -725,8 +727,18 @@ final class NotchController {
     }
 
     /// A file started coming in over AirDrop, came further, or is in: AirDrop's wings come, fill, or
-    /// go. Opened to it as it goes, the notch closes.
+    /// go. Opened to it as it goes, the notch closes. One asking to be accepted opens the notch by
+    /// itself, to Decline and Accept, until it's answered.
     private func show(airdrop transfer: AirDropShown?) {
+        let wasAsking = model.airdrop?.asking == true, was = model.airdrop?.id
+        defer {
+            let asking = model.airdrop?.asking == true
+            if asking, !wasAsking || transfer?.id != was {
+                present(.airdrop, for: nil)
+            } else if wasAsking, !asking {
+                endPresenting()
+            }
+        }
         guard (transfer == nil) != (model.airdrop == nil) || transfer?.id != model.airdrop?.id else {
             // Only further along: the ring fills on its own.
             model.airdrop = transfer
@@ -953,7 +965,7 @@ final class NotchController {
     private func announceTrack() {
         let defaults = UserDefaults.standard
         guard Date.now.timeIntervalSince(createdAt) > 2, defaults.bool(forKey: Preferences.liveActivity),
-            defaults.bool(forKey: Preferences.musicTrackPop)
+            defaults.bool(forKey: Preferences.musicTrackPop), LiveActivityPlace.allows(Preferences.musicTrackPop, in: defaults)
         else { return }
         popTask?.cancel()
         popTask = Task { [weak self] in
@@ -1636,7 +1648,7 @@ final class NotchController {
         case .timer, .stopwatch: [.activityFirst, .activitySecond]
         case .call:
             model.call.map { ExpandedCallView.controls(for: $0, microphoneAvailable: CallMicrophone.canMute, sourceAvailable: $0.sourceURL != nil) } ?? []
-        case .airdrop: model.airdrop?.offersStop == true ? [.activityFirst] : []
+        case .airdrop: model.airdrop?.asking == true ? [.activityFirst, .activitySecond] : model.airdrop?.offersStop == true ? [.activityFirst] : []
         case .alarm: model.alarm.map(AlarmActivityView.controls(for:)) ?? []
         case .recognition: model.recognition.map(MusicRecognitionActivityView.controls(for:)) ?? []
         case .shortcut: model.shortcut.map(ShortcutRunView.controls(for:)) ?? []

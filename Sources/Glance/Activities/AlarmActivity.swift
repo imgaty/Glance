@@ -73,6 +73,7 @@ final class AlarmActivity: ObservableObject {
     static let shared = AlarmActivity(isEnabled: {
         (UserDefaults.standard.object(forKey: Preferences.activityAlarms) as? Bool ?? true)
             && (UserDefaults.standard.object(forKey: Preferences.notchEnabled) as? Bool ?? true)
+            && LiveActivityPlace.allows(Preferences.activityAlarms)
     })
 
     enum Action: String, Hashable, Sendable {

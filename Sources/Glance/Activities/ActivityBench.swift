@@ -20,7 +20,7 @@ final class ActivityBench {
 
     enum Scene: String, CaseIterable {
         case focus
-        case music, airdrop, airdropSend, timer, stopwatch, call, charging, lowBattery, headphones, deviceBattery, caseBattery
+        case music, airdrop, airdropSend, airdropAsk, timer, stopwatch, call, charging, lowBattery, headphones, deviceBattery, caseBattery
         /// A call in one state, held for the round: coming in, swiped away while it rings, going out,
         /// going on, with someone whose name is too long and for over an hour, with a number, in an app
         /// that says nothing about it, and with nothing read from macOS's popup.
@@ -64,6 +64,7 @@ final class ActivityBench {
             case .voiceMemoPaused: "Voice Memo, Paused"
             case .airdrop: "Coming In"
             case .airdropSend: "Going Out"
+            case .airdropAsk: "Asking to Share"
             case .airdropReal: "Real Files, Nothing Made Up"
             case .timer: "Timer"
             case .stopwatch: "Stopwatch"
@@ -104,7 +105,7 @@ final class ActivityBench {
             ("Calls", [.call, .callRinging, .callSwiped, .callOutgoing, .callOngoing, .callLong, .callNumber, .callOtherApp, .callUnread]),
             ("Recording", [.screenRecording, .screenCountdown, .screenSaving, .screenSaved, .voiceMemo, .voiceMemoPaused]),
             ("Music", [.music]),
-            ("AirDrop", [.airdrop, .airdropSend, .airdropReal]),
+            ("AirDrop", [.airdrop, .airdropSend, .airdropAsk, .airdropReal]),
             ("Clock", [.timer, .stopwatch, .alarm, .alarmNoSnooze, .alarmUnavailable, .alarmPending, .alarmFailed]),
             (
                 "Music Recognition",
@@ -205,11 +206,19 @@ final class ActivityBench {
         ended.insert(activity)
     }
 
+    /// The made-up AirDrop request's answer, from its own Decline or Accept.
+    private var airDropAnswer: AirDropAnswer.Choice?
+
+    func answered(_ choice: AirDropAnswer.Choice) {
+        airDropAnswer = choice
+    }
+
     private func play(_ scene: Scene) async {
         switch scene {
         case .airdropReal, .music: break
         case .airdrop: await airDrop(sending: false)
         case .airdropSend: await airDrop(sending: true)
+        case .airdropAsk: await airDropAsk()
         case .timer: await timer()
         case .stopwatch: await stopwatch()
         case .recognition, .recognitionPermission, .recognitionMatch, .recognitionNoMatch, .recognitionDenied, .recognitionRestricted, .recognitionOffline, .recognitionFailed, .recognitionCancelled:
@@ -266,6 +275,33 @@ final class ActivityBench {
             }
             // In, it shows a moment full.
             if !ended.contains(.airdrop) { await wait(1.2) }
+            watch.bench(nil)
+            await wait(Self.rest)
+        }
+    }
+
+    /// Someone nearby asking to share a photo, until it's answered or the round is over: accepted, it
+    /// comes in over a few seconds; declined, or left, it goes, and the next one asks after a moment.
+    private func airDropAsk() async {
+        let picture = Self.photo()
+        let watch = AirDropWatch.shared
+        while !Task.isCancelled {
+            ended.remove(.airdrop)
+            airDropAnswer = nil
+            let id = UUID().uuidString
+            watch.bench(AirDropShown(id: id, sender: "iPhone", preview: picture, fraction: 0, canStop: false, asking: true))
+            let end = Date.now + length
+            while airDropAnswer == nil, !ended.contains(.airdrop), Date.now < end, !Task.isCancelled { await wait(0.2) }
+            if airDropAnswer == .accept {
+                let start = Date.now
+                var fraction = 0.0
+                while !ended.contains(.airdrop), fraction < 1, !Task.isCancelled {
+                    fraction = min(Date.now.timeIntervalSince(start) / 4, 1)
+                    watch.bench(AirDropShown(id: id, sender: "iPhone", preview: picture, fraction: fraction))
+                    await wait(0.1)
+                }
+                if !ended.contains(.airdrop) { await wait(1.2) }
+            }
             watch.bench(nil)
             await wait(Self.rest)
         }

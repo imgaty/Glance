@@ -124,7 +124,9 @@ final class ClockActivity: ObservableObject {
         lastRead = .now
         let defaults = UserDefaults.standard
         CFPreferencesAppSynchronize(Self.domain)
-        let timers = defaults.bool(forKey: Preferences.activityClockTimers) ? Self.kept("MTTimers") : []
+        let timers =
+            defaults.bool(forKey: Preferences.activityClockTimers) && LiveActivityPlace.allows(Preferences.activityClockTimers, in: defaults)
+            ? Self.kept("MTTimers") : []
         let current = Self.timer(in: timers)
         var nextTimer = current?.state
         shownID = current?.id
@@ -150,7 +152,9 @@ final class ClockActivity: ObservableObject {
             }
         }
 
-        var nextStopwatch = defaults.bool(forKey: Preferences.activityStopwatch) ? Stopwatch.current(in: Self.kept("MTStopwatches")) : nil
+        var nextStopwatch =
+            defaults.bool(forKey: Preferences.activityStopwatch) && LiveActivityPlace.allows(Preferences.activityStopwatch, in: defaults)
+            ? Stopwatch.current(in: Self.kept("MTStopwatches")) : nil
         if let expected = expectedStopwatch {
             if Date.now < expected.until, !Stopwatch.alike(nextStopwatch, expected.state) {
                 nextStopwatch = expected.state

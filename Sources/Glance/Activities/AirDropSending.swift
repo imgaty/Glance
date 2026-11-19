@@ -59,7 +59,7 @@ final class AirDropSendWatch {
     }
 
     private func tick() {
-        guard UserDefaults.standard.bool(forKey: Preferences.activityAirDrop) else { return }
+        guard UserDefaults.standard.bool(forKey: Preferences.activityAirDrop), LiveActivityPlace.allows(Preferences.activityAirDrop) else { return }
         let out = Self.bytesOut(of: "awdl0")
         let busy = out.flatMap { now in bytesOut.map { now > $0 + Self.busyBytes } } ?? false
         bytesOut = out

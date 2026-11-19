@@ -357,6 +357,8 @@ enum Preferences {
             activityScreenRecording: true,
             activityVoiceMemos: true,
             hideMenuBarLiveActivities: true,
+            // The notch, as before there was a choice.
+            liveActivityPlace: LiveActivityPlace.notch.rawValue,
             swipeToSwitch: true,
         ])
     }
@@ -466,6 +468,9 @@ enum Preferences {
     static let clockTimerHidesMenuBar = "clockTimerHidesMenuBar"
     /// macOS's own Live Activities turned off in Menu Bar settings (see `MenuBarLiveActivities`).
     static let hideMenuBarLiveActivities = "hideMenuBarLiveActivities"
+    /// Where the activities macOS has its own menu bar pill for show: the notch or the menu bar
+    /// (see `LiveActivityPlace`).
+    static let liveActivityPlace = "liveActivityPlace"
     static let activityStopwatch = "activityStopwatch"
     /// The screen being recorded, and a voice memo being recorded, show (see `ScreenRecordingWatch`
     /// and `VoiceMemoWatch`).
@@ -769,7 +774,9 @@ final class NotchManager {
     /// System Settings opened, hidden, to switch the pill back on or off.
     var nativeActivityReplacements: Set<String> {
         let defaults = UserDefaults.standard
-        let shows = !controllers.isEmpty && defaults.bool(forKey: Preferences.notchEnabled) && defaults.bool(forKey: Preferences.liveActivity)
+        let shows =
+            !controllers.isEmpty && defaults.bool(forKey: Preferences.notchEnabled) && defaults.bool(forKey: Preferences.liveActivity)
+            && LiveActivityPlace.allows(Preferences.liveActivity, in: defaults)
         return shows ? [MenuBarLiveActivities.nowPlayingName] : []
     }
 
