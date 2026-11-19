@@ -22,9 +22,11 @@ struct AirDropShown: Equatable {
     var file: String?
     /// Whether the transfer currently exposes a reachable cancellation action.
     var canStop = true
+    /// Coming in and waiting to be accepted or declined: what macOS asks before a file comes.
+    var asking = false
 
-    var done: Bool { fraction >= 1 }
-    var offersStop: Bool { canStop && !done }
+    var done: Bool { fraction >= 1 && !asking }
+    var offersStop: Bool { canStop && !done && !asking }
 }
 
 /// Session updates may arrive in any order. Keep the visible transfer until it leaves, then use
@@ -50,7 +52,9 @@ struct AirDropTransferOrder {
 /// when the file starts coming until it's in, AirDrop's symbol at one end and how far along it is
 /// at the other; opened, a picture of it, who it's from, and a button to stop it. macOS tells
 /// apps of them through its own observer, the one its AirDrop notices use, which has no public way
-/// in; without it, nothing shows. What waits to be accepted shows once it's accepted.
+/// in; without it, nothing shows. What waits to be accepted shows as it asks, opened by itself, with
+/// Decline and Accept, which answer it as macOS's own buttons do (see `AirDropAnswer`); macOS's own
+/// request stays where it is too, to be answered there.
 @MainActor
 final class AirDropWatch: NSObject, ObservableObject {
     static let shared = AirDropWatch()
@@ -110,11 +114,15 @@ final class AirDropWatch: NSObject, ObservableObject {
     }
 
     /// macOS's own notice for a file coming in stays out of sight while the notch shows it, and for a
-    /// moment after, when macOS says it's in. What's waiting to be accepted isn't shown here, so its
-    /// notice stays, to be accepted.
+    /// moment after, when macOS says it's in. What's waiting to be accepted keeps macOS's own request
+    /// in sight, to be answered there as well.
     private func hideNotice() {
         guard ActivityBench.scene == nil else { return }
-        if let transfer, !transfer.sending {
+        if transfer?.asking == true {
+            lettingGo?.cancel()
+            lettingGo = nil
+            NotificationWindow.shared.letGo(.airDrop)
+        } else if let transfer, !transfer.sending {
             lettingGo?.cancel()
             lettingGo = nil
             NotificationWindow.shared.hold(.airDrop)
@@ -135,11 +143,16 @@ final class AirDropWatch: NSObject, ObservableObject {
         guard !ActivityBench.fakes else { return ActivityBench.shared.stopped(.airdrop) }
         if transfer?.sending == true { return sends.stop() }
         guard let id = transfer?.id, let shown = transfers[id] else { return }
-        if let cancel = shown.value(forKey: "cancelAction") as? NSObject, cancel.responds(to: NSSelectorFromString("triggerAction")) {
-            cancel.perform(NSSelectorFromString("triggerAction"))
-        } else {
-            (shown.value(forKey: "transferProgress") as? Progress)?.cancel()
-        }
+        // The notice's own Cancel, if macOS gave it a way to run; otherwise the transfer's progress.
+        let cancel = shown.value(forKey: "cancelAction") as? NSObject
+        if cancel.map(AirDropAnswer.trigger) != true { (shown.value(forKey: "transferProgress") as? Progress)?.cancel() }
+    }
+
+    /// Accepts or declines the request showing, as macOS's own Accept and Decline do.
+    func answer(_ choice: AirDropAnswer.Choice) {
+        guard let shown = transfer, shown.asking else { return }
+        guard !ActivityBench.fakes else { return ActivityBench.shared.answered(choice) }
+        AirDropAnswer.answer(choice, transfer: transfers[shown.id])
     }
 
     private func updated(_ transfer: NSObject) {
@@ -190,11 +203,7 @@ final class AirDropWatch: NSObject, ObservableObject {
     }
 
     private func shown(_ transfer: NSObject) -> AirDropShown? {
-        guard let id = transfer.value(forKey: "identifier") as? String,
-            transfer.value(forKey: "needsAction") as? Bool != true,
-            let progress = transfer.value(forKey: "transferProgress") as? Progress,
-            !progress.isCancelled, progress.totalUnitCount > 0
-        else { return nil }
+        guard let id = transfer.value(forKey: "identifier") as? String else { return nil }
         let meta = transfer.value(forKey: "metaData") as? NSObject
         func text(_ key: String) -> String? { (meta?.value(forKey: key) as? String).flatMap { $0.isEmpty ? nil : $0 } }
         let mine = meta?.value(forKey: "senderIsMe") as? Bool ?? false
@@ -202,6 +211,12 @@ final class AirDropWatch: NSObject, ObservableObject {
         let preview =
             previews[id] ?? Self.image(meta?.value(forKey: "smallPreviewImage")) ?? Self.image(meta?.value(forKey: "previewImage"))
         previews[id] = preview
+        // Asking to be accepted: shown with Decline and Accept while macOS's own actions can answer it.
+        if transfer.value(forKey: "needsAction") as? Bool == true {
+            return AirDropShown(id: id, sender: sender, preview: preview, fraction: 0, canStop: false, asking: true)
+        }
+        guard let progress = transfer.value(forKey: "transferProgress") as? Progress, !progress.isCancelled, progress.totalUnitCount > 0
+        else { return nil }
         let cancel = transfer.value(forKey: "cancelAction") as? NSObject
         let canStop = cancel?.responds(to: NSSelectorFromString("triggerAction")) == true || progress.isCancellable
         return AirDropShown(id: id, sender: sender, preview: preview, fraction: min(max(progress.fractionCompleted, 0), 1), canStop: canStop)
@@ -244,6 +259,8 @@ enum AirDropLayout {
     static let gap: CGFloat = 0.35
     static let bigRingLine: CGFloat = 0.127
     static let stop: CGFloat = 0.43
+    /// Accept's check, by its button's side, as the call's Accept handset is by its own.
+    static let check: CGFloat = 0.4
 
     /// The picture as far in from its end as the ring is from the other, the iPhone's 17 points.
     static func thumbEdge(_ h: CGFloat) -> CGFloat { TimerLayout.buttonEdge(h) }
@@ -251,13 +268,19 @@ enum AirDropLayout {
     static func ringEdge(_ h: CGFloat) -> CGFloat { TimerLayout.circleEdge(h) }
 
     /// Opened: only as wide as the camera needs it: the picture and the ring stand as high as the
-    /// camera, so beside it, and the words, as high as they go under it, run on beneath it.
+    /// camera, so beside it, and the words, as high as they go under it, run on beneath it. Asking to
+    /// be accepted, Decline and Accept stand where the ring would, side by side.
     @MainActor
-    static func width(restingHeight h: CGFloat, camera: CGFloat) -> CGFloat {
+    static func width(restingHeight h: CGFloat, camera: CGFloat, asking: Bool = false) -> CGFloat {
         let gap = LiveActivityView.cameraGap
         let left = thumbEdge(h) + TimerLayout.content(h) + gap
-        let right = gap + TimerLayout.circle(h) + ringEdge(h)
+        let right = gap + trailing(h, asking: asking) + ringEdge(h)
         return (camera + max(left, right) * 2).rounded(.up)
+    }
+
+    /// What stands at the right end: the ring, or Decline and Accept with the timer's gap between.
+    static func trailing(_ h: CGFloat, asking: Bool) -> CGFloat {
+        asking ? TimerLayout.circle(h) * 2 + TimerLayout.circleGap(h) : TimerLayout.circle(h)
     }
 
     /// Where the words' first line, "AirDrop", stands: as high as it goes under the camera.
@@ -268,9 +291,9 @@ enum AirDropLayout {
     /// Where the words start, from the left end.
     static func wordsStart(_ h: CGFloat) -> CGFloat { thumbEdge(h) + TimerLayout.content(h) + h * gap }
 
-    /// As far as who it's from can run, under the camera, before the ring.
-    static func wordsRoom(_ h: CGFloat, width: CGFloat) -> CGFloat {
-        max(width - wordsStart(h) - ringEdge(h) - TimerLayout.circle(h) - h * gap, 0)
+    /// As far as who it's from can run, under the camera, before the ring or the buttons.
+    static func wordsRoom(_ h: CGFloat, width: CGFloat, asking: Bool = false) -> CGFloat {
+        max(width - wordsStart(h) - ringEdge(h) - trailing(h, asking: asking) - h * gap, 0)
     }
 
 }
@@ -336,6 +359,7 @@ struct ExpandedAirDropView: View {
     var closedDrop: CGFloat = 0
     /// Isolated render fixtures can exercise the control without touching a real transfer.
     var stop: () -> Void = { AirDropWatch.shared.stop() }
+    var answer: (AirDropAnswer.Choice) -> Void = { AirDropWatch.shared.answer($0) }
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
 
@@ -346,6 +370,7 @@ struct ExpandedAirDropView: View {
     }
 
     static func spoken(_ shown: AirDropShown) -> String {
+        if shown.asking { return String(localized: "AirDrop from \(shown.sender), waiting for an answer") }
         let who = shown.sending ? shown.recipient.map { String(localized: "to \($0)") } ?? String(localized: "sending") : String(localized: "from \(shown.sender)")
         return String(localized: "AirDrop \(who), \(Int((shown.fraction * 100).rounded())) percent")
     }
@@ -364,7 +389,7 @@ struct ExpandedAirDropView: View {
         }
         .lineLimit(1)
         .truncationMode(.tail)
-        .frame(maxWidth: AirDropLayout.wordsRoom(h, width: width), alignment: .leading)
+        .frame(maxWidth: AirDropLayout.wordsRoom(h, width: width, asking: shown.asking), alignment: .leading)
         .firstBaseline(AirDropLayout.wordsBaseline(h))
         .padding(.leading, AirDropLayout.wordsStart(h))
         // The ring grows out of where it shows beside the camera, as the Timer's does.
@@ -383,7 +408,15 @@ struct ExpandedAirDropView: View {
         ZStack {
             left.modifier(IslandReveal(hidden: !revealed)).frame(maxWidth: .infinity, alignment: .leading)
             words.modifier(IslandReveal(hidden: !revealed))
-            right.frame(maxWidth: .infinity, alignment: .trailing)
+            if shown.asking {
+                // Nothing beside the camera to grow from: they come in as the rest does.
+                answerButtons(h)
+                    .modifier(IslandReveal(hidden: !revealed))
+                    .padding(.trailing, AirDropLayout.ringEdge(h))
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                right.frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
         .frame(width: width, height: TimerLayout.rowHeight(h))
         .accessibilityElement(children: .contain)
@@ -401,6 +434,33 @@ struct ExpandedAirDropView: View {
                 .frame(width: TimerLayout.circle(h), height: TimerLayout.circle(h))
                 .accessibilityHidden(true)
         }
+    }
+
+    /// Decline, a white ✕ on its faint circle as the Timer's, and Accept, a check on AirDrop's blue,
+    /// round buttons as every other activity's, at the right end.
+    private func answerButtons(_ h: CGFloat) -> some View {
+        let side = TimerLayout.circle(h)
+        return HStack(spacing: TimerLayout.circleGap(h)) {
+            IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Decline"), side: side) {
+                perform(.decline)
+            } glyph: {
+                CrossGlyph(height: h)
+            }
+            .accessibilityIdentifier("decline-airdrop")
+            IslandCircleButton(control: .activitySecond, height: h, tint: .white, label: String(localized: "Accept"), fill: AirDropLayout.tint, side: side) {
+                perform(.accept)
+            } glyph: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: side * AirDropLayout.check, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .accessibilityIdentifier("accept-airdrop")
+        }
+    }
+
+    func perform(_ choice: AirDropAnswer.Choice) {
+        guard revealed, shown.asking else { return }
+        answer(choice)
     }
 
     func performStop() {

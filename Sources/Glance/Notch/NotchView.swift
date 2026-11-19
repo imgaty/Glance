@@ -620,7 +620,7 @@ final class NotchModel: ObservableObject {
                 (restingWidth + 2 * swell + pull * 0.4 + across, resting + swell + pull)
             case .open where expanded == .airdrop:
                 (
-                    AirDropLayout.width(restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
+                    AirDropLayout.width(restingHeight: closedSize.height, camera: camera, asking: airdrop?.asking == true) + pull * 0.35 + across,
                     TimerLayout.rowHeight(closedSize.height) + pull
                 )
             case .open where expanded == .call:
@@ -1318,7 +1318,7 @@ struct NotchView: View {
             let h = model.closedSize.height
             let visible = shown && model.expanded == .airdrop
             ExpandedAirDropView(
-                shown: transfer, restingHeight: h, width: AirDropLayout.width(restingHeight: h, camera: model.camera),
+                shown: transfer, restingHeight: h, width: AirDropLayout.width(restingHeight: h, camera: model.camera, asking: transfer.asking),
                 revealed: visible, closedWidth: grownOrigin(.airdrop)
             )
             .environment(\.activityBubbleCenter, bubbleOrigin(.airdrop))
