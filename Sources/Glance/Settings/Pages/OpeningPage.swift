@@ -32,18 +32,12 @@ struct OpeningPage: View {
                 }
                 Toggle("Haptic feedback", isOn: $haptics)
             }
-            // One switch for every swipe, on the trackpad and on a display with Touch, and under it
-            // what each does, as Trackpad settings says how its gestures are done.
+            // One switch for every swipe, on the trackpad and on a display with Touch, and under its
+            // box what each does, as a footnote, as Trackpad settings says how its gestures are done.
             Section {
-                Toggle(isOn: gestures) {
-                    Text("Gestures")
-                    Text(
-                        trayOn
-                            ? String(localized: "Swipe down with two fingers to open the notch, up to close it or swipe a live activity away, and left or right to change songs.")
-                                + " " + String(localized: "Swipe with three fingers on the open notch, or scroll holding Shift, to go between tools.")
-                            : String(localized: "Swipe down with two fingers to open the notch, up to close it or swipe a live activity away, and left or right to change songs.")
-                    )
-                }
+                Toggle("Gestures", isOn: gestures)
+            } footer: {
+                Text(Self.gesturesFootnote(tray: trayOn))
             }
             Section {
                 ShortcutRow(action: .music)
@@ -51,6 +45,13 @@ struct OpeningPage: View {
                     .disabled(!trayOn)
             }
         }
+    }
+
+    /// What the swipes do, said under the Gestures box: going between tools only with the tray on.
+    static func gesturesFootnote(tray: Bool) -> String {
+        let swipes = String(localized: "Swipe down with two fingers to open the notch, up to close it or swipe a live activity away, and left or right to change songs.")
+        guard tray else { return swipes }
+        return swipes + " " + String(localized: "Swipe with three fingers on the open notch, or scroll holding Shift, to go between tools.")
     }
 
     /// On while any swipe is, turning them all on or off.
