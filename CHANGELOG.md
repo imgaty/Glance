@@ -363,6 +363,10 @@
   dragging controls between buttons or out of the player.
 - Updated the welcome tour's navigation, captions, permission controls and
   previews to follow Settings.
+- Changed new installs to start with your Mac's own settings:
+  `Haptic feedback` as **Force Click and haptic feedback** is set in
+  **System Settings > Trackpad**, and `Animated cover` off while
+  **Reduce motion** is on. Updates keep every setting as it was.
 
 ### Accessibility and languages
 

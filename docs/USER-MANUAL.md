@@ -888,6 +888,12 @@ Settings opens on the page you last used. While it's open, the **View** menu has
 **Back** (⌘[), **Forward** (⌘]), **Search** (⌘F) and every page, and
 **Help > Glance Help** opens this manual.
 
+The first time Glance opens, settings that have an equivalent on your Mac start
+as your Mac has it: `Haptic feedback` follows **Force Click and haptic
+feedback** in **System Settings > Trackpad**, and `Animated cover` starts off
+when **Reduce motion** is on in **System Settings > Accessibility > Display**.
+After that, they change only in Glance. An update keeps every setting as it was.
+
 ### General
 
 | Setting | Operation |
@@ -940,7 +946,7 @@ the selected output.
 | `Controls` | The two buttons beside the playback controls |
 | `Lyrics` | Whether clicking the waveform shows the words |
 | `Tint progress bar` | Colors the progress bar with the accent color (off at first) |
-| `Animated cover` | Plays an album's animated cover, when it has one |
+| `Animated cover` | Plays an album's animated cover, when it has one (on at first, unless **Reduce motion** is on) |
 | `Show app icon on cover` | Shows the playing app's icon on the cover (on at first) |
 | `Show audio from` | Which apps' audio Glance shows; **Add App…** adds an app, and right-clicking one offers **Remove from List** |
 | `Show new apps` | Whether apps that start playing are added turned on |
@@ -998,7 +1004,7 @@ preview stays on what's playing.
 | `Open with` | `Hover`, `Click`, or `Hover or click` |
 | `Hover delay` | How long the pointer rests on the notch before it opens |
 | `Click and hold` | How long a click is held before it opens |
-| `Haptic feedback` | A light tap as the player starts opening, or when another activity reaches the housing before expanding (off at first); with Reduce Motion, the tap is immediate |
+| `Haptic feedback` | A light tap as the player starts opening, or when another activity reaches the housing before expanding (at first, as **Force Click and haptic feedback** in **System Settings > Trackpad**); with Reduce Motion, the tap is immediate |
 | `Gestures` | Two-finger swipes down to open and up to close, and left and right to change songs; three-finger swipes on the open notch and scrolling sideways with Shift held to go between tools; and the same drags on a display with Touch, two fingers sideways for the tools. Scrolling goes the way your Mac scrolls |
 | `Open the player` | The keyboard shortcut, ⌥⇧1 at first; click it and type another, or Control-click it to restore ⌥⇧1 |
 | `Open the tray` | The tray's shortcut, ⌥⇧2 at first, changed the same way |
