@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 18 November 2026`
+`Created: 11 October 2026` | `Last updated: 19 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -520,8 +520,11 @@ accept, and on the call, who it's with and Discord's own time, which keeps
 counting while Discord is out of sight behind a full-screen app; the red button
 leaves the call. For those apps, your half of the waveform needs `Microphone`,
 which Glance asks for during that call and uses only during calls, and the
-other half needs `Audio from apps`. Turn all this off with `Calls` in
-**Settings > Live Activities**.
+other half needs `Audio from apps`. Your half comes only from the microphone
+the call itself records from, so AirPods never switch to their headset mode
+for it; if Glance can't listen to that microphone, your bars stay as dots. An
+app on a call is never turned down by the sound slider. Turn all this off with
+`Calls` in **Settings > Live Activities**.
 Batteries show green, or red at 20% and below. VoiceOver reads each one out.
 Compact accessory percentages stay at least 10 points tall, and the Low Power
 Mode instruction uses the notch's readable secondary text color.
@@ -720,14 +723,16 @@ Center remain separate.
 
 Right-click the notch and choose **Run Shortcut**, then a shortcut. The submenu
 also lists runs already started in Glance; choosing one opens that run without
-starting it again. A run shows as the iPhone shows a shortcut running: beside
-the camera, the shortcut's own icon at the left and a ring in its color at the
-right, filling from the top as Shortcuts reports how far the run has got. Until
-Shortcuts reports anything, the ring is a dot at the top; beside the camera it
-appears after a second, or as soon as the run moves. Open the activity to see
-the icon laid flat at the left end, which opens Shortcuts, the shortcut's name
-beside the camera, and at the right end the ring, with the square inside it:
-**Stop**. With another activity beside it, the run's bubble shows its icon.
+starting it again. A shortcut started anywhere else, from the Shortcuts app,
+Terminal or another app, shows in the notch too while it runs. A run shows as
+the iPhone shows a shortcut running: beside the camera, the shortcut's own icon
+at the left and a ring in its color at the right, filling from the top as
+Shortcuts reports how far the run has got. Until Shortcuts reports anything, the
+ring is a dot at the top; beside the camera it appears after a second, or as
+soon as the run moves. Open the activity to see the icon laid flat at the left
+end, which opens Shortcuts, the shortcut's name beside the camera, and at the
+right end the ring, with the square inside it: **Stop**. With another activity
+beside it, the run's bubble shows its icon.
 
 When the shortcut finishes, the ring turns white with a check and the activity
 closes by itself a moment later; one you stopped closes the same way. A run that
@@ -738,12 +743,13 @@ time, macOS asks to let Glance control `Shortcuts Events`, which gives each
 shortcut's icon and color. Without it, runs show as a new shortcut does, in cyan
 with Shortcuts' layers.
 
-Glance tracks its own launched processes, not runs started elsewhere. **Stop**
-is an interruption request, and the activity keeps showing that request until
-the process ends. Turning this activity off hides it without interrupting a
-running shortcut. Existing runs keep their **Stop**, **Show Result** and
-**Done** commands in the menu even when their display is off. Shortcuts may
-ask for their own permissions or input.
+Runs started elsewhere aren't listed in the **Run Shortcut** menu, and a
+shortcut with no actions to count, such as one Spotlight runs for itself, isn't
+shown. **Stop** stops a run as Shortcuts' own Stop does, and the activity keeps
+showing that request until the run ends. Turning this activity off hides it
+without interrupting a running shortcut. Existing runs keep their **Stop**,
+**Show Result** and **Done** commands in the menu even when their display is
+off. Shortcuts may ask for their own permissions or input.
 
 Results are temporary. Copy or move a result elsewhere to keep it. Unchanged
 results are eligible for cleanup the next time Glance starts after 24 hours;
@@ -766,8 +772,14 @@ date. macOS keeps its own Focus controls.
 While a file comes in over AirDrop, the notch shows it as the iPhone does, from
 when it starts coming until it's in: AirDrop's symbol in blue at its left end,
 and a ring at its right, filling as the file comes in. After another activity, it
-goes in a bubble of its own, showing the ring. Something waiting to be accepted shows
-once you accept it.
+goes in a bubble of its own, showing the ring.
+
+When someone nearby asks to share a file with you, the notch opens by itself to
+the file's picture, who it's from, and two buttons: **Decline**, a cross, and
+**Accept**, a check on AirDrop's blue. Accepted, the file comes in as above.
+macOS's own request stays where it is, so it can be answered there too. An
+incoming request hasn't yet been tried with a real AirDrop, so if the notch's
+buttons don't answer it, use macOS's.
 
 If several files arrive together, the visible transfer stays until it ends;
 the next accepted transfer then takes its place in arrival order.
@@ -921,7 +933,7 @@ shows a sharp circle at one end and the same circle blurred at the other.
 | --- | --- |
 | `Use the same appearance on all displays` | One look for every display, or a separate one for each (with more than one display) |
 | `Match system Liquid Glass` | Follows the Liquid Glass style chosen in System Settings > Appearance |
-| `Liquid Glass` | From clear glass to black |
+| `Liquid Glass` | From black on the left to clear glass on the right |
 | `Blur` | How much the glass blurs what's behind it |
 | `Use cover colors` | Tints the notch with the cover's colors; off, with your Mac's accent color |
 | `Background` | `Replace glass`, `Spotlight`, or `None` behind the player (`None` at first). `Spotlight` is a glow of the cover's colors that comes out of the cover and travels slowly round it, its colors turning, going behind the cover as it passes the camera; it holds still while paused |
@@ -981,8 +993,18 @@ The cycle waits while an activity is open. Its sample controls do not change
 real calls, recordings, timers, or sound routes. With Reduce Motion on, the
 preview stays on what's playing.
 
+`Show in` chooses where Live Activities go. `Notch`, the first value, shows
+every one beside the camera. `Menu Bar` leaves Now Playing, Clock's timers,
+stopwatch and alarms, recordings, AirDrop and shortcuts run elsewhere to macOS's
+own Live Activities in the menu bar, and keeps calls, the battery, devices,
+Focus and what you start from the notch's menu in the notch. With `Menu Bar`
+chosen, the page shows only the switches of what's still in the notch, and
+Glance turns macOS's Now Playing back on if it had hidden it. Each switch keeps
+its value for when `Notch` is chosen again.
+
 | Setting | Operation |
 | --- | --- |
+| `Show in` | `Notch` or `Menu Bar`, as above |
 | `Hide native Live Activities` | Hides native Now Playing only while Glance visibly replaces it, with `Accessibility` allowed. Other apps keep their native activities and controls. Glance restores settings it previously changed for unsupported activities, and restores Now Playing when its replacement goes away. Settings Glance did not change stay untouched |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
@@ -994,7 +1016,7 @@ preview stays on what's playing.
 | `Alarms` | Shows identifiable ringing Clock alerts with their available actions |
 | `Focus Changes` | Announces confirmed Focus changes |
 | `Music Recognition` | Enables recognition started from Glance's menu |
-| `Shortcuts` | Shows runs started from Glance's menu; turning this off does not interrupt them |
+| `Shortcuts` | Shows shortcuts as they run, wherever you start them, with a button to stop each; turning this off does not interrupt them |
 | `Hide in menu bar` | Takes macOS's own timer out of the menu bar while the notch shows it, with `Accessibility` allowed (off at first). macOS keeps it out even after this is off; **Menu Bar settings**, under it, opens **System Settings > Menu Bar** to bring it back |
 
 ### Opening

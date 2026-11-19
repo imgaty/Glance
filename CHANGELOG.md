@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 18 November 2026`
+`Created: 11 October 2026` | `Last updated: 19 November 2026`
 
 <br>
 
@@ -9,6 +9,27 @@
 `Released: not yet`
 
 ### Live Activities
+
+- Added shortcuts started anywhere to the notch, not only those run from its
+  menu: from the Shortcuts app, Terminal or any other app, each with its name,
+  its icon, a ring that fills as it runs, and a button to stop it.
+
+- Added AirDrop requests to the notch: a file someone asks to share opens the
+  notch by itself with its picture, who it's from, and **Decline** and
+  **Accept**. macOS's own request stays and can be answered there too.
+
+- Added `Show in` to **Settings > Live Activities**, with `Notch` and
+  `Menu Bar`. `Menu Bar` leaves Now Playing, Clock, recordings, AirDrop and
+  shortcuts run elsewhere to macOS's own Live Activities in the menu bar, and
+  keeps calls, the battery, devices, Focus and what you start from the notch's
+  menu in the notch.
+
+- Fixed the other person going silent on a call with AirPods in: Glance
+  switched the AirPods to their headset mode for the call's waveform. It now
+  listens only to the microphone the call uses, and the sound slider no longer
+  turns down an app that's on a call.
+
+- Fixed the ring of a shortcut run from the notch's menu never filling.
 
 - Changed a ringing Clock alarm to come in as the iPhone's does in the Dynamic
   Island, as tall as the notch's alerts: Clock's own alarm clock in its orange,
@@ -261,6 +282,9 @@
 
 ### Player
 
+- Fixed the gap between the artist and the progress bar with `Cover on top`,
+  which was twice the gap with `Cover on the side`.
+
 - Fixed the explicit-content badge disappearing from long titles with
   Reduce Motion enabled.
 
@@ -338,6 +362,8 @@
 
 ### Tray
 
+- Changed **Clear…** in **Settings > Tray** to a red button, as it removes
+  everything in the tray.
 - Added `When dragged out` in **Settings > Tray**, to keep an item or remove
   it after another app takes it.
 - Added saved screen recordings alongside screenshots.
@@ -359,6 +385,10 @@
   are closed, and power control can be removed without changing its mode.
 - Updated display controls, appearance sliders, app lists and search, and
   renamed the Music page to Player.
+- Changed the `Liquid Glass` slider to run from black on the left to clear
+  glass on the right. A look already chosen stays as it was.
+- Moved what the gestures do out of the `Gestures` box in
+  **Settings > Opening**, to a note under it.
 - Added keyboard selection and removal to **Customize Controls**, alongside
   dragging controls between buttons or out of the player.
 - Updated the welcome tour's navigation, captions, permission controls and
