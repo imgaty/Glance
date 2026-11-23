@@ -348,7 +348,8 @@ final class ScreenRecordingWatch: ObservableObject {
         openFile: ((URL) -> Bool)? = nil,
         waitForSavedDismissal: (@MainActor () async throws -> Void)? = nil
     ) {
-        self.readIndicator = readIndicator ?? { Self.stopItem().map(Self.words) }
+        // With Screenshot's Live Activity turned off, there's no stop item: the movie being recorded is.
+        self.readIndicator = readIndicator ?? { Self.stopItem().map(Self.words) ?? (Self.recordingFileOpen() ? "" : nil) }
         self.isEnabled = isEnabled ?? { Self.enabled }
         self.captureIsRunning = captureIsRunning ?? { !NSRunningApplication.runningApplications(withBundleIdentifier: Self.capture).isEmpty }
         self.access = access
@@ -478,6 +479,58 @@ final class ScreenRecordingWatch: ObservableObject {
             }
         }
         return nil
+    }
+
+    /// Where Screenshot's movie is written while it records: ReplayKit's daemon keeps it open there
+    /// from the moment recording starts until it stops, and moves it to where it's saved once it has.
+    nonisolated static let recordingsFolder = "/group.com.apple.screencapture/ScreenRecordings/"
+
+    /// Whether Screenshot is recording, read from the files ReplayKit's daemon has open, as Activity
+    /// Monitor lists a process's open files: the movie's path alone, never the file. It's what's left
+    /// with Screenshot's Live Activity turned off in System Settings, when macOS shows a recording
+    /// nowhere else, and only Screenshot's own recordings go there: not a still screenshot, not
+    /// another app's capture.
+    nonisolated static func recordingFileOpen() -> Bool {
+        guard let pid = replayd() else { return false }
+        return openPaths(of: pid).contains(where: isScreenshotRecording)
+    }
+
+    nonisolated static func isScreenshotRecording(_ path: String) -> Bool {
+        path.contains(recordingsFolder) && !path.hasSuffix("/")
+    }
+
+    nonisolated(unsafe) private static var replaydPID: pid_t = 0
+
+    /// ReplayKit's daemon, which records for Screenshot.
+    nonisolated private static func replayd() -> pid_t? {
+        func isReplayd(_ pid: pid_t) -> Bool {
+            var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+            return proc_pidpath(pid, &path, UInt32(path.count)) > 0 && String(cString: path) == "/usr/libexec/replayd"
+        }
+        let known = replaydPID
+        if known > 0, isReplayd(known) { return known }
+        let count = proc_listallpids(nil, 0)
+        guard count > 0 else { return nil }
+        var pids = [pid_t](repeating: 0, count: Int(count) + 64)
+        let listed = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
+        guard let pid = pids.prefix(Int(max(listed, 0))).first(where: { $0 > 0 && isReplayd($0) }) else { return nil }
+        replaydPID = pid
+        return pid
+    }
+
+    /// The paths of the files a process has open.
+    nonisolated private static func openPaths(of pid: pid_t) -> [String] {
+        let size = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
+        guard size > 0 else { return [] }
+        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: Int(size) / MemoryLayout<proc_fdinfo>.size)
+        let filled = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, &fds, size)
+        guard filled > 0 else { return [] }
+        return fds.prefix(Int(filled) / MemoryLayout<proc_fdinfo>.size).compactMap { fd in
+            guard fd.proc_fdtype == PROX_FDTYPE_VNODE else { return nil }
+            var info = vnode_fdinfowithpath()
+            guard proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDVNODEPATHINFO, &info, Int32(MemoryLayout<vnode_fdinfowithpath>.size)) > 0 else { return nil }
+            return withUnsafePointer(to: info.pvip.vip_path) { $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) } }
+        }
     }
 
     nonisolated static func isRecordingControl(role: String?, subrole: String?, identifier: String?) -> Bool {
@@ -639,7 +692,7 @@ final class ScreenRecordingWatch: ObservableObject {
             AXUIElementPerformAction(button, kAXPressAction as CFString)
             return
         }
-        guard let item = Self.stopItem() else { return }
+        guard let item = Self.stopItem() else { return stopFromToolbar() }
         AXUIElementPerformAction(item, kAXPressAction as CFString)
         guard SystemNotices.value(item, kAXSubroleAttribute) as? String == Self.liveActivity else { return }
         Task {
@@ -652,6 +705,36 @@ final class ScreenRecordingWatch: ObservableObject {
             }
         }
     }
+
+    /// With nothing in the menu bar to press, Screenshot's own toolbar, which opens with its stop
+    /// button while it records, as Shift-Command-5 opens it, is pressed in its place.
+    private static func stopFromToolbar() {
+        guard recordingFileOpen() else { return }
+        let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.screenshot.launcher")
+            ?? URL(fileURLWithPath: "/System/Applications/Utilities/Screenshot.app")
+        NSWorkspace.shared.openApplication(at: app, configuration: NSWorkspace.OpenConfiguration())
+        Task {
+            for _ in 0..<40 {
+                if let button = toolbarStopButton() {
+                    AXUIElementPerformAction(button, kAXPressAction as CFString)
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(75))
+            }
+        }
+    }
+
+    /// Screenshot's toolbar's stop button, by its symbol, which is the same in every language.
+    static func toolbarStopButton() -> AXUIElement? {
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: capture).first else { return nil }
+        let element = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 0.1)
+        return first(in: SystemNotices.value(element, kAXWindowsAttribute) as? [AXUIElement] ?? []) {
+            SystemNotices.value($0, kAXRoleAttribute) as? String == kAXButtonRole && isToolbarStop(SystemNotices.value($0, kAXIdentifierAttribute) as? String)
+        }
+    }
+
+    nonisolated static func isToolbarStop(_ identifier: String?) -> Bool { identifier == "stop.circle.fill" }
 
     nonisolated static let liveActivity = "AXLiveActivity"
 

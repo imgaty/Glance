@@ -18,6 +18,13 @@
   notch by itself with its picture, who it's from, and **Decline** and
   **Accept**. macOS's own request stays and can be answered there too.
 
+- Changed `Hide native Live Activities` to turn off every Live Activity macOS
+  lists in **System Settings > Menu Bar > Live Activities**, other apps' and
+  macOS's own Music Recognition included, and to turn them all back on when it
+  goes off or `Menu Bar` is chosen. Clock stays on, as macOS shows ringing
+  alarms nowhere without it. Screen recordings still show in the notch with
+  Screenshot's turned off.
+
 - Added `Show in` to **Settings > Live Activities**, with `Notch` and
   `Menu Bar`. `Menu Bar` leaves Now Playing, Clock, recordings, AirDrop and
   shortcuts run elsewhere to macOS's own Live Activities in the menu bar, and
@@ -126,8 +133,8 @@
 - Added isolated cases for pending actions, missing permissions, unavailable
   sources, failures and completed results.
 
-- Fixed native activities being hidden without a visible replacement. Other
-  apps keep their controls, and Glance restores settings it previously changed.
+- Fixed native activities being hidden while nothing showed them, and Glance
+  not restoring settings it had changed.
 
 - Changed Sound to the menu bar's Sound menu's spacing, and its rows to light
   in the system's own fill, 5 points in from the sides with corners that

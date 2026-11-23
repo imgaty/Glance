@@ -826,11 +826,12 @@ for an instant as the recording stops. Turn it off, with voice memos, with
 `Recordings` in **Settings > Live Activities**.
 
 Screen recordings are detected while Screenshot runs in the background as well
-as while its controls are open. Keep Screenshot enabled in
-**System Settings > Menu Bar > Live Activities** so its recording indicator and
-Stop button are available. `Hide native Live Activities` never disables
-Screenshot. If Glance previously disabled it, Glance restores that setting;
-a setting Glance did not change stays unchanged.
+as while its controls are open. With `Hide native Live Activities` on, Glance
+turns Screenshot off in **System Settings > Menu Bar > Live Activities**, and
+macOS then shows the recording nowhere but in the notch. Glance still sees it
+start and stop, and its stop button opens Screenshot's own controls for an
+instant to press **Stop Screen Recording**. The countdown before a recording
+starts shows only while Screenshot's Live Activity is on.
 
 If Accessibility access is lost, the activity keeps its last known recording
 and says `Needs Accessibility`. The dimmed Stop button requests access when
@@ -1006,7 +1007,7 @@ again when `Notch` is chosen.
 | Setting | Operation |
 | --- | --- |
 | `Show in` | `Notch` or `Menu Bar`, as above |
-| `Hide native Live Activities` | Hides native Now Playing only while Glance visibly replaces it, with `Accessibility` allowed. Other apps keep their native activities and controls. Glance restores settings it previously changed for unsupported activities, and restores Now Playing when its replacement goes away. Settings Glance did not change stay untouched |
+| `Hide native Live Activities` | Turns off every Live Activity in **System Settings > Menu Bar > Live Activities**, other apps' included and macOS's own Music Recognition, while the notch shows Live Activities, with `Accessibility` allowed. Clock stays on, as with it off macOS shows ringing alarms nowhere, not even as a notification. Now Playing and Screenshot stay on while `Now Playing` or `Recordings` is off. Turning this off, choosing `Menu Bar` or turning the notch off turns back on everything Glance turned off; what you turned off yourself stays off |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect |

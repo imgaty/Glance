@@ -98,7 +98,9 @@ struct ActivitiesPage: View {
             Section {
                 Toggle(isOn: placed($hidesSystemActivities)) {
                     Text("Hide native Live Activities")
-                    Text("Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.")
+                    Text(
+                        "Hides every native Live Activity in the menu bar, other apps' too, while the notch shows Live Activities. macOS's own Music Recognition stays hidden. Clock stays, as its alarms show nowhere else."
+                    )
                 }
                 .disabled(inMenuBar)
                 .grayedOut(inMenuBar)

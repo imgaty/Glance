@@ -39006,210 +39006,210 @@
         }
       }
     },
-    "Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.": {
+    "Hides every native Live Activity in the menu bar, other apps' too, while the notch shows Live Activities. macOS's own Music Recognition stays hidden. Clock stays, as its alarms show nowhere else.": {
       "localizations": {
         "ar": {
           "stringUnit": {
-            "state": "translated",
-            "value": "يخفي «قيد التشغيل» الأصلي ما دامت النوتش تعرضه. تبقى الأنشطة المباشرة الأصلية الأخرى في شريط القائمة."
+            "state": "needs_review",
+            "value": "يخفي كل الأنشطة المباشرة الأصلية في شريط القائمة، ومنها أنشطة التطبيقات الأخرى، ما دامت النوتش تعرض الأنشطة المباشرة. يبقى «التعرّف على الموسيقى» الخاص بـ macOS مخفيًا. تبقى «الساعة»، لأن منبّهاتها لا تظهر في أي مكان آخر."
           }
         },
         "ca": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Amaga l’Ara sona natiu mentre el notch el mostra. Les altres activitats en directe natives es queden a la barra de menús."
+            "state": "needs_review",
+            "value": "Amaga totes les activitats en directe natives de la barra de menús, també les d’altres apps, mentre el notch mostra activitats en directe. El Reconeixement de música propi del macOS es queda amagat. El Rellotge es queda, perquè les seves alarmes no es mostren enlloc més."
           }
         },
         "cs": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Skryje nativní Právě hraje, dokud ho zobrazuje výřez. Ostatní nativní živé aktivity zůstanou na řádku nabídek."
+            "state": "needs_review",
+            "value": "Skryje všechny nativní živé aktivity na řádku nabídek, i ty z jiných aplikací, dokud výřez zobrazuje živé aktivity. Vlastní Rozpoznávání hudby v macOS zůstane skryté. Hodiny zůstanou, protože jejich budíky se jinde nezobrazují."
           }
         },
         "da": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Skjuler den indbyggede Afspiller nu, mens notchen viser den. Andre indbyggede liveaktiviteter bliver i menulinjen."
+            "state": "needs_review",
+            "value": "Skjuler alle indbyggede liveaktiviteter i menulinjen, også andre apps’, mens notchen viser liveaktiviteter. macOS’ egen Musikgenkendelse forbliver skjult. Ur bliver, da dets alarmer ikke vises andre steder."
           }
         },
         "de": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Blendet das systemeigene „Jetzt läuft“ aus, solange die Notch es zeigt. Andere systemeigene Live-Aktivitäten bleiben in der Menüleiste."
+            "state": "needs_review",
+            "value": "Blendet alle systemeigenen Live-Aktivitäten in der Menüleiste aus, auch die anderer Apps, solange die Notch Live-Aktivitäten zeigt. Die Musikerkennung von macOS bleibt ausgeblendet. Uhr bleibt, da ihre Wecker sonst nirgends erscheinen."
           }
         },
         "el": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Αποκρύπτει το εγγενές «Παίζει τώρα» όσο το δείχνει η εγκοπή. Οι άλλες εγγενείς ζωντανές δραστηριότητες μένουν στη γραμμή μενού."
+            "state": "needs_review",
+            "value": "Αποκρύπτει όλες τις εγγενείς ζωντανές δραστηριότητες στη γραμμή μενού, και των άλλων εφαρμογών, όσο η εγκοπή δείχνει ζωντανές δραστηριότητες. Η Αναγνώριση μουσικής του macOS μένει κρυφή. Το Ρολόι μένει, καθώς οι αφυπνίσεις του δεν εμφανίζονται πουθενά αλλού."
           }
         },
         "es": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Oculta el Ahora suena nativo mientras el notch lo muestra. Las demás actividades en directo nativas se quedan en la barra de menús."
+            "state": "needs_review",
+            "value": "Oculta todas las actividades en directo nativas de la barra de menús, también las de otras apps, mientras el notch muestra actividades en directo. El Reconocimiento de música de macOS se queda oculto. El Reloj se queda, porque sus alarmas no aparecen en ningún otro sitio."
           }
         },
         "fi": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Piilottaa järjestelmän Toistossa nyt -näkymän, kun lovi näyttää sen. Muu järjestelmän liveseuranta pysyy valikkorivillä."
+            "state": "needs_review",
+            "value": "Piilottaa kaiken järjestelmän liveseurannan valikkoriviltä, myös muiden appien, kun lovi näyttää liveseurantaa. macOS:n oma Musiikin tunnistus pysyy piilossa. Kello jää, koska sen herätykset eivät näy muualla."
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Masque l’À l’écoute natif tant que l’encoche l’affiche. Les autres activités en direct natives restent dans la barre des menus."
+            "state": "needs_review",
+            "value": "Masque toutes les activités en direct natives de la barre des menus, y compris celles des autres apps, tant que l’encoche affiche des activités en direct. La Reconnaissance de musique de macOS reste masquée. Horloge reste, car ses alarmes ne s’affichent nulle part ailleurs."
           }
         },
         "he": {
           "stringUnit": {
-            "state": "translated",
-            "value": "מסתיר את «מופעל כעת» המובנה כל עוד המגרעת מציגה אותו. שאר הפעילויות בזמן אמת המובנות נשארות בשורת התפריטים."
+            "state": "needs_review",
+            "value": "מסתיר את כל הפעילויות בזמן אמת המובנות בשורת התפריטים, גם של יישומים אחרים, כל עוד המגרעת מציגה פעילויות בזמן אמת. «זיהוי מוזיקה» של macOS נשאר מוסתר. «שעון» נשאר, כי השעונים המעוררים שלו לא מוצגים בשום מקום אחר."
           }
         },
         "hi": {
           "stringUnit": {
-            "state": "translated",
-            "value": "नॉच के दिखाने पर सिस्टम का “अभी चल रहा है” छिपाता है। सिस्टम की बाकी लाइव ऐक्टिविटी मेनू बार में रहती हैं।"
+            "state": "needs_review",
+            "value": "नॉच के लाइव ऐक्टिविटी दिखाने पर मेनू बार में सिस्टम की सभी लाइव ऐक्टिविटी छिपाता है, दूसरी ऐप्स की भी। macOS का अपना म्यूज़िक पहचान छिपा रहता है। घड़ी बनी रहती है, क्योंकि उसके अलार्म और कहीं नहीं दिखते।"
           }
         },
         "hr": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Skriva izvorni Izvodi se dok ga prikazuje urez. Ostale izvorne aktivnosti uživo ostaju u traci s izbornicima."
+            "state": "needs_review",
+            "value": "Skriva sve izvorne aktivnosti uživo u traci s izbornicima, i one drugih aplikacija, dok urez prikazuje aktivnosti uživo. Prepoznavanje glazbe sustava macOS ostaje skriveno. Sat ostaje jer se njegovi alarmi ne prikazuju nigdje drugdje."
           }
         },
         "hu": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Elrejti a rendszer Lejátszás alatt nézetét, amíg a notch mutatja. A rendszer többi élő tevékenysége a menüsoron marad."
+            "state": "needs_review",
+            "value": "Elrejti a rendszer összes élő tevékenységét a menüsoron, más appokét is, amíg a notch élő tevékenységeket mutat. A macOS saját Zenefelismerése rejtve marad. Az Óra marad, mert az ébresztői máshol nem jelennek meg."
           }
         },
         "id": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Menyembunyikan Sedang Diputar bawaan selama notch menampilkannya. Aktivitas Langsung bawaan lainnya tetap di bar menu."
+            "state": "needs_review",
+            "value": "Menyembunyikan semua Aktivitas Langsung bawaan di bar menu, termasuk milik app lain, selama notch menampilkan Aktivitas Langsung. Pengenalan Musik milik macOS tetap tersembunyi. Jam tetap ada, karena alarmnya tidak muncul di tempat lain."
           }
         },
         "it": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Nasconde l’In riproduzione nativo mentre il notch lo mostra. Le altre attività in tempo reale native restano nella barra dei menu."
+            "state": "needs_review",
+            "value": "Nasconde tutte le attività in tempo reale native nella barra dei menu, anche quelle di altre app, mentre il notch mostra attività in tempo reale. Il Riconoscimento musica di macOS resta nascosto. Orologio resta, perché le sue sveglie non compaiono altrove."
           }
         },
         "ja": {
           "stringUnit": {
-            "state": "translated",
-            "value": "ノッチに表示している間、標準の「再生中」を隠します。ほかの標準のライブアクティビティはメニューバーに残ります。"
+            "state": "needs_review",
+            "value": "ノッチがライブアクティビティを表示している間、メニューバーの標準のライブアクティビティをすべて隠します。ほかのアプリのものも含みます。macOSの「ミュージック認識」も隠れたままです。「時計」は残ります。そのアラームはほかのどこにも表示されないためです。"
           }
         },
         "ko": {
           "stringUnit": {
-            "state": "translated",
-            "value": "노치가 표시하는 동안 기본 '지금 재생 중'을 가립니다. 다른 기본 실시간 현황은 메뉴 막대에 남습니다."
+            "state": "needs_review",
+            "value": "노치가 실시간 현황을 표시하는 동안 메뉴 막대의 기본 실시간 현황을 모두 가립니다. 다른 앱의 것도 포함됩니다. macOS의 음악 인식도 계속 가려집니다. 시계는 남습니다. 시계의 알람은 다른 곳에 표시되지 않기 때문입니다."
           }
         },
         "ms": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Menyembunyikan Kini Dimainkan asli semasa notch menunjukkannya. Aktiviti Langsung asli yang lain kekal dalam bar menu."
+            "state": "needs_review",
+            "value": "Menyembunyikan semua Aktiviti Langsung asli dalam bar menu, termasuk milik app lain, semasa notch menunjukkan Aktiviti Langsung. Pengecaman Muzik macOS sendiri kekal tersembunyi. Jam kekal, kerana penggeranya tidak dipaparkan di tempat lain."
           }
         },
         "nb": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Skjuler den innebygde Spilles nå mens notchen viser den. Andre innebygde løpende oppdateringer blir i menylinjen."
+            "state": "needs_review",
+            "value": "Skjuler alle innebygde løpende oppdateringer i menylinjen, også andre apper sine, mens notchen viser løpende oppdateringer. macOS sin egen Musikkgjenkjenning forblir skjult. Klokke blir, fordi alarmene der ikke vises noe annet sted."
           }
         },
         "nl": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Verbergt het ingebouwde Huidig onderdeel zolang de notch het toont. Andere ingebouwde live activiteiten blijven in de menubalk."
+            "state": "needs_review",
+            "value": "Verbergt alle ingebouwde live activiteiten in de menubalk, ook die van andere apps, zolang de notch live activiteiten toont. De eigen muziekherkenning van macOS blijft verborgen. Klok blijft, want de wekkers ervan verschijnen nergens anders."
           }
         },
         "pl": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Ukrywa systemowe Odtwarzane, gdy pokazuje je wycięcie. Inne systemowe wydarzenia na żywo zostają na pasku menu."
+            "state": "needs_review",
+            "value": "Ukrywa wszystkie systemowe wydarzenia na żywo na pasku menu, także z innych aplikacji, gdy wycięcie pokazuje wydarzenia na żywo. Rozpoznawanie muzyki systemu macOS pozostaje ukryte. Zegar zostaje, bo jego alarmy nie pojawiają się nigdzie indziej."
           }
         },
         "pt-BR": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Oculta o Reproduzindo nativo enquanto o notch o mostra. As outras Atividades ao Vivo nativas ficam na barra de menus."
+            "state": "needs_review",
+            "value": "Oculta todas as Atividades ao Vivo nativas da barra de menus, inclusive as de outros apps, enquanto o notch mostra Atividades ao Vivo. O Reconhecimento de Música do macOS fica oculto. O Relógio fica, pois seus alarmes não aparecem em nenhum outro lugar."
           }
         },
         "pt-PT": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Oculta o A reproduzir nativo enquanto o entalhe o mostra. As outras atividades em tempo real nativas ficam na barra de menus."
+            "state": "needs_review",
+            "value": "Oculta todas as atividades em tempo real nativas da barra de menus, incluindo as de outras apps, enquanto o entalhe mostra atividades em tempo real. O Reconhecimento de música do macOS fica oculto. O Relógio fica, porque os seus alarmes não aparecem em mais lado nenhum."
           }
         },
         "ro": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Ascunde În redare nativ cât timp îl arată notch-ul. Celelalte activități live native rămân în bara de meniuri."
+            "state": "needs_review",
+            "value": "Ascunde toate activitățile live native din bara de meniuri, inclusiv ale altor aplicații, cât timp notch-ul arată activități live. Recunoașterea muzicii din macOS rămâne ascunsă. Ceas rămâne, deoarece alarmele sale nu apar în altă parte."
           }
         },
         "ru": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Скрывает системный виджет «Исполняется», пока его показывает вырез. Остальной эфир активности системы остается в строке меню."
+            "state": "needs_review",
+            "value": "Скрывает все системные живые активности в строке меню, в том числе других приложений, пока вырез показывает живые активности. Собственное «Распознавание музыки» macOS остается скрытым. «Часы» остаются, потому что их будильники больше нигде не показываются."
           }
         },
         "sk": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Skryje natívne Práve hrá, kým ho zobrazuje výrez. Ostatné natívne aktivity naživo zostanú na lište s ponukami."
+            "state": "needs_review",
+            "value": "Skryje všetky natívne aktivity naživo na lište s ponukami, aj tie z iných apiek, kým výrez zobrazuje aktivity naživo. Vlastné Rozpoznávanie hudby v macOS zostane skryté. Hodiny zostanú, pretože ich budíky sa inde nezobrazujú."
           }
         },
         "sl": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Skrije izvorni Predvaja se, dokler ga prikazuje zareza. Druge izvorne aktivnosti v živo ostanejo v menijski vrstici."
+            "state": "needs_review",
+            "value": "Skrije vse izvorne aktivnosti v živo v menijski vrstici, tudi tiste drugih aplikacij, dokler zareza prikazuje aktivnosti v živo. Prepoznavanje glasbe sistema macOS ostane skrito. Ura ostane, ker se njeni alarmi ne prikažejo nikjer drugje."
           }
         },
         "sv": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Gömmer den inbyggda Spelas nu medan notchen visar den. Andra inbyggda liveaktiviteter stannar i menyraden."
+            "state": "needs_review",
+            "value": "Gömmer alla inbyggda liveaktiviteter i menyraden, även andra appars, medan notchen visar liveaktiviteter. macOS egen musikigenkänning förblir gömd. Klocka stannar, eftersom dess alarm inte visas någon annanstans."
           }
         },
         "th": {
           "stringUnit": {
-            "state": "translated",
-            "value": "ซ่อน “กำลังเล่นอยู่” ของระบบขณะที่รอยบากแสดงอยู่ กิจกรรมสดอื่นๆ ของระบบยังอยู่ในแถบเมนู"
+            "state": "needs_review",
+            "value": "ซ่อนกิจกรรมสดทั้งหมดของระบบในแถบเมนู รวมถึงของแอปอื่น ขณะที่รอยบากแสดงกิจกรรมสด การจดจำเพลงของ macOS ยังคงถูกซ่อน นาฬิกายังคงอยู่ เพราะการปลุกของนาฬิกาไม่แสดงที่อื่น"
           }
         },
         "tr": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Çentik gösterirken yerleşik Şu An Çalınan’ı gizler. Diğer yerleşik Canlı Etkinlikler menü çubuğunda kalır."
+            "state": "needs_review",
+            "value": "Çentik Canlı Etkinlikler gösterirken menü çubuğundaki tüm yerleşik Canlı Etkinlikleri, diğer uygulamalarınkiler de dahil gizler. macOS’in kendi Müzik Tanıma’sı gizli kalır. Saat kalır, çünkü alarmları başka hiçbir yerde görünmez."
           }
         },
         "uk": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Ховає вбудований «Зараз грає», поки його показує виріз. Інші вбудовані дії наживо лишаються на смузі меню."
+            "state": "needs_review",
+            "value": "Ховає всі вбудовані дії наживо на смузі меню, зокрема інших програм, поки виріз показує дії наживо. Власне «Розпізнавання музики» macOS лишається прихованим. «Годинник» лишається, бо його будильники більше ніде не показуються."
           }
         },
         "vi": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Ẩn Đang phát gốc khi phần khuyết đang hiển thị. Các Hoạt động trực tiếp gốc khác vẫn ở thanh menu."
+            "state": "needs_review",
+            "value": "Ẩn tất cả Hoạt động trực tiếp gốc trên thanh menu, kể cả của các ứng dụng khác, khi phần khuyết hiển thị Hoạt động trực tiếp. Nhận dạng nhạc của macOS vẫn bị ẩn. Đồng hồ vẫn ở lại, vì báo thức của nó không hiển thị ở nơi nào khác."
           }
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "translated",
-            "value": "在刘海显示时隐藏系统自带的“播放中”。其他系统自带的实时活动仍留在菜单栏。"
+            "state": "needs_review",
+            "value": "在刘海显示实时活动时，隐藏菜单栏中所有系统自带的实时活动，包括其他 App 的。macOS 自带的“音乐识别”保持隐藏。“时钟”保留，因为它的闹钟不会在其他地方显示。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
-            "state": "translated",
-            "value": "在瀏海顯示時隱藏系統內建的「播放中」。其他系統內建的即時動態仍留在選單列。"
+            "state": "needs_review",
+            "value": "在瀏海顯示即時動態時，隱藏選單列中所有系統內建的即時動態，包含其他 App 的。macOS 內建的「音樂辨識」保持隱藏。「時鐘」保留，因為它的鬧鐘不會在其他地方顯示。"
           }
         }
       }
