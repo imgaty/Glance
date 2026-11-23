@@ -384,7 +384,7 @@ opens it too, ready for the drop, without reaching the top edge.
 | Shift-click an item | Selects everything from the last item selected to it |
 | Double-click an item | Pastes it where you're typing (with `Accessibility` allowed) |
 | Drag an item out | Puts it there, with the others selected; files move or copy as they do in Finder |
-| Swipe left or right with two fingers, or scroll a mouse's wheel | Scrolls the tray |
+| Swipe left or right with two fingers, or scroll a mouse's wheel | Scrolls the tray; after a swipe it glides on as your fingers lift, slowing to a stop |
 | Right-click an item | Open, Open With, Show in Finder, Quick Look, Copy, Paste, Share (AirDrop is there), Keep, and Remove from Tray |
 | Hold Option in an item's menu | Turns Paste into Paste and Match Style, for text without its style |
 | Choose **Services > Send to Glance Tray** in Finder or any app | Keeps what's selected there in the tray, as a drop does |

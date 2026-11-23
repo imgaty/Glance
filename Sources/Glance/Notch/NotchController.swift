@@ -295,6 +295,10 @@ final class NotchController {
         panel.contentView = eventView
 
         // The mouse, the trackpad and a finger, on the notch's window, and on its touch target.
+        // Scrolls are taken at the windows, momentum and all (see `NotchPanel.onScroll`).
+        for window in [panel, touchTarget].compactMap({ $0 }) {
+            window.onScroll = { [weak self] event in self?.scrolled(event) }
+        }
         for view in [eventView, touchView] {
             view.onMouseDown = { [weak self] p in self?.press(at: p) }
             view.onMouseUp = { [weak self] p in self?.release(at: p) }
@@ -2584,6 +2588,16 @@ final class NotchPanel: NSPanel {
         hidesOnDeactivate = false
         animationBehavior = .none
         ignoresMouseEvents = true
+    }
+
+    /// Every scroll on the notch, handed to the notch's own handling before AppKit's dispatch: that
+    /// dispatch drops the trackpad's momentum, the scroll that carries on after the fingers lift, so
+    /// the tray's row stopped dead instead of gliding on. Nothing else in the notch scrolls.
+    var onScroll: (@MainActor (NSEvent) -> Void)?
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .scrollWheel, let onScroll { return onScroll(event) }
+        super.sendEvent(event)
     }
 
     /// Free to slide above the top of the screen when it tucks away in full screen.
