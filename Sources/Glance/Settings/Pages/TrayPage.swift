@@ -87,8 +87,10 @@ struct TrayPage: View {
                     Text("Removes everything in it. Files stay where they are.")
                 } trailing: {
                     // Destructive, and red as its button in the alert: in a form, macOS draws the role
-                    // alone like any other button.
-                    Button("Clear…", role: .destructive) { confirmingClear = true }
+                    // alone like any other button. Its own key: the catalog's "Clear" is the glass's.
+                    Button(String(localized: "Clear (tray)", defaultValue: "Clear", comment: "Empties the tray, after asking"), role: .destructive) {
+                        confirmingClear = true
+                    }
                         .foregroundStyle(.red)
                         .disabled(tray.items.isEmpty)
                 }

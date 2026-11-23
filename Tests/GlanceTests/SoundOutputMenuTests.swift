@@ -112,7 +112,7 @@ struct SoundOutputMenuTests {
         #expect(selected == headphones.id)
     }
 
-    @Test("Mounted rows and native slider keep their actions in a hidden panel")
+    @Test("Mounted rows and the system slider keep their actions in a hidden panel")
     func sliderActions() async throws {
         _ = NSApplication.shared
         var selected: AudioDeviceID?
@@ -123,7 +123,7 @@ struct SoundOutputMenuTests {
                 guard let id = $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
                 return CGDisplayIsBuiltin(id.uint32Value) != 0
             })
-        let popover = SoundPopover(menu: menu, maximumHeight: screen.visibleFrame.height - 40)
+        let popover = SoundPanel(menu: menu, maximumHeight: screen.visibleFrame.height - 40)
         let panel = NSWindow(
             contentRect: CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 100, width: popover.contentView.frame.width, height: popover.contentView.frame.height),
             styleMask: [.borderless], backing: .buffered, defer: false)
@@ -133,10 +133,7 @@ struct SoundOutputMenuTests {
         panel.orderFrontRegardless()
         defer { panel.orderOut(nil) }
         try await Task.sleep(for: .milliseconds(150))
-        func findSlider(_ view: NSView) -> NSSlider? {
-            (view as? NSSlider) ?? view.subviews.lazy.compactMap(findSlider).first
-        }
-        let slider = try #require(panel.contentView.flatMap(findSlider))
+        #expect(menu.items.contains { $0.view is VolumeMenuSlider })
         let item = try #require(menu.items.first(where: { $0.tag == Int(speakers.id) }))
         let row = try #require(item.view as? SoundMenuContentRow)
         let surface = try #require(panel.contentView)
@@ -151,8 +148,7 @@ struct SoundOutputMenuTests {
         #expect(selected == speakers.id)
         #expect(menu.items.last?.view?.accessibilityPerformPress() == true)
         #expect(openedSettings)
-        slider.doubleValue = 0.73
-        #expect(slider.sendAction(slider.action, to: slider.target))
+        menu.level.move(to: 0.73)
         #expect(menu.level.value == 0.73)
         let revision = menu.level.revision
         menu.level.show(0.2, since: revision - 1)
@@ -168,7 +164,7 @@ struct SoundOutputMenuTests {
         NSApp.finishLaunching()
         #expect(!NSApp.isActive)
         let menu = SoundOutputMenu(devices: [speakers], current: speakers.id, volume: nil, batteries: [:], choose: { _ in }, settings: {})
-        let popover = SoundPopover(menu: menu, maximumHeight: 700)
+        let popover = SoundPanel(menu: menu, maximumHeight: 700)
         let screen = try #require(
             NSScreen.screens.first {
                 guard let id = $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
@@ -180,8 +176,8 @@ struct SoundOutputMenuTests {
         window.ignoresMouseEvents = true
         window.orderFrontRegardless()
         defer { window.orderOut(nil) }
-        #expect(popover.popover.behavior == .transient)
-        #expect(popover.popover.contentViewController?.view === popover.contentView)
+        #expect(popover.window.styleMask.contains(.nonactivatingPanel))
+        #expect((popover.window.contentView as? NSGlassEffectView)?.contentView === popover.contentView)
         let speaker = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view)
         let holder = try #require(speaker.superview)
         let oldHeight = popover.contentSize.height
@@ -192,7 +188,7 @@ struct SoundOutputMenuTests {
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight + headphone.frame.height)
         #expect(!window.isKeyWindow)
-        #expect(popover.popover.contentSize == popover.contentSize)
+        #expect(popover.window.frame.size == popover.contentSize)
         // A current-output refresh must not replace or restart the appearing row.
         menu.refresh(devices: [speakers, headphones], current: speakers.id, batteries: [:])
         popover.reload(animated: true)
@@ -210,6 +206,6 @@ struct SoundOutputMenuTests {
         #expect(inserted.superview == nil)
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight)
-        #expect(popover.popover.contentSize == popover.contentSize)
+        #expect(popover.window.frame.size == popover.contentSize)
     }
 }

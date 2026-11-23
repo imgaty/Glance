@@ -170,7 +170,7 @@ struct PlayerLayoutTests {
     @Test("The cover is smaller on top than on the side")
     func artwork() {
         #expect(PlayerLayout.top.artwork == 60)
-        #expect(PlayerLayout.side.artwork == 120)
+        #expect(PlayerLayout.side.artwork == 132)
         // A thumbnail's corners.
         #expect(PlayerLayout.top.artworkRadius == PlayerLayout.top.artwork * PlayerLayout.thumbnailCorner)
         // Concentric with the notch's.
@@ -188,28 +188,34 @@ struct PlayerLayoutTests {
     @Test("Cover on top, around the usual notch")
     func topSize() {
         // Wide enough to keep the cover clear of the camera: 185 + 2 × (14 + 60 + 8) = 349, made even.
-        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 4 + 16 + 8 + 40 + 14.
-        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 156))
+        // Tall enough for the padding, cover, timeline and controls: 14 + 60 + 12 + 16 + 8 + 40 + 14.
+        #expect(PlayerLayout.top.size(closed: closed) == CGSize(width: 350, height: 164))
     }
 
-    @Test(
-        "The timeline hangs as far under the artist in both layouts",
-        arguments: [CGSize(width: 185, height: 32), CGSize(width: 100, height: 20), CGSize(width: 185, height: 60)])
-    func sameGapUnderArtist(camera: CGSize) {
-        let top = NowPlayingView.rows(.top, closed: camera)
-        let side = NowPlayingView.rows(.side, closed: camera)
-        #expect(top.timeline - top.header == side.timeline - side.header)
-        #expect(top.timeline - (top.header + PlayerLayout.headerHeight) == PlayerLayout.rowGap)
+    @Test("Around the usual notch, the timeline hangs 16 points under the artist's line in both layouts")
+    func sameGapUnderArtist() {
+        // 16 points between the lines' boxes is 24 between the artist's letters and the bar.
+        for layout in PlayerLayout.allCases {
+            let rows = NowPlayingView.rows(layout, closed: closed)
+            #expect(rows.timeline - (rows.header + PlayerLayout.headerHeight) == 16)
+        }
     }
 
-    @Test("Around the usual notch, what's beside the cover ends on its bottom edge")
-    func besideCoverEndsWithIt() {
+    @Test("Cover on top, the title right below the camera and the timeline 12 points under the cover")
+    func topRows() {
         let top = NowPlayingView.rows(.top, closed: closed)
+        // Clear of the camera: 32 + 4 under the top, less the padding, lower than centered (13).
+        #expect(top.header == 22)
+        #expect(top.timeline == PlayerLayout.top.artwork + 12)
+        #expect(top.controls == top.timeline + PlayerLayout.timelineHeight + 8)
+    }
+
+    @Test("Cover on the side, the column starts below the camera and ends on the cover's bottom edge")
+    func sideRows() {
         let side = NowPlayingView.rows(.side, closed: closed)
-        #expect(top.header + PlayerLayout.headerHeight == PlayerLayout.top.artwork)
+        #expect(side.header == 22)
+        #expect(side.controls == side.timeline + PlayerLayout.timelineHeight + 4)
         #expect(side.controls + NowPlayingView.hitbox == PlayerLayout.side.artwork)
-        // Clear of the camera: 32 + 4 under the top, less the padding.
-        #expect(top.header >= 22 && side.header == 22)
     }
 
     @Test("Each layout's rows fit the notch it opens to", arguments: PlayerLayout.allCases)
@@ -224,16 +230,16 @@ struct PlayerLayoutTests {
 
     @Test("Cover on the side, around the usual notch")
     func sideSize() {
-        // 185 + 2 × (14 + 120 + 8) = 469, made even; the cover sets the height: 14 + 120 + 14.
-        #expect(PlayerLayout.side.size(closed: closed) == CGSize(width: 470, height: 148))
+        // 185 + 2 × (14 + 132 + 8) = 493, made even; the cover sets the height: 14 + 132 + 14.
+        #expect(PlayerLayout.side.size(closed: closed) == CGSize(width: 494, height: 160))
     }
 
     @Test("A narrow camera still leaves room for the controls")
     func narrowCamera() {
         let small = CGSize(width: 100, height: 20)
-        // 14 × 2 + 280 = 308 on top; 14 × 2 + 120 + 17 + 280 = 445 on the side, made even.
+        // 14 × 2 + 280 = 308 on top; 14 × 2 + 132 + 17 + 280 = 457 on the side, made even.
         #expect(PlayerLayout.top.size(closed: small).width == 308)
-        #expect(PlayerLayout.side.size(closed: small).width == 446)
+        #expect(PlayerLayout.side.size(closed: small).width == 458)
     }
 
     @Test("A tall camera pushes the side layout's column down")

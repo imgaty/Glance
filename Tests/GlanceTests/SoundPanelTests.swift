@@ -3,7 +3,7 @@ import Testing
 
 @testable import Glance
 
-@Suite("Native Sound popover anchors")
+@Suite("Sound panel placement")
 @MainActor
 struct SoundPanelTests {
     @Test("Every click and keyboard activation uses the complete Sound button")
@@ -27,5 +27,31 @@ struct SoundPanelTests {
         #expect(rect.midX == local.x)
         #expect(rect.midY == local.y)
         #expect(SoundMenuPlacement.anchorRect(in: view, pointer: nil) == view.bounds)
+    }
+
+    @Test("The panel hangs under the button, centered on it, and stays on the screen")
+    func frameUnderButton() {
+        let visible = CGRect(x: 0, y: 0, width: 1512, height: 950)
+        let size = CGSize(width: SoundLook.width, height: 227)
+        let button = CGRect(x: 900, y: 800, width: 40, height: 40)
+        let frame = SoundMenuPlacement.frame(for: size, below: button, in: visible)
+        #expect(frame.midX == button.midX)
+        #expect(frame.maxY == button.minY - SoundLook.below)
+        // Near the screen's right edge, it's moved in rather than cut off.
+        let edge = SoundMenuPlacement.frame(for: size, below: CGRect(x: 1490, y: 800, width: 20, height: 20), in: visible)
+        #expect(edge.maxX == visible.maxX)
+        // Too low for its height, it stops at the bottom.
+        let low = SoundMenuPlacement.frame(for: size, below: CGRect(x: 600, y: 100, width: 40, height: 40), in: visible)
+        #expect(low.minY == visible.minY)
+    }
+
+    @Test("Opening it never makes Glance the app in use")
+    func nonactivating() {
+        _ = NSApplication.shared
+        let panel = SoundPanelWindow()
+        #expect(panel.styleMask.contains(.nonactivatingPanel))
+        #expect(panel.canBecomeKey)
+        #expect(!panel.canBecomeMain)
+        #expect(!panel.hidesOnDeactivate)
     }
 }

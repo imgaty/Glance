@@ -57,9 +57,18 @@ struct ActivitiesPage: View {
             })
     }
 
-    /// With Menu Bar chosen, what macOS shows there itself isn't in the notch: its switches step aside,
-    /// kept as they are for the notch.
+    /// With Menu Bar chosen, what macOS shows there itself isn't in the notch.
     private var inMenuBar: Bool { place == .menuBar }
+
+    /// The switch of something macOS shows in the menu bar itself: with Menu Bar chosen, off and
+    /// grayed out, its own value kept as it was underneath, for when Notch is chosen again.
+    private func placed(_ binding: Binding<Bool>) -> Binding<Bool> { Self.placed(binding) { place } }
+
+    static func placed(_ binding: Binding<Bool>, place: @escaping () -> LiveActivityPlace) -> Binding<Bool> {
+        Binding(
+            get: { LiveActivityPlace.shown(binding.wrappedValue, place: place()) },
+            set: { if place() == .notch { binding.wrappedValue = $0 } })
+    }
 
     /// What each place includes, one after the other, under the choice.
     static var placesFootnote: AttributedString {
@@ -84,35 +93,36 @@ struct ActivitiesPage: View {
             } footer: {
                 Text(Self.placesFootnote)
             }
-            // In the menu bar, macOS's own stay as they are: there's nothing to hide.
-            if place == .notch {
-                Section {
-                    Toggle(isOn: $hidesSystemActivities) {
-                        Text("Hide native Live Activities")
-                        Text("Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.")
-                    }
-                    // Said only when it's in the way.
-                    if hidesSystemActivities, !accessibilityAllowed {
-                        CenteredRow {
-                            Text("Glance can't turn them off")
-                            Text("Allow it in Privacy & Security, under Accessibility.")
-                        } trailing: {
-                            Button("Open Privacy & Security…") {
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                            }
+            // In the menu bar, macOS's own stay as they are: there's nothing to hide, so it shows off
+            // and grayed out, as the switches of what's there do.
+            Section {
+                Toggle(isOn: placed($hidesSystemActivities)) {
+                    Text("Hide native Live Activities")
+                    Text("Hides the native Now Playing while the notch shows it. Other native Live Activities stay in the menu bar.")
+                }
+                .disabled(inMenuBar)
+                .grayedOut(inMenuBar)
+                // Said only when it's in the way.
+                if !inMenuBar, hidesSystemActivities, !accessibilityAllowed {
+                    CenteredRow {
+                        Text("Glance can't turn them off")
+                        Text("Allow it in Privacy & Security, under Accessibility.")
+                    } trailing: {
+                        Button("Open Privacy & Security…") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
                         }
                     }
                 }
             }
             // One switch for each kind, as Menu Bar settings lists its Live Activities, each turning
             // on or off everything of that kind.
-            if !inMenuBar {
-                Section {
-                    Toggle(isOn: kind($liveActivity, $trackPop)) {
-                        Text("Now Playing")
-                        Text("Shows the cover and a waveform beside the camera, and briefly shows what starts playing.")
-                    }
+            Section {
+                Toggle(isOn: placed(kind($liveActivity, $trackPop))) {
+                    Text("Now Playing")
+                    Text("Shows the cover and a waveform beside the camera, and briefly shows what starts playing.")
                 }
+                .disabled(inMenuBar)
+                .grayedOut(inMenuBar)
             }
             if hasBattery {
                 Section {
@@ -134,63 +144,64 @@ struct ActivitiesPage: View {
                     Text("Shows calls coming in and the call you're on, in place of macOS's popup.")
                 }
             }
-            if !inMenuBar {
-                Section {
-                    Toggle(isOn: $airDrop) {
-                        Text("AirDrop")
-                        Text("Shows files coming in and going out over AirDrop, as they go.")
-                    }
+            Section {
+                Toggle(isOn: placed($airDrop)) {
+                    Text("AirDrop")
+                    Text("Shows files coming in and going out over AirDrop, as they go.")
                 }
+                .disabled(inMenuBar)
+                .grayedOut(inMenuBar)
             }
-            if !inMenuBar {
-                Section {
-                    Toggle(isOn: kind($screenRecording, $voiceMemos)) {
-                        Text("Recordings")
-                        Text("Shows the screen or a voice memo being recorded, with a button to stop it.")
-                    }
+            Section {
+                Toggle(isOn: placed(kind($screenRecording, $voiceMemos))) {
+                    Text("Recordings")
+                    Text("Shows the screen or a voice memo being recorded, with a button to stop it.")
                 }
+                .disabled(inMenuBar)
+                .grayedOut(inMenuBar)
             }
-            if !inMenuBar {
-                Section {
-                    Toggle(isOn: kind($timers, $stopwatch)) {
-                        Text("Clock")
-                        Text("Counts Clock's timers down and its stopwatch up beside the camera, and says when a timer is done.")
-                    }
-                    Toggle(isOn: $hidesMenuBar) {
-                        Text("Hide in menu bar")
-                        Text("Takes macOS's timer out of the menu bar while the notch shows it.")
-                    }
-                    .disabled(!timers)
-                    // Said only when it's in the way, as the Tray page says Glance can't see copies.
-                    if timers, hidesMenuBar, !accessibilityAllowed {
-                        CenteredRow {
-                            Text("Glance can't take macOS's timer out")
-                            Text("Allow it in Privacy & Security, under Accessibility.")
-                        } trailing: {
-                            Button("Open Privacy & Security…") {
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                            }
+            Section {
+                Toggle(isOn: placed(kind($timers, $stopwatch))) {
+                    Text("Clock")
+                    Text("Counts Clock's timers down and its stopwatch up beside the camera, and says when a timer is done.")
+                }
+                .disabled(inMenuBar)
+                .grayedOut(inMenuBar)
+                Toggle(isOn: placed($hidesMenuBar)) {
+                    Text("Hide in menu bar")
+                    Text("Takes macOS's timer out of the menu bar while the notch shows it.")
+                }
+                .disabled(!timers || inMenuBar)
+                .grayedOut(inMenuBar)
+                // Said only when it's in the way, as the Tray page says Glance can't see copies.
+                if !inMenuBar, timers, hidesMenuBar, !accessibilityAllowed {
+                    CenteredRow {
+                        Text("Glance can't take macOS's timer out")
+                        Text("Allow it in Privacy & Security, under Accessibility.")
+                    } trailing: {
+                        Button("Open Privacy & Security…") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
                         }
                     }
-                } footer: {
-                    // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
-                    // Read as Markdown, so its link is one.
-                    Text(
-                        (try? AttributedString(
-                            markdown: String(
-                                localized:
-                                    "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
-                            ))) ?? ""
-                    )
                 }
+            } footer: {
+                // Before it's turned on, so it's chosen knowing: macOS keeps it, and Glance can't undo it.
+                // Read as Markdown, so its link is one.
+                Text(
+                    (try? AttributedString(
+                        markdown: String(
+                            localized:
+                                "macOS keeps its timer out of the menu bar, even after this is turned off. To bring it back, choose Show When Active for Timer in [Menu Bar settings](x-apple.systempreferences:com.apple.ControlCenter-Settings.extension)."
+                        ))) ?? ""
+                )
             }
-            if !inMenuBar {
-                Section {
-                    Toggle(isOn: $alarms) {
-                        Text("Alarms")
-                        Text("Shows Clock's alarms as they ring, with Snooze and Stop. Needs Accessibility.")
-                    }
+            Section {
+                Toggle(isOn: placed($alarms)) {
+                    Text("Alarms")
+                    Text("Shows Clock's alarms as they ring, with Snooze and Stop. Needs Accessibility.")
                 }
+                .disabled(inMenuBar)
+                .grayedOut(inMenuBar)
             }
             Section {
                 Toggle(isOn: $focus) {
@@ -222,5 +233,13 @@ struct ActivitiesPage: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             accessibilityAllowed = AXIsProcessTrusted()
         }
+    }
+}
+
+extension View {
+    /// Grayed out as well as disabled, words and all, as System Settings grays a row that can't be
+    /// changed: SwiftUI's form leaves a disabled switch's words as they were.
+    @ViewBuilder func grayedOut(_ grayed: Bool) -> some View {
+        if grayed { foregroundStyle(.tertiary) } else { self }
     }
 }

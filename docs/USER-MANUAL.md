@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 19 November 2026`
+`Created: 11 October 2026` | `Last updated: 23 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -294,18 +294,18 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens the system dropdown, with native glass, rounded
-corners and an arrow pointing to the button. It uses the same button anchor for
-mouse and keyboard input, and takes keyboard focus while keeping the notch open.
-Opening and closing use system transitions; the window resizes smoothly
-as outputs change. Escape, another press on the button, or a click outside
-closes it.
+The `Sound Output` button opens Sound under it, in native glass, as the menu
+bar's Sound menu opens. The app you're using stays in front while Sound takes
+the keys for its own rows and slider, and the notch stays open under it. Sound
+grows and shrinks as outputs come and go. Escape, another press on the button,
+or a click outside closes it.
 
-The system slider sets the playing app's volume. Its filled track is white in
-dark appearance and uses the accent color in light appearance, with a glass
-handle. Drag the knob or click the track to change it. The speaker symbols at
-either end have matching heights, and the two dividers share one width. The
-slider stays visible and is disabled when no app is playing. For `Music` and
+Sound is laid out as the menu bar's Sound menu: the same width, insets, row
+heights and lines, and a row lit under the pointer or the arrow keys in the
+system's own fill, with corners that follow the menu's. The system slider sets
+the playing app's volume, its filled track in your Mac's accent color. Drag the
+knob or click the track to change it. The slider stays visible and is disabled
+when no app is playing. For `Music` and
 `Spotify`, it reads their volume as Sound opens; other apps need the `Audio from
 apps` permission. Left and Right adjust the volume while Sound is open. Up and
 Down move between outputs and **Sound Settings…**; Return chooses the
@@ -313,7 +313,6 @@ highlighted row.
 
 Connected speakers and headphones appear under **Output**, with a circle in your
 Mac's accent color for the current output and battery details when available.
-macOS draws the row's hover, focus and pressed feedback.
 Long output names wrap above their battery details. The list expands as outputs
 connect, with new rows fading in. Existing rows move into
 place and disconnected outputs fade away. Reduce Motion removes these
@@ -389,7 +388,8 @@ opens it too, ready for the drop, without reaching the top edge.
 | Choose **Share > Glance Tray** in Safari, Photos, Finder or any app | Keeps what's shared in the tray, as a drop does; a picture on a web page too |
 
 Something dragged onto the notch from another app gets two places to go:
-`Keep in Tray` and `AirDrop`. To send items already in the tray, right-click
+`Keep in Tray` and `AirDrop`. Each lights up only while the drag is over it.
+To send items already in the tray, right-click
 them and choose Share, which has AirDrop. A link shows its site's icon, which
 Glance fetches from the site, as Messages does.
 
@@ -998,9 +998,10 @@ every one beside the camera. `Menu Bar` leaves Now Playing, Clock's timers,
 stopwatch and alarms, recordings, AirDrop and shortcuts run elsewhere to macOS's
 own Live Activities in the menu bar, and keeps calls, the battery, devices,
 Focus and what you start from the notch's menu in the notch. With `Menu Bar`
-chosen, the page shows only the switches of what's still in the notch, and
-Glance turns macOS's Now Playing back on if it had hidden it. Each switch keeps
-its value for when `Notch` is chosen again.
+chosen, the switches of what's left to the menu bar, and `Hide native Live
+Activities`, show off and grayed out, and Glance turns macOS's Now Playing back
+on if it had hidden it. Each switch keeps its own value underneath, and shows it
+again when `Notch` is chosen.
 
 | Setting | Operation |
 | --- | --- |

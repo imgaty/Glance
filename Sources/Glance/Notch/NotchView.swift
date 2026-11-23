@@ -282,7 +282,10 @@ final class NotchModel: ObservableObject {
     /// Where AirDrop's place to drop is, in the notch's points, while it shows; and whether something
     /// dragged is over it.
     var airDropFrame: CGRect?
-    @Published var airDropTargeted = false
+    /// Where Keep in Tray is, for lighting it under a drag.
+    var keepFrame: CGRect?
+    /// The place to drop a drag is over, lit while it's there and only then.
+    @Published var dropTarget: DropTarget?
 
     /// The lyrics show only for a song, on the player; for a video, a podcast or nothing at all
     /// they fold away, and come back with the next song.
@@ -1104,7 +1107,7 @@ struct NotchView: View {
                 .accessibilityHidden(true, isEnabled: !playerShown)
             TrayView(
                 tray: tray, isVisible: trayShown && !paused, dropping: model.dropping, scroll: model.trayScroll,
-                airDropTargeted: model.airDropTargeted
+                dropTarget: model.dropTarget
             )
             .frame(width: model.trayWidth, height: model.trayHeight)
             .environment(\.notchControls, trayShown)
@@ -1210,6 +1213,7 @@ struct NotchView: View {
         .coordinateSpace(.named(ControlFrames.space))
         .onPreferenceChange(ControlFrames.self) { model.controlFrames = $0 }
         .onPreferenceChange(AirDropFrame.self) { model.airDropFrame = $0 }
+        .onPreferenceChange(KeepFrame.self) { model.keepFrame = $0 }
         .onPreferenceChange(AlertButtonFrames.self) { model.alertButtons = $0 }
         // A change in Settings eases in rather than snapping.
         .animation(.easeInOut(duration: 0.45), value: darkness)

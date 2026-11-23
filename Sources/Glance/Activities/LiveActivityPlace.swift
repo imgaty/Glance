@@ -53,6 +53,10 @@ enum LiveActivityPlace: String, CaseIterable, Identifiable {
         current(in: defaults) == .notch || !menuBarKinds.contains(key)
     }
 
+    /// What the switch of one of `menuBarKinds` shows on the Live Activities page: off with Menu Bar
+    /// chosen, its saved value with Notch. The saved value itself never changes with the place.
+    static func shown(_ saved: Bool, place: LiveActivityPlace) -> Bool { place == .notch && saved }
+
     /// Whether shortcuts run outside Glance show in the notch; those run from its menu always do.
     static func allowsShortcutsElsewhere(in defaults: UserDefaults = .standard) -> Bool { current(in: defaults) == .notch }
 }

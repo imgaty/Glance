@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 19 November 2026`
+`Created: 11 October 2026` | `Last updated: 23 November 2026`
 
 <br>
 
@@ -22,7 +22,8 @@
   `Menu Bar`. `Menu Bar` leaves Now Playing, Clock, recordings, AirDrop and
   shortcuts run elsewhere to macOS's own Live Activities in the menu bar, and
   keeps calls, the battery, devices, Focus and what you start from the notch's
-  menu in the notch.
+  menu in the notch. Their switches, and `Hide native Live Activities`, show
+  off and grayed out, and come back as they were with `Notch`.
 
 - Fixed the other person going silent on a call with AirPods in: Glance
   switched the AirPods to their headset mode for the call's waveform. It now
@@ -128,12 +129,18 @@
 - Fixed native activities being hidden without a visible replacement. Other
   apps keep their controls, and Glance restores settings it previously changed.
 
-- Changed Sound output rows to system controls, with native highlighting,
-  pressed feedback and keyboard behavior.
+- Changed Sound to the menu bar's Sound menu's spacing, and its rows to light
+  in the system's own fill, 5 points in from the sides with corners that
+  follow the menu's. Its slider fills in the accent color, and the speakers at
+  its ends are gray, as macOS draws them.
 - Fixed closing Sound taking focus away from another Glance window.
 
-- Changed Sound to the system dropdown, with native corners, arrow, placement
-  and animation. It opens from the same button anchor for every input method.
+- Changed Sound to open as the menu bar's Sound menu does: a glass panel under
+  its button, without an arrow, that takes the keys for its own rows and
+  slider while the app you're using stays in front. Pressing the button again
+  closes it.
+- Fixed opening and closing Sound taking the focus from the app in front, which
+  made that app's window flash when the button was pressed again and again.
 
 - Shortened opening and closing, keeping a small bounce only as the notch
   expands. Moving between the tray and player now keeps the notch open,
@@ -282,8 +289,10 @@
 
 ### Player
 
-- Fixed the gap between the artist and the progress bar with `Cover on top`,
-  which was twice the gap with `Cover on the side`.
+- Fixed the gap between the artist and the progress bar with
+  `Cover on the side`, which was half the gap with `Cover on top`. The cover on
+  the side is a little larger, so the controls still end level with its bottom
+  edge.
 
 - Fixed the explicit-content badge disappearing from long titles with
   Reduce Motion enabled.
@@ -362,10 +371,13 @@
 
 ### Tray
 
-- Changed **Clear…** in **Settings > Tray** to a red button, as it removes
-  everything in the tray.
+- Changed **Clear** in **Settings > Tray** to a red button, as it removes
+  everything in the tray, and dropped the ellipsis from its name.
 - Added `When dragged out` in **Settings > Tray**, to keep an item or remove
   it after another app takes it.
+- Fixed `Keep in Tray` showing as chosen as soon as something was dragged onto
+  the notch, and staying so after the drag left it. `Keep in Tray` and
+  `AirDrop` now light up only while the drag is over them.
 - Added saved screen recordings alongside screenshots.
 - Changed the tray's height, glass and text contrast to follow its contents
   and appearance settings. Scrolling past its end with Shift returns to the
