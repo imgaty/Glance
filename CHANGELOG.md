@@ -384,6 +384,8 @@
   everything in the tray, and dropped the ellipsis from its name.
 - Added `When dragged out` in **Settings > Tray**, to keep an item or remove
   it after another app takes it.
+- Fixed the tray's row stopping dead as two fingers lifted off the trackpad,
+  instead of gliding on and slowing to a stop.
 - Fixed `Keep in Tray` showing as chosen as soon as something was dragged onto
   the notch, and staying so after the drag left it. `Keep in Tray` and
   `AirDrop` now light up only while the drag is over them.
