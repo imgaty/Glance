@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notches.contextMenu = statusBar.menu
         statusBar.putAway = { [notches] in notches.putAwayCommand }
         notches.start()
-        MenuBarLiveActivities.shared.replacements = { [notches] in notches.nativeActivityReplacements }
+        MenuBarLiveActivities.shared.active = { [notches] in notches.showsLiveActivities }
         Tray.shared.start()
         NSApp.servicesProvider = trayService
         NSUpdateDynamicServices()
@@ -768,16 +768,13 @@ final class NotchManager {
     func recognizeMusic() { pointed?.recognizeMusic() }
     func openShortcut(runID: UUID) { pointed?.openShortcut(runID: runID) }
     var canLaunchActivity: Bool { pointed?.canLaunchActivity == true }
-    /// macOS's Now Playing pill is replaced for as long as the notch shows what's playing at all: on,
-    /// on a display with a notch, its music Live Activity on. Not only while music plays and shows
-    /// there, as that changes with every pause, announcement and opening, and each change has
-    /// System Settings opened, hidden, to switch the pill back on or off.
-    var nativeActivityReplacements: Set<String> {
+    /// Whether the notch is where Live Activities show, so macOS's own can be hidden: on, on a
+    /// display with a notch, with Notch chosen in Show in. Not whether one shows right now, as that
+    /// changes with every pause, announcement and opening, and each change would have System
+    /// Settings opened, hidden, to switch the pills back on or off.
+    var showsLiveActivities: Bool {
         let defaults = UserDefaults.standard
-        let shows =
-            !controllers.isEmpty && defaults.bool(forKey: Preferences.notchEnabled) && defaults.bool(forKey: Preferences.liveActivity)
-            && LiveActivityPlace.allows(Preferences.liveActivity, in: defaults)
-        return shows ? [MenuBarLiveActivities.nowPlayingName] : []
+        return !controllers.isEmpty && defaults.bool(forKey: Preferences.notchEnabled) && LiveActivityPlace.current(in: defaults) == .notch
     }
 
     func perform(_ action: Shortcuts.Action) {

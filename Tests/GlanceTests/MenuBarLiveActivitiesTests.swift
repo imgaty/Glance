@@ -59,18 +59,25 @@ struct MenuBarLiveActivitiesTests {
         #expect(result.failed)
     }
 
-    @Test("Screenshot's existing authorization is untouched when Glance doesn't own it", arguments: [false, true])
-    func preserveScreenshot(hiding: Bool) {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: hiding, hidden: [], screenshot: "Screenshot", eligible: ["Now Playing"])
+    private static let kept: Set<String> = ["Clock", "Screenshot"]
+
+    @Test("Hiding turns every switch off, apps' own included, except those Glance reads its activities from")
+    func hidesAll() {
+        let policy = MenuBarLiveActivities.SwitchPolicy(intent: .init(hiding: true, active: true, kept: Self.kept), hidden: [])
+        for name in ["Now Playing", "Music Recognition", "Shortcuts", "Journal"] {
+            #expect(policy.target(for: name) == false)
+        }
         // Nil means no AX read or press is requested for either an enabled or disabled switch.
         #expect(policy.target(for: "Screenshot") == nil)
-        #expect(policy.target(for: "Now Playing") == (hiding ? false : nil))
-        #expect(policy.isComplete(.init(hidden: [])))
+        #expect(policy.target(for: "Clock") == nil)
+        #expect(policy.isComplete(.init(hidden: ["Now Playing", "Journal"])))
+        #expect(!policy.isComplete(.init(hidden: ["Now Playing", "Clock"])))
     }
 
-    @Test("An owned Screenshot change is restored while other activities remain hidden", arguments: [false, true])
-    func migrateScreenshot(alreadyEnabled: Bool) {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Screenshot"], screenshot: "Screenshot", eligible: ["Now Playing"])
+    @Test("A kept switch Glance turned off earlier is turned back on while the others stay off", arguments: [false, true])
+    func migrateKept(alreadyEnabled: Bool) {
+        let intent = MenuBarLiveActivities.Intent(hiding: true, active: true, kept: Self.kept)
+        let policy = MenuBarLiveActivities.SwitchPolicy(intent: intent, hidden: ["Screenshot"])
         var switches = ["Screenshot": alreadyEnabled, "Now Playing": true, "Already off": false]
         var result = MenuBarLiveActivities.SwitchResult(hidden: policy.hidden)
         for name in ["Screenshot", "Now Playing", "Already off"] {
@@ -82,13 +89,13 @@ struct MenuBarLiveActivitiesTests {
         #expect(switches == ["Screenshot": true, "Now Playing": false, "Already off": false])
         #expect(result.hidden == ["Now Playing"])
         #expect(policy.isComplete(result))
-        let next = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: result.hidden, screenshot: "Screenshot", eligible: ["Now Playing"])
-        #expect(next.target(for: "Screenshot") == nil)
+        #expect(MenuBarLiveActivities.SwitchPolicy(intent: intent, hidden: result.hidden).target(for: "Screenshot") == nil)
     }
 
-    @Test("Missing or unconfirmed Screenshot restoration remains pending")
-    func retryScreenshotMigration() {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Screenshot", "Now Playing"], screenshot: "Screenshot", eligible: ["Now Playing"])
+    @Test("Missing or unconfirmed restoration of a kept switch remains pending")
+    func retryKeptMigration() {
+        let policy = MenuBarLiveActivities.SwitchPolicy(
+            intent: .init(hiding: true, active: true, kept: Self.kept), hidden: ["Screenshot", "Now Playing"])
         var missing = MenuBarLiveActivities.SwitchResult(hidden: policy.hidden)
         missing.record(name: "Now Playing", off: true, changed: false, confirmed: true)
         #expect(!policy.isComplete(missing))
@@ -100,37 +107,86 @@ struct MenuBarLiveActivitiesTests {
         #expect(failed.hidden.contains("Screenshot"))
     }
 
-    @Test("Turning hiding off restores only owned changes")
-    func restoreOwnedSwitches() {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: false, hidden: ["Now Playing"], screenshot: "Screenshot", eligible: ["Now Playing"])
+    @Test(
+        "Turning hiding off, or the notch no longer showing Live Activities, restores only owned changes",
+        arguments: [(false, true), (true, false)])
+    func restoreOwnedSwitches(hiding: Bool, active: Bool) {
+        let policy = MenuBarLiveActivities.SwitchPolicy(
+            intent: .init(hiding: hiding, active: active, kept: Self.kept), hidden: ["Now Playing", "Shortcuts"])
         #expect(policy.target(for: "Now Playing") == true)
+        #expect(policy.target(for: "Shortcuts") == true)
         #expect(policy.target(for: "Screenshot") == nil)
         #expect(policy.target(for: "Other app") == nil)
         #expect(!policy.isComplete(.init(hidden: ["Now Playing"])))
         #expect(policy.isComplete(.init(hidden: [])))
     }
 
-    @Test("Screenshot protection uses the localized Settings row name")
-    func localizedScreenshot() {
+    @Test("Kept switches go by the names System Settings shows in the Mac's language")
+    func localizedKept() {
         let name = "Captura de pantalla"
-        let unowned = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: [], screenshot: name)
-        #expect(unowned.target(for: name) == nil)
-        let owned = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: [name], screenshot: name)
+        let intent = MenuBarLiveActivities.Intent(hiding: true, active: true, kept: [name])
+        #expect(MenuBarLiveActivities.SwitchPolicy(intent: intent, hidden: []).target(for: name) == nil)
+        let owned = MenuBarLiveActivities.SwitchPolicy(intent: intent, hidden: [name])
         #expect(owned.target(for: name) == true)
         #expect(!owned.isComplete(.init(hidden: [name])))
+        #expect(MenuBarLiveActivities.SwitchPolicy(intent: intent, hidden: []).target(for: "Screenshot") == false)
     }
-    @Test("Unsupported and different-session activities stay native, restoring only owned changes")
-    func preserveUnsupported() {
-        let policy = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Clock", "Shortcuts"], screenshot: "Screenshot", eligible: ["Now Playing"])
-        #expect(policy.target(for: "Clock") == true)
-        #expect(policy.target(for: "Shortcuts") == true)
-        #expect(policy.target(for: "Journal") == nil)
-        #expect(policy.target(for: "Music Recognition") == nil)
-        #expect(!policy.isComplete(.init(hidden: ["Clock"])))
-        #expect(policy.isComplete(.init(hidden: ["Now Playing"])))
-        let absent = MenuBarLiveActivities.SwitchPolicy(hiding: true, hidden: ["Now Playing"], screenshot: "Screenshot")
-        #expect(absent.target(for: "Now Playing") == true)
-        #expect(!absent.isComplete(.init(hidden: ["Now Playing"])))
+
+    @Test("Clock always stays; Now Playing and Screenshot stay only while Glance's own switch for them is off")
+    func kept() {
+        let suite = "dev.vibe.Glance.tests.kept-live-activities"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let clock = MenuBarLiveActivities.clockName, nowPlaying = MenuBarLiveActivities.nowPlayingName
+        let screenshot = MenuBarLiveActivities.screenshotName
+        for (music, recordings) in [(true, true), (false, true), (true, false), (false, false)] {
+            defaults.set(music, forKey: Preferences.liveActivity)
+            defaults.set(recordings, forKey: Preferences.activityScreenRecording)
+            var expected: Set<String> = [clock]
+            if !music { expected.insert(nowPlaying) }
+            if !recordings { expected.insert(screenshot) }
+            #expect(MenuBarLiveActivities.kept(in: defaults) == expected, "music \(music), recordings \(recordings)")
+        }
+        // Music Recognition and Shortcuts are never kept.
+        #expect(!MenuBarLiveActivities.kept(in: defaults).contains("Music Recognition"))
+        #expect(AlarmPillSnapshot.identifier == MenuBarLiveActivities.pillPrefix + MenuBarLiveActivities.clockPill)
+        #expect(MenuBarLiveActivities.known.map(\.pill) == [MenuBarLiveActivities.nowPlayingPill, MenuBarLiveActivities.capture, MenuBarLiveActivities.clockPill])
+    }
+
+    @Test("Every row System Settings lists turns off, and back on with the switch, or with Menu Bar chosen", arguments: [false, true])
+    @MainActor func hidesEveryRow(byPlace: Bool) async {
+        let settings = FakeActivitySettings()
+        settings.rows = ["Clock", "Music Recognition", "Now Playing", "Screenshot", "Shortcuts", "Journal"]
+        settings.kept = ["Clock", "Screenshot"]
+        for name in settings.rows { settings.values[name] = true }
+        let manager = settings.manager()
+        await manager.reconcile()
+        #expect(settings.owned == ["Music Recognition", "Now Playing", "Shortcuts", "Journal"])
+        #expect(settings.rows.filter { settings.values[$0] == true } == ["Clock", "Screenshot"])
+        #expect(settings.opens == 1)
+        if byPlace { settings.active = false } else { settings.hiding = false }
+        await manager.reconcile()
+        #expect(settings.owned.isEmpty)
+        #expect(settings.rows.allSatisfy { settings.values[$0] == true })
+        #expect(settings.opens == 2)
+    }
+
+    @Test("A pill that stays once every switch is off never has System Settings opened again for it")
+    @MainActor func settledPill() async {
+        let settings = FakeActivitySettings()
+        settings.pills = ["com.example.unswitchable"]
+        let manager = settings.manager()
+        await manager.reconcile()
+        #expect(settings.opens == 1)
+        for _ in 0..<3 { await manager.reconcile() }
+        #expect(settings.opens == 1)
+        // Gone and back, it's looked at once more: it may be a new app's.
+        settings.pills = []
+        await manager.reconcile()
+        settings.pills = ["com.example.unswitchable"]
+        await manager.reconcile()
+        await manager.reconcile()
+        #expect(settings.opens == 2)
     }
 
     @Test("A newly absent replacement restores during another switch's failure backoff")
@@ -141,13 +197,14 @@ struct MenuBarLiveActivitiesTests {
         settings.failures = ["Clock"]
         let manager = settings.manager()
         await manager.reconcile()
-        #expect(settings.owned == ["Clock", "Now Playing"])
+        #expect(settings.owned == ["Clock", "Now Playing", "Journal"])
         #expect(settings.opens == 1)
 
         settings.now += 1
-        settings.visible = []
+        settings.active = false
         await manager.reconcile()
         #expect(settings.values["Now Playing"] == true)
+        #expect(settings.values["Journal"] == true)
         #expect(settings.owned == ["Clock"])
         #expect(settings.opens == 2)
         #expect(settings.attempts.filter { $0.name == "Clock" }.count == 1)
@@ -174,7 +231,7 @@ struct MenuBarLiveActivitiesTests {
     @Test("A queued row reauthorizes after its read and skips an absent replacement")
     @MainActor func changedBeforePress() async {
         let settings = FakeActivitySettings()
-        settings.beforeAuthorization = { settings.visible = [] }
+        settings.beforeAuthorization = { settings.active = false }
         await settings.manager().reconcile()
         #expect(settings.skipped == 1)
         #expect(settings.writes.isEmpty)
@@ -184,7 +241,7 @@ struct MenuBarLiveActivitiesTests {
     @Test("A visibility change during an in-flight hide gets an immediate corrective pass")
     @MainActor func changedDuringPress() async {
         let settings = FakeActivitySettings()
-        settings.afterSubmission = { _, target in if !target { settings.visible = [] } }
+        settings.afterSubmission = { _, target in if !target { settings.active = false } }
         await settings.manager().reconcile()
         #expect(settings.writes == [.init(name: "Now Playing", target: false), .init(name: "Now Playing", target: true)])
         #expect(settings.owned.isEmpty)
@@ -197,7 +254,7 @@ struct MenuBarLiveActivitiesTests {
         let settings = FakeActivitySettings()
         settings.owned = ["Now Playing"]
         settings.values["Now Playing"] = false
-        settings.visible = []
+        settings.active = false
         settings.unavailable = true
         let manager = settings.manager()
         await manager.reconcile()
@@ -223,12 +280,13 @@ struct MenuBarLiveActivitiesTests {
         settings.unconfirmed = ["Now Playing"]
         let manager = settings.manager()
         await manager.reconcile()
-        #expect(settings.owned == ["Now Playing"])
-        settings.visible = []
+        #expect(settings.owned == ["Now Playing", "Journal"])
+        settings.active = false
         settings.unconfirmed = []
         await manager.reconcile()
         #expect(settings.owned.isEmpty)
         #expect(settings.values["Now Playing"] == true)
+        #expect(settings.values["Journal"] == true)
     }
 
     @Test("An already disabled unowned switch is never enabled by reconciliation")
@@ -238,7 +296,7 @@ struct MenuBarLiveActivitiesTests {
         settings.values["Journal"] = false
         let manager = settings.manager()
         await manager.reconcile()
-        settings.visible = []
+        settings.active = false
         await manager.reconcile()
         #expect(settings.writes.isEmpty)
         #expect(settings.owned.isEmpty)
@@ -249,7 +307,7 @@ struct MenuBarLiveActivitiesTests {
     @Test("Repeated changes during native writes cannot create an unbounded corrective loop")
     @MainActor func correctivePassIsBounded() async {
         let settings = FakeActivitySettings()
-        settings.afterSubmission = { _, target in settings.visible = target ? ["Now Playing"] : [] }
+        settings.afterSubmission = { _, target in settings.active = target }
         await settings.manager().reconcile()
         #expect(settings.opens == 2)
         #expect(settings.writes.count == 2)
@@ -268,8 +326,11 @@ private final class FakeActivitySettings {
 
     var now = Date(timeIntervalSince1970: 1000)
     var hiding = true
+    var active = true
     var owned: [String] = []
-    var visible: Set<String> = ["Now Playing"]
+    var rows = ["Clock", "Now Playing", "Journal"]
+    var kept: Set<String> = ["Clock"]
+    var pills: Set<String> = []
     var values = ["Now Playing": true, "Clock": true, "Journal": true]
     var failures = Set<String>()
     var unconfirmed = Set<String>()
@@ -287,9 +348,9 @@ private final class FakeActivitySettings {
         let manager = MenuBarLiveActivities(
             dependencies: .init(
                 now: { self.now }, hiding: { self.hiding }, owned: { self.owned },
-                saveOwned: { self.owned = $0 }, isTrusted: { true }, pillShowing: { false },
+                saveOwned: { self.owned = $0 }, isTrusted: { true }, kept: { self.kept }, pills: { self.pills },
                 openSettings: { await self.open() }))
-        manager.replacements = { self.visible }
+        manager.active = { self.active }
         return manager
     }
 
@@ -300,7 +361,7 @@ private final class FakeActivitySettings {
         onOpen = nil
         hook?()
         guard !unavailable else { return nil }
-        let rows = ["Clock", "Now Playing", "Journal"].map { name in
+        let rows = rows.map { name in
             MenuBarLiveActivities.SettingsRow(name: name) { target, authorization in
                 await self.apply(name: name, target: target, authorization: authorization)
             }

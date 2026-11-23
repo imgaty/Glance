@@ -96,4 +96,22 @@ struct ScreenRecordingDetectionTests {
             ))
         #expect(ScreenRecordingWatch.isRecordingControl(role: nil, subrole: nil, identifier: nil) == false)
     }
+
+    @Test("With Screenshot's Live Activity off, a recording is read from the movie ReplayKit writes for Screenshot alone")
+    func recordingFile() {
+        let home = NSHomeDirectory()
+        #expect(ScreenRecordingWatch.isScreenshotRecording("\(home)/Library/Group Containers/group.com.apple.screencapture/ScreenRecordings/85E31A3C-831F-4970-B67E-696C2FB6BE79.mov"))
+        // The folder itself, a still screenshot, and another app's recording aren't.
+        #expect(!ScreenRecordingWatch.isScreenshotRecording("\(home)/Library/Group Containers/group.com.apple.screencapture/ScreenRecordings/"))
+        #expect(!ScreenRecordingWatch.isScreenshotRecording("\(home)/Desktop/Screenshot 2026-11-23 at 11.22.47.png"))
+        #expect(!ScreenRecordingWatch.isScreenshotRecording("\(home)/Movies/Capture.mov"))
+    }
+
+    @Test("Stopped from Screenshot's own toolbar, by its stop button's symbol, the same in every language")
+    func toolbarStop() {
+        #expect(ScreenRecordingWatch.isToolbarStop("stop.circle.fill"))
+        #expect(!ScreenRecordingWatch.isToolbarStop("rectangle.dashed.badge.record"))
+        #expect(!ScreenRecordingWatch.isToolbarStop(nil))
+    }
 }
+

@@ -8,13 +8,17 @@
 import AppKit
 import ApplicationServices
 
-/// Hide a native activity only while its verified replacement is visible in Glance.
-/// App-wide switches cannot distinguish individual Clock alarms, Shortcuts runs or recording
-/// sessions, so those remain native. Previously owned changes are restored and verified.
+/// Hides macOS's own Live Activities in the menu bar while the notch shows Live Activities: every
+/// switch System Settings lists under Menu Bar > Live Activities, read as it is, so apps' own are
+/// included, but those that would leave something showing nowhere (see `kept`). What it turned off
+/// is remembered, and only that is turned back on: when the switch goes off, Menu Bar is chosen or
+/// the notch is turned off.
 @MainActor
 final class MenuBarLiveActivities {
     static let shared = MenuBarLiveActivities()
-    var replacements: () -> Set<String> = { [] }
+    /// Whether the notch is where Live Activities show: on, on a display with a notch, with Notch
+    /// chosen in Show in.
+    var active: () -> Bool = { false }
     private let dependencies: Dependencies
     private var intent: Intent?
     private var generation: UInt64 = 0
@@ -22,11 +26,6 @@ final class MenuBarLiveActivities {
 
     init(dependencies: Dependencies? = nil) {
         self.dependencies = dependencies ?? .system
-    }
-
-    static var nowPlayingName: String {
-        let bundle = Bundle(path: "/System/Library/ExtensionKit/Extensions/ControlCenterSettings.appex")
-        return bundle?.localizedString(forKey: "Now Playing", value: "Now Playing", table: "Localizable") ?? "Now Playing"
     }
 
     private static let pane = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!
@@ -46,9 +45,44 @@ final class MenuBarLiveActivities {
     /// Screenshot's pill's app.
     nonisolated static let capture = "com.apple.screencaptureui"
     /// Screenshot's name, as System Settings lists it.
-    nonisolated static var screenshotName: String {
-        FileManager.default.displayName(atPath: "/System/Applications/Utilities/Screenshot.app").replacingOccurrences(of: ".app", with: "")
+    nonisolated static var screenshotName: String { appName("/System/Applications/Utilities/Screenshot.app") }
+    /// Clock's pill's app, and its name as System Settings lists it.
+    nonisolated static let clockPill = "com.apple.ClockAngel"
+    nonisolated static var clockName: String { appName("/System/Applications/Clock.app") }
+    nonisolated private static func appName(_ path: String) -> String {
+        FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
     }
+
+    /// Now Playing's name, as System Settings lists it, and its pill's app.
+    nonisolated static var nowPlayingName: String {
+        let bundle = Bundle(path: "/System/Library/ExtensionKit/Extensions/ControlCenterSettings.appex")
+        return bundle?.localizedString(forKey: "Now Playing", value: "Now Playing", table: "Localizable") ?? "Now Playing"
+    }
+    nonisolated static let nowPlayingPill = "com.apple.MediaRemoteUIService"
+
+    /// A switch System Settings lists for one of macOS's own, by its name, with its pill's app.
+    struct Row: Equatable, Sendable {
+        let name: String
+        let pill: String
+    }
+
+    nonisolated static var known: [Row] {
+        [Row(name: nowPlayingName, pill: nowPlayingPill), Row(name: screenshotName, pill: capture), Row(name: clockName, pill: clockPill)]
+    }
+
+    /// The switches left on. Clock's always: with it off, macOS shows a ringing alarm nowhere, not
+    /// even as a notification (it skips one, seeing Live Activities turned on), and Glance reads
+    /// alarms from its pill alone. Now Playing's and Screenshot's while Glance's own switch for
+    /// what they show is off, so what's playing, or being recorded, still shows somewhere.
+    nonisolated static func kept(in defaults: UserDefaults = .standard) -> Set<String> {
+        var kept: Set<String> = [clockName]
+        if !defaults.bool(forKey: Preferences.liveActivity) { kept.insert(nowPlayingName) }
+        if !defaults.bool(forKey: Preferences.activityScreenRecording) { kept.insert(screenshotName) }
+        return kept
+    }
+
+    /// Pills no switch takes away, so showing never calls for another pass: AirDrop's.
+    nonisolated static let unswitchable: Set<String> = ["com.apple.Sharing.AirDropUI"]
 
     func start() {
         guard ActivityBench.scene == nil, timer == nil else { return }
@@ -61,9 +95,10 @@ final class MenuBarLiveActivities {
         self.timer = timer
         settingObserver = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated {
+                let shared = MenuBarLiveActivities.shared
                 let on = UserDefaults.standard.bool(forKey: Preferences.hideMenuBarLiveActivities)
-                guard on != MenuBarLiveActivities.shared.intent?.hiding else { return }
-                MenuBarLiveActivities.shared.check()
+                guard on != shared.intent?.hiding || shared.active() != shared.intent?.active else { return }
+                shared.check()
             }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
@@ -90,7 +125,7 @@ final class MenuBarLiveActivities {
 
     @discardableResult
     private func refreshIntent() -> Intent {
-        let latest = Intent(hiding: dependencies.hiding(), eligible: replacements().subtracting([Self.screenshotName]))
+        let latest = Intent(hiding: dependencies.hiding(), active: active(), kept: dependencies.kept())
         if latest != intent {
             retries.changed(from: intent, to: latest)
             intent = latest
@@ -109,9 +144,13 @@ final class MenuBarLiveActivities {
         defer { working = false }
         for _ in 0..<2 {
             var latest = refreshIntent()
-            let showing =
-                latest.hiding && !latest.eligible.isEmpty && dependencies.now() >= retries.hideAfter
-                ? await dependencies.pillShowing() : false
+            // A pill showing calls for another pass, unless it stayed after the last one.
+            var showing = false
+            if latest.hidesAny, dependencies.now() >= retries.hideAfter {
+                let pills = await dependencies.pills()
+                retries.settled.formIntersection(pills)
+                showing = !pills.subtracting(retries.settled).isEmpty
+            }
             latest = refreshIntent()
             guard let plan = retries.plan(intent: latest, owned: dependencies.owned(), showing: showing, now: dependencies.now()) else { return }
             let started = generation
@@ -126,29 +165,28 @@ final class MenuBarLiveActivities {
             refreshIntent()
             if generation != started { continue }
             retries.finished(plan, remaining: result.hidden, failed: result.failed, now: dependencies.now())
+            // What still shows once everything is off isn't any switch's to take away.
+            if plan.hiding, !result.failed { retries.settled = await dependencies.pills() }
             return
         }
     }
 
     private func reconcileRows(_ rows: [SettingsRow], plan: RetrySchedule.Plan, generation started: UInt64) async -> SwitchResult {
         var result = SwitchResult(hidden: dependencies.owned())
-        var seen = Set<String>()
         for row in rows {
             let latest = refreshIntent()
-            let policy = SwitchPolicy(hiding: latest.hiding, hidden: result.hidden, screenshot: Self.screenshotName, eligible: latest.eligible)
+            let policy = SwitchPolicy(intent: latest, hidden: result.hidden)
             guard let target = policy.target(for: row.name) else { continue }
             if target {
                 guard retries.canRestore(row.name, now: dependencies.now()) else { continue }
             } else {
                 // A newer intent gets its own pass; this session may only restore it.
-                guard plan.hiding.contains(row.name), generation == started else { continue }
+                guard plan.hiding, generation == started else { continue }
             }
-            seen.insert(row.name)
             let authorizedGeneration = generation
             let authorization = WriteAuthorization { [weak self] in
                 guard let self else { return false }
-                let current = self.refreshIntent()
-                let currentPolicy = SwitchPolicy(hiding: current.hiding, hidden: self.dependencies.owned(), screenshot: Self.screenshotName, eligible: current.eligible)
+                let currentPolicy = SwitchPolicy(intent: self.refreshIntent(), hidden: self.dependencies.owned())
                 return self.generation == authorizedGeneration && currentPolicy.target(for: row.name) == target
             }
             let outcome = await row.apply(target, authorization)
@@ -168,18 +206,13 @@ final class MenuBarLiveActivities {
             refreshIntent()
             if generation != authorizedGeneration { break }
         }
-        let current = refreshIntent()
-        let policy = SwitchPolicy(hiding: current.hiding, hidden: result.hidden, screenshot: Self.screenshotName, eligible: current.eligible)
-        if !policy.isComplete(result) || !plan.hiding.isSubset(of: seen) { result.failed = true }
+        let policy = SwitchPolicy(intent: refreshIntent(), hidden: result.hidden)
+        if !policy.isComplete(result) { result.failed = true }
         return result
     }
 
-    /// Any pill except those being ignored, in either native menu bar tree.
-    nonisolated static func pillShowing(ignoring: [String] = []) -> Bool {
-        pills().contains { !ignoring.contains($0) }
-    }
-
-    nonisolated private static func pills() -> Set<String> {
+    /// The apps whose pills show, in either native menu bar tree.
+    nonisolated static func pills() -> Set<String> {
         guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first else { return [] }
         let app = AXUIElementCreateApplication(agent.processIdentifier)
         AXUIElementSetMessagingTimeout(app, 0.2)
@@ -275,19 +308,28 @@ final class MenuBarLiveActivities {
     }
 
     struct Intent: Equatable, Sendable {
+        /// The switch.
         var hiding: Bool
-        var eligible: Set<String>
-        var hiddenNames: Set<String> { hiding ? eligible : [] }
+        /// Whether the notch shows Live Activities.
+        var active: Bool
+        /// Switches left on whatever the switch says (see `sources`).
+        var kept: Set<String>
+        var hidesAny: Bool { hiding && active }
+        func hides(_ name: String) -> Bool { hidesAny && !kept.contains(name) }
     }
 
     /// A failed Clock migration must never postpone restoring a newly absent music replacement.
     struct RetrySchedule {
         struct Plan {
-            let hiding: Set<String>
+            /// Whether this pass turns off every switch that should be.
+            let hiding: Bool
             let restoring: Set<String>
         }
 
         var hideAfter = Date.distantPast
+        /// Pills still showing right after every switch was turned off: none of them is a switch's,
+        /// so they never call for another pass while they show.
+        var settled = Set<String>()
         private var restoreAfter: [String: Date] = [:]
         private var allPending = true
         /// Passes that failed in a row: each waits twice as long as the last before the next, from a
@@ -298,20 +340,21 @@ final class MenuBarLiveActivities {
         mutating func changed(from previous: Intent?, to current: Intent) {
             allPending = true
             hideAfter = .distantPast
+            settled = []
             if previous?.hiding != current.hiding { restoreAfter.removeAll() }
         }
 
         mutating func retainRestorations(for intent: Intent, owned: [String]) {
-            let needed = Set(owned).subtracting(intent.hiddenNames)
+            let needed = Set(owned.filter { !intent.hides($0) })
             restoreAfter = restoreAfter.filter { needed.contains($0.key) }
         }
 
         func canRestore(_ name: String, now: Date) -> Bool { now >= (restoreAfter[name] ?? .distantPast) }
 
         func plan(intent: Intent, owned: [String], showing: Bool, now: Date) -> Plan? {
-            let restoring = Set(owned).subtracting(intent.hiddenNames).filter { canRestore($0, now: now) }
-            let hiding = now >= hideAfter && (allPending || showing) ? intent.hiddenNames : []
-            guard !restoring.isEmpty || !hiding.isEmpty else { return nil }
+            let restoring = Set(owned.filter { !intent.hides($0) && canRestore($0, now: now) })
+            let hiding = intent.hidesAny && now >= hideAfter && (allPending || showing)
+            guard !restoring.isEmpty || hiding else { return nil }
             return Plan(hiding: hiding, restoring: restoring)
         }
 
@@ -321,7 +364,7 @@ final class MenuBarLiveActivities {
             for name in plan.restoring {
                 restoreAfter[name] = remaining.contains(name) ? now + delay : nil
             }
-            if !plan.hiding.isEmpty {
+            if plan.hiding {
                 allPending = failed
                 hideAfter = failed ? now + delay : .distantPast
             }
@@ -353,7 +396,9 @@ final class MenuBarLiveActivities {
         var owned: @MainActor () -> [String]
         var saveOwned: @MainActor ([String]) -> Void
         var isTrusted: @MainActor () -> Bool
-        var pillShowing: @MainActor () async -> Bool
+        var kept: @MainActor () -> Set<String>
+        /// The apps whose pills show, other than those that are meant to.
+        var pills: @MainActor () async -> Set<String>
         var openSettings: @MainActor () async -> SettingsSession?
 
         @MainActor static var system: Self {
@@ -363,27 +408,31 @@ final class MenuBarLiveActivities {
                 owned: { UserDefaults.standard.stringArray(forKey: MenuBarLiveActivities.turnedOffKey) ?? [] },
                 saveOwned: { UserDefaults.standard.set($0, forKey: MenuBarLiveActivities.turnedOffKey) },
                 isTrusted: { AXIsProcessTrusted() },
-                pillShowing: { await Task.detached { MenuBarLiveActivities.pillShowing(ignoring: [MenuBarLiveActivities.capture]) }.value },
+                kept: { MenuBarLiveActivities.kept() },
+                pills: {
+                    // A kept switch's pill is meant to show, as AirDrop's always does.
+                    let kept = MenuBarLiveActivities.kept()
+                    let ignored = Set(MenuBarLiveActivities.known.filter { kept.contains($0.name) }.map(\.pill)).union(MenuBarLiveActivities.unswitchable)
+                    return await Task.detached { MenuBarLiveActivities.pills().subtracting(ignored) }.value
+                },
                 openSettings: { await MenuBarLiveActivities.openSettings() })
         }
     }
 
     /// Pure policy shared by migration and ordinary reconciliation, without changing settings.
     struct SwitchPolicy {
-        let hiding: Bool
+        let intent: Intent
         let hidden: [String]
-        let screenshot: String
-        var eligible: Set<String> = []
 
-        /// Nil leaves the user's current setting untouched, including a disabled Screenshot.
+        /// Off for every switch that hides; back on for one Glance turned off that no longer does.
+        /// Nil leaves the user's own setting untouched, a kept switch they turned off included.
         func target(for name: String) -> Bool? {
-            if name == screenshot { return hidden.contains(name) ? true : nil }
-            if hiding, eligible.contains(name) { return false }
+            if intent.hides(name) { return false }
             return hidden.contains(name) ? true : nil
         }
 
         func isComplete(_ result: SwitchResult) -> Bool {
-            !result.failed && (hiding ? result.hidden.allSatisfy { $0 != screenshot && eligible.contains($0) } : result.hidden.isEmpty)
+            !result.failed && result.hidden.allSatisfy(intent.hides)
         }
     }
 
