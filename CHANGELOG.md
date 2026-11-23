@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 19 November 2026`
+`Created: 11 October 2026` | `Last updated: 23 November 2026`
 
 <br>
 
@@ -282,8 +282,10 @@
 
 ### Player
 
-- Fixed the gap between the artist and the progress bar with `Cover on top`,
-  which was twice the gap with `Cover on the side`.
+- Fixed the gap between the artist and the progress bar with
+  `Cover on the side`, which was half the gap with `Cover on top`. The cover on
+  the side is a little larger, so the controls still end level with its bottom
+  edge.
 
 - Fixed the explicit-content badge disappearing from long titles with
   Reduce Motion enabled.

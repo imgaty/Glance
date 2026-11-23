@@ -14,7 +14,8 @@ import SwiftUI
 struct NowPlayingView: View {
     /// Every button's contact area. The glyphs inside it differ in size; the contact areas don't.
     static let hitbox: CGFloat = 40
-    static let sideColumnHeight = PlayerLayout.headerHeight + PlayerLayout.rowGap + PlayerLayout.timelineHeight + PlayerLayout.rowGap + hitbox
+    static let sideColumnHeight =
+        PlayerLayout.headerHeight + PlayerLayout.underArtist + PlayerLayout.timelineHeight + PlayerLayout.overSideControls + hitbox
 
     @EnvironmentObject private var nowPlaying: NowPlaying
     @ObservedObject private var output = AudioOutput.shared
@@ -63,20 +64,24 @@ struct NowPlayingView: View {
         hasMedia && duration.isFinite && duration > 0 && !djTalking
     }
 
-    /// Where the title and artist, the timeline and the controls start, below the padding. What's
-    /// beside the artwork ends on its bottom edge in both layouts, and the timeline hangs the same
-    /// gap under the artist in both, so the two read alike.
+    /// Where the title and artist, the timeline and the controls start, below the padding.
     static func rows(_ layout: PlayerLayout, closed: CGSize) -> (header: CGFloat, timeline: CGFloat, controls: CGFloat) {
         // How far below the artwork's top the camera housing ends; what's under it starts there.
         let clearance = closed.height + PlayerLayout.cameraGap - PlayerLayout.padding
-        // On top, the artist's line ends level with the artwork, unless that puts the title under
-        // the camera; on the side, the column starts right below the camera.
-        let header = layout == .top ? max(layout.artwork - PlayerLayout.headerHeight, clearance) : clearance
-        let timeline = header + PlayerLayout.headerHeight + PlayerLayout.rowGap
-        // On the side, the controls end on the artwork's bottom edge.
-        let sideHeight = max(layout.artwork - clearance, sideColumnHeight)
-        let controls = layout == .top ? timeline + PlayerLayout.timelineHeight + 8 : clearance + sideHeight - hitbox
-        return (header, timeline, controls)
+        switch layout {
+        case .top:
+            // The title and artist centered on the artwork, unless that puts them under the camera;
+            // the timeline under whichever ends lower.
+            let header = max((layout.artwork - PlayerLayout.headerHeight) / 2, clearance)
+            let timeline = max(layout.artwork, header + PlayerLayout.headerHeight) + PlayerLayout.underTopRow
+            return (header, timeline, timeline + PlayerLayout.timelineHeight + PlayerLayout.overTopControls)
+        case .side:
+            // The column starts right below the camera and its controls end on the artwork's bottom
+            // edge, or on the column's own, should that be lower.
+            let timeline = clearance + PlayerLayout.headerHeight + PlayerLayout.underArtist
+            let height = max(layout.artwork - clearance, sideColumnHeight)
+            return (clearance, timeline, clearance + height - hitbox)
+        }
     }
 
     var body: some View {

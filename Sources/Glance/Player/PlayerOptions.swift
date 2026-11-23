@@ -48,9 +48,15 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     /// Between the artwork and what sits beside it.
     static let besideArtwork: CGFloat = 17
     static let timelineHeight: CGFloat = 16
-    /// Between the artist's line and the timeline in both layouts, and between the timeline and the
-    /// controls beside the artwork on the side.
-    static let rowGap: CGFloat = 4
+    /// With the cover on top, between the cover (or the artist's line, if that ends lower) and the
+    /// timeline: around the usual notch, 24 points between the artist's letters and the bar.
+    static let underTopRow: CGFloat = 12
+    /// With the cover on the side, between the artist's line and the timeline: the same 24 points
+    /// between the artist's letters and the bar as on top.
+    static let underArtist: CGFloat = 16
+    /// Between the timeline and the controls, on top and beside the cover.
+    static let overTopControls: CGFloat = 8
+    static let overSideControls: CGFloat = 4
     /// Play and pause are the largest glyphs, back and forward next, the two option buttons smallest.
     static let playGlyph: CGFloat = 28
     static let skipGlyph: CGFloat = 18
@@ -59,7 +65,9 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
     /// shortest, so anything round at its ends is concentric with them (see `NotchModel.corners`).
     static let cornerRadius: CGFloat = 38.5
 
-    var artwork: CGFloat { self == .top ? 60 : 120 }
+    /// On the side, as tall as the column beside it around the usual notch (22 + 34 + 16 + 16 + 4 +
+    /// 40), so it still sets the player's height and the controls end on its bottom edge.
+    var artwork: CGFloat { self == .top ? 60 : 132 }
 
     /// How far in from the controls' row its outer contact areas' centers are: the circles' edges sit
     /// on the padding, lined up with the artwork and the times.
@@ -88,8 +96,8 @@ enum PlayerLayout: String, CaseIterable, Identifiable {
                 // ones do from the sides.
                 (
                     max(p * 2 + 280, besideCamera),
-                    p + max(artwork, closed.height + Self.cameraGap - p + Self.headerHeight) + Self.rowGap + Self.timelineHeight + 8
-                        + NowPlayingView.hitbox + p
+                    p + max(artwork, closed.height + Self.cameraGap - p + Self.headerHeight) + Self.underTopRow + Self.timelineHeight
+                        + Self.overTopControls + NowPlayingView.hitbox + p
                 )
             case .side:
                 // The column beside the artwork starts below the camera.
