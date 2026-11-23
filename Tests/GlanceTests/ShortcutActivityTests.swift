@@ -71,14 +71,15 @@ struct ShortcutActivityTests {
         let done = activity.run(definition)
         let failed = activity.run(definition)
         let stopped = activity.run(definition)
+        let finished = ContinuousClock.now
         source.finish(0)
         source.finish(1, status: 1)
         activity.stop(stopped)
         source.finish(2, status: SIGINT, reason: .signal)
         #expect(activity.runs.first { $0.id == done }?.state == .completed)
         #expect(activity.runs.first { $0.id == stopped }?.state == .stopped)
-        try await Task.sleep(for: .milliseconds(400))
-        #expect(activity.runs.map(\.id) == [failed])
+        try await settle { activity.runs.map(\.id) == [failed] }
+        #expect(ContinuousClock.now - finished >= .milliseconds(80), "They closed before their check")
         #expect(activity.runs.first?.state == .failed)
     }
 
@@ -110,10 +111,11 @@ struct ShortcutActivityTests {
         let source = Source()
         let activity = ShortcutActivity(source: source, closeDelay: .milliseconds(80))
         let done = activity.run(definition)
+        let finished = ContinuousClock.now
         source.finish(0, output: URL(fileURLWithPath: "/glance-test/Result"))
         #expect(activity.shown?.run.id == done)
-        try await Task.sleep(for: .milliseconds(400))
-        #expect(activity.shown == nil)
+        try await settle { activity.shown == nil }
+        #expect(ContinuousClock.now - finished >= .milliseconds(80), "It left before its check")
         #expect(activity.runs.map(\.id) == [done])
         // Shown again from the menu, it stays; Done takes it away.
         activity.select(done)
@@ -169,10 +171,7 @@ struct ShortcutActivityTests {
         activity.stop(id)
         // Other suites can occupy the main actor before the delayed task starts or publishes.
         // Wait for its observable result, bounded so a missing update still fails the test.
-        let deadline = ContinuousClock.now + .seconds(5)
-        while activity.shown?.run.state == .stopping, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        try await settle { activity.shown?.run.state != .stopping }
         #expect(activity.shown?.run.state == .stopDelayed)
         #expect(activity.shown?.run.canStop == true)
         activity.stop(id)

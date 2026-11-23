@@ -40,8 +40,7 @@ struct MainThreadWatchTests {
         stallMainThread()
         #expect(watch.silent >= 1.1)
         // Free again, it answers, as soon as the main thread gets to it.
-        for _ in 0..<40 where watch.silent >= 0.5 { try await Task.sleep(for: .milliseconds(50)) }
-        #expect(watch.silent < 0.5)
+        #expect(await eventually { watch.silent < 0.5 })
     }
 
     /// Deliberately block rather than suspend: the watchdog must detect a thread that cannot run.

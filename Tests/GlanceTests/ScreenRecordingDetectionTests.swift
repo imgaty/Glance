@@ -19,24 +19,10 @@ struct ScreenRecordingDetectionTests {
             findSavedFile: { searches += 1 }, fileIsAvailable: { _ in false }, openFile: { _ in false }
         )
         watch.refresh()
-        let startedDeadline = Date.now.addingTimeInterval(2)
-        while watch.recording == nil, Date.now < startedDeadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        guard case .recording? = watch.recording else {
-            Issue.record("A native recording indicator wasn't observed")
-            return
-        }
+        try await settle("A native recording indicator wasn't observed") { watch.recording?.isRecording == true }
         indicator.withLock { $0 = nil }
         watch.refresh()
-        let stoppedDeadline = Date.now.addingTimeInterval(2)
-        while case .recording? = watch.recording, Date.now < stoppedDeadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        guard case .saving? = watch.recording else {
-            Issue.record("Disappearing native control didn't enter saving")
-            return
-        }
+        try await settle("Disappearing native control didn't enter saving") { watch.recording?.isSaving == true }
         #expect(searches == 1)
     }
 
@@ -54,13 +40,9 @@ struct ScreenRecordingDetectionTests {
         try await Task.sleep(for: .milliseconds(100))
         #expect(watch.recording == nil)
         indicator.withLock { $0 = "Stop Screen Recording" }
-        let deadline = Date.now.addingTimeInterval(4)
-        while watch.recording == nil, Date.now < deadline {
-            try await Task.sleep(for: .milliseconds(25))
-        }
-        guard case .recording? = watch.recording else {
-            Issue.record("The recording was missed without an app launch notification")
-            return
+        // Idle, the watch looks only every two seconds, and its timer waits for a busy main thread.
+        try await settle("The recording was missed without an app launch notification", timeout: .seconds(10)) {
+            watch.recording?.isRecording == true
         }
     }
 
