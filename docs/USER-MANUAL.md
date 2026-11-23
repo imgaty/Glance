@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 19 November 2026`
+`Created: 11 October 2026` | `Last updated: 23 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -294,12 +294,11 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens the system dropdown, with native glass, rounded
-corners and an arrow pointing to the button. It uses the same button anchor for
-mouse and keyboard input, and takes keyboard focus while keeping the notch open.
-Opening and closing use system transitions; the window resizes smoothly
-as outputs change. Escape, another press on the button, or a click outside
-closes it.
+The `Sound Output` button opens Sound under it, in native glass, as the menu
+bar's Sound menu opens. The app you're using stays in front while Sound takes
+the keys for its own rows and slider, and the notch stays open under it. Sound
+grows and shrinks as outputs come and go. Escape, another press on the button,
+or a click outside closes it.
 
 The system slider sets the playing app's volume. Its filled track is white in
 dark appearance and uses the accent color in light appearance, with a glass

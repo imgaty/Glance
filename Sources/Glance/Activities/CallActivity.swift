@@ -873,7 +873,8 @@ struct ExpandedCallView: View {
     private func soundButton(_ h: CGFloat, symbolShare: CGFloat, weight: Font.Weight = .semibold) -> some View {
         let side = CallLayout.round(h)
         return IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
-            if let output = actions.output { output(nil) } else { soundPresented = true }
+            // Pressed again, it closes the menu it opened, as a menu's title does.
+            if let output = actions.output { output(nil) } else { soundPresented.toggle() }
         } glyph: {
             glyph("speaker.wave.3.fill", symbolShare, side, weight: weight)
         }

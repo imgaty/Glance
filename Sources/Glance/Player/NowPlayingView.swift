@@ -429,8 +429,15 @@ struct NowPlayingView: View {
         case .shuffle: nowPlaying.toggleShuffle()
         case .repeatMode: nowPlaying.cycleRepeat()
         case .output:
-            soundPlace = place ?? (keys?.focus == .left ? .left : (soundControl ?? .right))
-            soundMenuChanged(true)
+            let target = place ?? (keys?.focus == .left ? .left : (soundControl ?? .right))
+            // Pressed again, it closes the menu it opened, as a menu's title does.
+            if soundPlace == target {
+                soundPlace = nil
+                soundMenuChanged(false)
+            } else {
+                soundPlace = target
+                soundMenuChanged(true)
+            }
         case .lyrics: lyricsControl.toggle()
         case .empty: break
         }

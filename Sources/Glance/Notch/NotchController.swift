@@ -472,7 +472,7 @@ final class NotchController {
                 MainActor.assumeIsolated { self?.model.soundMenuShown = true }
             },
             NotificationCenter.default.publisher(for: SoundOutputMenu.didClose).sink { [weak self] _ in
-                MainActor.assumeIsolated { self?.model.soundMenuShown = false }
+                MainActor.assumeIsolated { self?.model.soundMenuShown = SoundOutputMenu.open > 0 }
             },
             NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification).sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.menuOpened() }

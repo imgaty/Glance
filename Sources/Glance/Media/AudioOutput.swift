@@ -413,6 +413,9 @@ final class VolumeMenuSlider: NSView {
 final class SoundOutputMenu: NSMenu, NSMenuDelegate {
     static let didOpen = Notification.Name("GlanceSoundMenuDidOpen")
     static let didClose = Notification.Name("GlanceSoundMenuDidClose")
+    /// The menus open now: pressed quickly again and again, one can still be fading out as the next
+    /// opens.
+    private(set) static var open = 0
     let level: VolumeMenuSlider.VolumeSlider.Level
     private let volume: AppVolume?
     private let choose: (AudioOutput.Device) -> Void
@@ -422,7 +425,7 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
     private var deviceItems: [NSMenuItem] = []
     private var deviceStart = 0
     private var outputWatch: AnyCancellable?
-    private var popover: SoundPopover?
+    private var popover: SoundPanel?
     private var focusedItem: NSMenuItem?
     private let withVolume: Bool
     private var tracking = false
@@ -587,18 +590,20 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
             dismissed()
             return
         }
-        let popover = SoundPopover(menu: self, maximumHeight: max(40, screen.visibleFrame.height - 40))
+        let popover = SoundPanel(menu: self, maximumHeight: max(40, screen.visibleFrame.height - 40))
         self.popover = popover
         // Retain the menu until dismissal, even if its SwiftUI anchor goes away.
-        // SoundPopover clears this callback before calling it, breaking the temporary ownership.
+        // SoundPanel clears this callback before calling it, breaking the temporary ownership.
         popover.onDismiss = { [self, weak popover] in
             guard self.popover === popover else { return }
             self.popover = nil
             self.menuDidClose(self)
+            Self.open -= 1
             NotificationCenter.default.post(name: Self.didClose, object: self)
             dismissed()
         }
         menuWillOpen(self)
+        Self.open += 1
         NotificationCenter.default.post(name: Self.didOpen, object: self)
         popover.show(from: anchor, pointer: pointer)
     }
@@ -757,6 +762,13 @@ final class SoundMenuContentRow: NSButton {
 enum SoundLook {
     static let edge: CGFloat = highlightInset
     static let width: CGFloat = 308
+    /// The panel's corners, as Control Center's Sound menu rounds its own.
+    static let radius: CGFloat = 16
+    /// How far under the button's contact area the panel hangs: 6 points under the notch's edge,
+    /// which is the padding under it.
+    static let below: CGFloat = PlayerLayout.padding + 6
+    /// Its fade in and out.
+    static let fade: TimeInterval = 0.12
     static let inset: CGFloat = 14
     static let highlightInset: CGFloat = 5
     // Nested corners share a center when the outer radius includes the inset.

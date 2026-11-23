@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// A system popover opened from the Sound button.
+/// The Sound menu, opened from the Sound button (see `SoundPanel`).
 struct SoundMenuPresenter: NSViewRepresentable {
     @Binding var isPresented: Bool
     let makeMenu: () -> SoundOutputMenu
@@ -38,9 +38,11 @@ struct SoundMenuPresenter: NSViewRepresentable {
                 }
                 let menu = makeMenu()
                 self.menu = menu
-                menu.present(from: anchor, pointer: pointer) { [weak self] in
-                    self?.menu = nil
-                    self?.dismissed()
+                menu.present(from: anchor, pointer: pointer) { [weak self, weak menu] in
+                    // One closed here and still fading out says nothing about a newer one open.
+                    guard let self, let menu, self.menu === menu else { return }
+                    self.menu = nil
+                    self.dismissed()
                 }
             }
         }
@@ -61,21 +63,27 @@ struct SoundMenuPresenter: NSViewRepresentable {
     static func dismantleNSView(_ view: Anchor, coordinator: Coordinator) { coordinator.cancel() }
 }
 
-/// AppKit supplies the popover's glass, arrow, corners, placement and window animations.
+/// The Sound menu's window: a glass panel under the button that opened it, as Control Center opens
+/// its Sound menu from the menu bar. It takes the keys for its rows and slider without making Glance
+/// the app in use, so the app in front stays in front and its window stays the key one: opening and
+/// closing it never makes that window blink between looking in front and behind.
 @MainActor
-final class SoundPopover: NSObject, NSPopoverDelegate {
+final class SoundPanel: NSObject {
     private weak var soundMenu: SoundOutputMenu?
-    let popover = NSPopover()
-    let contentView = SoundPopoverContent()
+    let window = SoundPanelWindow()
+    let contentView = SoundPanelContent()
+    private let glass = NSGlassEffectView()
     private let scroll = NSScrollView()
     private let stack = SoundMenuStack()
     private let maximumHeight: CGFloat
     private var holders: [ObjectIdentifier: SoundRowHolder] = [:]
     private(set) var contentSize = CGSize.zero
-    private var keys: Any?
+    /// The button's rect on the screen, and the screen's visible part, it hangs under.
+    private var placement: (anchor: CGRect, visible: CGRect)?
+    private var monitors: [Any] = []
     private var observers: [NSObjectProtocol] = []
-    private var workspaceObserver: NSObjectProtocol?
-    private var previousApp: NSRunningApplication?
+    private var workspaceObservers: [NSObjectProtocol] = []
+    /// Glance's own window that had the keys before (the notch, say), given them back.
     private weak var previousKey: NSWindow?
     private var dismissing = false
     private var didFinish = false
@@ -85,27 +93,31 @@ final class SoundPopover: NSObject, NSPopoverDelegate {
         soundMenu = menu
         self.maximumHeight = maximumHeight
         super.init()
-        popover.behavior = .transient
-        popover.delegate = self
-        let controller = NSViewController()
-        controller.title = String(localized: "Sound")
-        controller.view = contentView
-        popover.contentViewController = controller
-        contentView.onCancel = { [weak self] in self?.dismiss() }
         scroll.drawsBackground = false
         scroll.borderType = .noBorder
         scroll.autohidesScrollers = true
         scroll.autoresizingMask = [.width, .height]
         scroll.documentView = stack
         contentView.addSubview(scroll)
+        contentView.onCancel = { [weak self] in self?.dismiss() }
+        contentView.setAccessibilityRole(.group)
         contentView.setAccessibilityLabel(String(localized: "Sound"))
+        glass.cornerRadius = SoundLook.radius
+        glass.contentView = contentView
+        window.contentView = glass
+        window.onCancel = { [weak self] in self?.dismiss() }
+        window.onKey = { [weak self] event in
+            guard let self, !self.dismissing else { return false }
+            return self.soundMenu?.handleKey(event) == true
+        }
+        window.setAccessibilityTitle(String(localized: "Sound"))
         reload()
     }
 
-    /// Preserve row identity, including a volume edit, while AppKit resizes the popover.
+    /// Preserve row identity, including a volume edit, while the panel grows or shrinks from its top.
     func reload(animated: Bool? = nil) {
         guard let menu = soundMenu, !dismissing else { return }
-        let animate = (animated ?? popover.isShown) && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let animate = (animated ?? window.isVisible) && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let views = menu.items.compactMap(\.view)
         let rowsHeight = views.reduce(CGFloat.zero) { $0 + $1.frame.height }
         let height = ceil(rowsHeight + SoundLook.edge * 2)
@@ -138,13 +150,15 @@ final class SoundPopover: NSObject, NSPopoverDelegate {
         stack.setFrameSize(CGSize(width: SoundLook.width, height: height))
         if contentSize != size {
             contentSize = size
-            popover.animates = animate
-            // The system owns the shown window's frame, including during live device changes.
-            if !popover.isShown {
-                contentView.setFrameSize(size)
-                scroll.frame = contentView.bounds
+            if let placement, window.isVisible {
+                window.setFrame(SoundMenuPlacement.frame(for: size, below: placement.anchor, in: placement.visible), display: true, animate: animate)
+            } else {
+                window.setContentSize(size)
             }
-            popover.contentSize = size
+            glass.frame = CGRect(origin: .zero, size: size)
+            contentView.frame = glass.bounds
+            scroll.frame = contentView.bounds
+            window.invalidateShadow()
         }
         NSAnimationContext.runAnimationGroup { context in
             if !animate { context.duration = 0 }
@@ -163,83 +177,146 @@ final class SoundPopover: NSObject, NSPopoverDelegate {
         }
     }
 
+    /// Places the panel under the button, above the notch's own window, without showing it.
+    func place(from anchor: NSView, pointer: CGPoint?) -> Bool {
+        guard let parent = anchor.window, let screen = parent.screen ?? NSScreen.main else { return false }
+        window.appearance = anchor.effectiveAppearance
+        let rect = SoundMenuPlacement.anchorRect(in: anchor, pointer: pointer)
+        let onScreen = parent.convertToScreen(anchor.convert(rect, to: nil))
+        placement = (onScreen, screen.visibleFrame)
+        window.level = NSWindow.Level(rawValue: max(parent.level.rawValue, NSWindow.Level.popUpMenu.rawValue) + 1)
+        window.setFrame(SoundMenuPlacement.frame(for: contentSize, below: onScreen, in: screen.visibleFrame), display: false)
+        return true
+    }
+
     func show(from anchor: NSView, pointer: CGPoint?) {
-        guard !dismissing, let parent = anchor.window, parent.isVisible else { return finishDismissal() }
-        popover.appearance = anchor.effectiveAppearance
-        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard !dismissing, let parent = anchor.window, parent.isVisible, place(from: anchor, pointer: pointer) else { return finishDismissal() }
         previousKey = NSApp.keyWindow
-        // A system popover needs the active app for immediate keyboard and slider focus.
-        if !NSApp.isActive {
-            previousApp = NSWorkspace.shared.frontmostApplication
-            NSApp.activate()
+        let fades = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        window.alphaValue = fades ? 0 : 1
+        // Key without making Glance the app in use: the panel is non-activating.
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(contentView)
+        if fades {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = SoundLook.fade
+                window.animator().alphaValue = 1
+            }
         }
-        popover.show(
-            relativeTo: SoundMenuPlacement.anchorRect(in: anchor, pointer: pointer), of: anchor,
-            preferredEdge: SoundMenuPlacement.below(anchor))
-        guard popover.isShown else { return finishDismissal() }
-        takeFocus()
-        keys = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, !self.dismissing, event.window === self.contentView.window else { return event }
-            return self.soundMenu?.handleKey(event) == true ? nil : event
-        }
-        // Outside clicks and the positioning window's lifetime belong to NSPopover.
-        // Explicitly dismiss on desktop changes so it cannot follow a hidden activity.
+        NSAccessibility.post(element: contentView, notification: .layoutChanged, userInfo: [.uiElements: [contentView]])
+        let anchorRect = placement?.anchor
+        let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        monitors = [
+            // Anywhere outside Glance, as a menu closes.
+            NSEvent.addGlobalMonitorForEvents(matching: clicks) { [weak self] _ in
+                MainActor.assumeIsolated { self?.dismiss() }
+            },
+            // In Glance, anywhere but the panel and the button, which closes it itself.
+            NSEvent.addLocalMonitorForEvents(matching: clicks) { [weak self, weak parent] event in
+                MainActor.assumeIsolated {
+                    guard let self, event.window !== self.window else { return }
+                    if let anchorRect, event.window === parent, let window = event.window,
+                        anchorRect.contains(window.convertPoint(toScreen: event.locationInWindow))
+                    {
+                        return
+                    }
+                    self.dismiss()
+                }
+                return event
+            },
+        ].compactMap { $0 }
+        // It can't follow the notch onto another Space or display.
         observers.append(
             NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: NSApp, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.dismiss() }
             })
-        workspaceObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.dismiss() }
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
+            workspaceObservers.append(
+                workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.dismiss() }
+                })
         }
-    }
-
-    private func takeFocus() {
-        guard !dismissing else { return }
-        contentView.window?.makeKey()
-        contentView.window?.makeFirstResponder(contentView)
     }
 
     func dismiss() {
         guard !dismissing else { return }
         dismissing = true
-        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        if popover.isShown { popover.close() } else { finishDismissal() }
+        guard window.isVisible else { return finishDismissal() }
+        // Fading, it lets clicks through to what's under it.
+        window.ignoresMouseEvents = true
+        let window = window
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : SoundLook.fade
+            window.animator().alphaValue = 0
+        } completionHandler: {
+            MainActor.assumeIsolated {
+                window.orderOut(nil)
+                self.finishDismissal()
+            }
+        }
     }
-
-    func popoverDidShow(_ notification: Notification) { takeFocus() }
-    func popoverShouldDetach(_ popover: NSPopover) -> Bool { false }
-    func popoverWillClose(_ notification: Notification) { dismissing = true }
-    func popoverDidClose(_ notification: Notification) { finishDismissal() }
 
     private func finishDismissal() {
         guard !didFinish else { return }
         didFinish = true
         dismissing = true
-        if let keys { NSEvent.removeMonitor(keys) }
-        keys = nil
+        monitors.forEach(NSEvent.removeMonitor)
+        monitors = []
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
-        if let workspaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(workspaceObserver) }
-        workspaceObserver = nil
+        workspaceObservers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
+        workspaceObservers = []
         contentView.onCancel = nil
-        if NSApp.isActive {
-            if NSApp.keyWindow == nil, let previousKey, previousKey.isVisible, previousKey.canBecomeKey { previousKey.makeKey() }
-            // A deliberate click in another Glance window keeps that window in front.
-            if NSApp.keyWindow == nil || NSApp.keyWindow === previousKey,
-                let previousApp, !previousApp.isTerminated
-            {
-                previousApp.activate(options: [])
-            }
+        window.onCancel = nil
+        window.onKey = nil
+        if window.isVisible { window.orderOut(nil) }
+        // The keys go back to Glance's own window that had them; another app's never left it.
+        if let previousKey, previousKey !== window, previousKey.isVisible, previousKey.canBecomeKey, NSApp.keyWindow == nil || NSApp.keyWindow === window {
+            previousKey.makeKey()
         }
         previousKey = nil
-        previousApp = nil
         let callback = onDismiss
         onDismiss = nil
         callback?()
     }
 }
 
-final class SoundPopoverContent: NSView {
+/// Takes the keys without making Glance the app in use, and draws as a window in front, so the
+/// slider and the playing output keep the accent color.
+final class SoundPanelWindow: NSPanel {
+    var onCancel: (() -> Void)?
+    /// A key pressed, before anything in the menu sees it: whether the menu took it.
+    var onKey: ((NSEvent) -> Bool)?
+
+    init() {
+        super.init(contentRect: CGRect(x: 0, y: 0, width: SoundLook.width, height: 100), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        hidesOnDeactivate = false
+        isReleasedWhenClosed = false
+        becomesKeyOnlyIfNeeded = false
+        collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
+        animationBehavior = .none
+    }
+
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+    override func cancelOperation(_ sender: Any?) { onCancel?() }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, onKey?(event) == true { return }
+        super.sendEvent(event)
+    }
+
+    /// Private AppKit hooks, as the menu bar menu's: drawn as a window in front, so the slider has
+    /// its color and the glass isn't the flat look of a window behind.
+    @objc func _hasActiveAppearance() -> Bool { true }
+    @objc func _hasActiveAppearanceIgnoringKeyFocus() -> Bool { true }
+}
+
+final class SoundPanelContent: NSView {
     var onCancel: (() -> Void)?
     override var acceptsFirstResponder: Bool { true }
     override func cancelOperation(_ sender: Any?) { onCancel?() }
@@ -265,6 +342,13 @@ private final class SoundMenuStack: NSView {
 }
 
 enum SoundMenuPlacement {
+    /// The panel's frame: its top the gap under the button, centered on it, kept on the screen.
+    static func frame(for size: CGSize, below anchor: CGRect, in visible: CGRect) -> CGRect {
+        let x = min(max(anchor.midX - size.width / 2, visible.minX), max(visible.minX, visible.maxX - size.width))
+        let y = max(visible.minY, anchor.minY - SoundLook.below - size.height)
+        return CGRect(x: x.rounded(), y: y.rounded(), width: size.width, height: size.height)
+    }
+
     /// Button-based entry points use their whole bounds, so different click locations cannot
     /// move the popover. Only the legacy window-level entry point needs a click-sized anchor.
     @MainActor static func anchorRect(in view: NSView, pointer: CGPoint?) -> CGRect {

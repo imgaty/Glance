@@ -132,8 +132,12 @@
   pressed feedback and keyboard behavior.
 - Fixed closing Sound taking focus away from another Glance window.
 
-- Changed Sound to the system dropdown, with native corners, arrow, placement
-  and animation. It opens from the same button anchor for every input method.
+- Changed Sound to open as the menu bar's Sound menu does: a glass panel under
+  its button, without an arrow, that takes the keys for its own rows and
+  slider while the app you're using stays in front. Pressing the button again
+  closes it.
+- Fixed opening and closing Sound taking the focus from the app in front, which
+  made that app's window flash when the button was pressed again and again.
 
 - Shortened opening and closing, keeping a small bounce only as the notch
   expands. Moving between the tray and player now keeps the notch open,
