@@ -22,7 +22,8 @@
   `Menu Bar`. `Menu Bar` leaves Now Playing, Clock, recordings, AirDrop and
   shortcuts run elsewhere to macOS's own Live Activities in the menu bar, and
   keeps calls, the battery, devices, Focus and what you start from the notch's
-  menu in the notch.
+  menu in the notch. Their switches, and `Hide native Live Activities`, show
+  off and grayed out, and come back as they were with `Notch`.
 
 - Fixed the other person going silent on a call with AirPods in: Glance
   switched the AirPods to their headset mode for the call's waveform. It now

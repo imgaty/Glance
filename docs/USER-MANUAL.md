@@ -997,9 +997,10 @@ every one beside the camera. `Menu Bar` leaves Now Playing, Clock's timers,
 stopwatch and alarms, recordings, AirDrop and shortcuts run elsewhere to macOS's
 own Live Activities in the menu bar, and keeps calls, the battery, devices,
 Focus and what you start from the notch's menu in the notch. With `Menu Bar`
-chosen, the page shows only the switches of what's still in the notch, and
-Glance turns macOS's Now Playing back on if it had hidden it. Each switch keeps
-its value for when `Notch` is chosen again.
+chosen, the switches of what's left to the menu bar, and `Hide native Live
+Activities`, show off and grayed out, and Glance turns macOS's Now Playing back
+on if it had hidden it. Each switch keeps its own value underneath, and shows it
+again when `Notch` is chosen.
 
 | Setting | Operation |
 | --- | --- |

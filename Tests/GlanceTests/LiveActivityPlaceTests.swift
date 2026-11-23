@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import Glance
@@ -61,5 +62,24 @@ struct LiveActivityPlaceTests {
     func footnote() {
         #expect(LiveActivityPlace.allCases.map(\.title) == [String(localized: "Notch"), String(localized: "Menu Bar")])
         for place in LiveActivityPlace.allCases { #expect(place.includes.hasPrefix("**" + place.title)) }
+    }
+
+    @Test("With Menu Bar chosen, those switches show off and can't be changed, and their own values come back with Notch")
+    func menuBarSwitchesKeepTheirValues() {
+        for saved in [true, false] {
+            var stored = saved
+            var place = LiveActivityPlace.notch
+            let shown = ActivitiesPage.placed(Binding(get: { stored }, set: { stored = $0 })) { place }
+            #expect(shown.wrappedValue == saved)
+            place = .menuBar
+            #expect(shown.wrappedValue == false)
+            // Grayed out, but should anything still set it, the saved value stays.
+            shown.wrappedValue = !saved
+            #expect(stored == saved)
+            place = .notch
+            #expect(shown.wrappedValue == saved)
+            shown.wrappedValue = !saved
+            #expect(stored == !saved)
+        }
     }
 }
