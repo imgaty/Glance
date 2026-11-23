@@ -375,6 +375,8 @@
   display and hide with the menu bar on other displays. New external displays
   start with it enabled; existing choices are preserved.
 - Changed quitting or turning Glance off to close the notch before it leaves.
+- Changed the notch to open no player while nothing plays: with no song and no
+  live activity, it opens to the tray, or stays as it is with the tray off.
 
 ### Tray
 

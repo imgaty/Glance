@@ -1110,11 +1110,11 @@ final class NotchController {
                 // The bubble's own: the notch beside it stays as it is.
                 openOnRest(at: p)
             } else if interactiveZone.contains(p) {
-                if model.state == .closed, !holdUntilExit { peek() }
+                if model.state == .closed, !holdUntilExit, opensOnHover { peek() }
                 openOnRest(at: p)
             } else {
                 holdUntilExit = false
-                if model.state == .peek { settle(at: p) } else { model.approach(closeness(to: p)) }
+                if model.state == .peek { settle(at: p) } else { model.approach(opensOnHover ? closeness(to: p) : 0) }
             }
         case .open:
             pageTurnZone = pageTurnZone.flatMap { Self.pageNavigationZone(from: $0, to: openZone, pointer: p) }
@@ -1406,8 +1406,11 @@ final class NotchController {
     /// Opens on the player, unless told otherwise; for something dragged to it, with its places to
     /// drop. An announcement folds away first, unless it's to go with the opening, for fingers
     /// already pulling the notch down, which a wait would leave stretching it.
-    private func open(on page: NotchPage = .player, forDrop: Bool = false) {
+    private func open(on asked: NotchPage = .player, forDrop: Bool = false) {
         guard model.state != .open else { return }
+        // With no song and no live activity, there's no player to open to: the tray instead, or
+        // nothing, as the Dynamic Island has nothing to expand with nothing going on.
+        guard let page = Self.openingPage(asked, forDrop: forDrop, playerEmpty: playerEmpty, trayOn: Tray.isOn) else { return }
         // Dismissing the announcement and choosing the open destination share one housing fold.
         if !forDrop { foldAnnouncement() }
         // The screen recording's countdown has nothing to open to, as on the iPhone.
@@ -1459,10 +1462,33 @@ final class NotchController {
         NotchSwipes.shared.start()
     }
 
+    /// What opening the notch shows: the page asked for; the tray in place of a player with nothing in
+    /// it; or, with the tray off too, nothing.
+    nonisolated static func openingPage(_ asked: NotchPage, forDrop: Bool, playerEmpty: Bool, trayOn: Bool) -> NotchPage? {
+        guard asked == .player, !forDrop, playerEmpty else { return asked }
+        return trayOn ? .tray : nil
+    }
+
+    /// Nothing for the player to show: no song, and no live activity it would open to or show.
+    private var playerEmpty: Bool { Self.playerEmpty(hasMedia: nowPlaying.hasMedia, activities: model.activities) }
+
+    nonisolated static func playerEmpty(hasMedia: Bool, activities: [NotchModel.Activity]) -> Bool {
+        !hasMedia && activities.allSatisfy { $0 == .music }
+    }
+
+    /// Whether hovering the closed notch leads anywhere: with an empty player and the tray off, it
+    /// stays as it is, as there's nothing to open, unless an announcement is showing.
+    private var opensOnHover: Bool { !playerEmpty || Tray.isOn || model.alert != nil }
+
+    /// Whether the open notch can turn to a page: never to an empty player.
+    private func canTurn(to page: NotchPage) -> Bool { page != .player || !playerEmpty }
+
     /// A page's shortcut: opens the notch on that page, switches to it if the notch is open on the
-    /// other, or closes the notch if it's already showing it.
+    /// other, or closes the notch if it's already showing it. With nothing for the player to show,
+    /// its shortcut does nothing.
     func toggleFromKeyboard(_ page: NotchPage) {
         guard page == .player || Tray.isOn, ActivityBench.scene == nil else { return }
+        if page == .player, playerEmpty, !(model.state == .open && model.page == .player) { return }
         if model.state == .open {
             guard model.page != page else { return close(holdUntilExit: false) }
             turn(to: page)
@@ -2341,7 +2367,7 @@ final class NotchController {
             // Flicked, without getting that far.
             if !pullFired, let flick {
                 let page: NotchPage = flick != Self.readsRightToLeft ? .tray : .player
-                if page != model.page {
+                if page != model.page, canTurn(to: page) {
                     turn(to: page)
                     Opening.tap(.alignment)
                 }
@@ -2362,7 +2388,7 @@ final class NotchController {
         // Scrolled toward the right, which macOS's scroll values already say the way this Mac
         // scrolls: the tray.
         let target: NotchPage = swipe < 0 ? .tray : .player
-        if !pullFired, abs(swipe) > Self.pageTurn, target != model.page {
+        if !pullFired, abs(swipe) > Self.pageTurn, target != model.page, canTurn(to: target) {
             pullFired = true
             turn(to: target)
             Opening.tap(.alignment)
@@ -2384,6 +2410,7 @@ final class NotchController {
 
     /// Keep the same open surface while its page and width change.
     private func turn(to page: NotchPage) {
+        guard canTurn(to: page) else { return }
         let previousZone = pageTurnZone ?? openZone
         closeTask?.cancel()
         closeTask = nil
@@ -2409,7 +2436,7 @@ final class NotchController {
     private func wheelTray(by delta: CGFloat, switches: Bool) {
         // Toward the player: back along the row.
         let towardPlayer = delta > 0
-        if switches, towardPlayer, abs(model.trayScroll) < 0.5 {
+        if switches, towardPlayer, abs(model.trayScroll) < 0.5, canTurn(to: .player) {
             if let since = trayEdgeSince, Date.now.timeIntervalSince(since) > Self.edgePause {
                 trayEdgeSince = nil
                 turn(to: .player)
