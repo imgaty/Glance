@@ -5,7 +5,15 @@
 //  Created by Gaty on 10/10/2026.
 //
 
-import Foundation
+import AppKit
+
+/// AppKit sends a menu item's action through `NSApp`, which stays nil until something asks for
+/// `NSApplication.shared`: until then `performActionForItem(at:)` does nothing at all. Other
+/// suites usually create it first, so a suite that presses menu items makes sure of it itself.
+@MainActor
+func appKitApplication() {
+    _ = NSApplication.shared
+}
 
 /// Whether two numbers are equal but for floating-point rounding.
 func isClose(_ a: Double, _ b: Double, tolerance: Double = 1e-9) -> Bool {

@@ -9,6 +9,9 @@ import Testing
 struct ShortcutActivityTests {
     private let definition = ShortcutDefinition(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, name: "My Shortcut")
 
+    /// The menu tests press items as AppKit does, which needs the application object.
+    init() { appKitApplication() }
+
     private final class Handle: ShortcutRunHandle {
         let processIdentifier: Int32
         var isRunning = true
@@ -36,7 +39,15 @@ struct ShortcutActivityTests {
             handles.append(handle)
             return handle
         }
-        func finish(_ index: Int, status: Int32 = 0, reason: ShortcutExit.Reason = .exit, output: URL? = nil) {
+        func finish(
+            _ index: Int, status: Int32 = 0, reason: ShortcutExit.Reason = .exit, output: URL? = nil,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
+            // A run that never launched is a failure to report, not an index to crash on.
+            guard handles.indices.contains(index) else {
+                Issue.record("Run \(index) was never launched; \(handles.count) were", sourceLocation: sourceLocation)
+                return
+            }
             handles[index].isRunning = false
             completions[index](.init(status: status, reason: reason, output: output))
         }
@@ -261,7 +272,7 @@ struct ShortcutActivityTests {
         #expect(source.launches.isEmpty)
         enabled = true
         menu.performActionForItem(at: index)
-        #expect(source.launches == [definition])
+        try #require(source.launches == [definition])
         source.finish(0)
     }
 
