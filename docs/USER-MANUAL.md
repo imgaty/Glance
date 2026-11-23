@@ -300,11 +300,12 @@ the keys for its own rows and slider, and the notch stays open under it. Sound
 grows and shrinks as outputs come and go. Escape, another press on the button,
 or a click outside closes it.
 
-The system slider sets the playing app's volume. Its filled track is white in
-dark appearance and uses the accent color in light appearance, with a glass
-handle. Drag the knob or click the track to change it. The speaker symbols at
-either end have matching heights, and the two dividers share one width. The
-slider stays visible and is disabled when no app is playing. For `Music` and
+Sound is laid out as the menu bar's Sound menu: the same width, insets, row
+heights and lines, and a row lit under the pointer or the arrow keys in the
+system's own fill, with corners that follow the menu's. The system slider sets
+the playing app's volume, its filled track in your Mac's accent color. Drag the
+knob or click the track to change it. The slider stays visible and is disabled
+when no app is playing. For `Music` and
 `Spotify`, it reads their volume as Sound opens; other apps need the `Audio from
 apps` permission. Left and Right adjust the volume while Sound is open. Up and
 Down move between outputs and **Sound Settings…**; Return chooses the
@@ -312,7 +313,6 @@ highlighted row.
 
 Connected speakers and headphones appear under **Output**, with a circle in your
 Mac's accent color for the current output and battery details when available.
-macOS draws the row's hover, focus and pressed feedback.
 Long output names wrap above their battery details. The list expands as outputs
 connect, with new rows fading in. Existing rows move into
 place and disconnected outputs fade away. Reduce Motion removes these

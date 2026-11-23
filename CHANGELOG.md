@@ -128,8 +128,10 @@
 - Fixed native activities being hidden without a visible replacement. Other
   apps keep their controls, and Glance restores settings it previously changed.
 
-- Changed Sound output rows to system controls, with native highlighting,
-  pressed feedback and keyboard behavior.
+- Changed Sound to the menu bar's Sound menu's spacing, and its rows to light
+  in the system's own fill, 5 points in from the sides with corners that
+  follow the menu's. Its slider fills in the accent color, and the speakers at
+  its ends are gray, as macOS draws them.
 - Fixed closing Sound taking focus away from another Glance window.
 
 - Changed Sound to open as the menu bar's Sound menu does: a glass panel under

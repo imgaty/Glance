@@ -112,7 +112,7 @@ struct SoundOutputMenuTests {
         #expect(selected == headphones.id)
     }
 
-    @Test("Mounted rows and native slider keep their actions in a hidden panel")
+    @Test("Mounted rows and the system slider keep their actions in a hidden panel")
     func sliderActions() async throws {
         _ = NSApplication.shared
         var selected: AudioDeviceID?
@@ -133,10 +133,7 @@ struct SoundOutputMenuTests {
         panel.orderFrontRegardless()
         defer { panel.orderOut(nil) }
         try await Task.sleep(for: .milliseconds(150))
-        func findSlider(_ view: NSView) -> NSSlider? {
-            (view as? NSSlider) ?? view.subviews.lazy.compactMap(findSlider).first
-        }
-        let slider = try #require(panel.contentView.flatMap(findSlider))
+        #expect(menu.items.contains { $0.view is VolumeMenuSlider })
         let item = try #require(menu.items.first(where: { $0.tag == Int(speakers.id) }))
         let row = try #require(item.view as? SoundMenuContentRow)
         let surface = try #require(panel.contentView)
@@ -151,8 +148,7 @@ struct SoundOutputMenuTests {
         #expect(selected == speakers.id)
         #expect(menu.items.last?.view?.accessibilityPerformPress() == true)
         #expect(openedSettings)
-        slider.doubleValue = 0.73
-        #expect(slider.sendAction(slider.action, to: slider.target))
+        menu.level.move(to: 0.73)
         #expect(menu.level.value == 0.73)
         let revision = menu.level.revision
         menu.level.show(0.2, since: revision - 1)

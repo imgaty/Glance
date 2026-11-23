@@ -642,58 +642,48 @@ final class SoundOutputMenu: NSMenu, NSMenuDelegate {
     }
 }
 
-/// The system slider retains its own pointer tracking and accessibility actions.
-struct NativeSoundSlider: NSViewRepresentable {
+/// The system's own slider, drawn as in a window in front: the Sound menu never makes Glance the app
+/// in use, and AppKit's slider draws its track gray in any window of an app that isn't, while this
+/// keeps the accent color, as the menu bar's Sound menu does.
+struct NativeSoundSlider: View {
     @ObservedObject var level: VolumeMenuSlider.VolumeSlider.Level
-    @Environment(\.colorScheme) private var colorScheme
     let enabled: Bool
 
-    final class Control: NSSlider {
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    }
-
-    final class Coordinator: NSObject {
-        var level: VolumeMenuSlider.VolumeSlider.Level
-        init(_ level: VolumeMenuSlider.VolumeSlider.Level) { self.level = level }
-        @objc func moved(_ slider: NSSlider) { level.move(to: slider.doubleValue) }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(level) }
-    func makeNSView(context: Context) -> Control {
-        let slider = Control(value: level.value, minValue: 0, maxValue: 1, target: context.coordinator, action: #selector(Coordinator.moved(_:)))
-        slider.isContinuous = true
-        slider.controlSize = .regular
-        slider.tintProminence = .primary
-        slider.setAccessibilityLabel(String(localized: "Volume"))
-        slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        return slider
-    }
-    func updateNSView(_ slider: Control, context: Context) {
-        context.coordinator.level = level
-        slider.doubleValue = level.value
-        slider.isEnabled = enabled
-        slider.trackFillColor = colorScheme == .dark ? .white : .controlAccentColor
+    var body: some View {
+        Slider(value: Binding(get: { level.value }, set: { level.move(to: $0) }), in: 0...1) {
+            Text("Volume")
+        }
+        .labelsHidden()
+        .controlSize(.regular)
+        .disabled(!enabled)
+        .environment(\.controlActiveState, .key)
     }
 }
 
-/// A native recessed button containing the output's rich label. AppKit owns its bezel,
-/// pressed tracking, focus ring and cancellation when a drag ends outside the button.
+/// A native button containing the output's rich label, lit as the menu bar's Sound menu lights a
+/// row: in the system's fill, 5 points in from the menu's sides, its corners as much rounder than
+/// the menu's as they're inset, so the two share their centers. AppKit owns the pressed tracking and
+/// its cancellation when a drag ends outside the button.
 final class SoundMenuContentRow: NSButton {
     weak var item: NSMenuItem? { didSet { isEnabled = item?.isEnabled ?? true } }
     private var hover: NSTrackingArea?
     private let host: NSHostingView<AnyView>
+    private let light = SoundRowLight()
     private var content: AnyView
-    var rowHighlighted = false { didSet { highlight(rowHighlighted) } }
+    private var pressed = false
+    /// Lit under the pointer, or by the arrow keys.
+    var rowHighlighted = false { didSet { showLight() } }
 
     init<Content: View>(@ViewBuilder content: () -> Content) {
         self.content = AnyView(content())
         host = NSHostingView(rootView: Self.root(self.content, width: SoundLook.width))
         super.init(frame: NSRect(x: 0, y: 0, width: SoundLook.width, height: ceil(host.fittingSize.height)))
         title = ""
-        setButtonType(.momentaryPushIn)
-        bezelStyle = .recessed
-        isBordered = true
-        showsBorderOnlyWhileMouseInside = true
+        setButtonType(.momentaryChange)
+        isBordered = false
+        focusRingType = .none
+        light.isHidden = true
+        addSubview(light)
         target = self
         action = #selector(chooseOutput)
         autoresizingMask = [.width]
@@ -723,7 +713,19 @@ final class SoundMenuContentRow: NSButton {
         layoutHost()
     }
 
-    private func layoutHost() { host.frame = bounds.insetBy(dx: SoundLook.highlightInset, dy: 0) }
+    private func layoutHost() {
+        host.frame = bounds.insetBy(dx: SoundLook.highlightInset, dy: 0)
+        light.frame = host.frame
+    }
+
+    private func showLight() { light.isHidden = !(rowHighlighted || pressed) || !isEnabled }
+
+    /// Held down, it stays lit, as a menu's row does.
+    override func highlight(_ flag: Bool) {
+        super.highlight(flag)
+        pressed = flag
+        showLight()
+    }
 
     private static func root(_ view: AnyView, width: CGFloat) -> AnyView {
         AnyView(view.frame(width: width - SoundLook.highlightInset * 2).accessibilityHidden(true))
@@ -759,6 +761,20 @@ final class SoundMenuContentRow: NSButton {
     }
 }
 
+/// A row's light, in the system's own fill for a lit row, redrawn for each appearance.
+final class SoundRowLight: NSView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.cornerRadius = SoundLook.highlightRadius
+        layer?.cornerCurve = .continuous
+    }
+    required init?(coder: NSCoder) { nil }
+    override var wantsUpdateLayer: Bool { true }
+    override func updateLayer() { layer?.backgroundColor = NSColor.systemFill.cgColor }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
 enum SoundLook {
     static let edge: CGFloat = highlightInset
     static let width: CGFloat = 308
@@ -771,10 +787,12 @@ enum SoundLook {
     static let fade: TimeInterval = 0.12
     static let inset: CGFloat = 14
     static let highlightInset: CGFloat = 5
-    // Nested corners share a center when the outer radius includes the inset.
-    /// Sound, its words' frame so far below the menu's first row.
-    static let titleHeight: CGFloat = 26.5
-    static let titleTop: CGFloat = 8
+    /// A lit row's corners: nested in the panel's, they share a center when the panel's radius is the
+    /// row's plus its inset.
+    static let highlightRadius: CGFloat = radius - highlightInset
+    /// Sound, its words' frame so far below the panel's edge, the row 5 points under it.
+    static let titleHeight: CGFloat = 25
+    static let titleTop: CGFloat = 6.5
     static let sliderHeight: CGFloat = 30
     /// The line under the slider, three points into its seven; the one above Sound Settings, in
     /// the middle of its eleven.
@@ -795,9 +813,12 @@ enum SoundInk {
     case primary, secondary, heading, symbol, speaker, fill
     var color: Color {
         switch self {
-        case .primary, .speaker: .primary
+        case .primary: .primary
         case .secondary, .heading, .symbol: .secondary
-        case .fill: Color(nsColor: .controlColor)
+        // The slider's speakers, lighter than the headings, as the menu bar's Sound menu draws them.
+        case .speaker: Color(nsColor: .secondaryLabelColor)
+        // The system's fill, as a lit row's: the menu bar's Sound menu fills its circles alike.
+        case .fill: Color(nsColor: .systemFill)
         }
     }
 }
