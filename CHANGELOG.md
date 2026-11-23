@@ -375,6 +375,9 @@
   everything in the tray, and dropped the ellipsis from its name.
 - Added `When dragged out` in **Settings > Tray**, to keep an item or remove
   it after another app takes it.
+- Fixed `Keep in Tray` showing as chosen as soon as something was dragged onto
+  the notch, and staying so after the drag left it. `Keep in Tray` and
+  `AirDrop` now light up only while the drag is over them.
 - Added saved screen recordings alongside screenshots.
 - Changed the tray's height, glass and text contrast to follow its contents
   and appearance settings. Scrolling past its end with Shift returns to the

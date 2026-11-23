@@ -388,7 +388,8 @@ opens it too, ready for the drop, without reaching the top edge.
 | Choose **Share > Glance Tray** in Safari, Photos, Finder or any app | Keeps what's shared in the tray, as a drop does; a picture on a web page too |
 
 Something dragged onto the notch from another app gets two places to go:
-`Keep in Tray` and `AirDrop`. To send items already in the tray, right-click
+`Keep in Tray` and `AirDrop`. Each lights up only while the drag is over it.
+To send items already in the tray, right-click
 them and choose Share, which has AirDrop. A link shows its site's icon, which
 Glance fetches from the site, as Messages does.
 

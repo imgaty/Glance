@@ -93,7 +93,7 @@ struct NotchDemoScene: View {
             if out { putBack(tray) }
             // Ended partway, as when the tour moves on: no places to drop are left behind.
             model.dropping = false
-            model.airDropTargeted = false
+            model.dropTarget = nil
         }
         while !Task.isCancelled {
             // Open, as the tour's last step left it: closed first, as the pointer leaving closes it.
@@ -108,7 +108,7 @@ struct NotchDemoScene: View {
                 model.state = .closed
                 model.page = .tray
                 model.dropping = true
-                model.airDropTargeted = false
+                model.dropTarget = nil
             }
             tray.remove(photo.id)
             out = true
@@ -129,6 +129,10 @@ struct NotchDemoScene: View {
                     step: { point in
                         if model.state == .closed, closed.distance(to: point) < reach { model.open() }
                         copying = model.state == .open && keep.contains(point)
+                        // Keep in Tray lights only once the photo's over it.
+                        if (model.dropTarget == .keep) != copying {
+                            withAnimation(.smooth(duration: 0.25)) { model.dropTarget = copying ? .keep : nil }
+                        }
                     }),
                 await wait(0.45)
             else { return }

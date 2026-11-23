@@ -71,8 +71,8 @@ struct TrayView: View {
     let dropping: Bool
     /// How far the row is scrolled.
     let scroll: CGFloat
-    /// Something dragged is over AirDrop.
-    var airDropTargeted = false
+    /// The place to drop something dragged is over, if either.
+    var dropTarget: DropTarget? = nil
     @Environment(\.closedNotch) private var closedNotch
     @AppStorage(Preferences.trayClipboard) private var keepsCopies = true
     @AppStorage(Preferences.trayScreenshots) private var keepsScreenshots = true
@@ -90,7 +90,7 @@ struct TrayView: View {
         .environment(\.colorScheme, .dark)
         .animation(.smooth(duration: 0.24), value: tray.items.map(\.id))
         .animation(.smooth(duration: 0.24), value: dropping)
-        .animation(.smooth(duration: 0.2), value: airDropTargeted)
+        .animation(.smooth(duration: 0.2), value: dropTarget)
         .onChange(of: isVisible, initial: true) {
             guard isVisible else { return }
             built = true
@@ -204,14 +204,16 @@ struct TrayView: View {
     /// let go over.
     private var dropZones: some View {
         HStack(spacing: Shelf.dropGap) {
-            DropZone(title: String(localized: "Keep in Tray"), lit: !airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
+            // Neither is lit until the drag is over it, nor once it has left.
+            DropZone(title: String(localized: "Keep in Tray"), lit: dropTarget == .keep, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
                 Image(systemName: "tray.and.arrow.down.fill").font(.system(size: Self.zoneGlyph))
             }
+            .reportsFrame(KeepFrame.self)
             // Both places in one style: a white symbol each, the same size.
-            DropZone(title: "AirDrop", lit: airDropTargeted, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
+            DropZone(title: "AirDrop", lit: dropTarget == .airDrop, radius: PlayerLayout.cornerRadius - Self.zoneInset) {
                 AirDropSymbol.glyph(size: Self.zoneGlyph)
             }
-            .reportsAirDropFrame()
+            .reportsFrame(AirDropFrame.self)
         }
     }
 }
@@ -379,18 +381,29 @@ private struct EdgeFade: View {
     }
 }
 
+/// The places something dragged in from another app can go.
+enum DropTarget: Equatable {
+    case keep, airDrop
+}
+
 /// Where AirDrop is in the notch, for dropping on it.
 struct AirDropFrame: PreferenceKey {
     static let defaultValue: CGRect? = nil
     static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) { value = nextValue() ?? value }
 }
 
+/// Where Keep in Tray is in the notch, for lighting it under a drag.
+struct KeepFrame: PreferenceKey {
+    static let defaultValue: CGRect? = nil
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) { value = nextValue() ?? value }
+}
+
 extension View {
-    /// Says where AirDrop is, for drops on it.
-    fileprivate func reportsAirDropFrame() -> some View {
+    /// Says where a place to drop is, for drops on it.
+    fileprivate func reportsFrame<Key: PreferenceKey>(_ key: Key.Type) -> some View where Key.Value == CGRect? {
         background {
             GeometryReader { proxy in
-                Color.clear.preference(key: AirDropFrame.self, value: proxy.frame(in: .named(ControlFrames.space)))
+                Color.clear.preference(key: key, value: proxy.frame(in: .named(ControlFrames.space)))
             }
         }
     }

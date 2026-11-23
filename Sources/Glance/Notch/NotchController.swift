@@ -1450,7 +1450,7 @@ final class NotchController {
             model.pageStretch = 0
             if !forDrop {
                 model.dropping = false
-                model.airDropTargeted = false
+                model.dropTarget = nil
             }
         }
         openMerging()
@@ -1769,7 +1769,7 @@ final class NotchController {
         // The places to drop stay as the notch closes, rather than the tray showing on its way
         // out; once it's shut, they go.
         if model.dropping { clearDropOnceClosed() }
-        model.airDropTargeted = false
+        model.dropTarget = nil
         Tray.shared.deselect()
         NotchSwipes.shared.set(nil, for: self)
         openTask?.cancel()
@@ -1848,7 +1848,7 @@ final class NotchController {
             still.disablesAnimations = true
             withTransaction(still) {
                 self.model.dropping = false
-                self.model.airDropTargeted = false
+                self.model.dropTarget = nil
             }
         }
     }
@@ -1870,10 +1870,10 @@ final class NotchController {
     /// AirDrop. Dragged out of the tray, it's on its way elsewhere: the notch takes nothing back.
     private func dragMoved(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> NSDragOperation {
         guard Tray.isOn, !tucked, !own, !model.activityControlsHidden else { return [] }
-        let onWell = isOnAirDrop(point)
-        if model.airDropTargeted != onWell {
-            withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = onWell }
-            if onWell { Opening.tap(.alignment) }
+        let target = dropTarget(at: point)
+        if model.dropTarget != target {
+            withAnimation(.smooth(duration: 0.25)) { model.dropTarget = target }
+            if target == .airDrop { Opening.tap(.alignment) }
         }
         guard Tray.accepts(pasteboard) else { return [] }
         // Back to the row, with a place at its front for the drop.
@@ -1891,25 +1891,34 @@ final class NotchController {
         return .copy
     }
 
-    private func isOnAirDrop(_ point: CGPoint) -> Bool {
-        guard model.state == .open, !model.activityControlsHidden, model.page == .tray, let well = model.airDropFrame else { return false }
-        return well.insetBy(dx: -6, dy: -6).contains(CGPoint(x: point.x, y: point.y - Layout.pastTop))
+    /// The place to drop the drag is over, at a point in the window's own (flipped) points.
+    private func dropTarget(at point: CGPoint) -> DropTarget? {
+        guard model.state == .open, !model.activityControlsHidden, model.page == .tray else { return nil }
+        return Self.dropTarget(at: CGPoint(x: point.x, y: point.y - Layout.pastTop), keep: model.keepFrame, airDrop: model.airDropFrame)
+    }
+
+    /// Which place to drop a drag is over, if either, in the notch's own points: lit only while the
+    /// pointer is over it, with a little room around each, as a target is easy to hit.
+    nonisolated static func dropTarget(at point: CGPoint, keep: CGRect?, airDrop: CGRect?) -> DropTarget? {
+        if let airDrop, airDrop.insetBy(dx: -6, dy: -6).contains(point) { return .airDrop }
+        if let keep, keep.insetBy(dx: -6, dy: -6).contains(point) { return .keep }
+        return nil
     }
 
     /// The drag left the notch's window. Its places to drop stay: near the notch, for the drop; going
     /// away, they close with the notch (see `close`).
     private func dragExited() {
-        if model.airDropTargeted { withAnimation(.smooth(duration: 0.25)) { model.airDropTargeted = false } }
+        if model.dropTarget != nil { withAnimation(.smooth(duration: 0.25)) { model.dropTarget = nil } }
     }
 
     /// Onto AirDrop's place: sent, as soon as a device is picked. Anywhere else on the notch: kept in
     /// the tray.
     private func dropped(_ pasteboard: NSPasteboard, at point: CGPoint, own: Bool) -> Bool {
         guard !own, !model.activityControlsHidden else { return false }
-        let onWell = isOnAirDrop(point)
+        let onWell = dropTarget(at: point) == .airDrop
         withAnimation(.smooth(duration: 0.3)) {
             model.dropping = false
-            model.airDropTargeted = false
+            model.dropTarget = nil
         }
         if onWell {
             let items = Self.shareable(from: pasteboard)
