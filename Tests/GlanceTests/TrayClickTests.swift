@@ -16,14 +16,6 @@ import Testing
 @MainActor
 @Suite("Clicking the tray", .serialized)
 struct TrayClickTests {
-    private func eventually(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<60 {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        return condition()
-    }
-
     /// A tray of its own with `count` notes, open in a notch in a window off the screen, put
     /// together as the notch's own window is: the notch's view, which decides where clicks go,
     /// around SwiftUI's. A song plays, so the player's lyrics button, under the tray, is live too.

@@ -157,17 +157,6 @@ struct ClockRepeatLifetimeTests {
         clock.dismissRing()
     }
 
-    private enum WaitError: Error { case timeout }
-
-    private func settle(_ ready: () -> Bool) async throws {
-        for _ in 0..<200 {
-            if ready() { return }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        Issue.record("The isolated repeat did not reach its expected state")
-        throw WaitError.timeout
-    }
-
     @MainActor
     private final class RepeatBackend {
         var requests: [(length: TimeInterval, title: String?)] = []

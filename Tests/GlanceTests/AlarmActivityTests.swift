@@ -383,14 +383,6 @@ struct AlarmActivityTests {
         model.cancelActivityTransition()
     }
 
-    private func settle(_ condition: () -> Bool) async throws {
-        for _ in 0..<300 {
-            if condition() { return }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        throw WaitError.timeout
-    }
-
     @MainActor
     private final class Source {
         var alarms: [AlarmActivity.Alarm]

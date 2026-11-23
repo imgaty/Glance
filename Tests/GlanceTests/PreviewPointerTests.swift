@@ -28,15 +28,6 @@ struct PreviewPointerTests {
 
     private let away = CGPoint(x: 200, y: 300)
 
-    /// Waits for `condition` as long as a busy Mac might take to animate there: up to two seconds.
-    private func eventually(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<40 {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        return condition()
-    }
-
     /// A scroll as the trackpad sends it: `phase` as Core Graphics numbers them, 1 for fingers down,
     /// 2 moving, 4 lifted; or a mouse's wheel, with none.
     private func scroll(_ delta: Int32, phase: Int64 = 0) throws -> NSEvent {

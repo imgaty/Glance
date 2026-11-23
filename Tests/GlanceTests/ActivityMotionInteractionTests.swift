@@ -33,14 +33,6 @@ struct ActivityMotionInteractionTests {
             }, scale: 1)
     }
 
-    private func eventually(_ condition: () -> Bool) async throws -> Bool {
-        for _ in 0..<80 {
-            if condition() { return true }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-        return condition()
-    }
-
     @Test("Controls stay unavailable through both the housing and reveal phases")
     func controlPhases() async throws {
         let model = model()
@@ -125,7 +117,7 @@ struct ActivityMotionInteractionTests {
         let transition = try #require(model.activityTransitionTask)
         #expect(!model.pressed && !model.bubblePressed)
         #expect(model.stretch == 0 && model.lean == 0 && model.pageStretch == 0)
-        try #require(try await eventually { model.activityOpening })
+        try #require(await eventually { model.activityOpening })
         let width = model.metrics.bodyWidth
         let height = model.metrics.height
         let request = model.activityTransitionID
@@ -153,16 +145,19 @@ struct ActivityMotionInteractionTests {
         await model.activityTransitionTask?.value
         model.close()
         let closing = try #require(model.activityTransitionTask)
-        try #require(try await eventually { model.activityOpening })
+        try #require(await eventually { model.activityOpening })
         let geometry = geometry(model)
         let closed = geometry.rect(.closed)
         let point = CGPoint(x: 0, y: inside ? closed.midY : closed.maxY + 20)
         preview.pointer(at: point, geometry)
         #expect(model.state == .closed && model.proximity == 0)
-        try await Task.sleep(for: .milliseconds(50))
-        #expect(model.activityOpening && model.state == .closed && model.proximity == 0)
+        // For as long as the reveal lasts, which a busy main thread may skip past, hover holds off.
+        while model.activityOpening {
+            #expect(model.state == .closed && model.proximity == 0)
+            try await Task.sleep(for: .milliseconds(5))
+        }
         await closing.value
-        #expect(try await eventually { inside ? model.state == .peek : model.proximity > 0 })
+        #expect(await eventually { inside ? model.state == .peek : model.proximity > 0 })
     }
 
     enum MotionInterruption: CaseIterable { case teardown, reducedMotion, fullscreen, replacement }
@@ -178,9 +173,10 @@ struct ActivityMotionInteractionTests {
         model.open()
         let first = try #require(model.activityTransitionTask)
         if duringReveal {
-            try #require(try await eventually { model.activityOpening })
+            try #require(await eventually { model.activityOpening })
         } else {
-            try await Task.sleep(for: .milliseconds(100))
+            // The fold starts with open() and lasts a fixed 0.3 s; interrupt it now, not after a
+            // sleep that a busy main thread can stretch past its end.
             #expect(model.activityFolded)
         }
 
@@ -283,7 +279,7 @@ struct ActivityMotionInteractionTests {
         preview.pointer(at: CGPoint(x: 0, y: geometry.rect(.open).midY), geometry)
         preview.pointer(at: nil, geometry)
         #expect(model.state == .open && model.activityFolded)
-        #expect(try await eventually { model.state == .closed })
+        #expect(await eventually { model.state == .closed })
         if let closing = model.activityTransitionTask { await closing.value }
         #expect(model.state == .closed && !model.activityControlsHidden)
     }

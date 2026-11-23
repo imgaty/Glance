@@ -68,14 +68,14 @@ struct ShortcutElsewhereTests {
         #expect(run.elsewhere == 7)
         #expect(run.state == .running)
         // Named once the catalog is read.
-        try await Task.sleep(for: .milliseconds(50))
-        #expect(activity.shown?.run.shortcut.name == "Glance Test Wait")
+        try await settle { activity.shown?.run.shortcut.name == "Glance Test Wait" }
         activity.progress(.progressed(publication: 7, fraction: 0.5))
         #expect(activity.shown?.run.progress == 0.5)
+        let ended = ContinuousClock.now
         activity.progress(.ended(publication: 7, cancelled: false))
         #expect(activity.shown?.run.state == .completed)
-        try await Task.sleep(for: .milliseconds(400))
-        #expect(activity.shown == nil)
+        try await settle { activity.shown == nil }
+        #expect(ContinuousClock.now - ended >= .milliseconds(80), "It closed before its check")
         #expect(activity.runs.isEmpty)
     }
 

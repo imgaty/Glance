@@ -54,12 +54,11 @@ struct ActivitiesTests {
         let activities = Activities()
         var alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
         alert.expires = 0.2
+        let posted = ContinuousClock.now
         activities.post(alert)
         #expect(activities.alert?.kind == .timerDone)
-        try await Task.sleep(for: .seconds(0.1))
-        #expect(activities.alert?.kind == .timerDone)
-        for _ in 0..<20 where activities.alert != nil { try await Task.sleep(for: .milliseconds(50)) }
-        #expect(activities.alert == nil)
+        try await settle { activities.alert == nil }
+        #expect(ContinuousClock.now - posted >= .seconds(0.2), "It went before its time was up")
     }
 
     @Test("A timer that's done goes by itself after ten seconds")
@@ -1073,9 +1072,11 @@ struct SystemBannersTests {
         return NSBitmapImageRep(data: image.tiffRepresentation!)!.representation(using: .png, properties: [:])!
     }
 
+    /// Gives a photo lookup that should find nothing time to have found something: a hundred short
+    /// sleeps, which stretch on a busy Mac as the lookup itself does.
     @MainActor
-    private func settle(_ photos: CallPhotos, until done: @escaping @MainActor () -> Bool) async {
-        for _ in 0..<100 where !done() { try? await Task.sleep(for: .milliseconds(10)) }
+    private func letLookupFinish() async {
+        for _ in 0..<100 { try? await Task.sleep(for: .milliseconds(10)) }
     }
 
     @Test("A FaceTime or Phone caller's photo comes from Contacts: one contact's, none without one or without permission")
@@ -1086,8 +1087,7 @@ struct SystemBannersTests {
         // One contact with a photo: it shows.
         let one = CallPhotos(book: .init(allowed: { true }, ask: { true }, cards: { name, _ in name == "Alex Morgan" ? [card] : [] }))
         one.look(for: call, face: nil)
-        await settle(one) { one.photo(for: call) != nil }
-        #expect(one.photo(for: call) != nil)
+        #expect(await eventually { one.photo(for: call) != nil })
         // Only for that caller.
         var other = call
         other.name = "Sam Rivers"
@@ -1095,7 +1095,7 @@ struct SystemBannersTests {
         // A contact without a photo: the initial.
         let plain = CallPhotos(book: .init(allowed: { true }, ask: { true }, cards: { _, _ in [CallPhotos.Card(photo: nil)] }))
         plain.look(for: call, face: nil)
-        await settle(plain) { false }
+        await letLookupFinish()
         #expect(plain.photo(for: call) == nil)
         // Contacts not allowed: never read, the initial.
         let denied = CallPhotos(
@@ -1106,18 +1106,18 @@ struct SystemBannersTests {
                     return [card]
                 }))
         denied.look(for: call, face: nil)
-        await settle(denied) { false }
+        await letLookupFinish()
         #expect(denied.photo(for: call) == nil)
         // Not asked yet: asked once, and refused, the initial.
         let refused = CallPhotos(book: .init(allowed: { nil }, ask: { false }, cards: { _, _ in [card] }))
         refused.look(for: call, face: nil)
-        await settle(refused) { false }
+        await letLookupFinish()
         #expect(refused.photo(for: call) == nil)
         // Another app's caller is never looked up.
         let discord = CallShown(name: "Alex Morgan", over: "Discord", app: "com.hnc.Discord", phase: .connected(since: .now))
         one.forget()
         one.look(for: discord, face: nil)
-        await settle(one) { false }
+        await letLookupFinish()
         #expect(one.photo(for: discord) == nil)
     }
 
@@ -1130,12 +1130,17 @@ struct SystemBannersTests {
         let photos = CallPhotos(book: .init(allowed: { true }, ask: { true }, cards: { _, _ in [.init(photo: blue), .init(photo: green)] }))
         // Until the popup's picture is read, no one's photo.
         photos.look(for: call, face: nil)
-        await settle(photos) { false }
+        await letLookupFinish()
         #expect(photos.photo(for: call) == nil)
         // The popup shows the second contact's photo, a little darker and smaller.
         let shown = try #require(NSImage(data: green)?.cgImage(forProposedRect: nil, context: nil, hints: nil))
         let face = try #require(CallFace.cells(of: shown)).map { UInt8(Double($0) * 0.85) }
-        photos.look(for: call, face: face)
+        // Read again each time the popup is, as the call does: a busy Mac can still be on the
+        // first lookup, which takes no newer picture while it runs.
+        try await settle {
+            photos.look(for: call, face: face)
+            return photos.photo(for: call) != nil
+        }
         let chosen = try #require(photos.photo(for: call))
         #expect(chosen.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0) }?.colorAt(x: 50, y: 5) != nil)
         let greenCells = CallFace.cells(of: shown)!

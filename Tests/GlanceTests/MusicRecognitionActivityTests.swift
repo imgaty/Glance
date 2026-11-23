@@ -60,11 +60,12 @@ struct MusicRecognitionActivityTests {
         activity.recognize()
         try await settle { source.permissionReply != nil }
         #expect(activity.listeningSince != nil)
+        let cancelled = ContinuousClock.now
         activity.cancel()
         #expect(activity.state == .cancelled)
         #expect(activity.listeningSince == nil)
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(activity.state == .idle)
+        try await settle { activity.state == .idle }
+        #expect(ContinuousClock.now - cancelled >= .milliseconds(80), "Canceled went before its moment")
         source.replyToPermission(false)
     }
 
@@ -168,10 +169,11 @@ struct MusicRecognitionActivityTests {
         let activity = MusicRecognitionActivity(backend: source.backend, noMatchDelay: .milliseconds(150))
         activity.recognize()
         try await settle { source.sessions.first?.reply != nil }
+        let unmatched = ContinuousClock.now
         source.sessions[0].complete(.noMatch)
         try await settle { activity.state == .noMatch }
-        try await Task.sleep(for: .milliseconds(400))
-        #expect(activity.state == .idle)
+        try await settle { activity.state == .idle }
+        #expect(ContinuousClock.now - unmatched >= .milliseconds(150), "No song found went before its moment")
         activity.recognize()
         try await settle { source.sessions.count == 2 && source.sessions[1].reply != nil }
         source.sessions[1].complete(.noMatch)
@@ -246,8 +248,6 @@ struct MusicRecognitionActivityTests {
         #expect(partial.webURL == nil)
     }
 
-    private enum WaitError: Error { case timeout }
-
     @Test("Disabling recognition cancels the owned session and prevents another microphone request")
     func preferenceStopsSession() async throws {
         let source = Source()
@@ -298,14 +298,6 @@ struct MusicRecognitionActivityTests {
         #expect(MusicRecognitionActivityView.actions(for: .match(.init(title: nil, artist: nil))) == [.done])
         #expect(MusicRecognitionActivityView.actions(for: .noMatch) == [.recognize])
         #expect(!NotchController.stepsAway(.recognition))
-    }
-
-    private func settle(_ condition: () -> Bool) async throws {
-        for _ in 0..<200 {
-            if condition() { return }
-            try await Task.sleep(for: .milliseconds(5))
-        }
-        throw WaitError.timeout
     }
 
     @MainActor

@@ -7,14 +7,6 @@ import os
 @Suite("Recording permission boundaries")
 @MainActor
 struct RecordingPermissionTests {
-    private func waitFor(_ predicate: () -> Bool) async throws {
-        for _ in 0..<100 {
-            if predicate() { return }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        #expect(predicate())
-    }
-
     @Test("Losing access preserves a recording without looking for a saved file")
     func screenPermissionLoss() async throws {
         let indicator = OSAllocatedUnfairLock(initialState: (words: Optional("Stop Screen Recording"), reads: 0))
@@ -32,7 +24,7 @@ struct RecordingPermissionTests {
             stopRecording: {}, findSavedFile: { fileLookups += 1 }, fileIsAvailable: { _ in false }, openFile: { _ in true }
         )
         watch.refresh()
-        try await waitFor { watch.recording?.isRecording == true }
+        try await settle { watch.recording?.isRecording == true }
         let observed = watch.recording
         granted = false
         indicator.withLock { $0.words = nil }
@@ -45,7 +37,7 @@ struct RecordingPermissionTests {
 
         granted = true
         watch.refresh()
-        try await waitFor { watch.recording?.isSaving == true }
+        try await settle { watch.recording?.isSaving == true }
         #expect(watch.canControl)
         #expect(fileLookups == 1)
     }
