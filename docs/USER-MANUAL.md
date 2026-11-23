@@ -93,13 +93,16 @@ song. Times and percentages use the digits of your language and region.
 
 Hover over the notch or click it, depending on **Settings > Opening > Open
 with**: `Hover`, `Click`, or `Hover or click`. The notch closes when the pointer
-leaves it. The player and tray open and close with their original direct
-springs. Swipes follow your fingers and settle with that same tool motion;
-changing tools keeps the notch open, including while the pointer remains over
-the wider tray. Lyrics resizing, hover and press feedback also keep their
-original motion. Tools remain interactive during animation. When another
-activity is detached, its bubble merges before the tool opens and buds off after
-it closes. Opening music from its bubble returns to that bubble.
+leaves it. With no song, playing or paused, and no live activity, there's no
+player to open: the notch opens to the tray, and with the tray off it stays as
+it is. The player's shortcut then does nothing, and swiping stays on the tray.
+The player and tray open and close with their original direct springs. Swipes
+follow your fingers and settle with that same tool motion; changing tools keeps
+the notch open, including while the pointer remains over the wider tray. Lyrics
+resizing, hover and press feedback also keep their original motion. Tools remain
+interactive during animation. When another activity is detached, its bubble
+merges before the tool opens and buds off after it closes. Opening music from
+its bubble returns to that bubble.
 
 An activity alone beside the camera opens straight out of it, as the iPhone's
 Dynamic Island does when you hold it: the notch grows into the open view with a
