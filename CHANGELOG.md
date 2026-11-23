@@ -364,8 +364,8 @@
 
 ### Tray
 
-- Changed **Clear…** in **Settings > Tray** to a red button, as it removes
-  everything in the tray.
+- Changed **Clear** in **Settings > Tray** to a red button, as it removes
+  everything in the tray, and dropped the ellipsis from its name.
 - Added `When dragged out` in **Settings > Tray**, to keep an item or remove
   it after another app takes it.
 - Added saved screen recordings alongside screenshots.
