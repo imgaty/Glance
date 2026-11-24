@@ -37,6 +37,13 @@ final class MenuBarLiveActivities {
     private var working = false
     /// The System Settings Glance has open, hidden, if any: quit with Glance if Glance quits first.
     private static var opened: NSRunningApplication?
+    /// Openings of System Settings asked for that haven't come back yet: until one does, nothing
+    /// can quit it.
+    private static var launching = 0
+    /// Set once Glance starts quitting: no pass starts on its own after that (see `finish`).
+    private var stopping = false
+    /// Calls of `reconcile` that have returned, to tell when one asked for is over.
+    private var passes = 0
     private var settingObserver: NSObjectProtocol?
     private var spaceObserver: NSObjectProtocol?
     /// How long System Settings' switches are waited for.
@@ -117,6 +124,7 @@ final class MenuBarLiveActivities {
     /// Hides any that show, or, turned off, shows again what Glance hid. Nothing here waits on the
     /// thread that draws the notch.
     private func check() {
+        guard !stopping else { return }
         // Refresh even during an in-flight Settings request, invalidating its queued writes.
         refreshIntent()
         guard !working else { return }
@@ -138,6 +146,7 @@ final class MenuBarLiveActivities {
     /// The same bounded reconciliation is used by production and fake Settings dependencies.
     /// A change during a write gets one immediate corrective pass, then the ordinary timer.
     func reconcile() async {
+        defer { passes &+= 1 }
         refreshIntent()
         guard !working, dependencies.isTrusted() else { return }
         working = true
@@ -169,6 +178,52 @@ final class MenuBarLiveActivities {
             if plan.hiding, !result.failed { retries.settled = await dependencies.pills() }
             return
         }
+    }
+
+    /// Whether quitting has anything to wait for: switches Glance turned off, or a System Settings
+    /// it's opening or has open.
+    var unfinished: Bool {
+        working || Self.launching > 0 || Self.opened != nil
+            || (timer != nil && !dependencies.owned().isEmpty && dependencies.isTrusted())
+    }
+
+    /// Glance is quitting: no pass starts on its own any more, as one started now would open System
+    /// Settings after Glance had gone, and leave it open, with nothing left to quit it.
+    func stop() {
+        guard !stopping else { return }
+        stopping = true
+        timer?.invalidate()
+        timer = nil
+        if let settingObserver { NotificationCenter.default.removeObserver(settingObserver) }
+        if let spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(spaceObserver) }
+        settingObserver = nil
+        spaceObserver = nil
+        // Quitting doesn't wait out a failure's backoff.
+        retries = RetrySchedule()
+    }
+
+    /// Glance is quitting, the notch gone: turns back on what Glance turned off, as with the notch
+    /// turned off, so macOS's own show while Glance doesn't run, then makes sure the System
+    /// Settings that took is gone. Gives up after `time`; past it, an opening already asked for
+    /// still gets `launchTime` to come back, as only then can it be quit.
+    func finish(within time: Duration = .seconds(3), launchTime: Duration = .seconds(2)) async {
+        stop()
+        let clock = ContinuousClock()
+        let deadline = clock.now + time
+        // Twice: a pass under way may already have used its corrective pass on something else.
+        for _ in 0..<2 where clock.now < deadline {
+            let before = passes
+            Task { await reconcile() }
+            while clock.now < deadline, passes == before || working {
+                try? await Task.sleep(for: .milliseconds(20))
+            }
+            if dependencies.owned().isEmpty { break }
+        }
+        let last = clock.now + launchTime
+        while clock.now < last, Self.launching > 0 {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        Self.opened?.forceTerminate()
     }
 
     private func reconcileRows(_ rows: [SettingsRow], plan: RetrySchedule.Plan, generation started: UInt64) async -> SwitchResult {
@@ -247,9 +302,13 @@ final class MenuBarLiveActivities {
         configuration.hides = true
         // Beside any the user has open, which may be on another Space, and left as it is.
         configuration.createsNewApplicationInstance = true
-        guard let instance = try? await NSWorkspace.shared.open([Self.pane], withApplicationAt: settings, configuration: configuration) else { return nil }
+        launching += 1
+        let instance = try? await NSWorkspace.shared.open([Self.pane], withApplicationAt: settings, configuration: configuration)
+        // Kept before it counts as back, so quitting finds one or the other.
+        if let instance { opened = instance }
+        launching -= 1
+        guard let instance else { return nil }
         instance.hide()
-        opened = instance
         let pid = instance.processIdentifier
         let rows = await Task.detached { () -> [(name: String, box: AXUIElement)] in
             let clock = ContinuousClock()

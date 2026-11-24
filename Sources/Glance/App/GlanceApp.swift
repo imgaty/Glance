@@ -79,27 +79,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// However Glance is quit (its menus, Command-Q, Activity Monitor's Quit, a script, logging out,
     /// or Terminal), the notch closes away first, as it does when it's turned off, and Glance quits
-    /// once it has.
+    /// once it has, and once macOS's own Live Activities it hid are back on, with the System
+    /// Settings that took gone too.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         MusicRecognitionActivity.shared.dismiss()
         AlarmActivity.shared.stop()
         guard !closingAway else { return .terminateNow }
+        let hider = MenuBarLiveActivities.shared
+        let restoring = hider.unfinished
+        hider.stop()
         let time = notches.closeAway()
-        guard time > 0 else { return .terminateNow }
+        guard time > 0 || restoring else { return .terminateNow }
         closingAway = true
-        // On the run loop, which goes on while Glance waits to quit, as the main queue may not.
-        let reply = Timer(timeInterval: time, repeats: false) { _ in
-            MainActor.assumeIsolated { NSApp.reply(toApplicationShouldTerminate: true) }
+        hiderFinished = !restoring
+        if restoring {
+            Task {
+                await hider.finish()
+                hiderFinished = true
+            }
+        }
+        // On the run loop, which goes on while Glance waits to quit, as the main queue may not: should
+        // the switches never finish, Glance quits anyway once `finish` would have given up.
+        let started = Date.now
+        let reply = Timer(timeInterval: 0.05, repeats: true) { timer in
+            MainActor.assumeIsolated {
+                let waited = Date.now.timeIntervalSince(started)
+                guard waited >= time, self.hiderFinished || waited >= time + 6 else { return }
+                timer.invalidate()
+                NSApp.reply(toApplicationShouldTerminate: true)
+            }
         }
         RunLoop.main.add(reply, forMode: .common)
         RunLoop.main.add(reply, forMode: .modalPanel)
         return .terminateLater
     }
     private var closingAway = false
+    private var hiderFinished = true
 
     /// Terminal's `kill`, `pkill` and `killall`, and Control-C, ask for an ordinary quit, so the
-    /// notch closes away first. Should Glance not have quit a few seconds later, it stops there and
-    /// then, as those would have stopped it. Force Quit and `kill -9` can't be answered at all.
+    /// notch closes away first, and macOS's own Live Activities come back. Should Glance not have
+    /// quit once those would have given up, it stops there and then, as those would have stopped it. Force Quit and `kill -9` can't be answered at all.
     private func quitOnSignals() {
         signalSources = [SIGTERM, SIGINT, SIGHUP].map { number in
             signal(number, SIG_IGN)
@@ -109,7 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // Glance quit, and with it what closes the notch.
                 NSApplication.shared.performSelector(
                     onMainThread: #selector(NSApplication.terminate(_:)), with: nil, waitUntilDone: false, modes: [RunLoop.Mode.common.rawValue])
-                DispatchQueue.global().asyncAfter(deadline: .now() + 3) { exit(0) }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 8) { exit(0) }
             }
             source.resume()
             return source

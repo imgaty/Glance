@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 23 November 2026`
+`Created: 11 October 2026` | `Last updated: 24 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -1010,7 +1010,7 @@ again when `Notch` is chosen.
 | Setting | Operation |
 | --- | --- |
 | `Show in` | `Notch` or `Menu Bar`, as above |
-| `Hide native Live Activities` | Turns off every Live Activity in **System Settings > Menu Bar > Live Activities**, other apps' included and macOS's own Music Recognition, while the notch shows Live Activities, with `Accessibility` allowed. Clock stays on, as with it off macOS shows ringing alarms nowhere, not even as a notification. Now Playing and Screenshot stay on while `Now Playing` or `Recordings` is off. Turning this off, choosing `Menu Bar` or turning the notch off turns back on everything Glance turned off; what you turned off yourself stays off |
+| `Hide native Live Activities` | Turns off every Live Activity in **System Settings > Menu Bar > Live Activities**, other apps' included and macOS's own Music Recognition, while the notch shows Live Activities, with `Accessibility` allowed. Clock stays on, as with it off macOS shows ringing alarms nowhere, not even as a notification. Now Playing and Screenshot stay on while `Now Playing` or `Recordings` is off. Turning this off, choosing `Menu Bar`, turning the notch off or quitting Glance turns back on everything Glance turned off; what you turned off yourself stays off |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect |

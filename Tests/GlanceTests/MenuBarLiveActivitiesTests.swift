@@ -313,6 +313,53 @@ struct MenuBarLiveActivitiesTests {
         #expect(settings.writes.count == 2)
         #expect(settings.closes == 2)
     }
+
+    @Test("Quitting turns back on what Glance turned off, and closes the System Settings that took")
+    @MainActor func quitRestores() async {
+        let settings = FakeActivitySettings()
+        settings.owned = ["Now Playing"]
+        settings.values["Now Playing"] = false
+        let manager = settings.manager()
+        // The notch has closed away.
+        settings.active = false
+        await manager.finish(within: .seconds(3))
+        #expect(settings.writes == [.init(name: "Now Playing", target: true)])
+        #expect(settings.owned.isEmpty)
+        #expect(settings.opens == 1)
+        #expect(settings.closes == 1)
+    }
+
+    @Test("Quitting waits for a System Settings still opening, so none is left behind")
+    @MainActor func quitWaitsForOpening() async {
+        let settings = FakeActivitySettings()
+        settings.openDelay = .milliseconds(300)
+        let manager = settings.manager()
+        let pass = Task { await manager.reconcile() }
+        #expect(await eventually { settings.opens == 1 })
+        settings.active = false
+        await manager.finish(within: .seconds(3))
+        #expect(settings.closes == settings.opens)
+        #expect(settings.writes.isEmpty)
+        #expect(settings.owned.isEmpty)
+        await pass.value
+    }
+
+    @Test("Quitting gives up on a System Settings that takes too long, rather than holding Glance open")
+    @MainActor func quitGivesUp() async {
+        let settings = FakeActivitySettings()
+        settings.owned = ["Now Playing"]
+        settings.values["Now Playing"] = false
+        settings.active = false
+        settings.openDelay = .seconds(2)
+        let manager = settings.manager()
+        let clock = ContinuousClock()
+        let start = clock.now
+        await manager.finish(within: .milliseconds(200), launchTime: .zero)
+        #expect(clock.now - start < .milliseconds(1500))
+        #expect(settings.closes == 0)
+        // The pass it left still ends on its own.
+        #expect(await eventually { settings.closes == 1 })
+    }
 }
 
 /// The async boundaries match discovery, the state read before a press, and its readback.
@@ -335,6 +382,8 @@ private final class FakeActivitySettings {
     var failures = Set<String>()
     var unconfirmed = Set<String>()
     var unavailable = false
+    /// How long System Settings takes to open, if at all.
+    var openDelay: Duration?
     var opens = 0
     var closes = 0
     var skipped = 0
@@ -356,6 +405,7 @@ private final class FakeActivitySettings {
 
     private func open() async -> MenuBarLiveActivities.SettingsSession? {
         opens += 1
+        if let openDelay { try? await Task.sleep(for: openDelay) }
         await Task.yield()
         let hook = onOpen
         onOpen = nil

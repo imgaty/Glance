@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 23 November 2026`
+`Created: 11 October 2026` | `Last updated: 24 November 2026`
 
 <br>
 
@@ -38,6 +38,11 @@
   turns down an app that's on a call.
 
 - Fixed the ring of a shortcut run from the notch's menu never filling.
+
+- Fixed quitting Glance sometimes leaving System Settings open, and macOS's own
+  Live Activities turned off while Glance wasn't running. Glance now turns back
+  on what `Hide native Live Activities` turned off before it quits, which can
+  take a couple of seconds.
 
 - Changed a ringing Clock alarm to come in as the iPhone's does in the Dynamic
   Island, as tall as the notch's alerts: Clock's own alarm clock in its orange,
