@@ -345,9 +345,12 @@
   follow fresh audio in order, with independent rounded ends, and delayed
   readings no longer disturb the background's beat. Reduce Motion holds
   the bars still while playing and shows dots while paused.
-- Changed the flowing artwork background and `Spotlight` to move in the
-  cover's colors and hold still while paused. The background and progress
-  bar share the same colors, which pulse on stronger beats.
+- Changed the background behind the player to three slowly turning copies of the
+  cover, softly blurred and warped, that pulse with the whole of the music: the
+  bass swells them and the treble deepens their colors. They keep moving while
+  the music is paused, and a new cover fades in over the last. `Spotlight` moves
+  in the cover's colors and holds still while paused, and the progress bar
+  shares the background's colors.
 - Changed paused covers to shrink and dim with the background and lyrics.
   Player buttons use native symbol transitions as their state changes.
 - Changed new installs to start with `Background` set to `None`,

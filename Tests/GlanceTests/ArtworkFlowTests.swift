@@ -49,9 +49,13 @@ struct ArtworkFlowTests {
         #expect(first === ArtworkFlow.of(image))
     }
 
-    static func rendered(_ flow: ArtworkFlow) async throws -> CGImage {
-        for _ in 0..<150 {
-            if let frame = flow.frame(at: 100), frame !== flow.bars { return frame }
+    /// The engine's first drawn frame of `flow`, as a wide picture asks for it.
+    static func rendered(_ flow: ArtworkFlow, engine: BackdropEngine? = nil) async throws -> CGImage {
+        let engine = engine ?? BackdropEngine(demo: false)
+        for step in 0..<150 {
+            if let frame = engine.frame(for: flow, at: 100 + Double(step) / 30, aspect: 3, reduceMotion: false, frozen: false), frame !== flow.bars {
+                return frame
+            }
             try await Task.sleep(for: .milliseconds(20))
         }
         throw NSError(domain: "Backdrop render", code: 1)
@@ -60,10 +64,11 @@ struct ArtworkFlowTests {
     @Test("A soft first frame is immediate and the rendered background arrives asynchronously")
     func firstFrame() async throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
+        let engine = BackdropEngine(demo: false)
         var ready = false
-        let subscription = flow.objectWillChange.sink { ready = true }
+        let subscription = engine.objectWillChange.sink { ready = true }
         defer { subscription.cancel() }
-        let frame = try #require(flow.frame(at: 100))
+        let frame = try #require(engine.frame(for: flow, at: 100, aspect: 3, reduceMotion: false, frozen: true))
         #expect(frame === flow.bars)
         // A paused view makes one request, then waits for notification rather than polling.
         for _ in 0..<150 {
@@ -71,7 +76,7 @@ struct ArtworkFlowTests {
             try await Task.sleep(for: .milliseconds(20))
         }
         #expect(ready)
-        let rendered = try #require(flow.frame(at: 100))
+        let rendered = try #require(engine.frame(for: flow, at: 100, aspect: 3, reduceMotion: false, frozen: true))
         #expect(rendered !== flow.bars)
         #expect(rendered.width == ArtworkBackdrop.side)
         #expect(Self.brightness(of: frame).colors.count > 100)
@@ -155,25 +160,21 @@ struct ArtworkFlowTests {
         for bar in spread { #expect((bar.max() ?? 0) - (bar.min() ?? 0) > 0.1 && (bar.max() ?? 1) <= 1 && (bar.min() ?? 0) > 0) }
     }
 
-    @Test("The made-up song hits hard once every eight beats, and only then do the colors pulse")
-    func demoBangs() {
-        let rate = WaveformGlyph.demoRate
-        let period = 8 / 1.8
-        // Sixteen beats from a hard kick: the waveform passes nine tenths only just after one.
-        let start = (3000 / period).rounded(.up) * period
-        var tall: [Double] = []
-        for i in 0..<Int(rate * 2 * period) {
-            let t = start + Double(i) / rate
-            if (WaveformGlyph.demoLevels(at: t).max() ?? 0) >= AudioLevels.bang { tall.append(t - start) }
+    @Test("The made-up song's spectrum comes as often as Apple's, its bass rising on each beat")
+    func demoReports() {
+        let interval = Double(BackdropSpectrum.window) / 48_000
+        let reports = WaveformGlyph.demoReports(at: 3000)
+        #expect(reports.count == 4)
+        // One report holds until the next is due; the newest is last.
+        #expect(WaveformGlyph.demoReports(at: 3000 + interval * 0.01) == WaveformGlyph.demoReports(at: 3000 + interval * 0.02))
+        #expect(WaveformGlyph.demoReports(at: 3000 + interval * 1.5).dropLast() == WaveformGlyph.demoReports(at: 3000 + interval * 0.5).dropFirst())
+        var bass: [Float] = []
+        for i in 0..<Int(4 / interval) {
+            let newest = WaveformGlyph.demoReports(at: 4000 + Double(i) * interval).last!
+            #expect(newest.w == 1 && newest.x > newest.y && newest.y > newest.z)
+            bass.append(newest.x)
         }
-        #expect(!tall.isEmpty)
-        for since in tall { #expect(since.truncatingRemainder(dividingBy: period) < 0.2, "\(since)") }
-        // The pulse peaks just after the hard kick, is mostly gone by the next beat and all but gone
-        // by the one after, easing away as music's does (about a third of a second).
-        #expect(WaveformGlyph.demoPulse(at: start + 0.07) > 0.6)
-        #expect(WaveformGlyph.demoPulse(at: start + 1 / 1.8) < 0.2)
-        #expect(WaveformGlyph.demoPulse(at: start + 2 / 1.8) < 0.05)
-        #expect(WaveformGlyph.demoPulse(at: start + period - 0.01) < 0.001)
+        #expect((bass.max() ?? 0) - (bass.min() ?? 1) > 0.3)
     }
 
     /// White with a black ball in the middle, the harshest a cover gets.
@@ -216,7 +217,7 @@ struct ArtworkFlowTests {
         }
     }
 
-    @Test("Behind the player every color is dimmed evenly, so white stays white and a red stays red")
+    @Test("Behind the player white comes out Apple Music's 139 gray, and a red stays red")
     func backgroundEven() async throws {
         func solid(_ color: NSColor) -> NSImage {
             NSImage(size: NSSize(width: 64, height: 64), flipped: false) { rect in
@@ -227,11 +228,11 @@ struct ArtworkFlowTests {
         }
         let white = Self.channels(of: try await Self.rendered(#require(ArtworkFlow.of(solid(.white)))))
         let red = Self.channels(of: try await Self.rendered(#require(ArtworkFlow.of(solid(NSColor(srgbRed: 0.8, green: 0.1, blue: 0.15, alpha: 1))))))
-        // The native shader's white, then the notch's dimming for its controls.
-        #expect(abs(white[white.count / 2 + 100].g - 0.726) < 0.01)
-        #expect(abs(white[white.count / 2 + 100].g * (1 - NotchView.colorsDim) * 255 - 139) < 2)
-        #expect((red.map(\.r).max() ?? 0) > 0.6)
-        #expect((red.map(\.g).max() ?? 1) < 0.25)
+        // Apple's renderer, run on this Mac, drew a white cover at 139 of 255.
+        #expect(abs(white[white.count / 2 + 100].g * 255 - 139) < 2.5)
+        #expect(abs(white[white.count / 2 + 100].g - NotchView.colorsBrightest) < 0.01)
+        #expect((red.map(\.r).max() ?? 0) > 0.45)
+        #expect((red.map(\.g).max() ?? 1) < 0.15)
     }
 
     @Test("A light cover is told from a dark one, for what's drawn over its colors")
@@ -279,13 +280,30 @@ struct ArtworkFlowTests {
     @Test("A moment later than the last is drawn away from the main thread, and shows when it's ready")
     func moves() async throws {
         let flow = try #require(ArtworkFlow.of(Self.cover()))
-        let first = try #require(flow.frame(at: 100))
-        _ = flow.frame(at: 100.1)
-        #expect(flow.frame(at: 100.1) === first)
-        for _ in 0..<100 where flow.frame(at: 100.1) === first {
+        let engine = BackdropEngine(demo: false)
+        let first = try await Self.rendered(flow, engine: engine)
+        let time = engine.motion.time
+        var later = first
+        for step in 0..<100 where later === first {
+            later = try #require(engine.frame(for: flow, at: 200 + Double(step) / 30, aspect: 3, reduceMotion: false, frozen: false))
             try await Task.sleep(for: .milliseconds(20))
         }
-        #expect(flow.frame(at: 100.1) !== first)
+        #expect(later !== first)
+        #expect(engine.motion.time > time)
+    }
+
+    @Test("A new cover fades in over the last as the colors keep moving, rather than starting over")
+    func newCoverFades() async throws {
+        let engine = BackdropEngine(demo: false)
+        let red = try #require(ArtworkFlow.of(Self.cover()))
+        _ = try await Self.rendered(red, engine: engine)
+        let time = engine.motion.time
+        let ball = try #require(ArtworkFlow.of(Self.ball()))
+        _ = engine.frame(for: ball, at: 300, aspect: 3, reduceMotion: false, frozen: false)
+        #expect(engine.motion.fade == 0)
+        #expect(engine.motion.time >= time)
+        for step in 1...30 { _ = engine.frame(for: ball, at: 300 + Double(step) / 30, aspect: 3, reduceMotion: false, frozen: false) }
+        #expect(engine.motion.fade == 1)
     }
 }
 

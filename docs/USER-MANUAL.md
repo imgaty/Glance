@@ -240,12 +240,14 @@ shrinks and fades the current shape away.
 Changing the layout moves the title, timeline and controls with the cover and
 the notch, keeping them visible throughout.
 
-Behind the player, the cover's colors flow slowly through one another in long
-ribbons and pulse on the music's biggest hits, as you hear them. Only a beat
-that takes the waveform nearly to its full height shows, so with most songs they
-hardly ever pulse. On AirPods and other wireless headphones, which play a moment
-late, the pulse and the waveform wait for the sound. The beat needs the
-`Audio from apps` permission. With Reduce Motion on, the colors hold still.
+Behind the player, the cover's colors drift slowly, three copies of the cover
+turning and bending under a soft blur. They pulse with the music as you hear it,
+not only on its biggest hits: the bass makes them swell and the treble deepens
+their colors, so most songs move them a little all the time. On AirPods and
+other wireless headphones, which play a moment late, the pulse and the waveform
+wait for the sound. The pulse needs the `Audio from apps` permission. With
+Reduce Motion on, the colors move ten times slower and still pulse. With
+Increase Contrast on, they hold still.
 
 <img src="../assets/screenshots/player.png"
      width="450"
@@ -944,10 +946,11 @@ shows a sharp circle at one end and the same circle blurred at the other.
 
 With **Reduce transparency** or **Increase contrast** on in **System Settings >
 Accessibility > Display**, the notch is opaque, and with **Increase contrast**
-the cover's colors behind the player are darker, so its words read on any
-cover, and a call's green Accept button is darker, so its phone stands out. With **Reduce motion** on, covers and their
-colors hold still, without pulsing on the beat, the spotlight stays by the
-cover, and long titles end in an ellipsis instead of scrolling.
+the cover's colors behind the player are darker and hold still, so its words
+read on any cover, and a call's green Accept button is darker, so its phone
+stands out. With **Reduce motion** on, covers hold still, the colors behind the
+player move ten times slower, the spotlight stays by the cover, and long titles
+end in an ellipsis instead of scrolling.
 
 VoiceOver identifies the Liquid Glass and Blur sliders by name. The background
 pictures are single choices; their pictured playback controls are decorative.
@@ -967,10 +970,10 @@ the selected output.
 | `Show audio from` | Which apps' audio Glance shows; **Add App…** adds an app, and right-clicking one offers **Remove from List** |
 | `Show new apps` | Whether apps that start playing are added turned on |
 
-The background's colors turn and bend while music plays, and resume from where
-they stopped after a pause. Changing `Background` reshapes the same field of
-color between the full background and the spotlight. Choosing `None` fades
-the light away.
+The background's colors keep turning and bending while music plays and while
+it's paused, and a new song's cover fades in over the last one's colors.
+Changing `Background` reshapes the same field of color between the full
+background and the spotlight. Choosing `None` fades the light away.
 `Spotlight` circles the cover, shrinking gently before it reaches the camera
 and growing again as it passes. Pausing freezes the glow where it is.
 

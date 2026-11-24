@@ -10,8 +10,8 @@ import Testing
 
 @testable import Glance
 
-/// The beat the colors behind the player pulse on, the bars as Apple's own waveform makes them, and
-/// how what's heard is held back until it is.
+/// The beat, the spectrum the colors behind the player pulse on, the bars as Apple's own waveform
+/// makes them, and how what's heard is held back until it is.
 @Suite("Audio levels")
 struct AudioLevelsTests {
     static let rate = 48_000.0
@@ -111,29 +111,74 @@ struct AudioLevelsTests {
         #expect(Self.bars(of: []) == [Float](repeating: 0, count: 6))
     }
 
-    @Test("The colors' pulse lands quickly on a bang and eases away slowly")
-    func pulse() {
-        var pulse: Float = 0
-        let rise = AudioLevels.eased(pulse, toward: 1)
-        #expect(rise >= 0.4 && rise < 1)
-        for _ in 0..<6 { pulse = AudioLevels.eased(pulse, toward: 1) }
-        #expect(pulse > 0.95)
-        let top = pulse
-        pulse = AudioLevels.eased(pulse, toward: 0)
-        #expect(pulse < top && top - pulse < 0.1)
+    /// `seconds` of tones, at `rate`.
+    static func tones(_ tones: [(hertz: Double, amplitude: Double)], count: Int = BackdropSpectrum.window) -> [Float] {
+        (0..<count).map { i in Float(tones.reduce(0) { $0 + $1.amplitude * sin(2 * .pi * $1.hertz * Double(i) / rate) }) }
     }
 
-    @Test("Only a beat with the waveform past nine tenths of its height shows in the colors")
-    func onlyBangs() {
-        #expect(AudioLevels.bang == 0.9)
-        // Measured from music on 8 November 2026: beats shown at 0.6 to 0.74, the tallest bar under
-        // 0.8. None of it reaches the colors.
-        #expect(AudioLevels.shown(0.74, tallest: 0.8) == 0)
-        #expect(AudioLevels.shown(1, tallest: 0.9) == 0)
-        #expect(abs(AudioLevels.shown(0.6, tallest: 0.95) - 0.3) < 0.001)
-        #expect(AudioLevels.shown(0.7, tallest: 1) == 0.7)
-        // No beat, nothing, however tall the bars.
-        #expect(AudioLevels.shown(0, tallest: 1) == 0)
+    @Test("A spectrum report is each band's share of the sound times its loudness over 120 dB, as Apple's")
+    func spectrumReport() {
+        // A full-scale tone in each band: its share is all but the whole, and 2048 samples of it are
+        // loud enough (about 132 dB of vDSP's power) to count in full.
+        let bass = BackdropSpectrum.report(Self.tones([(100, 1)]), sampleRate: Self.rate)
+        #expect(bass.x > 0.95 && bass.y < 0.05 && bass.z < 0.01 && bass.w == 1)
+        let middle = BackdropSpectrum.report(Self.tones([(1_000, 1)]), sampleRate: Self.rate)
+        #expect(middle.y > 0.95 && middle.x < 0.05)
+        let treble = BackdropSpectrum.report(Self.tones([(8_000, 1)]), sampleRate: Self.rate)
+        #expect(treble.z > 0.95 && treble.x < 0.05)
+        // Quieter, each share counts less: by its decibels over 120.
+        let quiet = BackdropSpectrum.report(Self.tones([(100, 0.01)]), sampleRate: Self.rate)
+        let loudness = 20 * log10(Float(0.01 * 1024 * 2) * Float(0.01 * 1024 * 2))
+        #expect(abs(quiet.x - loudness / 120) < 0.03)
+        // The same analyzer, used again and again, gives the same report each time.
+        let analyzer = BackdropSpectrumAnalyzer()!
+        let samples = Self.tones([(1_000, 0.3), (8_000, 0.05)])
+        let once = analyzer.report(samples, sampleRate: Self.rate)
+        for _ in 0..<5 { #expect(analyzer.report(samples, sampleRate: Self.rate) == once) }
+        #expect(once.y > 0.8 && once.y < 1 && once.z > 0.01 && once.x < 0.05)
+        // Silence is nothing at all.
+        #expect(BackdropSpectrum.report([Float](repeating: 0, count: 2048), sampleRate: Self.rate) == .zero)
+        // Lyrics behind the colors take it in full; otherwise a fifth of it.
+        #expect(BackdropSpectrum.report(shares: SIMD3(0.5, 0.25, 0.1), total: 1e6) == SIMD4(0.5, 0.25, 0.1, 1))
+        #expect(BackdropSpectrum.report(shares: SIMD3(0.5, 0, 0), total: 1e6, intensity: BackdropSpectrum.subdued) == SIMD4(0.1, 0, 0, 0.2))
+    }
+
+    @Test("The colors' level weighs the last four reports, holds its peak and follows it halfway each frame")
+    func spectrumLevel() {
+        var state = BackdropSpectrumState()
+        var recent = [SIMD4<Float>](repeating: .zero, count: 4)
+        // One report of a hit: the newest counts four tenths.
+        recent = Array(recent.dropFirst()) + [SIMD4(1, 1, 1, 1)]
+        state.step(recent: recent)
+        #expect(abs(state.peak.x - 0.4) < 0.0001 && abs(state.level.x - 0.2) < 0.0001)
+        // Then silence: the hit moves down the four, weighing less each report, while the peak lets go
+        // fastest in the bass, barely in the treble, and not at all held for whether there's sound.
+        for _ in 0..<4 { recent = Array(recent.dropFirst()) + [.zero] }
+        state.step(recent: recent)
+        #expect(abs(state.peak.x - 0.4 * 0.98) < 0.0001)
+        #expect(abs(state.peak.y - 0.4 * 0.99) < 0.0001)
+        #expect(abs(state.peak.z - 0.4 * 0.999) < 0.0001)
+        #expect(state.peak.w == 0)
+        // Shown eased in and out: half is half, a little is less.
+        let half = BackdropSpectrumState(peak: .zero, level: SIMD4(repeating: 0.5)).shown
+        #expect(abs(half.x - 0.5) < 0.0001)
+        let little = BackdropSpectrumState(peak: .zero, level: SIMD4(repeating: 0.2)).shown
+        #expect(abs(little.x - 0.05792) < 0.0001)
+    }
+
+    @Test("Spectrum reports count only while music plays, and a pause brings one silent report")
+    @MainActor func spectrumWhilePlaying() {
+        let audio = AudioLevels()
+        audio.receive(AudioReading(levels: nil, beat: 0, spectrum: SIMD4(1, 0, 0, 1)))
+        #expect(audio.recent.allSatisfy { $0 == .zero })
+        audio.follow(pid: 0, playing: true)
+        audio.receive(AudioReading(levels: nil, beat: 0, spectrum: SIMD4(1, 0, 0, 1)))
+        audio.receive(AudioReading(levels: nil, beat: 0, spectrum: SIMD4(0.5, 0, 0, 1)))
+        #expect(audio.recent.suffix(2) == [SIMD4(1, 0, 0, 1), SIMD4(0.5, 0, 0, 1)])
+        audio.follow(pid: 0, playing: false)
+        #expect(audio.recent.suffix(3) == [SIMD4(1, 0, 0, 1), SIMD4(0.5, 0, 0, 1), .zero])
+        audio.receive(AudioReading(levels: nil, beat: 0, spectrum: SIMD4(1, 1, 1, 1)))
+        #expect(audio.recent.last == .zero)
     }
 
     @Test("A bass line with no kicks has no beat")
@@ -154,5 +199,10 @@ struct AudioLevelsTests {
         // Moved to speakers that play at once, what's waiting shows straight away.
         heard.delay = 0
         #expect(heard.take(reading(5), at: 10.31) == reading(5))
+        // Spectrum reports each count: every one that's due comes, oldest first.
+        var reports = HeardLater(delay: 0.1)
+        #expect(reports.takeAll(reading(1), at: 20).isEmpty)
+        #expect(reports.takeAll(reading(2), at: 20.05).isEmpty)
+        #expect(reports.takeAll(reading(3), at: 20.2) == [reading(1), reading(2)])
     }
 }

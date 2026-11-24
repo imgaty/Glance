@@ -9,7 +9,7 @@ import Accelerate
 import AppKit
 import CoreAudio
 
-/// How loud the playing app is in six frequency bands, for the waveforms, and its beat, for the
+/// How loud the playing app is in six frequency bands, for the waveforms, and its spectrum, for the
 /// colors behind the player. It listens to the player's own sound through a Core Audio process
 /// tap; nothing is recorded or kept. What it hears is shown as it's heard, held back by as long as
 /// the speakers or headphones take to play it. It only runs while music plays, and only once the
@@ -21,28 +21,19 @@ final class AudioLevels: ObservableObject {
 
     /// 0...1 per bar, left to right. All zero while nothing is being measured.
     @Published private(set) var levels = [Float](repeating: 0, count: bands)
-    /// 0...1: 1 on a kick or a bass note's attack, easing off over a fraction of a second. Not
-    /// published: the colors read it as they're drawn, frame by frame.
+    /// 0...1: 1 on a kick or a bass note's attack, easing off over a fraction of a second.
     private(set) var beat: Float = 0
-    /// The same beat as the colors behind the player show it: only a huge bang shows at all, a beat
-    /// with the waveform near its full height, swelling in quickly and easing away. Read as they're
-    /// drawn, as the beat is.
-    private(set) var pulse: Float = 0
+    /// The last four reports of the music's spectrum, oldest first, as Apple Music's background holds
+    /// them (see `BackdropSpectrum`). Not published: the colors read them frame by frame. When the
+    /// music pauses, one silent report comes in and they hold, as Apple's do when its player stops
+    /// listening.
+    private(set) var recent = [SIMD4<Float>](repeating: .zero, count: BackdropSpectrum.ramp.count)
+    private var playing = false
 
-    /// How tall the waveform's tallest bar must reach, of its full height, for a beat to show in the
-    /// colors: below it none does, so they hold still for all but the biggest hits.
-    nonisolated static let bang: Float = 0.9
-
-    /// How much of a beat the colors show: none while the tallest bar is under `bang`, rising to all
-    /// of it at the waveform's full height.
-    nonisolated static func shown(_ beat: Float, tallest: Float) -> Float {
-        beat * min(max((tallest - bang) / (1 - bang), 0), 1)
-    }
-
-    /// A reading's step of the pulse toward what's shown: quick to rise, so a bang lands, and slow to
-    /// fall.
-    nonisolated static func eased(_ pulse: Float, toward shown: Float) -> Float {
-        pulse + (shown - pulse) * (shown > pulse ? 0.5 : 0.06)
+    /// The newest report in, the oldest out.
+    func report(_ spectrum: SIMD4<Float>) {
+        recent.removeFirst()
+        recent.append(spectrum)
     }
 
     private var pipeline: TapPipeline?
@@ -73,6 +64,9 @@ final class AudioLevels: ObservableObject {
     /// Measures `pid` while it plays; stops a moment after playback pauses.
     func follow(pid: pid_t, playing: Bool) {
         last = (pid, playing)
+        // Apple's player stops listening as it pauses, with one silent report.
+        if self.playing, !playing { report(.zero) }
+        self.playing = playing
         guard playing, pid > 0 else {
             if pipeline != nil, stopTask == nil {
                 stopTask = Task { [weak self] in
@@ -114,26 +108,28 @@ final class AudioLevels: ObservableObject {
         tappedPID = 0
         levels = [Float](repeating: 0, count: Self.bands)
         beat = 0
-        pulse = 0
     }
 
-    /// Bars and beats have separate clocks. A delayed bar must not replay an older beat.
+    /// Bars, beats and spectra have separate clocks. A delayed bar must not replay an older beat.
+    /// Spectra count only while the music plays.
     func receive(_ reading: AudioReading) {
         if let levels = reading.levels {
             if levels != self.levels { self.levels = levels }
+        } else if let spectrum = reading.spectrum {
+            if playing { report(spectrum) }
         } else {
             beat = reading.beat
-            pulse = Self.eased(pulse, toward: Self.shown(reading.beat, tallest: levels.max() ?? 0))
         }
     }
 }
 
 /// What the analysis hears at a moment: the bars' levels, when there's a new reading of them, the
-/// beat, and how loud the sound is, 0 to 1.
+/// beat, how loud the sound is, 0 to 1, and a spectrum report, when there's a new one.
 struct AudioReading: Equatable {
     var levels: [Float]?
     var beat: Float
     var loudness: Float = 0
+    var spectrum: SIMD4<Float>?
 }
 
 /// Readings held back until the sound they were made from is heard: the tap hears the player as it
@@ -145,9 +141,15 @@ struct HeardLater {
 
     /// Takes a reading made at `time`; gives back the latest one that's due by then, if any.
     mutating func take(_ reading: AudioReading, at time: TimeInterval) -> AudioReading? {
+        takeAll(reading, at: time).last
+    }
+
+    /// Takes a reading made at `time`; gives back every one that's due by then, oldest first, for
+    /// readings that each count, as the spectrum's reports do.
+    mutating func takeAll(_ reading: AudioReading, at time: TimeInterval) -> [AudioReading] {
         waiting.append((time, reading))
-        var due: AudioReading?
-        while let first = waiting.first, first.time + delay <= time { due = waiting.removeFirst().reading }
+        var due: [AudioReading] = []
+        while let first = waiting.first, first.time + delay <= time { due.append(waiting.removeFirst().reading) }
         return due
     }
 }
@@ -164,8 +166,9 @@ final class TapPipeline: @unchecked Sendable {
 
     private let queue = DispatchQueue(label: "Glance.AudioLevels")
     private let publish: (AudioReading) -> Void
-    /// The beat and the bars, each held back until it's heard.
+    /// The beat, the bars and the spectrum, each held back until it's heard.
     private var heard = HeardLater()
+    private var heardSpectrum = HeardLater()
     private var heardBars = WaveformDelivery()
     private var active = false
     private var ticks = 0
@@ -173,6 +176,7 @@ final class TapPipeline: @unchecked Sendable {
     private var aggregateID = AudioObjectID(0)
     private var ioProc: AudioDeviceIOProcID?
     private var timer: DispatchSourceTimer?
+    private var spectrumTimer: DispatchSourceTimer?
     private var barsTimer: DispatchSourceTimer?
     private var barsReady: DispatchSourceUserDataAdd?
     private var analyzer: Analyzer?
@@ -268,6 +272,7 @@ final class TapPipeline: @unchecked Sendable {
             // read again every second.
             if ticks % 45 == 0 {
                 heard.delay = Self.heardAfter(aggregate: aggregateID, window: Analyzer.size)
+                heardSpectrum.delay = Self.heardAfter(aggregate: aggregateID, window: BackdropSpectrum.window)
                 heardBars.delay = Self.waveformDelay(sampleRate: rate)
                 deliverBars()
             }
@@ -278,6 +283,21 @@ final class TapPipeline: @unchecked Sendable {
         }
         timer.resume()
         self.timer = timer
+
+        // Apple's spectrum: 2048 samples at a time, one window after the other, about 23 a second.
+        heardSpectrum.delay = Self.heardAfter(aggregate: aggregateID, window: BackdropSpectrum.window)
+        let spectrumAnalyzer = BackdropSpectrumAnalyzer()
+        let spectrumTimer = DispatchSource.makeTimerSource(queue: queue)
+        spectrumTimer.schedule(deadline: .now(), repeating: Double(BackdropSpectrum.window) / rate)
+        spectrumTimer.setEventHandler { [weak self] in
+            guard let self, let samples = ring.latest(BackdropSpectrum.window) else { return }
+            let reading = AudioReading(
+                levels: nil, beat: analyzer?.lastBeat ?? 0, loudness: analyzer?.loudness ?? 0,
+                spectrum: spectrumAnalyzer?.report(samples, sampleRate: rate) ?? .zero)
+            for due in heardSpectrum.takeAll(reading, at: ProcessInfo.processInfo.systemUptime) { publish(due) }
+        }
+        spectrumTimer.resume()
+        self.spectrumTimer = spectrumTimer
         return true
     }
 
@@ -300,6 +320,8 @@ final class TapPipeline: @unchecked Sendable {
         heardBars = WaveformDelivery()
         timer?.cancel()
         timer = nil
+        spectrumTimer?.cancel()
+        spectrumTimer = nil
         barsTimer?.cancel()
         barsTimer = nil
         barsReady?.cancel()
@@ -363,7 +385,7 @@ final class TapPipeline: @unchecked Sendable {
 
 }
 
-/// The beat, which the colors behind the player pulse on, from 1024 samples at a time, 45 times a
+/// The beat, and how loud the sound is (which a call's bars show), from 1024 samples at a time, 45 times a
 /// second: the bass rising more sharply than it has been lately, to well above its usual level, as a
 /// kick or a bass note starts; no sooner than a fifth of a second after the last. The bars come from
 /// `BinnedFFT`.

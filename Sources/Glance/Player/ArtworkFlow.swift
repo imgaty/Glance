@@ -11,27 +11,18 @@ import Combine
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
-/// The background's three artwork planes and subdivided warp are rendered on the artwork queue.
-/// The waveform keeps its own cover treatment; it never takes its colors from the background.
+/// A picture's colors: the cover, small, for the background (see `BackdropEngine`), and the
+/// waveform's own treatment of it, which never takes its colors from the background.
 @MainActor
-final class ArtworkFlow: @MainActor ObservableObject {
-    /// A paused picture still receives the first completed artwork frame. Later frames are
-    /// requested by its own timeline, without publishing at the renderer's cadence.
-    let objectWillChange = ObservableObjectPublisher()
-
+final class ArtworkFlow {
     /// One for each picture, kept only as long as the picture is.
     private static let flows = NSMapTable<NSImage, ArtworkFlow>.weakToStrongObjects()
-    private static let queue = DispatchQueue(label: "Glance.ArtworkFlow", qos: .userInitiated)
     private nonisolated static let context = CIContext(options: [
         .workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any, .cacheIntermediates: false,
     ])
 
-    /// The colors move slowly and are soft, so they're drawn small, each picture as soon as the last
-    /// is old enough: a little sooner than the 30 times a second the background asks, so none of
-    /// its asks is missed. At half that, they'd be seen to step.
-    private static let interval = 1.0 / 40
     /// The cover, small: the copies are blurred away, so nothing of its detail would show.
-    private static let coverSide: CGFloat = 128
+    private static let coverSide = CGFloat(ArtworkBackdrop.coverSide)
 
     /// The waveform's colors, as Apple's own waveform takes them from the artwork (`MediaCoreUI`'s
     /// `WaveformTheme.artwork`, read from its layers on macOS 27.3): the cover stretched across the
@@ -64,17 +55,8 @@ final class ArtworkFlow: @MainActor ObservableObject {
     /// The cover itself, blurred, which the waveform shows through its bars laid across the whole of
     /// it, as Apple's own waveform does (see `bars(of:)`): a red cover's sides red, a blue middle blue.
     let bars: CGImage
-    private let cover: CGImage
-    @MainActor
-    private final class Frame {
-        var renderer: ArtworkBackdrop?
-        var latest: CGImage?
-        var drawing = false
-        var drawnAt = 0.0
-    }
-    private var frames: [Int: Frame] = [:]
-    private let variant = Int.random(in: 0..<5)
-    private var clock = ArtworkFlowClock()
+    /// The cover, small, which the background is made from.
+    let cover: CGImage
 
     private init?(_ image: NSImage) {
         guard let source = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
@@ -191,40 +173,6 @@ final class ArtworkFlow: @MainActor ObservableObject {
             colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
         return (0.2126 * Double(pixel[0]) + 0.7152 * Double(pixel[1]) + 0.0722 * Double(pixel[2])) / 255
     }
-
-    /// A soft cover is ready immediately. Shader compilation, textures and every rendered frame,
-    /// including the first, are prepared on the artwork queue.
-    func frame(at time: Double, aspect: Double = 1) -> CGImage? {
-        let key = Int((min(max(aspect, 0.25), 8) * 20).rounded())
-        let frame: Frame
-        if let cached = frames[key] {
-            frame = cached
-        } else {
-            frame = Frame()
-            if frames.count >= 6, let old = frames.keys.first { frames.removeValue(forKey: old) }
-            frames[key] = frame
-        }
-        let elapsed = clock.read(at: time)
-        guard !frame.drawing, frame.latest == nil || abs(time - frame.drawnAt) >= Self.interval else { return frame.latest ?? bars }
-        frame.drawing = true
-        frame.drawnAt = time
-        let cover = cover, previous = frame.renderer, variant = variant
-        Self.queue.async { [self, frame] in
-            let renderer = previous ?? ArtworkBackdrop(cover, variant: variant, aspect: Double(key) / 20)
-            let image = renderer?.frame(at: elapsed)
-            DispatchQueue.main.async { [weak self] in
-                MainActor.assumeIsolated {
-                    frame.renderer = renderer
-                    frame.drawing = false
-                    if let image {
-                        if frame.latest == nil { self?.objectWillChange.send() }
-                        frame.latest = image
-                    }
-                }
-            }
-        }
-        return frame.latest ?? bars
-    }
 }
 
 /// Time advances only while a view is asking for frames. A return from a hidden or paused view
@@ -240,6 +188,121 @@ struct ArtworkFlowClock {
         }
         previous = time
         return elapsed
+    }
+
+    /// Notes the time without moving on, as a paused picture does.
+    mutating func hold(at time: Double) {
+        previous = time
+    }
+}
+
+/// The colors behind the player, kept going from one cover to the next as Apple Music keeps its
+/// background (see `BackdropMotion` and `ArtworkBackdrop`): one clock, one warp shape picked at
+/// random, the music's pulse, and each new cover fading in over the last rather than starting over.
+/// Every picture asking at once shares them; each shape of picture is drawn separately, on the
+/// artwork queue, at most once for each of Apple's 30 frames a second.
+@MainActor
+final class BackdropEngine: @MainActor ObservableObject {
+    /// A paused picture still receives the first drawn frame. Later frames are asked for by its own
+    /// timeline, without publishing at the renderer's pace.
+    let objectWillChange = ObservableObjectPublisher()
+
+    /// The music's colors, and the welcome tour's made-up song's.
+    static let live = BackdropEngine(demo: false)
+    static let demo = BackdropEngine(demo: true)
+    private static let queue = DispatchQueue(label: "Glance.ArtworkFlow", qos: .userInitiated)
+    /// The width of the window Apple's background fills, full screen, which a smaller picture shows a
+    /// smaller copy of: the main screen's, in points.
+    static var referenceWidth: Double { Double(NSScreen.main?.frame.width ?? 1512) }
+    /// Apple's background is at its liveliest behind lyrics, which is how it's seen in Apple Music
+    /// unless the cover is chosen instead: the warp in, the pulse in full.
+    static let exciting = true
+
+    private final class Picture {
+        var renderer: ArtworkBackdrop?
+        var latest: CGImage?
+        var drawing = false
+        var drawnFrame = -1
+    }
+    private let demo: Bool
+    private var pictures: [Int: Picture] = [:]
+    private let variant = Int.random(in: 0..<5)
+    private var clock = ArtworkFlowClock()
+    private var frames = 0
+    /// Moves on with every change a picture has to be drawn again for.
+    private var stamp = 0
+    private(set) var motion = BackdropMotion()
+    private var cover: CGImage?
+    private var previous: CGImage?
+
+    init(demo: Bool) {
+        self.demo = demo
+    }
+
+    /// The colors of `flow`, for a picture of `aspect` (width over height), `time` seconds in. Frozen,
+    /// they hold still, as Apple's do with Increase Contrast on; with Reduce Motion on they move ten
+    /// times slower. Until the first frame is drawn, the cover's soft bars stand in.
+    func frame(for flow: ArtworkFlow, at time: Double, aspect: Double, reduceMotion: Bool, frozen: Bool) -> CGImage? {
+        if flow.cover !== cover {
+            // Held still, a new cover shows at once rather than waiting to fade in.
+            if cover != nil, !frozen { motion.newCover() }
+            previous = cover
+            cover = flow.cover
+            stamp += 1
+        }
+        let key = Int((min(max(aspect, 0.25), 8) * 20).rounded())
+        if frozen {
+            clock.hold(at: time)
+        } else {
+            let elapsed = clock.read(at: time)
+            let due = Int(elapsed * BackdropMotion.frameRate)
+            // Apple's frames, each moving everything on; a long gap draws no catch-up, as Apple's doesn't.
+            let wide = key > 20
+            for _ in 0..<min(max(due - frames, 0), 4) {
+                motion.advance(reduceMotion: reduceMotion, exciting: Self.exciting, wide: wide, recent: recent(at: time))
+                stamp += 1
+            }
+            frames = max(frames, due)
+        }
+        if motion.fade >= 1 { previous = nil }
+        let picture: Picture
+        if let existing = pictures[key] {
+            picture = existing
+        } else {
+            picture = Picture()
+            if pictures.count >= 6, let old = pictures.keys.first { pictures.removeValue(forKey: old) }
+            pictures[key] = picture
+        }
+        guard !picture.drawing, picture.latest == nil || picture.drawnFrame != stamp, let cover else { return picture.latest ?? flow.bars }
+        picture.drawing = true
+        picture.drawnFrame = stamp
+        let motion = motion, previous = previous, variant = variant, reference = Self.referenceWidth
+        let renderer = picture.renderer
+        Self.queue.async { [weak self] in
+            let renderer = renderer ?? ArtworkBackdrop(variant: variant, aspect: Double(key) / 20)
+            let image = renderer.flatMap { renderer in
+                let uniforms = motion.uniforms(
+                    aspect: Double(renderer.width) / Double(renderer.height), exciting: Self.exciting, size: (renderer.width, renderer.height))
+                return renderer.frame(
+                    cover: cover, previous: previous, uniforms: uniforms, blurSigma: renderer.blurSigma(points: motion.blur, referenceWidth: reference))
+            }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    picture.renderer = renderer
+                    picture.drawing = false
+                    if let image {
+                        if picture.latest == nil { self?.objectWillChange.send() }
+                        picture.latest = image
+                    }
+                }
+            }
+        }
+        return picture.latest ?? flow.bars
+    }
+
+    /// The music's last four reports, as Apple's background holds them; the made-up song's for the tour.
+    private func recent(at time: Double) -> [SIMD4<Float>] {
+        demo ? WaveformGlyph.demoReports(at: time) : AudioLevels.shared.recent
     }
 }
 

@@ -208,8 +208,7 @@ struct WaveformGlyph: View {
     /// The made-up song's beats a second: a little under two.
     private static let demoTempo = 1.8
     /// How often the made-up song hits hard: on the first of every eight beats, the only kick that
-    /// takes the waveform to its full height, and so the only one the colors behind the player pulse
-    /// on (see `AudioLevels.bang`).
+    /// takes the waveform to its full height.
     private static let demoAccent = 8.0
 
     /// How loud the made-up song is in each band, 0 to 1, left to right: a kick on every beat, harder
@@ -242,13 +241,17 @@ struct WaveformGlyph: View {
         return x - x.rounded(.down)
     }
 
-    /// The colors' pulse for the made-up song, 0 to 1, as `AudioLevels` shows music's: nothing but on
-    /// its hard kick, every eight beats, up over 70 milliseconds and easing away over about a third
-    /// of a second.
-    static func demoPulse(at t: Double) -> Double {
-        let period = demoAccent / demoTempo, rise = 0.07, fall = 0.36
-        let since = t.truncatingRemainder(dividingBy: period)
-        return 0.7 * (since < rise ? (1 - cos(.pi * since / rise)) / 2 : exp(-(since - rise) / fall))
+    /// The made-up song's last four spectrum reports, oldest first, as `AudioLevels` holds music's for
+    /// the colors behind the player (see `BackdropSpectrum`): as often as Apple's come, the kick and
+    /// the bass line most of the sound, the voice and snare some, the hi-hats a little.
+    static func demoReports(at t: Double) -> [SIMD4<Float>] {
+        let interval = Double(BackdropSpectrum.window) / 48_000
+        let newest = (t / interval).rounded(.down)
+        return (0..<BackdropSpectrum.ramp.count).reversed().map { back in
+            let heard = demoHeard(at: (newest - Double(back)) * interval)
+            let bass = 0.55 * heard[0] + 0.3 * heard[1], middle = 0.12 * (heard[2] + heard[3]), treble = 0.02 * (heard[4] + heard[5])
+            return SIMD4(Float(0.9 * bass), Float(0.9 * middle), Float(0.9 * treble), 1)
+        }
     }
 
     /// Where the bars draw together: a dot in the middle, where the symbol springs from.
