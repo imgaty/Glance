@@ -175,15 +175,17 @@ struct WaveformSamplesTests {
         #expect(delivery.nextDeadline == nil)
     }
 
-    @Test("Delayed bars leave the newer beat and its easing untouched")
+    @Test("Delayed bars leave the newer beat and the spectrum untouched")
     @MainActor func separateBeat() {
         let audio = AudioLevels()
+        audio.follow(pid: 0, playing: true)
         audio.receive(AudioReading(levels: Array(repeating: 1, count: 6), beat: 0))
         audio.receive(AudioReading(levels: nil, beat: 0.8))
-        let pulse = audio.pulse
+        audio.receive(AudioReading(levels: nil, beat: 0, spectrum: SIMD4(0.7, 0, 0, 1)))
+        let recent = audio.recent
         audio.receive(AudioReading(levels: Array(repeating: 0.5, count: 6), beat: 0.1))
         #expect(audio.beat == 0.8)
-        #expect(audio.pulse == pulse)
+        #expect(audio.recent == recent)
         #expect(audio.levels == Array(repeating: 0.5, count: 6))
     }
 }

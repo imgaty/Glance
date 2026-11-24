@@ -1458,14 +1458,15 @@ struct NotchView: View {
         CGSize(width: model.openSize.width + (model.showsLyrics ? model.lyricsWidth : 0) + 60, height: model.openSize.height + 40)
     }
 
-    /// The rendered colors are dimmed again for the player's controls. A white cover
-    /// reaches about 139 gray, with a little over half its original brightness left.
-    static let colorsDim = 0.25
-    /// The colors' brightest, a white cover's, before they're dimmed.
-    static let colorsBrightest = 0.727
+    /// The rendered colors aren't dimmed again for the player's controls: Apple's own black and
+    /// white already leave a white cover at about 140 gray, as Apple Music shows it.
+    static let colorsDim = 0.0
+    /// The colors' brightest, a white cover's: half its brightness under Apple's black, washed with a
+    /// tenth of white, through Apple's color table.
+    static let colorsBrightest = 0.552
     /// With Increase Contrast on, dimmed further, so the artist's gray reads 4.5 to 1 even on a white
     /// cover's colors, the title far more.
-    static let contrastDim = 0.77
+    static let contrastDim = 0.7
 
     @ViewBuilder
     private func artworkBackground(_ m: NotchMetrics, shown: Bool) -> some View {

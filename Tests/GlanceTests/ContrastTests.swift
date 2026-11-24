@@ -58,7 +58,7 @@ struct ContrastTests {
         }
         let usual = NotchView.colorsBrightest * (1 - NotchView.colorsDim)
         let dimmed = NotchView.colorsBrightest * (1 - NotchView.contrastDim)
-        // The usual dimming leaves a white cover's colors about Apple Music's 139 gray.
+        // Undimmed, a white cover's colors are about Apple Music's 139 gray.
         #expect(abs(usual * 255 - 139) < 2)
         #expect(contrast(NotchType.detailColor, onGray: usual) < 4.5)
         #expect(contrast(NotchType.detailColor, onGray: dimmed) >= 4.5)

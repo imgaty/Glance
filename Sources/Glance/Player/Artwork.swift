@@ -243,41 +243,51 @@ struct ArtworkLight: View {
     var body: some View {
         let flow = nowPlaying.flow(from: accentSource)
         ZStack {
+            // The same colors from one cover to the next: a new cover fades in over the last inside
+            // them, as Apple's background fades it. They keep moving while the music's paused.
             if let flow {
-                ArtworkSwirl(flow: flow, active: active && nowPlaying.isPlaying, spread: spread, demo: nowPlaying.isDemo)
+                ArtworkSwirl(flow: flow, active: active, spread: spread, demo: nowPlaying.isDemo)
                     .transition(.opacity)
-                    .id(ObjectIdentifier(flow))
             } else {
                 nowPlaying.accent(from: accentSource)
                     .transition(.opacity)
             }
         }
         .overlay(Color.black.opacity(dim))
-        .animation(.easeInOut(duration: 0.8), value: flow.map(ObjectIdentifier.init))
+        .animation(.easeInOut(duration: 0.8), value: flow == nil)
         .animation(.easeInOut(duration: 0.5), value: dim)
         .animation(.easeInOut(duration: 0.5), value: accentSource)
     }
 }
 
-/// The flowing colors (see `ArtworkFlow`), all of them spread across the room given, rather than
+/// The flowing colors (see `BackdropEngine`), all of them spread across the room given, rather than
 /// the middle of them filling it: on a shape as wide as the notch, that would be a band, and a color
-/// off to one side of the cover would never show. On the music's biggest hits, as they're heard,
-/// they swell and brighten just a little and ease back.
+/// off to one side of the cover would never show. The music's pulse is inside them: on the bass the
+/// cover's copies swell and gain contrast, on the treble they saturate, as Apple Music's do.
 struct ArtworkSwirl: View {
-    @ObservedObject var flow: ArtworkFlow
+    let flow: ArtworkFlow
     let active: Bool
     let spread: CGSize
-    /// The welcome tour's made-up song, whose beat is made up too.
-    var demo = false
-    /// With Reduce Motion on, the colors stay where they are.
+    @ObservedObject private var engine: BackdropEngine
+    @ObservedObject private var accessibility = SystemAccessibility.shared
+    /// With Reduce Motion on, the colors move ten times slower, as Apple's do; the pulse stays.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// `demo`: the welcome tour's made-up song, whose sound is made up too.
+    init(flow: ArtworkFlow, active: Bool, spread: CGSize, demo: Bool = false) {
+        self.flow = flow
+        self.active = active
+        self.spread = spread
+        engine = demo ? .demo : .live
+    }
+
     var body: some View {
+        // With Increase Contrast on, Apple's background holds still.
+        let frozen = !active || accessibility.increasesContrast
         GeometryReader { proxy in
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !active || reduceMotion)) { context in
-                let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
-                let pulse = active && !reduceMotion ? CGFloat(demo ? WaveformGlyph.demoPulse(at: t) : Double(AudioLevels.shared.pulse)) : 0
-                if let frame = flow.frame(at: t, aspect: spread.width / max(spread.height, 1)) {
+            TimelineView(.animation(minimumInterval: 1.0 / BackdropMotion.frameRate, paused: frozen)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                if let frame = engine.frame(for: flow, at: t, aspect: spread.width / max(spread.height, 1), reduceMotion: reduceMotion, frozen: frozen) {
                     Image(decorative: frame, scale: 1)
                         .resizable()
                         .interpolation(.high)
@@ -285,8 +295,6 @@ struct ArtworkSwirl: View {
                         // blend and retain a trail of old frames while the preview reshapes.
                         .transaction { $0.animation = nil }
                         .frame(width: spread.width, height: spread.height)
-                        .scaleEffect(1 + 0.015 * pulse)
-                        .brightness(0.03 * pulse)
                         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 }
             }
