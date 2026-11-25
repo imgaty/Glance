@@ -100,14 +100,16 @@ struct PreviewPointerTests {
         #expect(preview.model.state == .open)
     }
 
-    @Test("Closed, it tracks pointer proximity and hover without resizing")
+    @Test("Closed, a pointer near it changes nothing; on it, the outline swells toward it")
     func nearing() {
         let preview = SettingsPreview()
         preview.setInteractive(true, animated: false)
+        preview.model.activityReducesMotion = false
         preview.pointer(at: CGPoint(x: 200, y: 60), geometry)
-        #expect(preview.model.proximity > 0)
+        #expect(preview.model.hoverPlace == nil && preview.model.outline == .zero)
         preview.pointer(at: CGPoint(x: 200, y: 15), geometry)
         #expect(preview.model.state == .peek)
+        #expect(preview.model.hoverPlace != nil && preview.model.outline.trailing > 0)
     }
 
     @Test("A preview bubble opens its own call and returns to the bubble")
@@ -168,7 +170,7 @@ struct PreviewPointerTests {
         preview.pointer(at: nil, geometry)
         try? await Task.sleep(for: .milliseconds(700))
         #expect(preview.model.state == .closed)
-        #expect(preview.model.proximity == 0)
+        #expect(preview.model.hoverPlace == nil)
     }
 }
 

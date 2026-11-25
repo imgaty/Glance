@@ -38,9 +38,10 @@ struct ActivityMotionInteractionTests {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
-        // Beside another activity, so opening folds to the housing before it reveals.
+        // The bubble's activity, so opening folds to the housing before it reveals.
         model.stopwatch = .stopped(elapsed: 31)
-        model.expanded = .timer
+        model.expanded = .stopwatch
+        model.openedFromBubble = true
         var phases: [(folded: Bool, opening: Bool)] = []
         let watch = model.$activityFolded.combineLatest(model.$activityOpening).dropFirst().sink {
             phases.append((folded: $0.0, opening: $0.1))
@@ -82,7 +83,8 @@ struct ActivityMotionInteractionTests {
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
         model.stopwatch = .stopped(elapsed: 31)
-        model.expanded = .timer
+        model.expanded = .stopwatch
+        model.openedFromBubble = true
         model.open()
         let transition = try #require(model.activityTransitionTask)
         var samples = 0
@@ -150,14 +152,14 @@ struct ActivityMotionInteractionTests {
         let closed = geometry.rect(.closed)
         let point = CGPoint(x: 0, y: inside ? closed.midY : closed.maxY + 20)
         preview.pointer(at: point, geometry)
-        #expect(model.state == .closed && model.proximity == 0)
+        #expect(model.state == .closed && model.hoverPlace == nil)
         // For as long as the reveal lasts, which a busy main thread may skip past, hover holds off.
         while model.activityOpening {
-            #expect(model.state == .closed && model.proximity == 0)
+            #expect(model.state == .closed && model.hoverPlace == nil)
             try await Task.sleep(for: .milliseconds(5))
         }
         await closing.value
-        #expect(await eventually { inside ? model.state == .peek : model.proximity > 0 })
+        #expect(await eventually { inside ? model.state == .peek && model.hoverPlace != nil : model.state == .closed && model.hoverPlace == nil })
     }
 
     enum MotionInterruption: CaseIterable { case teardown, reducedMotion, fullscreen, replacement }
@@ -213,7 +215,7 @@ struct ActivityMotionInteractionTests {
         let opening = try #require(model.activityTransitionTask)
         if !duringTransition { await opening.value }
         let order = model.activities
-        model.proximity = 1
+        model.hoverPlace = .zero
         model.pressed = true
         model.stretch = 12
         model.lean = 9
@@ -251,11 +253,11 @@ struct ActivityMotionInteractionTests {
     func previewStationaryPointer() async throws {
         let preview = preview()
         let model = preview.model
-        // Beside another activity, so opening folds to the housing first.
+        // The bubble's activity, so opening folds to the housing first.
         model.stopwatch = .stopped(elapsed: 31)
         defer { model.cancelActivityTransition() }
         let geometry = geometry(model)
-        model.openNotch()
+        model.openBubble()
         let point = CGPoint(x: 0, y: geometry.rect(.open).midY)
         #expect(model.activityFolded)
         #expect(point.y > model.metrics.height)
@@ -271,11 +273,11 @@ struct ActivityMotionInteractionTests {
     func previewDeferredExit() async throws {
         let preview = preview()
         let model = preview.model
-        // Beside another activity, so opening folds to the housing first.
+        // The bubble's activity, so opening folds to the housing first.
         model.stopwatch = .stopped(elapsed: 31)
         defer { model.cancelActivityTransition() }
         let geometry = geometry(model)
-        model.openNotch()
+        model.openBubble()
         preview.pointer(at: CGPoint(x: 0, y: geometry.rect(.open).midY), geometry)
         preview.pointer(at: nil, geometry)
         #expect(model.state == .open && model.activityFolded)

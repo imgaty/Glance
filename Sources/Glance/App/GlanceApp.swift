@@ -292,6 +292,7 @@ enum Preferences {
     static let earlierDefaults: [Int: [String: Any]] = [
         1: [musicBackground: MusicBackground.replaceGlass.rawValue],
         2: [musicAccentTimeline: true, musicAppBadge: false],
+        3: [openTrigger: OpenTrigger.both.rawValue],
     ]
     /// The last change of first values this install has been through, so each is done once.
     static let defaultsVersion = "defaultsVersion"
@@ -350,7 +351,7 @@ enum Preferences {
             lyrics: true,
             musicLayout: PlayerLayout.top.rawValue,
             musicDJButton: true,
-            openTrigger: OpenTrigger.both.rawValue,
+            openTrigger: OpenTrigger.click.rawValue,
             hoverDelay: 0.2,
             clickDelay: 0.0,
             haptics: false,

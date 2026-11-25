@@ -13,8 +13,6 @@ import SwiftUI
 
 private enum Layout {
     static let virtualNotchWidth: CGFloat = 185
-    /// How far away (pt) the closed notch starts to notice the pointer.
-    static let proximityRange: CGFloat = 60
     /// Room around the open notch for its glass edge and rubber-band stretch.
     static let windowPadding = CGSize(width: 90, height: 90)
     /// How far the window reaches past the top of the screen, with nothing drawn there: a window
@@ -34,7 +32,7 @@ struct Opening {
 
     static var current: Opening {
         let defaults = UserDefaults.standard
-        let trigger = OpenTrigger(rawValue: defaults.string(forKey: Preferences.openTrigger) ?? "") ?? .both
+        let trigger = OpenTrigger(rawValue: defaults.string(forKey: Preferences.openTrigger) ?? "") ?? .click
         return Opening(
             onHover: trigger != .click, onClick: trigger != .hover,
             hoverDelay: defaults.double(forKey: Preferences.hoverDelay),
@@ -157,9 +155,16 @@ final class NotchController {
         /// It opened by itself, as the iPhone's screen recording does as it starts and as it's
         /// saved: it stays open until that's done, or the pointer visits it and leaves.
         case presented
+        /// Opened with a click, as the Mac's island is: it stays open with the pointer away, until a
+        /// click lands outside it, it's swiped up, or the shortcut or Escape closes it.
+        case clicked
     }
 
     private var holds: Set<Hold> = []
+    /// Escape, heard while the notch stays open from a click without taking the keyboard: only
+    /// that key is looked at, and only until it closes. It needs Accessibility, as three-finger
+    /// swipes do.
+    private var escapeWatch: Any?
     /// Opened from the keyboard, it takes the keyboard too, as Spotlight's window does, until it
     /// closes or the keyboard goes elsewhere: Escape, the arrows, Space, Return, a few ⌘ keys and
     /// typing a name work it (see `typed`). Keys come through a watch on Glance's own, ahead of its
@@ -542,6 +547,7 @@ final class NotchController {
         entryTask?.cancel()
         entryTask = nil
         giveBackKeys()
+        watchEscape(false)
         Tray.shared.hold(false, for: self)
         dropDwell?.cancel()
         NotchSwipes.shared.set(nil, for: self)
@@ -1107,25 +1113,34 @@ final class NotchController {
         case .closed, .peek:
             let onBubble = button == nil && bubbleZone?.contains(p) == true
             if onBubble != model.bubbleHovered { hoverBubble(onBubble, at: p) }
+            let onNotch = button == nil && !onBubble && interactiveZone.contains(p)
+            // The outline swells under the pointer, leaning toward it, the notch's or the bubble's.
+            model.hover(at: onNotch && model.swells && opensOnHover ? IslandSwell.place(of: p, in: restingRect, rightToLeft: Self.readsRightToLeft) : nil)
+            model.hoverBubble(at: onBubble ? bubbleZone.map { IslandSwell.place(of: p, in: $0, rightToLeft: Self.readsRightToLeft) } : nil)
             if button != nil {
                 // On a done timer's button the notch stays as it is, so a click there is the button's.
                 openTask?.cancel()
             } else if onBubble {
                 // The bubble's own: the notch beside it stays as it is.
                 openOnRest(at: p)
-            } else if interactiveZone.contains(p) {
+            } else if onNotch {
                 if model.state == .closed, !holdUntilExit, opensOnHover { peek() }
                 openOnRest(at: p)
             } else {
                 holdUntilExit = false
-                if model.state == .peek { settle(at: p) } else { model.approach(opensOnHover ? closeness(to: p) : 0) }
+                if model.state == .peek { settle(at: p) }
             }
         case .open:
+            // The open notch takes no notice of the pointer; the bubble beside it, opened from the
+            // bubble, swells as it does beside the compact.
+            model.hover(at: nil)
+            let besideBubble = besideBubbleZone?.contains(p) == true
+            model.hoverBubble(at: besideBubble ? besideBubbleZone.map { IslandSwell.place(of: p, in: $0, rightToLeft: Self.readsRightToLeft) } : nil)
             pageTurnZone = pageTurnZone.flatMap { Self.pageNavigationZone(from: $0, to: openZone, pointer: p) }
             // Once the pointer has been on it, it closes as usual when the pointer leaves.
             if openZone.contains(p) { holds.subtract([.keyboard, .touch, .presented]) }
             // Share's picker over it holds it open too, as a menu from it does.
-            if !holds.isEmpty || Tray.shared.sharing || openZone.contains(p) || pageTurnZone != nil {
+            if !holds.isEmpty || Tray.shared.sharing || openZone.contains(p) || besideBubble || pageTurnZone != nil {
                 closeTask?.cancel()
                 closeTask = nil
             } else if closeTask == nil {
@@ -1135,20 +1150,22 @@ final class NotchController {
         // Only swallow clicks while the pointer is actually on the notch, or while a finger holds it
         // open, with no pointer on it.
         if !model.pressed {
-            let capture = interactiveZone.contains(p) || (model.state == .open && holds.contains(.touch))
+            let capture =
+                interactiveZone.contains(p) || (model.state == .open && holds.contains(.touch))
+                || (model.state == .open && besideBubbleZone?.contains(p) == true)
             if panel.ignoresMouseEvents == capture { panel.ignoresMouseEvents = !capture }
         }
         // With the pointer on the tray, new copies wait, so its row doesn't move under it.
         Tray.shared.hold(model.state == .open && model.page == .tray && openZone.contains(p), for: self)
     }
 
-    /// The pointer onto a bubble beside the notch, or off it: highlight it without resizing.
-    /// Only a click opens it, to what it shows.
+    /// The pointer onto a bubble beside the notch, or off it: it swells, as the notch does (see
+    /// `pointerMoved`). Only a click opens it, to what it shows.
     private func hoverBubble(_ on: Bool, at p: CGPoint) {
         if on, model.state == .peek { settle(at: p) }
         openTask?.cancel()
         restPoint = nil
-        withAnimation(model.detached == .music ? ToolMotion.peek : NotchMotion.feedback) { model.bubbleHovered = on }
+        model.bubbleHovered = on
         if on {
             startPolling()
         } else if model.state == .closed {
@@ -1167,13 +1184,13 @@ final class NotchController {
 
     func clicked(outsideAt p: CGPoint) {
         guard !holds.contains(.sound) else { return }
-        if model.state == .open, !openZone.contains(p) { close(holdUntilExit: false) }
+        if model.state == .open, !openZone.contains(p), besideBubbleZone?.contains(p) != true { close(holdUntilExit: false) }
     }
 
-    /// Pressing the closed notch squeezes it, and letting go opens it, at a point on the screen. The
-    /// open notch ignores clicks outside its controls: it closes when the pointer leaves or with a
-    /// swipe up. A tap in its window's margin, which takes them while a finger holds it open, closes
-    /// it, as one anywhere else does.
+    /// Pressing the closed notch gives back its swell's width, and letting go opens it, at a point on
+    /// the screen. A click outside the open notch closes it; one on the bubble beside it opens what
+    /// the bubble shows. A tap in its window's margin, which takes them while a finger holds it open,
+    /// closes it, as one anywhere else does.
     private func press(at p: CGPoint) {
         guard !holds.contains(.sound), !model.activityControlsHidden else { return }
         // A done timer's buttons, in the closed notch, are buttons of their own.
@@ -1181,6 +1198,10 @@ final class NotchController {
         model.pressedAlertButton = alertPress.highlight(over: alertButton(at: p), alert: model.alert?.id)
         if alertPress.isActive { return }
         pressBeganClosed = model.state != .open
+        if !pressBeganClosed, besideBubbleZone?.contains(p) == true {
+            model.pressBubble(true)
+            return
+        }
         if !pressBeganClosed, !openZone.contains(p) { return close(holdUntilExit: false) }
         // A click on the tray, off its items, lets go of any chosen ones, as in Finder.
         if !pressBeganClosed, model.page == .tray { Tray.shared.deselect() }
@@ -1192,13 +1213,13 @@ final class NotchController {
             restPoint = nil
         }
         if model.bubbleHovered {
-            withAnimation(model.detached == .music ? ToolMotion.press(true) : NotchMotion.feedback) { model.bubblePressed = true }
+            model.pressBubble(true)
         } else {
             model.press(true)
         }
         // With a hold delay, the notch opens while the button is still down.
         if opening.onClick, opening.clickDelay > 0 {
-            scheduleOpen(after: opening.clickDelay)
+            scheduleOpen(after: opening.clickDelay, byClick: true)
         }
     }
 
@@ -1208,7 +1229,7 @@ final class NotchController {
             openingZone = nil
             _ = alertPress.end(over: nil, alert: model.alert?.id)
             model.pressedAlertButton = nil
-            model.bubblePressed = false
+            model.pressBubble(false)
             model.press(false)
             pressBeganClosed = false
             return
@@ -1219,10 +1240,19 @@ final class NotchController {
             if let button { perform(button) }
             return
         }
+        if !pressBeganClosed, model.state == .open, model.bubblePressed {
+            // The bubble beside the open notch: what it shows opens, through the housing.
+            model.pressBubble(false)
+            if besideBubbleZone?.contains(p) == true, let first = model.activities.first {
+                model.selectActivity(first, onCollapse: { Opening.openingTap() })
+                stayOpen()
+            }
+            return
+        }
         guard pressBeganClosed else { return }
         let onBubble = model.bubblePressed
         if onBubble {
-            withAnimation(model.detached == .music ? ToolMotion.press(false) : NotchMotion.feedback) { model.bubblePressed = false }
+            model.pressBubble(false)
         } else {
             model.press(false)
         }
@@ -1231,7 +1261,7 @@ final class NotchController {
             // Let go before a hold delay ran out: no open.
             if model.state != .open { openTask?.cancel() }
         } else if opening.onClick, onBubble ? bubbleZone?.contains(p) == true : interactiveZone.contains(p) {
-            open()
+            open(byClick: true)
         }
     }
 
@@ -1386,7 +1416,7 @@ final class NotchController {
     /// As long as the open notch takes to close, near enough to open again from.
     private static let closeTime = 0.34
 
-    private func scheduleOpen(after delay: Double) {
+    private func scheduleOpen(after delay: Double, byClick: Bool = false) {
         openTask?.cancel()
         let target = model.activityFolded ? openZone : interactiveZone
         openingZone = target
@@ -1395,22 +1425,22 @@ final class NotchController {
             guard let self, !Task.isCancelled else { return }
             self.openingZone = nil
             guard target.contains(NSEvent.mouseLocation) else { return }
-            self.open()
+            self.open(byClick: byClick)
         }
     }
 
     private func settle(at p: CGPoint) {
         openTask?.cancel()
         restPoint = nil
-        model.settle(closeness: closeness(to: p))
+        model.settle()
+        model.hoverBubble(at: nil)
         stopPolling()
-
     }
 
     /// Opens on the player, unless told otherwise; for something dragged to it, with its places to
     /// drop. An announcement folds away first, unless it's to go with the opening, for fingers
     /// already pulling the notch down, which a wait would leave stretching it.
-    private func open(on asked: NotchPage = .player, forDrop: Bool = false) {
+    private func open(on asked: NotchPage = .player, forDrop: Bool = false, byClick: Bool = false) {
         guard model.state != .open else { return }
         // With no song and no live activity, there's no player to open to: the tray instead, or
         // nothing, as the Dynamic Island has nothing to expand with nothing going on.
@@ -1460,6 +1490,9 @@ final class NotchController {
                 model.dropTarget = nil
             }
         }
+        // Opened with a click, it stays open until a click outside it, as the Mac's island does;
+        // opened by the pointer resting on it, it closes as the pointer leaves.
+        if byClick { stayOpen() }
         openMerging()
         startPolling()
         // Accessibility may have been allowed since: three fingers can turn the page now.
@@ -1795,7 +1828,8 @@ final class NotchController {
         pageTurnZone = nil
         giveBackKeys()
         // A menu's hold lasts until the menu is gone (see `menuClosed`).
-        holds.subtract([.keyboard, .touch, .drag])
+        holds.subtract([.keyboard, .touch, .drag, .clicked])
+        watchEscape(false)
         // The places to drop stay as the notch closes, rather than the tray showing on its way
         // out; once it's shut, they go.
         if model.dropping { clearDropOnceClosed() }
@@ -1809,6 +1843,27 @@ final class NotchController {
         model.close(intoHousing: intoHousing)
         stopPolling()
         pointerMoved(to: NSEvent.mouseLocation)
+    }
+
+    /// Opened with a click: open with the pointer away, until a click outside, a swipe up or Escape.
+    private func stayOpen() {
+        holds.insert(.clicked)
+        watchEscape(true)
+    }
+
+    private func watchEscape(_ on: Bool) {
+        if on, escapeWatch == nil {
+            escapeWatch = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard event.keyCode == UInt16(kVK_Escape) else { return }
+                MainActor.assumeIsolated {
+                    guard let self, self.holds.contains(.clicked), self.model.state == .open else { return }
+                    self.close(holdUntilExit: false)
+                }
+            }
+        } else if !on, let escapeWatch {
+            NSEvent.removeMonitor(escapeWatch)
+            self.escapeWatch = nil
+        }
     }
 
     /// A menu opened while the pointer is in the open notch was opened from it.
@@ -2544,10 +2599,15 @@ final class NotchController {
     /// A little forgiving margin before an open notch decides the pointer has left.
     private var openZone: CGRect { rect(for: .open).insetBy(dx: -8, dy: -8) }
 
-    /// 1 on the notch, 0 from `proximityRange` away or off its display.
-    private func closeness(to p: CGPoint) -> CGFloat {
-        guard screen.frame.insetBy(dx: -1, dy: -1).contains(p) else { return 0 }
-        return 1 - restingRect.distance(to: p) / Layout.proximityRange
+    /// Where the notch's own activity is, budded off beside a view opened from the bubble, on the
+    /// compact's row (see `NotchView.bubble`).
+    private var besideBubbleZone: CGRect? {
+        guard model.state == .open, model.openedFromBubble, !model.activityControlsHidden, !model.bubbleMerged, model.second != nil else { return nil }
+        let h = model.closedSize.height
+        let m = model.metrics(for: .open)
+        let out = m.bodyWidth / 2 + m.flare + h * IslandBubble.gap
+        let left = Self.readsRightToLeft ? centerX - out - h : centerX + out
+        return CGRect(x: left - 4, y: topY - h - 4, width: h + 8, height: h + 6)
     }
 
     // MARK: Helpers

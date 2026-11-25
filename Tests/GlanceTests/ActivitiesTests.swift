@@ -946,19 +946,22 @@ struct SystemBannersTests {
         #expect(abs(CGFloat(circleRows.min() ?? 0) / 2 - ExpandedCallView.circleTop(for: call, restingHeight: h)) <= 0.5)
     }
 
-    @Test("Hover and proximity keep the compact footprint fixed before opening")
+    @Test("The pointer swells only the outline: the notch's own size, which what's in it follows, stays put")
     @MainActor
     func fixedHoverFootprint() {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        model.activityReducesMotion = false
         model.airdrop = AirDropShown(id: "1", sender: "iPhone", preview: nil, fraction: 0.4)
         let rest = model.metrics
-        for proximity: CGFloat in [0, 0.5, 1] {
-            model.proximity = proximity
+        for place in [nil, CGPoint.zero, CGPoint(x: 1, y: 1)] {
+            model.hoverPlace = place
             for state in [NotchState.closed, .peek] {
                 let target = model.metrics(for: state)
                 #expect(target.bodyWidth == rest.bodyWidth && target.height == rest.height)
             }
         }
+        model.hoverPlace = .zero
+        #expect(model.outline.leading > 2 && model.outline.trailing > 2 && model.outline.bottom > 1)
     }
 
     @Test("Pointer feedback preserves activity geometry and whether a recording can open")
@@ -967,7 +970,7 @@ struct SystemBannersTests {
         let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
         model.screenRecording = .countdown(from: 3, until: .now + 3)
         let rest = model.metrics(for: .closed)
-        model.proximity = 1
+        model.hoverPlace = .zero
         // A countdown keeps its footprint and opens to nothing.
         #expect(model.opensToNothing)
         #expect(model.metrics(for: .closed).height == rest.height && model.metrics(for: .peek).height == rest.height)

@@ -93,6 +93,8 @@ final class SettingsPreview: ObservableObject {
     private var openingZone: CGRect?
     private var pressBeganClosed = false
     private var pressOnBubble = false
+    /// Opened with a click: it stays open with the pointer away, as on screen.
+    private var openedByClick = false
     private var restPoint: CGPoint?
 
     /// On the Opening page it closes, to be opened; leaving, it opens again and stays open, as it
@@ -130,7 +132,8 @@ final class SettingsPreview: ObservableObject {
             withTransaction(transaction) {
                 model.state = .open
                 model.pressed = false
-                model.proximity = 0
+                model.hoverPlace = nil
+                model.bubbleHoverPlace = nil
             }
         }
     }
@@ -194,8 +197,11 @@ final class SettingsPreview: ObservableObject {
             if onBubble != model.bubbleHovered {
                 openTask?.cancel()
                 restPoint = nil
-                withAnimation(model.detached == .music ? ToolMotion.peek : NotchMotion.feedback) { model.bubbleHovered = onBubble }
+                model.bubbleHovered = onBubble
             }
+            // The outline swells under the pointer, leaning toward it, as on screen.
+            model.hover(at: onNotch && model.swells ? Self.place(of: p, in: g.rect(.closed)) : nil)
+            model.hoverBubble(at: onBubble ? g.bubble().map { Self.place(of: p, in: $0) } : nil)
             if onBubble || onNotch {
                 if onNotch, model.state == .closed { peek() }
                 let opening = self.opening()
@@ -208,10 +214,10 @@ final class SettingsPreview: ObservableObject {
             } else {
                 openTask?.cancel()
                 restPoint = nil
-                if model.state == .peek { settle() } else { model.approach(1 - g.rect(.closed).distance(to: p) / (60 * g.scale)) }
+                if model.state == .peek { settle() }
             }
         case .open:
-            if g.rect(.open).insetBy(dx: -8 * g.scale, dy: -8 * g.scale).contains(p) {
+            if openedByClick || g.rect(.open).insetBy(dx: -8 * g.scale, dy: -8 * g.scale).contains(p) {
                 closeTask?.cancel()
                 closeTask = nil
             } else if closeTask == nil {
@@ -230,10 +236,11 @@ final class SettingsPreview: ObservableObject {
     private func goHome(_ g: Geometry) {
         openTask?.cancel()
         restPoint = nil
-        withAnimation(model.detached == .music ? ToolMotion.close : IslandMotion.fold) { model.bubbleHovered = false }
+        model.bubbleHovered = false
+        model.hoverBubble(at: nil)
         switch model.state {
         case .closed, .peek:
-            if model.state == .peek { settle() } else { model.approach(0) }
+            if model.state == .peek { settle() } else { model.hover(at: nil) }
             guard !interactive, homeTask == nil else { return }
             homeTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(0.5))
@@ -303,9 +310,11 @@ final class SettingsPreview: ObservableObject {
         pointerGeometry = g
         pressOnBubble = g.bubble()?.contains(p) == true
         pressBeganClosed = model.state != .open && (zone(g).contains(p) || pressOnBubble)
+        // A click outside the open notch closes it, as on screen.
+        if model.state == .open, !g.rect(.open).insetBy(dx: -8 * g.scale, dy: -8 * g.scale).contains(p) { return close() }
         guard pressBeganClosed else { return }
         model.bubbleHovered = pressOnBubble
-        if pressOnBubble { model.bubblePressed = true } else { model.press(true) }
+        if pressOnBubble { model.pressBubble(true) } else { model.press(true) }
         let opening = self.opening()
         if opening.onClick, opening.clickDelay > 0 { scheduleOpen(after: opening.clickDelay) }
     }
@@ -316,7 +325,7 @@ final class SettingsPreview: ObservableObject {
         guard pressBeganClosed else { return }
         pressBeganClosed = false
         model.press(false)
-        model.bubblePressed = false
+        model.pressBubble(false)
         guard !model.activityControlsHidden else {
             openTask?.cancel()
             openingZone = nil
@@ -326,7 +335,7 @@ final class SettingsPreview: ObservableObject {
         if opening.clickDelay > 0 {
             if model.state != .open { openTask?.cancel() }
         } else if opening.onClick, pressOnBubble ? g.bubble()?.contains(p) == true : zone(g).contains(p) {
-            open()
+            open(byClick: true)
         }
     }
 
@@ -343,13 +352,18 @@ final class SettingsPreview: ObservableObject {
         pressBeganClosed = false
         openTask?.cancel()
         model.press(false)
-        model.bubblePressed = false
+        model.pressBubble(false)
     }
 
     private func settle() {
         openTask?.cancel()
         restPoint = nil
-        model.settle(closeness: 0)
+        model.settle()
+    }
+
+    /// Where the pointer is on a shape in the preview, whose points count down from the top.
+    private static func place(of p: CGPoint, in shape: CGRect) -> CGPoint {
+        IslandSwell.place(of: CGPoint(x: p.x, y: 2 * shape.midY - p.y), in: shape)
     }
 
     private func scheduleOpen(after delay: Double) {
@@ -366,8 +380,9 @@ final class SettingsPreview: ObservableObject {
         }
     }
 
-    private func open(fromBubble: Bool? = nil) {
+    private func open(fromBubble: Bool? = nil, byClick: Bool = false) {
         guard model.state != .open else { return }
+        openedByClick = byClick
         let bubble = fromBubble ?? model.bubbleHovered
         guard !model.opensToNothing(fromBubble: bubble) else { return }
         openTask?.cancel()
@@ -392,8 +407,8 @@ final class SettingsPreview: ObservableObject {
     private func close() {
         openTask?.cancel()
         closeTask = nil
+        openedByClick = false
         model.close()
-
     }
 
 }

@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 24 November 2026`
+`Created: 11 October 2026` | `Last updated: 25 November 2026`
 
 <br>
 
@@ -49,10 +49,17 @@
   rocking as its bells shake, the time above the alarm's name, and **Snooze**
   and **Stop** as round buttons. Swiped away, it stays beside the camera.
 
-- Changed activities to open as the iPhone's Dynamic Island does when held: one
-  alone beside the camera grows straight into its open view. Closing, switching
-  and a second activity coming or going still fold to the camera first, now at
-  the iPhone's own pace.
+- Changed opening, closing and switching, the player and the tray included, to
+  one spring with a slight overshoot. What the notch shows grows straight into
+  its open view and closes straight back, beside a bubble too, which the notch's
+  end takes in at once. Opening the bubble's activity, closing back into it, and
+  another activity taking the notch fold to the camera first, and the notch's
+  own activity stays as a bubble beside the open view. After closing, the notch
+  comes back a little taller and settles.
+
+- Changed what opens to come in once the notch has grown, sharp in about a
+  quarter of a second, and to go at once as it closes. Bubbles sit a little
+  further from the notch.
 
 - Changed a timer sharing the notch with another activity to keep its time
   beside its ring, as `3m` or `27s`, as the iPhone's Clock does.
@@ -370,6 +377,16 @@
 
 ### Opening and displays
 
+- Changed a new install to open the notch with a click. Opened with a click,
+  the notch stays open with the pointer away, until you click outside it, press
+  Escape (with `Accessibility` allowed) or swipe up; opened by hovering, it
+  closes as the pointer leaves. Hover is still a choice in **Settings > Opening
+  > Open with**, and an install that never changed it keeps `Hover or click`.
+- Changed the closed notch and its bubble to swell a little under the pointer
+  and lean toward it, the nearer end reaching out while what's in them stays
+  still. Pressing gives back the width before it opens. Nothing happens any
+  more as the pointer only comes near.
+- Added a soft shadow under the open notch.
 - Added touch on supported MacBook displays and Sidecar: tap to open, drag to
   open or close, swipe to change songs or move through the tray, and touch
   and hold for menus.
