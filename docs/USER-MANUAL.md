@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 24 November 2026`
+`Created: 11 October 2026` | `Last updated: 25 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -784,17 +784,23 @@ the file's picture, who it's from, and two buttons: **Decline**, a cross, and
 **Accept**, a check on AirDrop's blue. Accepted, the file comes in as above.
 macOS's own request stays where it is, so it can be answered there too. An
 incoming request hasn't yet been tried with a real AirDrop, so if the notch's
-buttons don't answer it, use macOS's.
+buttons don't answer it, use macOS's. On macOS 27.3 and later, Glance learns
+of a file only once it's accepted, so answer a request in macOS's own AirDrop
+Live Activity in the menu bar; the file then shows in the notch.
 
 If several files arrive together, the visible transfer stays until it ends;
-the next accepted transfer then takes its place in arrival order.
+the next accepted transfer then takes its place in arrival order. On macOS 27.3
+and later, files coming in at the same time show as one, the ring counting all
+of them.
 
 Hover over or click the notch while AirDrop has it, or click its bubble, and it
 opens to a picture of the file, who it's from, and the ring around a button:
-click it to stop the transfer. If cancellation is unavailable or the transfer
-is complete, the ring shows progress without a stop button. Closing the system
-transfer window can make cancellation unavailable until it is opened again.
-With Reduce Motion, the ring updates without sweeping between positions.
+click it to stop the transfer. On macOS 27.3 and later, which no longer tells
+other apps who sent a file, it shows the file's kind and its name instead. If
+cancellation is unavailable or the transfer is complete, the ring shows progress
+without a stop button. Closing the system transfer window can make cancellation
+unavailable until it is opened again. With Reduce Motion, the ring updates
+without sweeping between positions.
 
 A file you send shows the same way, once it's accepted, the ring filling as it
 goes out. Opened, it says who it's going to while macOS's AirDrop window is

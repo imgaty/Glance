@@ -50,9 +50,11 @@ struct AirDropTransferOrder {
 
 /// Files coming in over AirDrop, as the iPhone's Dynamic Island shows them: beside the camera from
 /// when the file starts coming until it's in, AirDrop's symbol at one end and how far along it is
-/// at the other; opened, a picture of it, who it's from, and a button to stop it. macOS tells
-/// apps of them through its own observer, the one its AirDrop notices use, which has no public way
-/// in; without it, nothing shows. What waits to be accepted shows as it asks, opened by itself, with
+/// at the other; opened, a picture of it, who it's from, and a button to stop it. Up to macOS 27.2,
+/// macOS told apps of them through its own observer, the one its AirDrop notices used, which has no
+/// public way in. From 27.3 its new AirDrop service tells only its own Live Activity, and what comes
+/// in is followed by the progress macOS publishes for it in Downloads instead (see
+/// `AirDropReceiveWatch`). What waits to be accepted shows as it asks, opened by itself, with
 /// Decline and Accept, which answer it as macOS's own buttons do (see `AirDropAnswer`); macOS's own
 /// request stays where it is too, to be answered there.
 @MainActor
@@ -72,6 +74,10 @@ final class AirDropWatch: NSObject, ObservableObject {
     private let sends = AirDropSendWatch()
     /// What's going out, which shows when nothing's coming in.
     private var outgoing: AirDropShown?
+    private let receives = AirDropReceiveWatch()
+    /// What's coming in as macOS 27.3's AirDrop publishes it in Downloads, which shows after what
+    /// the observer tells of.
+    private var receiving: AirDropShown?
 
     func start() {
         sends.changed = { [weak self] in
@@ -79,6 +85,11 @@ final class AirDropWatch: NSObject, ObservableObject {
             self?.refresh()
         }
         sends.start()
+        receives.changed = { [weak self] in
+            self?.receiving = $0
+            self?.refresh()
+        }
+        if !ActivityBench.fakes { receives.start() }
         guard observer == nil,
             dlopen("/System/Library/PrivateFrameworks/Sharing.framework/Sharing", RTLD_LAZY) != nil,
             let type = NSClassFromString("SFAirDropTransferObserver") as? NSObject.Type
@@ -142,7 +153,7 @@ final class AirDropWatch: NSObject, ObservableObject {
         guard transfer?.offersStop == true else { return }
         guard !ActivityBench.fakes else { return ActivityBench.shared.stopped(.airdrop) }
         if transfer?.sending == true { return sends.stop() }
-        guard let id = transfer?.id, let shown = transfers[id] else { return }
+        guard let id = transfer?.id, let shown = transfers[id] else { return receives.stop() }
         // The notice's own Cancel, if macOS gave it a way to run; otherwise the transfer's progress.
         let cancel = shown.value(forKey: "cancelAction") as? NSObject
         if cancel.map(AirDropAnswer.trigger) != true { (shown.value(forKey: "transferProgress") as? Progress)?.cancel() }
@@ -169,7 +180,7 @@ final class AirDropWatch: NSObject, ObservableObject {
         let incoming = enabled ? Dictionary(uniqueKeysWithValues: transfers.values.compactMap(shown).map { ($0.id, $0) }) : [:]
         let current = transfer?.sending == false ? transfer?.id : nil
         let first = order.first(in: Set(incoming.keys), keeping: current).flatMap { incoming[$0] }
-        let next = enabled ? first ?? outgoing : nil
+        let next = enabled ? first ?? receiving ?? outgoing : nil
         if next?.id != transfer?.id {
             finishing?.cancel()
             finishing = nil
@@ -191,12 +202,12 @@ final class AirDropWatch: NSObject, ObservableObject {
             transfer = next
         }
         hideNotice()
-        // Its progress read a few times a second while it comes in; macOS says less often.
-        if let transfer, !transfer.sending, ticker == nil {
+        // Its progress read a few times a second while it comes in; the observer says less often.
+        if let transfer, !transfer.sending, transfers[transfer.id] != nil, ticker == nil {
             let ticker = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.refresh() } }
             RunLoop.main.add(ticker, forMode: .common)
             self.ticker = ticker
-        } else if transfer?.sending != false {
+        } else if transfer.map({ $0.sending || transfers[$0.id] == nil }) ?? true {
             ticker?.invalidate()
             ticker = nil
         }
@@ -363,15 +374,19 @@ struct ExpandedAirDropView: View {
     @Environment(\.activityBubbleCenter) private var bubbleCenter
     @Environment(\.trailingGrows) private var trailingGrows
 
-    /// Who it's with; going out, the file, until macOS's window says who it's going to.
+    /// Who it's with; going out, the file, until macOS's window says who it's going to. Coming in
+    /// on macOS 27.3, which tells only its own AirDrop who sends, the file.
     static func from(_ shown: AirDropShown) -> String {
-        guard shown.sending else { return String(localized: "From \(shown.sender)") }
+        guard shown.sending else { return shown.sender.isEmpty ? shown.file ?? String(localized: "Nearby") : String(localized: "From \(shown.sender)") }
         return shown.recipient.map { String(localized: "To \($0)") } ?? shown.file ?? String(localized: "Sending")
     }
 
     static func spoken(_ shown: AirDropShown) -> String {
         if shown.asking { return String(localized: "AirDrop from \(shown.sender), waiting for an answer") }
-        let who = shown.sending ? shown.recipient.map { String(localized: "to \($0)") } ?? String(localized: "sending") : String(localized: "from \(shown.sender)")
+        let who =
+            shown.sending
+            ? shown.recipient.map { String(localized: "to \($0)") } ?? String(localized: "sending")
+            : shown.sender.isEmpty ? shown.file ?? String(localized: "Nearby") : String(localized: "from \(shown.sender)")
         return String(localized: "AirDrop \(who), \(Int((shown.fraction * 100).rounded())) percent")
     }
 
