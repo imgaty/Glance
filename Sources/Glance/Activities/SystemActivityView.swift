@@ -688,9 +688,10 @@ private struct IslandFadeModifier: ViewModifier {
     }
 }
 
-/// The fade's curves, measured frame by frame from the iPhone's AirPods arriving and leaving, with
-/// what its island's resting shape hides taken out, since the notch's own hides what rides under it
-/// just as much: from when the wings start to move, how far along it is.
+/// The fade's curves, measured frame by frame from the Mac's own island opening and closing: from
+/// when the shape starts to move, how far along it is. What comes waits while the shape grows,
+/// hidden for its first tenth of a second, blurred and dim to 0.15, and is sharp and bright by
+/// 0.24; what goes is gone within a frame or two, before the shape has visibly moved.
 private struct IslandCurve: CustomAnimation {
     enum Part: Hashable { case blurIn, opacityIn, blurOut, opacityOut, ringIn, ringOut }
     /// Hidden, blurred by this much of the height.
@@ -701,26 +702,12 @@ private struct IslandCurve: CustomAnimation {
 
     /// Seconds, and how far along.
     private static let curves: [Part: [(Double, Double)]] = [
-        // Half there while it's still all but under the resting shape, then the rest as it rides out.
-        .opacityIn: [
-            (0.050, 0), (0.074, 0.15), (0.090, 0.30), (0.107, 0.42), (0.124, 0.48), (0.140, 0.52), (0.157, 0.56),
-            (0.174, 0.60), (0.190, 0.64), (0.207, 0.68), (0.224, 0.70), (0.240, 0.72), (0.257, 0.745), (0.274, 0.78),
-            (0.290, 0.81), (0.307, 0.85), (0.324, 0.88), (0.340, 0.91), (0.357, 0.94), (0.374, 0.96), (0.390, 0.97),
-            (0.407, 0.99), (0.424, 1),
-        ],
-        .blurIn: [
-            (0.134, 0), (0.167, 0.125), (0.184, 0.25), (0.200, 0.34), (0.217, 0.46), (0.234, 0.59), (0.251, 0.69),
-            (0.267, 0.76), (0.284, 0.825), (0.300, 0.875), (0.317, 0.925), (0.350, 0.96), (0.434, 1),
-        ],
-        .opacityOut: [
-            (0, 0), (0.013, 0.09), (0.030, 0.21), (0.046, 0.35), (0.063, 0.60), (0.080, 0.73), (0.096, 0.86),
-            (0.113, 0.94), (0.130, 0.97), (0.146, 0.99), (0.163, 1),
-        ],
-        // Blurring on past where it rests hidden while it's still seen; it's gone by the time it's back.
-        .blurOut: [
-            (0, 0), (0.013, 0.10), (0.030, 0.28), (0.046, 0.55), (0.063, 0.88), (0.080, 1.05), (0.096, 1.12), (0.113, 1.15),
-            (0.163, 1.15),
-        ],
+        .opacityIn: [(0.10, 0), (0.13, 0.15), (0.15, 0.30), (0.17, 0.50), (0.19, 0.72), (0.21, 0.88), (0.24, 1)],
+        // The artwork's edges show a little from 0.08, the words' from 0.14; most of it between 0.17
+        // and 0.2.
+        .blurIn: [(0.08, 0), (0.12, 0.10), (0.155, 0.20), (0.17, 0.30), (0.185, 0.48), (0.20, 0.78), (0.215, 0.90), (0.24, 0.96), (0.27, 1)],
+        .opacityOut: [(0, 0), (0.025, 0.85), (0.05, 1)],
+        .blurOut: [(0, 0), (0.025, 0.93), (0.05, 1)],
         // Of what's arrived, how much of a battery's ring shows: it comes in a little after, and goes
         // a little ahead.
         .ringIn: [

@@ -9,7 +9,7 @@ import AppKit
 import SwiftUI
 
 struct OpeningPage: View {
-    @AppStorage(Preferences.openTrigger) private var openTrigger = OpenTrigger.both
+    @AppStorage(Preferences.openTrigger) private var openTrigger = OpenTrigger.click
     @AppStorage(Preferences.hoverDelay) private var hoverDelay = 0.2
     @AppStorage(Preferences.clickDelay) private var clickDelay = 0.0
     @AppStorage(Preferences.haptics) private var haptics = false

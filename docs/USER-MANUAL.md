@@ -91,36 +91,45 @@ song. Times and percentages use the digits of your language and region.
 
 ## Opening and closing
 
-Hover over the notch or click it, depending on **Settings > Opening > Open
-with**: `Hover`, `Click`, or `Hover or click`. The notch closes when the pointer
-leaves it. With no song, playing or paused, and no live activity, there's no
-player to open: the notch opens to the tray, and with the tray off it stays as
-it is. The player's shortcut then does nothing, and swiping stays on the tray.
-The player and tray open and close with their original direct springs. Swipes
-follow your fingers and settle with that same tool motion; changing tools keeps
-the notch open, including while the pointer remains over the wider tray. Lyrics
-resizing, hover and press feedback also keep their original motion. Tools remain
-interactive during animation. When another activity is detached, its bubble
-merges before the tool opens and buds off after it closes. Opening music from
-its bubble returns to that bubble.
+Click the notch to open it, or hover over it, depending on **Settings >
+Opening > Open with**: `Click` at first, `Hover`, or `Hover or click`. Opened
+with a click, the notch stays open with the pointer away, until you click
+outside it, press Escape (with `Accessibility` allowed) or swipe up. Opened by
+hovering, it closes when the pointer leaves it. With no song, playing or
+paused, and no live activity, there's no player to open: the notch opens to the
+tray, and with the tray off it stays as it is. The player's shortcut then does
+nothing, and swiping stays on the tray. Swipes follow your fingers and settle
+on their own spring; changing tools keeps the notch open, including while the
+pointer remains over the wider tray. Tools remain interactive during animation.
 
-An activity alone beside the camera opens straight out of it, as the iPhone's
-Dynamic Island does when you hold it: the notch grows into the open view with a
-small bounce while what was beside the camera blurs away and the open view
-blurs in. Closing it, switching activities, an announcement, and opening beside
-another activity first fold to the camera housing, as the iPhone's island
-shrinks to its bare pill, then expand into the next view. The fold starts fast
-and slows into the housing, and the next view opens about a third of a second
-after it began. Only the expansion bounces, both into the open view and back to
-the compact live activity. Hover keeps those compact activity footprints fixed.
-Their contents and detached bubble follow the same motion. Device announcements
-use this sequence too. When the last activity ends, it stays at the housing.
-Time and progress updates keep their place, and a new action replaces an
-unfinished transition.
+With the pointer on it, the closed notch swells a little at its ends and bottom,
+leaning toward the pointer: the end nearer the pointer reaches out, the other
+stays still, and what the notch shows doesn't move. A bubble beside it does the
+same, and the notch's swell pushes it along. Pressing gives back the width,
+keeping the height, and letting go opens it. A pointer only passing over barely
+swells it, and nothing happens as it only comes near. The open notch takes no
+notice of the pointer.
 
-With Reduce Motion on, nothing bounces: the notch, bubbles and cover settle
-straight where they're going, the star glows without swelling, the skip arrows
-stay where they are, and the welcome tour's pages fade rather than slide.
+Every opening, closing and switch moves on one spring, with a slight overshoot.
+What the notch shows grows straight into its open view and closes straight back
+to it: an activity beside the camera, or the player with music there. Beside a
+bubble, the notch's end takes the bubble in at once and grows from there, and
+the bubble buds off again as it closes. Anything that changes what the notch
+shows first folds to the camera housing, then grows into the next view about a
+quarter of a second after it began: opening the bubble's activity, closing back
+into it, switching activities, an announcement, and a second activity coming or
+going. Opened from its bubble, an activity has the notch's own activity beside
+it as a bubble, and clicking that bubble opens it. What opens comes in once the
+notch has grown, sharp in about a quarter of a second, and goes at once as it
+closes. After closing, the notch comes back a little taller and settles. Only
+the open notch casts a shadow. Device announcements use this sequence too. When
+the last activity ends, it stays at the housing. Time and progress updates keep
+their place, and a new action replaces an unfinished transition.
+
+With Reduce Motion on, nothing bounces or swells: the notch, bubbles and cover
+settle straight where they're going, the star glows without swelling, the skip
+arrows stay where they are, and the welcome tour's pages fade rather than
+slide.
 
 Activity controls become available as they appear. Escape can close an opening
 activity, and the activity navigation keys can change its destination during the
@@ -137,8 +146,8 @@ camera housing. Leaving full screen restores the compact activities and bubble.
 
 | Gesture | Operation |
 | --- | --- |
-| Hover | Opens the notch, after the hover delay; with two activities showing, opens the notch or the bubble once the pointer stops on it |
-| Click | Opens the notch; click and hold, if a hold time is set |
+| Hover | Swells the notch toward the pointer; with `Hover` or `Hover or click`, opens it after the hover delay, or with two activities showing, opens the notch or the bubble once the pointer stops on it |
+| Click | Opens the notch, which stays open until you click outside it; click and hold, if a hold time is set |
 | Swipe down with two fingers | Opens the notch |
 | Swipe up with two fingers | Closes the notch; on the closed notch, swipes its live activity away, but not a call or a recording (see [Live Activities](#live-activities)) |
 | Swipe left or right with two fingers | Changes songs; on the tray, scrolls it |
@@ -1037,7 +1046,7 @@ again when `Notch` is chosen.
 
 | Setting | Operation |
 | --- | --- |
-| `Open with` | `Hover`, `Click`, or `Hover or click` |
+| `Open with` | `Click` at first, `Hover`, or `Hover or click`; opened with a click, the notch stays open until you click outside it |
 | `Hover delay` | How long the pointer rests on the notch before it opens |
 | `Click and hold` | How long a click is held before it opens |
 | `Haptic feedback` | A light tap as the player starts opening, or when another activity reaches the housing before expanding (at first, as **Force Click and haptic feedback** in **System Settings > Trackpad**); with Reduce Motion, the tap is immediate |

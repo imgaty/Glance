@@ -44,21 +44,20 @@ struct ToolMotionTests {
         }
     }
 
-    @Test("A detached activity merges before tool opening and returns after closing", arguments: [NotchPage.player, .tray])
+    @Test("Beside a bubble, the player opens straight, taking the bubble in at once, and it buds off after closing", arguments: [NotchPage.player, .tray])
     func bubbleChoreography(_ page: NotchPage) async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
         model.page = page
         let order = model.activities
+        #expect(model.opensStraight)
         model.open()
-        #expect(model.state == .closed && model.bubbleMerged)
-        #expect(!model.activityControlsHidden)
-        let opening = try #require(model.activityTransitionTask)
-        await opening.value
-        #expect(model.state == .open && model.bubbleMerged)
+        #expect(model.state == .open && model.bubbleMerged && !model.activityFolded)
+        #expect(!model.activityControlsHidden && model.activityTransitionTask == nil)
+        #expect(model.bubbleReach == 0)
         model.close()
-        #expect(model.state == .closed && model.bubbleMerged)
+        #expect(model.state == .closed && model.bubbleMerged && !model.activityFolded)
         #expect(!model.activityControlsHidden)
         let closing = try #require(model.activityTransitionTask)
         await closing.value
@@ -66,44 +65,56 @@ struct ToolMotionTests {
         #expect(model.activities == order)
     }
 
-    @Test("Closing during the tool merge cancels its deferred opening")
+    @Test("Opened from the bubble, the player folds to the housing first; closing during the fold cancels its opening")
     func interruptedMerge() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
+        model.activity = false
         model.timer = .paused(left: 75, total: 120)
+        model.activity = true
+        #expect(model.detached == .music)
+        model.openedFromBubble = true
         model.open()
+        #expect(model.state == .closed && model.activityFolded && model.bubbleMerged)
         let opening = try #require(model.activityTransitionTask)
         model.close()
         let closing = model.activityTransitionTask
         await opening.value
         await closing?.value
         #expect(model.state == .closed && !model.activityControlsHidden)
-        #expect(model.detached == .timer && !model.bubbleMerged)
+        #expect(model.detached == .music && !model.bubbleMerged)
         #expect(model.activityTransitionTask == nil)
     }
 
-    @Test("Tool hover restores its old swell while activity hover and Reduce Motion stay fixed")
+    @Test("Every compact swells its outline under the pointer, never its size; tall announcements and Reduce Motion don't")
     func scopedHover() {
         let model = model()
         defer { model.cancelActivityTransition() }
         let resting = model.metrics
-        model.approach(1)
-        #expect(model.metrics.bodyWidth == resting.bodyWidth + 6)
-        #expect(model.metrics.height == resting.height + 3)
         model.peek()
-        #expect(model.metrics.bodyWidth == resting.bodyWidth + 14)
-        #expect(model.metrics.height == resting.height + 7)
-        model.activityReducesMotion = true
+        model.hoverPlace = .zero
         #expect(model.metrics.bodyWidth == resting.bodyWidth && model.metrics.height == resting.height)
+        let h = model.closedSize.height
+        #expect(abs(model.outline.leading - 2.4 * h / 34.5) < 0.01 && abs(model.outline.trailing - 2.4 * h / 34.5) < 0.01)
+        #expect(abs(model.outline.bottom - 1.5 * h / 34.5) < 0.01)
+        model.activityReducesMotion = true
+        #expect(model.outline == .zero)
         model.activityReducesMotion = false
+        // An activity's compact swells as the player's does.
         model.activity = false
         model.timer = .paused(left: 75, total: 120)
         #expect(!model.interactingWithTools)
+        #expect(model.outline.across > 4)
         #expect(model.metrics.height == model.closedSize.height)
+        // As tall as the Alarm, nothing swells.
+        model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 60, name: "Timer"), spoken: "Timer done", stays: true)
+        #expect(model.restingTall && model.outline == .zero)
+        model.alert = nil
         model.expanded = .timer
         model.open()
-        // An activity grows straight to its own height, with no hover swell added.
+        // Open, it takes no notice of the pointer.
         #expect(!model.activityFolded && model.activityControlsHidden)
+        #expect(model.hoverPlace == nil && model.outline == .zero)
         #expect(model.metrics.height == TimerLayout.tallHeight(model.closedSize.height))
     }
 }

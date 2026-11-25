@@ -18,9 +18,10 @@ struct ActivityOpeningFeedbackTests {
         let model = model()
         defer { model.cancelActivityTransition() }
         model.timer = .paused(left: 75, total: 120)
-        // Beside another activity, so opening folds to the housing first.
+        // The bubble's activity, so opening folds to the housing first.
         model.stopwatch = .stopped(elapsed: 31)
-        model.expanded = .timer
+        model.expanded = .stopwatch
+        model.openedFromBubble = true
         var taps = 0
         model.open {
             taps += 1
@@ -39,7 +40,7 @@ struct ActivityOpeningFeedbackTests {
         #expect(taps == 1)
     }
 
-    @Test("An activity alone taps once as it grows out of its compact")
+    @Test("The notch's own activity taps once as it grows out of its compact")
     func directBeat() async throws {
         let model = model()
         defer { model.cancelActivityTransition() }
@@ -64,6 +65,7 @@ struct ActivityOpeningFeedbackTests {
         model.activity = true
         model.timer = .paused(left: 75, total: 120)
         model.voiceMemo = .recording(since: .now)
+        // Waiting its turn behind the first two, so the notch changes hands and folds first.
         model.expanded = .voiceMemo
         var taps = 0
         model.open { taps += 1 }
@@ -108,10 +110,10 @@ struct ActivityOpeningFeedbackTests {
         preview.setInteractive(true, animated: false)
         preview.model.activity = false
         preview.model.timer = .paused(left: 75, total: 120)
-        // Beside another activity, so opening folds to the housing first.
+        // The bubble's activity, so opening folds to the housing first.
         preview.model.stopwatch = .stopped(elapsed: 31)
         defer { preview.model.cancelActivityTransition() }
-        preview.model.openNotch()
+        preview.model.openBubble()
         let task = try #require(preview.model.activityTransitionTask)
         #expect(taps == 0)
         if scenario == .disabledDuringFold { enabled = false }

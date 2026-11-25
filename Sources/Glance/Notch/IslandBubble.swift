@@ -10,14 +10,15 @@ import SwiftUI
 
 /// The second activity, detached, as the Dynamic Island's minimal presentation shows one beside
 /// another: only ever off the notch's trailing end, the first staying attached at its leading end.
-/// By Apple's measures, for the island's height: a circle as wide as the island is tall, level with
-/// it, 0.175 of that off its end, a timer's ring, the stopwatch's symbol or AirDrop's ring in it
-/// as beside the camera, or a call's time. It leaves the notch's end as a
-/// drop of water does: the end draws back from it on a neck that thins until it parts, and it runs
-/// back into the end as it goes. Opened from the notch, it runs into the notch's end and rides on
-/// it as the notch opens, until the end takes it in; opened from the bubble, it stays where it
-/// rests, and the notch comes out over it. With Reduce Motion on, it fades in and out where it
-/// rests. VoiceOver names it, and opens it as a click does.
+/// By the Mac's island's measures, for its height: a circle as wide as the island is tall, level
+/// with it, 0.217 of that off its end, a timer's ring, the stopwatch's symbol or AirDrop's ring in
+/// it as beside the camera, or a call's time. It leaves the notch's end as a drop of water does: the
+/// end draws back from it on a neck that thins until it parts, and it runs back into the end as it
+/// goes. Opened from the notch, the notch's end takes it in at once and grows from there; opened
+/// from the bubble, it runs into the notch, which folds to the housing first. The pointer resting on
+/// it swells its outline and leans it toward the pointer, with what's in it staying where it is.
+/// With Reduce Motion on, it fades in and out where it rests. VoiceOver names it, and opens it as a
+/// click does.
 struct IslandBubble: View {
     /// Out of the notch; in it, it's hidden in its end.
     let shown: Bool
@@ -43,15 +44,13 @@ struct IslandBubble: View {
     let restingHeight: CGFloat
     /// How far from the notch's middle its trailing end is, which the bubble sits off.
     let notchEnd: CGFloat
-    /// The notch is open: nothing of the bubble shows over its glass.
+    /// How much further out than its gap it rests: beside an open view, past the flare its top
+    /// corner reaches out to the screen's edge with, coming out of the view's body under it.
+    var travel: CGFloat = 0
+    /// The notch is open over it: nothing of the bubble shows over its glass.
     let hidden: Bool
-    /// The notch opened from its own end, which the bubble goes on running into as it opens, riding
-    /// with it: it's hidden only once it's all the way in.
-    var runsIn = false
-    /// Its glyph is carried by the expanded presentation until it returns here.
-    var sharedGlyph = false
-    let hovered: Bool
-    let pressed: Bool
+    /// How far its outline reaches past its circle under the pointer (see `IslandSwell`).
+    var swell = IslandSwell.zero
     var toolMotion = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.islandExpansionMotion) private var expansionMotion
@@ -69,11 +68,10 @@ struct IslandBubble: View {
     /// Counted, so what's kept goes only if nothing has come since.
     @State private var changes = (clock: 0, airdrop: 0, music: 0, recording: 0, call: 0, recognition: 0, alarm: 0, shortcut: 0)
 
-    /// Off the notch's end, by its height.
-    static let gap: CGFloat = 0.175
-    /// The last part of the bubble disappears into the shell during its housing fold, so it
-    /// cannot remain detached beside the bare camera housing.
-    static let inBy: Double = 0.13
+    /// Off the notch's end, by its height: 7.5 points off a 34.5 point island.
+    static let gap: CGFloat = 0.217
+    /// How long it keeps what it showed as it runs back into the notch, at the notch's pace.
+    private static var keeping: Duration { SystemActivityView.folding * (1 / max(NotchMotion.pace, 0.01)) }
 
     /// On the same expansion or collapse motion as the notch's end, so the two part evenly.
     private var motion: Animation { toolMotion ? (shown ? ToolMotion.bubble : ToolMotion.close) : (shown ? expansionMotion : IslandMotion.fold) }
@@ -82,14 +80,22 @@ struct IslandBubble: View {
         let h = restingHeight
         // With Reduce Motion on, it stays where it rests, and only fades.
         let out: CGFloat = shown || reduceMotion ? 1 : 0
+        let span = h * (1 + Self.gap) + travel
         ZStack(alignment: .leading) {
             if !reduceMotion {
-                BubbleBlend(out: out)
+                BubbleBlend(out: out, span: span / h)
                     .animation(motion, value: out)
             }
             ZStack {
                 Circle().fill(.black)
-                    .overlay { Circle().fill(.white.opacity(hovered && !pressed ? 0.08 : 0)) }
+                    // Its outline swollen and leaning toward the pointer; its top, the screen's edge,
+                    // stays put.
+                    .background(alignment: .top) {
+                        Ellipse().fill(.black)
+                            .frame(width: h + swell.across, height: h + swell.bottom)
+                            .offset(x: (swell.trailing - swell.leading) / 2)
+                            .animation(NotchMotion.hover, value: swell)
+                    }
                 ZStack {
                     switch kept {
                     case .timer(let timer): TimerRing(state: timer, height: h)
@@ -130,7 +136,7 @@ struct IslandBubble: View {
                 }
                 .modifier(BubbleGlyph(out: reduceMotion ? 1 : out))
                 .animation(motion, value: out)
-                .modifier(BubbleContentHandoff(hidden: hidden, shared: sharedGlyph))
+                .animation(Animation.easeOut(duration: 0.1).paced) { $0.opacity(hidden ? 0 : 1) }
             }
             .frame(width: h, height: h)
             // What it shows, in words, and a click's opening.
@@ -188,19 +194,18 @@ struct IslandBubble: View {
                         .accessibilityAction(.default, open)
                 }
             }
-            .scaleEffect(reduceMotion || !pressed ? 1 : 0.94)
             .animation(.easeInOut(duration: 0.25)) { $0.opacity(reduceMotion && !shown ? 0 : 1) }
-            .offset(x: h * (1 + Self.gap) * out)
+            .offset(x: span * out)
             .animation(motion, value: out)
         }
         // From inside the notch's end, where it comes out of, to where it rests.
-        .frame(width: h * (2 + Self.gap), height: h, alignment: .leading)
+        .frame(width: h + span, height: h, alignment: .leading)
         // Stepped as the notch's own frame is, so the two keep one clock even when a frame comes late.
-        .modifier(SteppedOffset(x: notchEnd - h + h * (2 + Self.gap) / 2))
+        .modifier(SteppedOffset(x: notchEnd - h + (h + span) / 2))
         // Solid until the opening notch has covered it, or it's run all the way into the notch's end,
         // and back before the closing notch uncovers it, as anything fading here would show as a pale
         // circle beside the notch.
-        .animation((hidden ? Animation.linear(duration: 0.01).delay(runsIn ? Self.inBy : 0.2) : .linear(duration: 0.01)).paced) {
+        .animation((hidden ? Animation.linear(duration: 0.01).delay(0.2) : .linear(duration: 0.01)).paced) {
             $0.opacity(hidden ? 0 : 1)
         }
         // With nothing to show or running back, it isn't there at all, to show past the notch's end.
@@ -216,7 +221,7 @@ struct IslandBubble: View {
             if let new { return kept = new }
             let change = changes.clock
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.clock == change { kept = nil }
             }
         }
@@ -229,7 +234,7 @@ struct IslandBubble: View {
             }
             let change = changes.music
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.music == change {
                     keptMusic = false
                     keptArtwork = nil
@@ -246,7 +251,7 @@ struct IslandBubble: View {
             if let new { return keptAirDrop = new }
             let change = changes.airdrop
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.airdrop == change { keptAirDrop = nil }
             }
         }
@@ -255,7 +260,7 @@ struct IslandBubble: View {
             if let new { return keptRecording = new }
             let change = changes.recording
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.recording == change { keptRecording = nil }
             }
         }
@@ -264,7 +269,7 @@ struct IslandBubble: View {
             if let new { return keptCall = new }
             let change = changes.call
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.call == change { keptCall = nil }
             }
         }
@@ -273,7 +278,7 @@ struct IslandBubble: View {
             if let new { return keptAlarm = new }
             let change = changes.alarm
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.alarm == change { keptAlarm = nil }
             }
         }
@@ -282,7 +287,7 @@ struct IslandBubble: View {
             if let new { return keptShortcut = new }
             let change = changes.shortcut
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.shortcut == change { keptShortcut = nil }
             }
         }
@@ -291,7 +296,7 @@ struct IslandBubble: View {
             if let new { return keptRecognition = new }
             let change = changes.recognition
             Task { @MainActor in
-                try? await Task.sleep(for: SystemActivityView.folding)
+                try? await Task.sleep(for: Self.keeping)
                 if changes.recognition == change { keptRecognition = nil }
             }
         }
@@ -335,6 +340,8 @@ private struct SteppedOffset: ViewModifier, Animatable {
 struct BubbleBlend: View, Animatable {
     /// 0 with the bubble in the notch's end, 1 where it rests.
     var out: CGFloat
+    /// How far it rests from the circle in the notch's end, by the height.
+    var span: CGFloat = 1 + IslandBubble.gap
 
     /// How much it's blurred, by the height: enough for them to part just before the bubble rests.
     static let blur: CGFloat = 0.11
@@ -354,7 +361,7 @@ struct BubbleBlend: View, Animatable {
             context.addFilter(.alphaThreshold(min: 0.5, color: .black))
             context.addFilter(.blur(radius: h * Self.blur))
             context.drawLayer { layer in
-                let bubble = h * (1 + IslandBubble.gap) * out
+                let bubble = h * span * out
                 // One shape, so that where they overlap, in the notch's end, they don't add up past its edge.
                 var circles = Path()
                 for x in [0, bubble] {
@@ -373,17 +380,5 @@ struct BubbleBlend: View, Animatable {
             }
         }
         .padding(-Self.margin)
-    }
-}
-
-private struct BubbleContentHandoff: ViewModifier {
-    let hidden: Bool
-    let shared: Bool
-    func body(content: Content) -> some View {
-        if shared {
-            content.modifier(GrownAway(grown: hidden))
-        } else {
-            content.animation(Animation.easeOut(duration: 0.1).paced) { $0.opacity(hidden ? 0 : 1) }
-        }
     }
 }

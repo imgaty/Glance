@@ -34,7 +34,7 @@ struct NotchPreview: View {
     var pointerOver: Binding<Bool>?
     @EnvironmentObject private var nowPlaying: NowPlaying
     @AppStorage(Preferences.liveActivity) private var liveActivity = true
-    @AppStorage(Preferences.openTrigger) private var trigger = OpenTrigger.both
+    @AppStorage(Preferences.openTrigger) private var trigger = OpenTrigger.click
     @State private var pressing = false
     /// The pointer is over the picture: the pointer showing how gives way.
     @State private var hovering = false

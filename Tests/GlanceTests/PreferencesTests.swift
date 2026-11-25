@@ -215,7 +215,7 @@ struct PreferencesTests {
         #expect(registered[Preferences.swipeToSkip] as? Bool == true)
         #expect(registered[Preferences.lyrics] as? Bool == true)
         #expect(registered[Preferences.musicLayout] as? String == PlayerLayout.top.rawValue)
-        #expect(registered[Preferences.openTrigger] as? String == OpenTrigger.both.rawValue)
+        #expect(registered[Preferences.openTrigger] as? String == OpenTrigger.click.rawValue)
         #expect(registered[Preferences.hoverDelay] as? Double == 0.2)
         #expect(registered[Preferences.clickDelay] as? Double == 0.0)
         #expect(registered[Preferences.haptics] as? Bool == false)

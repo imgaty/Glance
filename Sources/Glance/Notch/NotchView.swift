@@ -146,8 +146,14 @@ final class NotchModel: ObservableObject {
     var activityReducesMotion: Bool?
 
     func advanceActivityTransition() { activityTransitionID &+= 1 }
-    /// 0...1, how close the pointer is while the notch is closed.
-    @Published var proximity: CGFloat = 0
+    /// Where the pointer rests on the closed notch, by its middle (see `IslandSwell.place`), or nil
+    /// off it; and on the bubble.
+    @Published var hoverPlace: CGPoint?
+    @Published var bubbleHoverPlace: CGPoint?
+    /// Just closed, the compact arrives a little taller and relaxes back, as the Mac's island does:
+    /// how much taller, at the bottom.
+    @Published var arrival: CGFloat = 0
+    var arrivalTask: Task<Void, Never>?
     /// Rubber-band offset from scroll gestures, in points. Negative squashes the open notch.
     @Published var stretch: CGFloat = 0
     /// How far a drag across has stretched the notch sideways, either way, as it stretches down: a
@@ -416,6 +422,9 @@ final class NotchModel: ObservableObject {
             keys.clear()
             page = .player
             expanded = activity == .music ? nil : activity
+            // The bubble's activity open, the notch's own buds off beside it; the notch's own open,
+            // the bubble's is taken in.
+            openedFromBubble = activity == second
         }
         return true
     }
@@ -620,14 +629,10 @@ final class NotchModel: ObservableObject {
         let pull = max(stretch, 0)
         let across = abs(lean)
         let resting = short ? closedSize.height : restingHeight
-        let swells =
-            interactingWithTools && !activityControlsHidden && !collapsed && !restingTall
-            && !(activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
-        let swell: CGFloat = swells ? (state == .peek ? 7 : state == .closed ? 3 * proximity : 0) : 0
         let (bodyWidth, height): (CGFloat, CGFloat) =
             switch state {
             case .closed, .peek:
-                (restingWidth + 2 * swell + pull * 0.4 + across, resting + swell + pull)
+                (restingWidth + pull * 0.4 + across, resting + pull)
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(restingHeight: closedSize.height, camera: camera, asking: airdrop?.asking == true) + pull * 0.35 + across,
@@ -673,11 +678,86 @@ final class NotchModel: ObservableObject {
             case .open where page == .tray: (trayWidth + pull * 0.35 + pageStretch + across, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35 + pageStretch + across, openSize.height + pull)
             }
-        // Pressed, it squeezes a little toward the top: made smaller rather than shrunk as a picture,
-        // which the glass, sized afresh with the notch, doesn't follow.
-        let press: CGFloat = pressed ? 0.975 : 1
-        let flare = corners.radii(forHeight: height * press).flare
-        return NotchMetrics(bodyWidth: bodyWidth * press, height: height * press, flare: flare, fold: state == .open || detached == nil ? 0 : max(wing - pastHousing, 0))
+        let flare = corners.radii(forHeight: height).flare
+        return NotchMetrics(bodyWidth: bodyWidth, height: height, flare: flare, fold: state == .open || detached == nil ? 0 : max(wing - pastHousing, 0))
+    }
+
+    /// The pointer swells the closed notch's outline, and not while it changes, as tall as the
+    /// Alarm, folded into a full-screen app's housing, or with Reduce Motion on.
+    var swells: Bool {
+        state != .open && !activityControlsHidden && !collapsed && !entering && !restingTall
+            && !(activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+    }
+
+    /// How far the notch's outline reaches past its shape: leaning toward the pointer resting on it,
+    /// its width given back while pressed, and a little taller just after it closed.
+    var outline: IslandSwell {
+        var swell = IslandSwell.zero
+        if swells, let hoverPlace {
+            swell = IslandSwell.island(toward: hoverPlace, height: closedSize.height)
+            if pressed { swell = swell.pressed }
+        }
+        swell.bottom += arrival
+        return swell
+    }
+
+    /// The bubble's, as the notch's but about half as much, back to its resting size while pressed.
+    var bubbleOutline: IslandSwell {
+        let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard let bubbleHoverPlace, !bubblePressed, !activityControlsHidden, !reduced else { return .zero }
+        return IslandSwell.bubble(toward: bubbleHoverPlace, height: closedSize.height)
+    }
+
+    /// How far the notch's swell pushes the bubble beside it along: about half as far as its end
+    /// reaches out, so the gap between them narrows a little.
+    var bubblePush: CGFloat { state == .open ? 0 : outline.trailing / 2 }
+
+    /// The pointer resting on the closed notch, at a place on it, or gone: the outline swells and
+    /// leans toward it, slowly enough that one passing over barely moves it.
+    func hover(at place: CGPoint?) {
+        guard Self.moved(hoverPlace, to: place) else { return }
+        withAnimation(NotchMotion.hover) { hoverPlace = place }
+    }
+
+    func hoverBubble(at place: CGPoint?) {
+        guard Self.moved(bubbleHoverPlace, to: place) else { return }
+        withAnimation(NotchMotion.hover) { bubbleHoverPlace = place }
+    }
+
+    /// Far enough to swell it by a tenth of a point or more.
+    private static func moved(_ from: CGPoint?, to: CGPoint?) -> Bool {
+        guard let from, let to else { return (from == nil) != (to == nil) }
+        return abs(from.x - to.x) > 0.02 || abs(from.y - to.y) > 0.02
+    }
+
+    /// The compact arrives a little taller after closing from an open view, more after a taller
+    /// one (1.3 points after a 61 point view, 4.5 after a 153 point one on the Mac's island), rising
+    /// as it comes and relaxing with no bounce.
+    static func arrivalSwell(from openHeight: CGFloat, to closedHeight: CGFloat) -> CGFloat {
+        min(max(openHeight - closedHeight, 0) * 0.04, closedHeight * 4.5 / 34.5)
+    }
+
+    /// From `start`, the compact's taller arrival: up over 0.2 seconds, then back as the swell goes.
+    func settleArrival(from openHeight: CGFloat, at start: ContinuousClock.Instant) {
+        arrivalTask?.cancel()
+        let reduced = activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let amount = Self.arrivalSwell(from: openHeight, to: closedSize.height)
+        guard !reduced, amount > 0.1 else { return }
+        let clock = ContinuousClock()
+        let pace = max(NotchMotion.pace, 0.01)
+        arrivalTask = Task { @MainActor [weak self] in
+            do { try await clock.sleep(until: start, tolerance: .zero) } catch { return }
+            withAnimation(Animation.easeOut(duration: 0.2).paced) { self?.arrival = amount }
+            do { try await clock.sleep(until: start + .seconds(0.2 / pace), tolerance: .zero) } catch { return }
+            withAnimation(NotchMotion.hover) { self?.arrival = 0 }
+            self?.arrivalTask = nil
+        }
+    }
+
+    func cancelArrival() {
+        arrivalTask?.cancel()
+        arrivalTask = nil
+        if arrival != 0 { arrival = 0 }
     }
 
     /// With another detached, how far the notch's folded end reaches past the camera housing: far
@@ -696,11 +776,20 @@ enum NotchMotion {
     /// at a time.
     nonisolated(unsafe) static var pace: Double = 1
 
-    /// How long an activity's fold to the housing takes before what comes next opens: the Dynamic
-    /// Island's on iOS 27, measured frame by frame closing a timer and as a second activity came
-    /// and went, reaches its bare pill in 0.22 to 0.27 seconds and opens again by 0.3.
-    static let foldDuration = 0.3
+    /// The Mac's own island moves every change of shape on one spring, measured frame by frame
+    /// opening, closing and switching: half way in 0.09 seconds, nine tenths by 0.17, a little
+    /// under 3% past its end at 0.28, settled by 0.45.
+    static let response = 0.38
+    static let damping = 0.76
+    /// How long the fold to the housing takes before what comes next grows out of it: the next
+    /// phase starts while the fold is still at its furthest past the housing, with no hold.
+    static let foldDuration = 0.25
+    /// How long until what opened is sharp, and its controls take clicks.
+    static let revealDuration = 0.24
+    /// With Reduce Motion on, how long the eased opening takes.
     static let expandDuration = 0.28
+    /// How long after the growth that carries it a bubble pinches off.
+    static let budDelay = 0.17
 }
 
 extension Animation {
@@ -709,30 +798,30 @@ extension Animation {
 }
 
 extension NotchMotion {
-    static var expand: Animation {
+    /// The island's one spring, or with Reduce Motion on, an ease with no travel past its end.
+    static var island: Animation {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: expandDuration)
         }
-        return .spring(duration: expandDuration, bounce: 0.15).paced
+        return .spring(response: response, dampingFraction: damping).paced
     }
 
-    /// A compact return travels only a little beyond its endpoint; expanded openings keep their
-    /// own spring. This never applies to the inward journey to the hardware housing.
-    static var inlineReturn: Animation {
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            return eased(duration: expandDuration)
-        }
-        return .spring(duration: expandDuration, bounce: 0.05).paced
-    }
+    static var expand: Animation { island }
 
-    /// Into the housing as the Dynamic Island goes: fast at once, half way in 0.08 seconds, nine
-    /// tenths by 0.2, settling with no travel past it.
+    /// Back to the compact it opened from, on the same spring.
+    static var inlineReturn: Animation { island }
+
+    /// Into the housing, on the same spring; with Reduce Motion on, a short ease.
     static var fold: Animation {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return eased(duration: 0.16)
         }
-        return .spring(response: 0.3, dampingFraction: 1).paced
+        return island
     }
+
+    /// The outline swelling under the pointer, and back: slower than the island's spring, with no
+    /// bounce, so a pointer that only passes over it barely moves it.
+    static var hover: Animation { .spring(response: 0.42, dampingFraction: 1).paced }
     static var feedback: Animation { eased(duration: 0.18) }
 
     /// Starts and stops at rest, with one speed peak and no travel beyond either endpoint.
@@ -768,7 +857,7 @@ extension NotchModel {
     }
 
     func peek() {
-        withAnimation(interactingWithTools ? ToolMotion.peek : NotchMotion.feedback) { state = .peek }
+        withAnimation(NotchMotion.feedback) { state = .peek }
     }
 
     /// Closed → a device extended, the notch and what it shows in one motion.
@@ -779,54 +868,82 @@ extension NotchModel {
         }
     }
 
-    /// A small hover settles directly. An extended device returns through the housing first.
-    func settle(closeness: CGFloat) {
-        if interactingWithTools, !alertExtended {
-            withAnimation(ToolMotion.settle) {
-                state = .closed
-                proximity = Self.eased(closeness)
-            }
+    /// The pointer gone, it settles directly. An extended device returns through the housing first.
+    func settle() {
+        hover(at: nil)
+        if !alertExtended {
+            withAnimation(NotchMotion.feedback) { state = .closed }
             return
         }
-        changeActivityPresentation(animation: alertExtended ? IslandMotion.fold : NotchMotion.feedback) {
+        changeActivityPresentation(animation: IslandMotion.fold) {
             state = .closed
             alertExtended = false
-            proximity = Self.eased(closeness)
         }
     }
 
-    /// Tools open directly, and so does an activity alone beside the camera, growing out of its own
-    /// compact as the Dynamic Island's does when held, measured on iOS 27. Opened over an
-    /// announcement or beside another activity, it first collapses to the housing.
+    /// What the notch shows grows straight open out of its compact, as the Mac's island does when
+    /// its own activity opens; what's opened from the bubble, or over an announcement, changes what
+    /// the notch shows, so it first folds to the housing (see `opensStraight`).
     func open(onCollapse: (() -> Void)? = nil) {
         guard !entering else { return }
         if expanded == nil {
             openTools(onOpen: onCollapse)
             return
         }
-        let alone = state != .open && alert == nil && !activityFolded && !collapsed && activities.prefix(2).count == 1
-        changeActivityPresentation(animation: Self.activityExpansionMotion, opensDirectly: alone, onCollapse: onCollapse) {
+        let straight = opensStraight
+        if straight { coverBubble() }
+        changeActivityPresentation(animation: Self.activityExpansionMotion, opensDirectly: straight, onCollapse: onCollapse) {
             state = .open
             pressed = false
             bubblePressed = false
             stretch = 0
             lean = 0
             pageStretch = 0
-            proximity = 0
             pop = false
             bubbleReach = 0
+            hoverPlace = nil
+            bubbleHoverPlace = nil
+        }
+    }
+
+    /// Opening grows straight out of the compact only when it opens what the notch already shows: its
+    /// own activity, or the player for music beside the camera, and not from the bubble, over an
+    /// announcement, or in the middle of a change. Anything else passes through the housing.
+    var opensStraight: Bool {
+        guard state != .open, alert == nil, !activityFolded, !collapsed, !openedFromBubble else { return false }
+        if let expanded { return expanded == activities.first }
+        return activities.first == nil || activities.first == .music
+    }
+
+    /// Closing goes straight back to the compact only when that shows what was open: its own
+    /// activity or the player, opened from the notch, with nothing announced meanwhile.
+    var closesStraight: Bool {
+        guard state == .open, alert == nil, !activityFolded, !collapsed, !openedFromBubble, !expandedGone else { return false }
+        if let expanded { return expanded == activities.first }
+        return activities.first == nil || activities.first == .music
+    }
+
+    /// Opening straight beside the bubble, the notch's end takes it in at once and grows from there,
+    /// as the Mac's island's does in its first frame: one outline over both.
+    func coverBubble() {
+        guard second != nil, detached != nil, !(activityReducesMotion ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion) else { return }
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) {
+            bubbleReach = bubbleSpan
+            bubbleMerged = true
         }
     }
 
     /// Ends a display or test scene with the same fold, regardless of the activity showing.
     func collapseAway() {
         cancelActivityTransition()
+        cancelArrival()
         withAnimation(IslandMotion.fold) {
             collapsed = true
             state = .closed
             activity = false
             pop = false
-            proximity = 0
             pressed = false
             stretch = 0
             lean = 0
@@ -837,6 +954,9 @@ extension NotchModel {
             bubblePressed = false
             bubbleMerged = false
             bubbleReach = 0
+            hoverPlace = nil
+            bubbleHoverPlace = nil
+            arrival = 0
         }
     }
 
@@ -848,7 +968,8 @@ extension NotchModel {
             withAnimation(reduced ? nil : IslandMotion.fold) {
                 state = .closed
                 collapsed = true
-                proximity = 0
+                hoverPlace = nil
+                bubbleHoverPlace = nil
                 pressed = false
                 stretch = 0
                 lean = 0
@@ -864,7 +985,7 @@ extension NotchModel {
             closeTools()
             return
         }
-        changeActivityPresentation(animation: IslandMotion.fold) {
+        changeActivityPresentation(animation: IslandMotion.fold, opensDirectly: closesStraight) {
             state = .closed
             stretch = 0
             lean = 0
@@ -873,22 +994,15 @@ extension NotchModel {
         }
     }
 
-    /// Tools retain their original press spring; activities use their quieter feedback.
+    /// Pressed, the outline gives back its width and keeps its height; let go, it swells again.
     func press(_ down: Bool) {
         guard pressed != down else { return }
-        withAnimation(interactingWithTools ? ToolMotion.press(down) : NotchMotion.feedback) { pressed = down }
+        withAnimation(NotchMotion.hover) { pressed = down }
     }
 
-    /// Tools grow slightly toward the pointer; activity footprints stay fixed.
-    func approach(_ closeness: CGFloat) {
-        let value = Self.eased(closeness)
-        guard abs(value - proximity) > 0.01 || (value == 0 && proximity != 0) else { return }
-        withAnimation(interactingWithTools ? ToolMotion.approach : NotchMotion.feedback) { proximity = value }
-    }
-
-    private static func eased(_ closeness: CGFloat) -> CGFloat {
-        let t = min(max(closeness, 0), 1)
-        return t * t * (3 - 2 * t)
+    func pressBubble(_ down: Bool) {
+        guard bubblePressed != down else { return }
+        withAnimation(NotchMotion.hover) { bubblePressed = down }
     }
 }
 
@@ -989,8 +1103,11 @@ struct NotchView: View {
         let playerShown = heroOpen && !onTray
         let trayShown = heroOpen && onTray
         let closed = model.closedSize
-        // Hidden at rest so no glass rim glints around the hardware notch; closed, it's black.
-        let visible: Double = !model.activityFolded && (model.state != .closed || tall) ? 1 : 0
+        // Hidden closed so no glass rim glints around the hardware notch or its swell; closed, it's
+        // black.
+        let visible: Double = !model.activityFolded && (model.state == .open || tall) ? 1 : 0
+        // The pointer's swell, and the taller arrival after closing: the outline alone.
+        let outline = model.outline
         // With Increase Contrast on, the colors stay, darker (see `contrastDim`).
         let lit = playerShown && nowPlaying.artwork != nil && background != .none
         let lyricsShown = heroOpen && model.showsLyrics
@@ -998,7 +1115,6 @@ struct NotchView: View {
         let swell = isOpen ? 1 : m.height / model.restingHeight
 
         ZStack(alignment: .top) {
-            shade
             // One persistent field of color reshapes between the background and the spotlight.
             artworkBackground(m, shown: playerShown && nowPlaying.artwork != nil)
             // As wide as the notch is at each step, so what the wings show rides in and out with their
@@ -1165,6 +1281,9 @@ struct NotchView: View {
         .offset(x: -reach / 2)
         .modifier(SteppedFrame(width: m.bodyWidth + reach, height: m.height, corners: model.corners, least: model.collapsed ? .zero : model.closedSize))
         .coordinateSpace(.named(Self.bodySpace))
+        // Swollen under the pointer, the outline reaches past what's in it, which stays where it is.
+        .modifier(SteppedOutline(swell: outline))
+        .background(alignment: .top) { shade }
         .environment(\.demoPointer, model.demoPointer)
         // Stretched sideways, what's in it stretches with it, staying where it is.
         // Pulled down, too, what's in it stretches with it.
@@ -1172,8 +1291,9 @@ struct NotchView: View {
         .scaleEffect(contentStretch(m), anchor: .top)
         .clipShape(shape)
         // The second activity, detached off the notch's trailing end. Behind the notch, so in its
-        // end, all of it is hidden there, under what the notch shows.
-        .background(alignment: .top) { bubble(m).offset(x: -reach / 2) }
+        // end, all of it is hidden there, under what the notch shows. Where the notch leans, it's
+        // from the outline's middle; the notch's swell pushes it along.
+        .background(alignment: .top) { bubble(m).offset(x: -reach / 2 - (outline.trailing - outline.leading) / 2 + model.bubblePush) }
         .background {
             ZStack {
                 if thumbnail {
@@ -1203,6 +1323,10 @@ struct NotchView: View {
                 }
             }
         }
+        // Open, it casts a soft shadow, as the Mac's island's open views do; closed, none.
+        .background { OpenShadow(shape: shape, height: m.height, restingHeight: closed.height, shown: isOpen) }
+        // Room on the far side for the outline's lean, so the notch's own frame stays in the middle.
+        .modifier(SteppedOutline(swell: outline, balancing: true))
         // Pushed up, the open notch shrinks a little as a whole, so nothing in it is cut off.
         .scaleEffect(model.activityFolded ? 1 : 1 + min(model.stretch, 0) * 0.005, anchor: .top)
         // The housing travels through the display edge without changing its shape.
@@ -1243,14 +1367,12 @@ struct NotchView: View {
     private var waveformShown: Bool { model.musicShown && !model.pop && !musicAway && model.detached == nil }
 
     private func bubble(_ m: NotchMetrics) -> some View {
-        // Open, it stays where it was, under the notch, which came out over it.
-        let activity = model.detached ?? (model.state == .open ? model.second : nil)
-        // Riding on the notch's end under the pointer. Opened from the notch, it goes on running into
-        // the end it ran towards, riding with it as the notch opens, so the two run together as drops
-        // do rather than the opening notch covering it at once. Opened from the bubble, the notch
-        // reaches over it where it rests, off the camera's end, and grows from there.
+        // Opened from the bubble, the notch's own activity buds off beside the open view, on the
+        // compact's row, as the Mac's island's does; opened from the notch, the bubble stays where it
+        // was, under the notch, which came out over it at once.
+        let beside = model.state == .open && model.openedFromBubble
+        let activity = model.detached ?? (model.state == .open ? (beside ? model.activities.first : model.second) : nil)
         let restingEnd = model.closedSize.width / 2
-        let runsIn = model.state == .open && model.bubbleMerged && !model.openedFromBubble
         return IslandBubble(
             shown: activity != nil && !model.bubbleMerged && !model.activityFolded, clock: activity.flatMap(model.clock(of:)),
             airdrop: activity == .airdrop ? model.airdrop : nil,
@@ -1263,26 +1385,17 @@ struct NotchView: View {
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
             restingHeight: model.closedSize.height,
-            notchEnd: model.state != .open ? m.bodyWidth / 2 - m.fold : runsIn ? m.bodyWidth / 2 : restingEnd,
-            hidden: model.state == .open || model.activityFolded, runsIn: runsIn, sharedGlyph: bubbleShares,
-            hovered: model.bubbleHovered, pressed: model.bubblePressed, toolMotion: model.toolPresentation)
+            // Beside an open view, it comes out of the view's body, under the flare its top corner
+            // reaches out to the screen's edge with, and rests past that flare.
+            notchEnd: model.state != .open ? m.bodyWidth / 2 - m.fold : beside ? m.bodyWidth / 2 : restingEnd,
+            travel: beside ? m.flare : 0,
+            hidden: (model.state == .open && !beside) || model.activityFolded,
+            swell: model.bubbleOutline, toolMotion: model.toolPresentation)
     }
 
     /// Keep each activity's closed pose mounted, so the notch's own transaction moves it.
     private func grownOrigin(_ activity: NotchModel.Activity) -> CGFloat? {
         !model.openedFromBubble && model.activities.first == activity ? model.restingWidth : nil
-    }
-
-    private func bubbleOrigin(_ activity: NotchModel.Activity) -> CGFloat? {
-        model.second == activity && sharesBubble(activity) ? model.closedSize.width / 2 + model.closedSize.height * (IslandBubble.gap + 0.5) : nil
-    }
-
-    private var bubbleShares: Bool {
-        model.openedFromBubble && model.second.map(sharesBubble) == true
-    }
-
-    private func sharesBubble(_ activity: NotchModel.Activity) -> Bool {
-        activity.sharesBubbleSide
     }
 
     private var grownFrom: CGFloat? { model.expanded.flatMap(grownOrigin) }
@@ -1299,7 +1412,6 @@ struct NotchView: View {
                     revealed: visible, closedWidth: grownOrigin(activity)
                 )
                 .frame(width: width, height: TimerLayout.tallHeight(h))
-                .environment(\.activityBubbleCenter, bubbleOrigin(activity))
                 .environment(\.notchControls, visible && !activityPreview)
                 .allowsHitTesting(places == nil && visible)
                 .accessibilityHidden(!visible)
@@ -1316,7 +1428,6 @@ struct NotchView: View {
                 call: call, restingHeight: h, width: ExpandedCallView.width(for: call, restingHeight: h, closedWidth: model.closedSize.width),
                 revealed: visible, closedWidth: grownOrigin(.call)
             )
-            .environment(\.activityBubbleCenter, bubbleOrigin(.call))
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)
@@ -1332,7 +1443,6 @@ struct NotchView: View {
                 shown: transfer, restingHeight: h, width: AirDropLayout.width(restingHeight: h, camera: model.camera, asking: transfer.asking),
                 revealed: visible, closedWidth: grownOrigin(.airdrop)
             )
-            .environment(\.activityBubbleCenter, bubbleOrigin(.airdrop))
             .environment(\.notchControls, visible && !activityPreview)
             .allowsHitTesting(places == nil && visible)
             .accessibilityHidden(!visible)
@@ -1397,7 +1507,6 @@ struct NotchView: View {
                     recording: recording, restingHeight: model.closedSize.height, camera: model.camera, width: model.openWidth(of: recording),
                     revealed: visible, closedWidth: grownOrigin(activity)
                 )
-                .environment(\.activityBubbleCenter, bubbleOrigin(activity))
                 .environment(\.notchControls, visible && !activityPreview)
                 .allowsHitTesting(places == nil && visible)
                 .accessibilityHidden(!visible)
@@ -1862,6 +1971,70 @@ private struct SteppedFrame: ViewModifier, Animatable {
     }
 }
 
+/// The outline's swell, laid out afresh at every step as it animates, as the notch's frame is, so
+/// the glass behind it swells with it. Inside, room at the ends and the bottom of what's in the
+/// notch, which stays where it is; balancing, as much again on the other side, so the notch's own
+/// frame stays in the middle however the outline leans.
+private struct SteppedOutline: ViewModifier, Animatable {
+    var swell: IslandSwell
+    var balancing = false
+
+    var animatableData: AnimatablePair<CGFloat, AnimatablePair<CGFloat, CGFloat>> {
+        get { AnimatablePair(swell.leading, AnimatablePair(swell.trailing, swell.bottom)) }
+        set { swell = IslandSwell(leading: newValue.first, trailing: newValue.second.first, bottom: newValue.second.second) }
+    }
+
+    func body(content: Content) -> some View {
+        let (leading, trailing, bottom) = (max(swell.leading, 0), max(swell.trailing, 0), max(swell.bottom, 0))
+        if balancing {
+            content.padding(.leading, trailing).padding(.trailing, leading)
+        } else {
+            content.padding(.leading, leading).padding(.trailing, trailing).padding(.bottom, bottom)
+        }
+    }
+}
+
+/// The shadow an open view casts, as the Mac's island's do: a soft black copy of its shape, lower
+/// down, never under the notch itself, which may be glass; as dark as measured under a view as tall
+/// as the open player, and less under a shorter one. Closed, there's none.
+struct OpenShadow: View {
+    let shape: NotchShape
+    let height: CGFloat
+    let restingHeight: CGFloat
+    let shown: Bool
+
+    /// Measured under the open player on white: a blurred copy with these, fitting 32% darker just
+    /// under its edge, 23% 10 points down and 12% 20 points down.
+    static let opacity = 0.42
+    static let blur: CGFloat = 16.5
+    static let drop: CGFloat = 11.5
+    /// The open player's height on the Mac's island, and its compact's.
+    private static let measuredOpen: CGFloat = 153.1
+    private static let measuredClosed: CGFloat = 34.5
+
+    /// How dark, for a view this tall: under the 61 point recording view it measured about half.
+    static func opacity(height: CGFloat, restingHeight: CGFloat) -> Double {
+        let grown = (height - restingHeight) / max(restingHeight * (measuredOpen - measuredClosed) / measuredClosed, 1)
+        return opacity * Double(min(max(grown, 0), 1)).squareRoot()
+    }
+
+    var body: some View {
+        let room = Self.blur * 3 + Self.drop
+        shape.fill(.black)
+            .offset(y: Self.drop)
+            .blur(radius: Self.blur)
+            // Drawn past the notch's frame, where the blur and the drop take it, but never inside it.
+            .mask {
+                Rectangle().padding(-room)
+                    .overlay { shape.fill(.black).blendMode(.destinationOut) }
+                    .compositingGroup()
+            }
+            .opacity(shown ? Self.opacity(height: height, restingHeight: restingHeight) : 0)
+            .animation((shown ? Animation.easeOut(duration: 0.2).delay(0.08) : .easeOut(duration: 0.12)).paced, value: shown)
+            .allowsHitTesting(false)
+    }
+}
+
 extension View {
     /// As wide as the notch is at each step as it animates, less its flares, so what the wings show
     /// rides in and out with their ends, as the Dynamic Island's activities do.
@@ -2056,9 +2229,4 @@ final class GlassBlurView: NSView {
         let scale: CGFloat = radius < 8 ? 1 : 0.5
         if (backdrop.value(forKey: "scale") as? CGFloat) != scale { backdrop.setValue(scale, forKey: "scale") }
     }
-}
-
-/// A detached bubble is on the right. Only an element expanded on that same side travels from it.
-extension NotchModel.Activity {
-    var sharesBubbleSide: Bool { self == .airdrop }
 }

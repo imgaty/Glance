@@ -299,7 +299,7 @@ private struct StepPage: View {
 private struct SettingChoice: View {
     let setting: OnboardingSetting
     let display: String
-    @AppStorage(Preferences.openTrigger) private var openTrigger = OpenTrigger.both
+    @AppStorage(Preferences.openTrigger) private var openTrigger = OpenTrigger.click
     @AppStorage(Preferences.musicLayout) private var layout = PlayerLayout.top
     /// The background of the display pictured.
     @AppStorage private var shownBackground: MusicBackground
