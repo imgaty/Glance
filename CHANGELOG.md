@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 24 November 2026`
+`Created: 11 October 2026` | `Last updated: 25 November 2026`
 
 <br>
 
@@ -38,6 +38,11 @@
   turns down an app that's on a call.
 
 - Fixed the ring of a shortcut run from the notch's menu never filling.
+
+- Fixed files coming in over AirDrop never showing in the notch on macOS 27.3.
+  They now show from when the file starts coming until it's in, with its ring
+  and **Stop**. Opened, the notch names the file rather than the sender, as
+  macOS 27.3 no longer tells other apps who sent it.
 
 - Fixed quitting Glance sometimes leaving System Settings open, and macOS's own
   Live Activities turned off while Glance wasn't running. Glance now turns back
