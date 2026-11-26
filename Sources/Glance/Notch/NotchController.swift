@@ -1187,6 +1187,28 @@ final class NotchController {
         if model.state == .open, !openZone.contains(p), besideBubbleZone?.contains(p) != true { close(holdUntilExit: false) }
     }
 
+    /// A click in one of Glance's own windows, such as Settings, at a point on the screen, which
+    /// the watch on other apps' clicks never hears. Off the notch, it closes it as a click in
+    /// another app does (see `clickIsOutside`).
+    func clicked(inGlance window: NSWindow?, at p: CGPoint) {
+        let look = QLPreviewPanel.sharedPreviewPanelExists() ? QLPreviewPanel.shared() : nil
+        let outside = Self.clickIsOutside(
+            in: window, own: [panel, touchTarget].compactMap { $0 }, menuUp: holds.contains(.menu), sharing: Tray.shared.sharing,
+            quickLook: look?.isVisible == true ? look : nil)
+        if outside { clicked(outsideAt: p) }
+    }
+
+    /// Whether a click in one of Glance's own windows is outside the notch. Its own window and
+    /// touch target take their clicks themselves (see `press` and `tapped`), and what it keeps open
+    /// takes its own: a menu opened from it, Share's picker over the tray, Quick Look showing the
+    /// tray's items. Anywhere else, Settings or another notch included, is outside.
+    static func clickIsOutside(in window: NSWindow?, own: [NSWindow], menuUp: Bool, sharing: Bool, quickLook: NSWindow?) -> Bool {
+        if let window, own.contains(where: { $0 === window }) { return false }
+        if menuUp || sharing { return false }
+        if let window, let quickLook, window === quickLook { return false }
+        return true
+    }
+
     /// Pressing the closed notch gives back its swell's width, and letting go opens it, at a point on
     /// the screen. A click outside the open notch closes it; one on the bubble beside it opens what
     /// the bubble shows. A tap in its window's margin, which takes them while a finger holds it open,

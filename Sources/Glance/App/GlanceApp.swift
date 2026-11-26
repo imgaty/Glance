@@ -607,6 +607,11 @@ final class NotchManager {
             NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
                 MainActor.assumeIsolated { self?.clickedElsewhere() }
             },
+            // Clicks in Glance's own windows, such as Settings, only a local monitor sees.
+            NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                MainActor.assumeIsolated { self?.clickedInGlance(event.window) }
+                return event
+            },
             NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
                 MainActor.assumeIsolated { self?.pressed(event.type == .leftMouseDown) }
             },
@@ -809,6 +814,11 @@ final class NotchManager {
     private func clickedElsewhere() {
         let location = NSEvent.mouseLocation
         controllers.forEach { $0.clicked(outsideAt: location) }
+    }
+
+    private func clickedInGlance(_ window: NSWindow?) {
+        let location = NSEvent.mouseLocation
+        controllers.forEach { $0.clicked(inGlance: window, at: location) }
     }
 }
 
