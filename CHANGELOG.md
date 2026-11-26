@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 25 November 2026`
+`Created: 11 October 2026` | `Last updated: 26 November 2026`
 
 <br>
 
@@ -450,6 +450,9 @@
   `Haptic feedback` as **Force Click and haptic feedback** is set in
   **System Settings > Trackpad**, and `Animated cover` off while
   **Reduce motion** is on. Updates keep every setting as it was.
+- Changed `Rebuild` in the menu bar to bring in what's new on Glance's branch
+  on GitHub before it builds. It stops with the reason if this copy can't
+  simply move forward to it.
 
 ### Accessibility and languages
 

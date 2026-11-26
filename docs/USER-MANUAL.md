@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 25 November 2026`
+`Created: 11 October 2026` | `Last updated: 26 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -898,7 +898,7 @@ Glance's icon in the menu bar opens a menu:
 | --- | --- |
 | `Glance` switch | Turns the notch off on every display, until it's turned back on |
 | `Check for Updates…` | Looks for a new version now |
-| `Rebuild` | Builds Glance again from its source and relaunches it (builds made from source only) |
+| `Rebuild` | Brings in what's new on Glance's branch on GitHub, then builds Glance again from its source and relaunches it (builds made from source only) |
 | `Glance Settings…` | Opens Settings |
 | `Quit Glance` | Closes the notch away, then quits Glance, as any other way of quitting it does but `Force Quit` |
 

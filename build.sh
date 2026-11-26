@@ -1,18 +1,26 @@
 #!/bin/zsh
 # Builds Glance.app into ./build.
+#   --pull     first brings in what's new on this branch on GitHub (Rebuild uses it)
 #   --run      relaunches it afterwards, with the welcome tour
 #   --release  leaves out where it was built from (so no Rebuild menu item), for release.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 
-RUN=false RELEASE=false
+PULL=false RUN=false RELEASE=false
 for arg in "$@"; do
     case "$arg" in
+        --pull) PULL=true ;;
         --run) RUN=true ;;
         --release) RELEASE=true ;;
         *) echo "Unknown option: $arg" >&2; exit 64 ;;
     esac
 done
+
+if $PULL; then
+    # Only a fast-forward: if this copy and GitHub have each gone their own way, the build stops
+    # rather than merging them here. Never waits for a password.
+    GIT_TERMINAL_PROMPT=0 git pull --ff-only
+fi
 
 swift build -c release
 

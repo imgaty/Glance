@@ -222,8 +222,9 @@ final class StatusBarController: NSObject {
 
     // MARK: Rebuild
 
-    /// Runs build.sh --run, which replaces this app with a fresh build and relaunches it.
-    /// On success this process is killed by the script; only failures come back here.
+    /// Runs build.sh --pull --run, which brings in what's new on this branch on GitHub, then
+    /// replaces this app with a fresh build and relaunches it. On success this process is killed by
+    /// the script; only failures come back here, a pull that can't fast-forward among them.
     private func rebuild() {
         guard buildProcess == nil, let source = BuildInfo.sourceDirectory else { return }
         let log = source.appending(path: "build/rebuild.log")
@@ -232,7 +233,7 @@ final class StatusBarController: NSObject {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = [source.appending(path: "build.sh").path, "--run"]
+        process.arguments = [source.appending(path: "build.sh").path, "--pull", "--run"]
         process.currentDirectoryURL = source
         if let output = try? FileHandle(forWritingTo: log) {
             process.standardOutput = output
