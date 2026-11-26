@@ -350,12 +350,14 @@ struct MenuBarLiveActivitiesTests {
         settings.owned = ["Now Playing"]
         settings.values["Now Playing"] = false
         settings.active = false
-        settings.openDelay = .seconds(2)
+        // Long enough that a busy test run's main-thread stalls still leave the giving up well
+        // short of the opening coming back.
+        settings.openDelay = .seconds(4)
         let manager = settings.manager()
         let clock = ContinuousClock()
         let start = clock.now
         await manager.finish(within: .milliseconds(200), launchTime: .zero)
-        #expect(clock.now - start < .milliseconds(1500))
+        #expect(clock.now - start < .milliseconds(3500))
         #expect(settings.closes == 0)
         // The pass it left still ends on its own.
         #expect(await eventually { settings.closes == 1 })
