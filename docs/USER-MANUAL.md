@@ -1,6 +1,6 @@
 # User Manual
 
-`Created: 11 October 2026` | `Last updated: 24 November 2026`
+`Created: 11 October 2026` | `Last updated: 25 November 2026`
 
 Installing, using, updating, and removing Glance and all its features.
 
@@ -782,9 +782,11 @@ goes in a bubble of its own, showing the ring.
 When someone nearby asks to share a file with you, the notch opens by itself to
 the file's picture, who it's from, and two buttons: **Decline**, a cross, and
 **Accept**, a check on AirDrop's blue. Accepted, the file comes in as above.
-macOS's own request stays where it is, so it can be answered there too. An
-incoming request hasn't yet been tried with a real AirDrop, so if the notch's
-buttons don't answer it, use macOS's.
+macOS's own request stays where it is, so it can be answered there too, even
+with `Hide native Live Activities` on: macOS's AirDrop Live Activity then comes
+back for the request, and goes once it's answered. An incoming request hasn't
+yet been tried with a real AirDrop, so if the notch's buttons don't answer it,
+use macOS's.
 
 If several files arrive together, the visible transfer stays until it ends;
 the next accepted transfer then takes its place in arrival order.
@@ -1013,7 +1015,7 @@ again when `Notch` is chosen.
 | Setting | Operation |
 | --- | --- |
 | `Show in` | `Notch` or `Menu Bar`, as above |
-| `Hide native Live Activities` | Turns off every Live Activity in **System Settings > Menu Bar > Live Activities**, other apps' included and macOS's own Music Recognition, while the notch shows Live Activities, with `Accessibility` allowed. Clock stays on, as with it off macOS shows ringing alarms nowhere, not even as a notification. Now Playing and Screenshot stay on while `Now Playing` or `Recordings` is off. Turning this off, choosing `Menu Bar`, turning the notch off or quitting Glance turns back on everything Glance turned off; what you turned off yourself stays off |
+| `Hide native Live Activities` | Turns off every Live Activity in **System Settings > Menu Bar > Live Activities**, other apps' included and macOS's own Music Recognition, while the notch shows Live Activities, with `Accessibility` allowed. Clock stays on, as with it off macOS shows ringing alarms nowhere, not even as a notification. Now Playing and Screenshot stay on while `Now Playing` or `Recordings` is off. macOS's own AirDrop Live Activity, which isn't listed there, is hidden too while `AirDrop` is on, with or without `Accessibility`, and shows only while a request someone sends you waits for an answer. Turning this off, choosing `Menu Bar`, turning the notch off or quitting Glance turns back on everything Glance turned off, AirDrop's included; what you turned off yourself stays off |
 | `Now Playing` | What's playing beside the camera while the notch is closed, its cover and a waveform, and a moment's announcement of what starts playing |
 | `Battery` | Shows the battery's level when you plug in, and warns at 20% and again at 10% (MacBooks only) |
 | `Devices` | Shows AirPods and Beats as they connect |
@@ -1179,4 +1181,12 @@ rm -rf ~/Library/Caches/dev.vibe.Glance
 ```
 ```sh
 tccutil reset All dev.vibe.Glance
+```
+
+If macOS's AirDrop Live Activity still doesn't show in the menu bar once Glance
+is gone, Glance didn't get to show it again before it was removed. To show it,
+run:
+
+```sh
+defaults delete -g MenuBarDeniedLiveActivityBundleIDs
 ```

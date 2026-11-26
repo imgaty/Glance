@@ -12,7 +12,8 @@ import ApplicationServices
 /// switch System Settings lists under Menu Bar > Live Activities, read as it is, so apps' own are
 /// included, but those that would leave something showing nowhere (see `kept`). What it turned off
 /// is remembered, and only that is turned back on: when the switch goes off, Menu Bar is chosen or
-/// the notch is turned off.
+/// the notch is turned off. AirDrop's, which no switch lists, goes on MenuBarAgent's own list of
+/// apps it leaves out instead, at the same times (see `MenuBarDenyList`).
 @MainActor
 final class MenuBarLiveActivities {
     static let shared = MenuBarLiveActivities()
@@ -88,7 +89,8 @@ final class MenuBarLiveActivities {
         return kept
     }
 
-    /// Pills no switch takes away, so showing never calls for another pass: AirDrop's.
+    /// Pills no switch takes away, so showing never calls for another pass: AirDrop's, which
+    /// `MenuBarDenyList` hides instead.
     nonisolated static let unswitchable: Set<String> = ["com.apple.Sharing.AirDropUI"]
 
     func start() {
@@ -108,6 +110,9 @@ final class MenuBarLiveActivities {
                 shared.check()
             }
         }
+        // A request someone sends over AirDrop brings macOS's AirDrop back at once, and its answer
+        // hides it again.
+        AirDropRequests.shared.changed = { MenuBarLiveActivities.shared.refreshIntent() }
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { Self.opened?.forceTerminate() }
         }
@@ -140,6 +145,9 @@ final class MenuBarLiveActivities {
             generation &+= 1
         }
         retries.retainRestorations(for: latest, owned: dependencies.owned())
+        // Needs neither Accessibility nor System Settings, so it never waits on a pass. Once Glance
+        // is quitting, a pass still under way can't put AirDrop back on the list.
+        dependencies.denyList(latest.hidesAny && !stopping)
         return latest
     }
 
@@ -200,6 +208,8 @@ final class MenuBarLiveActivities {
         spaceObserver = nil
         // Quitting doesn't wait out a failure's backoff.
         retries = RetrySchedule()
+        // Instant, so macOS's AirDrop shows again even if Glance is made to quit at once.
+        dependencies.denyList(false)
     }
 
     /// Glance is quitting, the notch gone: turns back on what Glance turned off, as with the notch
@@ -459,6 +469,8 @@ final class MenuBarLiveActivities {
         /// The apps whose pills show, other than those that are meant to.
         var pills: @MainActor () async -> Set<String>
         var openSettings: @MainActor () async -> SettingsSession?
+        /// Puts the apps no switch hides on MenuBarAgent's list, or takes them off.
+        var denyList: @MainActor (_ hiding: Bool) -> Void = { _ in }
 
         @MainActor static var system: Self {
             Self(
@@ -474,7 +486,13 @@ final class MenuBarLiveActivities {
                     let ignored = Set(MenuBarLiveActivities.known.filter { kept.contains($0.name) }.map(\.pill)).union(MenuBarLiveActivities.unswitchable)
                     return await Task.detached { MenuBarLiveActivities.pills().subtracting(ignored) }.value
                 },
-                openSettings: { await MenuBarLiveActivities.openSettings() })
+                openSettings: { await MenuBarLiveActivities.openSettings() },
+                denyList: { hiding in
+                    // Hidden only while a request would be seen, and none waits for an answer.
+                    let wanted = MenuBarDenyList.hides(hiding), requests = AirDropRequests.shared
+                    requests.follow(wanted)
+                    MenuBarDenyList().apply(hiding: MenuBarDenyList.hides(wanted: wanted, requestsSeen: requests.ready, asking: requests.asking))
+                })
         }
     }
 

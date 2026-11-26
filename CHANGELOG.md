@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 24 November 2026`
+`Created: 11 October 2026` | `Last updated: 25 November 2026`
 
 <br>
 
@@ -23,7 +23,9 @@
   macOS's own Music Recognition included, and to turn them all back on when it
   goes off or `Menu Bar` is chosen. Clock stays on, as macOS shows ringing
   alarms nowhere without it. Screen recordings still show in the notch with
-  Screenshot's turned off.
+  Screenshot's turned off. macOS's own AirDrop Live Activity, which isn't
+  listed there, is hidden too while `AirDrop` is on, and shows only while a
+  request someone sends you waits for an answer.
 
 - Added `Show in` to **Settings > Live Activities**, with `Notch` and
   `Menu Bar`. `Menu Bar` leaves Now Playing, Clock, recordings, AirDrop and
