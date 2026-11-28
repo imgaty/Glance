@@ -10,6 +10,11 @@
 
 ### Live Activities
 
+- Fixed a Focus turned on or off from Control Center never showing in the
+  notch: macOS shows no banner for a change made there. Glance now also reads
+  what macOS records as a Focus changes, from anywhere, which needs an
+  administrator account.
+
 - Changed every live activity, closed and opened, to keep the same room at
   both ends and under what it shows, and above it too unless words stand under
   the camera, where they stay as high as they go. Pictures and buttons beside

@@ -2,8 +2,8 @@ import AppKit
 import ApplicationServices
 import SwiftUI
 
-/// A change that macOS actually announced. This is not a query for the current Focus mode:
-/// Control Center can change Focus without issuing a banner, and inaccessible state stays unknown.
+/// A change that macOS announced, in its banner or in what Do Not Disturb's service logs. This is not
+/// a query for the current Focus mode: what neither says stays unknown.
 struct FocusChange: Equatable, Sendable {
     enum State: Equatable, Sendable { case on, off }
 
@@ -118,6 +118,70 @@ struct FocusStateWords: Equatable, Sendable {
     }
 }
 
+/// What Do Not Disturb's service logs each time its state changes, read from one line of it: the
+/// Focus on now and the one on before, each its name, its identifier and its symbol. Control Center
+/// drops its own banner when the change comes from its open panel (the user, 2026-11-28: "i turned on
+/// do not disturb on my mac and it didnt show on the notch"), and the service logs every change,
+/// whatever made it. The line is cut short past about a thousand characters, so the Focus before can be
+/// unreadable.
+struct FocusStateLine: Equatable, Sendable {
+    struct Mode: Equatable, Sendable {
+        let identifier: String
+        let name: String
+        let symbol: String
+    }
+
+    /// The Focus on now, or nil with none on.
+    let active: Mode?
+    /// Whether the line still says which Focus was on before, and which: nil with none on.
+    let previousRead: Bool
+    let previous: Mode?
+
+    static let prefix = "Delivering state update:"
+
+    static func read(_ message: String) -> FocusStateLine? {
+        guard message.hasPrefix(prefix) else { return nil }
+        let parts = message.components(separatedBy: "; previousState: ")
+        guard case .some(let active) = configuration(in: parts[0]) else { return nil }
+        let previous = parts.count > 1 ? configuration(in: parts[1]) : nil
+        return FocusStateLine(active: active, previousRead: previous != nil, previous: previous ?? nil)
+    }
+
+    /// The Focus a state names: none, one, or unreadable (nil).
+    private static func configuration(in part: String) -> Mode?? {
+        guard let start = part.range(of: "activeModeConfiguration: ") else { return nil }
+        let rest = part[start.upperBound...]
+        if rest.hasPrefix("(null)") { return .some(nil) }
+        func field(_ name: String) -> String? {
+            guard let range = rest.range(of: "; \(name): ") else { return nil }
+            let value = rest[range.upperBound...].prefix { $0 != ";" && $0 != ">" }
+            let text = value.trimmingCharacters(in: .whitespaces)
+            return text.isEmpty || text == "(null)" ? nil : text
+        }
+        guard let identifier = field("modeIdentifier"), let name = field("name"), let symbol = field("symbolImageName") else { return nil }
+        return .some(Mode(identifier: identifier, name: name, symbol: symbol))
+    }
+}
+
+/// Follows the Focus from one logged state to the next, saying what turned on or off. The service
+/// logs a state for each of its clients and for changes that leave the Focus as it was, as the screen
+/// locks; only a different Focus is news. Before anything's known, a line that doesn't say what was on
+/// before is only noted.
+struct FocusModeFollower {
+    private var known = false
+    private(set) var active: FocusStateLine.Mode?
+
+    mutating func take(_ line: FocusStateLine) -> (mode: FocusStateLine.Mode, on: Bool)? {
+        let wasKnown = known || line.previousRead
+        let before = known ? active : line.previous
+        known = true
+        defer { active = line.active }
+        guard wasKnown, line.active?.identifier != before?.identifier else { return nil }
+        if let now = line.active { return (now, true) }
+        return before.map { ($0, false) }
+    }
+}
+
 /// Deduplicate creation notifications by window identity, not the mode name or its current value.
 /// A later event for the same Focus is still news. A window present at attachment is not.
 struct FocusBannerLedger<ID: Hashable> {
@@ -134,8 +198,10 @@ struct FocusBannerLedger<ID: Hashable> {
     }
 }
 
-/// Observes only real Focus banner creation. It does not open Control Center, request permission,
-/// infer Off from absence, read private Focus preferences, or suppress macOS's banner.
+/// Observes real Focus banner creation, and what Do Not Disturb's service logs as the Focus changes,
+/// which says so when Control Center keeps its banner to itself (see `FocusStateLine`). It does not
+/// open Control Center, request permission, infer Off from absence, read private Focus preferences,
+/// or suppress macOS's banner. The same change from both is told once.
 final class FocusWatch: @unchecked Sendable {
     static let shared = FocusWatch()
     private static let menuBarAgent = "com.apple.MenuBarAgent"
@@ -144,6 +210,15 @@ final class FocusWatch: @unchecked Sendable {
     private var onChange: (@MainActor @Sendable (FocusChange) -> Void)?
     private var generation: UInt64 = 0
     @MainActor private var following: Task<Void, Never>?
+    /// `log stream`, following the service's state lines, and when to try it again after it ended
+    /// soon after starting, as it does for an account that isn't an administrator.
+    @MainActor private var stream: Process?
+    @MainActor private var streamRetry = Date.distantPast
+    @MainActor private var quitting: NSObjectProtocol?
+    @MainActor private var follower = FocusModeFollower()
+    /// The last change told, so the banner and the log don't both tell it.
+    @MainActor private var told: (change: FocusChange, at: Date)?
+    static let sameChange: TimeInterval = 4
 
     // Owned by the dedicated AX run loop from here on.
     private var app: AXUIElement?
@@ -180,20 +255,90 @@ final class FocusWatch: @unchecked Sendable {
         }
         guard following == nil else { return }
         follow()
+        followLog()
         following = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled, let self else { return }
                 // Only reattach after permission or process changes; no Focus state is polled.
                 self.follow()
+                self.followLog()
             }
         }
+    }
+
+    /// Follows the service's state lines in the system log, from now on, if it isn't already.
+    @MainActor
+    private func followLog() {
+        guard lock.withLock({ onChange != nil }), stream == nil, Date.now >= streamRetry else { return }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
+        process.arguments = [
+            "stream", "--style", "ndjson",
+            "--predicate", "process == \"donotdisturbd\" AND eventMessage BEGINSWITH \"\(FocusStateLine.prefix)\"",
+        ]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        let lines = LogLines()
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+            for message in lines.take(data) {
+                guard let line = FocusStateLine.read(message) else { continue }
+                DispatchQueue.main.async { MainActor.assumeIsolated { self?.took(line) } }
+            }
+        }
+        let started = Date.now
+        process.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.stream = nil
+                    // Ended right away: not allowed, or not there. Try again in a while.
+                    if Date.now.timeIntervalSince(started) < 5 { self.streamRetry = .now + 60 }
+                }
+            }
+        }
+        do {
+            try process.run()
+            stream = process
+        } catch {
+            streamRetry = .now + 60
+        }
+        // Not left running past Glance.
+        if quitting == nil {
+            quitting = NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.stream?.terminate() }
+            }
+        }
+    }
+
+    @MainActor
+    private func took(_ line: FocusStateLine) {
+        guard let (mode, on) = follower.take(line), let words = FocusStateWords.system() else { return }
+        // A Focus of your own can take a symbol the Mac doesn't draw.
+        let symbol = SystemSymbol.exists(mode.symbol) ? mode.symbol : "moon.fill"
+        tell(FocusChange(name: mode.name, symbol: symbol, state: on ? .on : .off, stateText: on ? words.on : words.off))
+    }
+
+    /// Tells a change once, however many of the banner and the log say it.
+    @MainActor
+    private func tell(_ change: FocusChange) {
+        if let told, told.change.name == change.name, told.change.state == change.state, Date.now.timeIntervalSince(told.at) < Self.sameChange { return }
+        told = (change, .now)
+        lock.withLock { onChange }?(change)
     }
 
     @MainActor
     func stop() {
         following?.cancel()
         following = nil
+        stream?.terminate()
+        stream = nil
         lock.withLock {
             onChange = nil
             generation &+= 1
@@ -272,9 +417,9 @@ final class FocusWatch: @unchecked Sendable {
                                     snapshot, words: words,
                                     // Apple keeps some Focus symbols, like Work's, to itself.
                                     symbolExists: SystemSymbol.exists),
-                                let callback = self.lock.withLock({ self.generation == version ? self.onChange : nil })
+                                self.lock.withLock({ self.generation == version })
                             else { return }
-                            callback(change)
+                            self.tell(change)
                         }
                     }
                     break
@@ -377,5 +522,26 @@ struct FocusExtendedView: View {
     /// Where the name and its state stand: as high as they go under the camera.
     static func wordsBaseline(name: String, state: String, restingHeight h: CGFloat) -> CGFloat {
         UnderCamera.baseline([name, state], font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
+    }
+}
+
+/// Whole lines from a stream of the system log's newline-delimited JSON, each line's message.
+final class LogLines: @unchecked Sendable {
+    private let lock = NSLock()
+    private var pending = Data()
+
+    func take(_ data: Data) -> [String] {
+        lock.withLock {
+            pending.append(data)
+            var messages: [String] = []
+            while let end = pending.firstIndex(of: 0x0A) {
+                let line = pending[pending.startIndex..<end]
+                pending.removeSubrange(pending.startIndex...end)
+                if let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any], let message = object["eventMessage"] as? String {
+                    messages.append(message)
+                }
+            }
+            return messages
+        }
     }
 }

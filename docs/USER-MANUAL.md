@@ -777,9 +777,12 @@ the Focus's symbol at the left end and `On` or `Off` at the right, both in the
 Focus's color, or gray when it turned off. After a second it extends for a
 moment, the symbol in a circle beside the Focus's name, then settles back and
 goes. Apple's own Focuses keep their colors; a Focus of your own takes your
-Mac's accent color. Glance observes the system's actual announcement; it does
-not infer Focus from preferences or show a persistent state that may be out of
-date. macOS keeps its own Focus controls.
+Mac's accent color. Glance reads macOS's own Focus banner and what macOS
+records in its log as a Focus turns on or off, so a change made from Control
+Center, where macOS shows no banner, shows too. Reading the log needs an
+administrator account; without one, only changes macOS announces show. Glance
+does not infer Focus from preferences or show a persistent state that may be
+out of date. macOS keeps its own Focus controls.
 
 ### AirDrop
 
