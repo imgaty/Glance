@@ -346,8 +346,8 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "circle.lefthalf.filled"
         case .player: "music.note"
         case .tray: "tray.full.fill"
-        // The Dynamic Island's own shape.
-        case .activities: "capsule.fill"
+        // macOS's own icon for Live Activities (`com.apple.graphic-icon.live-activities`).
+        case .activities: "clock.badge.fill"
         case .opening: "cursorarrow.click.2"
         case .displays: "sun.max.fill"
         }
@@ -364,7 +364,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: Color(white: 0.15)
         case .player: .pink
         case .tray: .indigo
-        case .activities: .green
+        case .activities: .blue
         case .opening: .orange
         case .displays: .blue
         }
@@ -512,7 +512,7 @@ private enum SystemIcons {
         case .displays: existing(settings.appending(path: "DisplaysExt.appex"))
         case .player: described(pane, symbol: "music.note", color: "Red")
         case .tray: described(pane, symbol: "tray.full.fill", color: "Indigo")
-        case .activities: described(pane, symbol: "capsule.fill", color: "Green")
+        case .activities: described(pane, symbol: "clock.badge.fill", color: "Blue")
         case .opening: described(pane, symbol: "cursorarrow.click.2", color: "Orange")
         }
     }
@@ -536,6 +536,9 @@ private enum SystemIcons {
         if (try? Data(contentsOf: plist)) != data {
             try? FileManager.default.createDirectory(at: plist.deletingLastPathComponent(), withIntermediateDirectories: true)
             guard (try? data.write(to: plist)) != nil else { return nil }
+            // macOS keeps the icon it drew for a bundle until the bundle's date changes: a new
+            // description alone would still show the old icon.
+            try? FileManager.default.setAttributes([.modificationDate: Date.now], ofItemAtPath: bundle.path)
         }
         return bundle
     }

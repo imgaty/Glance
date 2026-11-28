@@ -482,6 +482,8 @@
 - Changed `Rebuild` in the menu bar to bring in what's new on Glance's branch
   on GitHub before it builds. It stops with the reason if this copy can't
   simply move forward to it.
+- Changed the Live Activities page's icon in the sidebar to macOS's own Live
+  Activities icon, a clock on blue.
 
 ### Accessibility and languages
 
