@@ -142,7 +142,7 @@ struct ArtworkFlowTests {
     @Test("The made-up song's bars come a reading at a time, as often as music's, the bass rising on each beat and falling away")
     func demoBarsEase() {
         let rate = WaveformGlyph.demoRate
-        #expect(abs(rate - 48_000.0 / 4096) < 0.001)
+        #expect(abs(rate - 25) < 0.001)
         // One reading holds until the next is due.
         #expect(WaveformGlyph.demoLevels(at: 1000.001) == WaveformGlyph.demoLevels(at: 1000.02))
         var bass: [Float] = []

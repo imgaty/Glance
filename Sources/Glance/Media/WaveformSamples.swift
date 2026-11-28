@@ -21,13 +21,16 @@ struct AudioSampleWindow {
 }
 
 /// A bounded, single-producer ring. The audio callback never waits or allocates; analysis copies
-/// a completed window under the lock and transforms it afterward. Beat detection reads the latest
+/// a completed window under the lock and transforms it afterward. A window starts every `hop`
+/// samples, so windows overlap when `hop` is less than the window. Beat detection reads the latest
 /// samples independently, without consuming waveform windows.
 final class SampleRing: @unchecked Sendable {
     private let lock = UnsafeMutablePointer<os_unfair_lock>.allocate(capacity: 1)
     private let samples: UnsafeMutablePointer<Float>
     private let capacity: Int
     private let windowSize: Int
+    /// Samples from one window's start to the next's.
+    private let hop: Int
     private let sampleRate: Double
     private var completedTimes: [TimeInterval]
     private var written = 0
@@ -37,15 +40,19 @@ final class SampleRing: @unchecked Sendable {
     // Only the audio producer accesses this flag, including when it cannot acquire the lock.
     private var interrupted = false
 
-    init(capacity: Int, sampleRate: Double, windowSize: Int = BinnedFFT.size) {
-        precondition(windowSize > 0 && capacity >= windowSize && capacity.isMultiple(of: windowSize))
+    /// `hop` defaults to the window, one window after the other.
+    init(capacity: Int, sampleRate: Double, windowSize: Int = BinnedFFT.size, hop: Int? = nil) {
+        let hop = hop ?? windowSize
+        precondition(windowSize > 0 && hop > 0 && capacity >= windowSize)
         precondition(sampleRate.isFinite && sampleRate > 0)
         self.capacity = capacity
         self.windowSize = windowSize
+        self.hop = hop
         self.sampleRate = sampleRate
         samples = .allocate(capacity: capacity)
         samples.initialize(repeating: 0, count: capacity)
-        completedTimes = Array(repeating: 0, count: capacity / windowSize)
+        // One for every window the ring can still hold whole, and more.
+        completedTimes = Array(repeating: 0, count: capacity / hop + 2)
         lock.initialize(to: os_unfair_lock())
     }
 
@@ -59,9 +66,16 @@ final class SampleRing: @unchecked Sendable {
     var readyWindowCount: Int {
         os_unfair_lock_lock(lock)
         defer { os_unfair_lock_unlock(lock) }
+        return max(completedCount - firstUnread, 0)
+    }
+
+    /// Windows `0..<completedCount` have all their samples written. Under the lock.
+    private var completedCount: Int { written >= windowSize ? (written - windowSize) / hop + 1 : 0 }
+
+    /// The first window not yet read none of whose samples have been overwritten. Under the lock.
+    private var firstUnread: Int {
         let oldest = max(written - capacity, 0)
-        let first = max(consumed, (oldest + windowSize - 1) / windowSize)
-        return max(written / windowSize - first, 0)
+        return max(consumed, (oldest + hop - 1) / hop)
     }
 
     /// True when at least one complete window is ready. Null-data streams are disabled by Core
@@ -97,7 +111,7 @@ final class SampleRing: @unchecked Sendable {
         } else {
             firstTime = Double(DispatchTime.now().uptimeNanoseconds) / 1_000_000_000 - Double(frames) * step
         }
-        let previous = written / windowSize
+        let previous = completedCount
         for frame in 0..<frames {
             var mono: Float = 0
             for buffer in buffers where buffer.mData != nil && buffer.mNumberChannels > 0 {
@@ -107,27 +121,30 @@ final class SampleRing: @unchecked Sendable {
             }
             samples[written % capacity] = mono / Float(channels)
             written += 1
-            if written.isMultiple(of: windowSize) {
-                completedTimes[(written / windowSize - 1) % completedTimes.count] = firstTime + Double(frame + 1) * step
+            if written >= windowSize, (written - windowSize).isMultiple(of: hop) {
+                completedTimes[(written - windowSize) / hop % completedTimes.count] = firstTime + Double(frame + 1) * step
             }
         }
-        return written / windowSize > previous
+        return completedCount > previous
     }
 
-    /// Takes the next complete block exactly once. If the consumer fell behind the bounded ring,
-    /// only whole overwritten blocks are skipped; a partially overwritten window is never read.
+    /// Takes the next complete window exactly once. If the consumer fell behind the bounded ring,
+    /// only overwritten windows are skipped; a partially overwritten window is never read.
     func nextWindow() -> AudioSampleWindow? {
-        // Allocate outside the lock so the audio thread is held off only for a contiguous copy.
+        // Allocate outside the lock so the audio thread is held off only for the copy.
         var copied = [Float](repeating: 0, count: windowSize)
         os_unfair_lock_lock(lock)
-        let oldest = max(written - capacity, 0)
-        consumed = max(consumed, (oldest + windowSize - 1) / windowSize)
-        guard (consumed + 1) * windowSize <= written else {
+        consumed = firstUnread
+        guard consumed < completedCount else {
             os_unfair_lock_unlock(lock)
             return nil
         }
-        let offset = consumed * windowSize % capacity
-        copied.withUnsafeMutableBufferPointer { $0.baseAddress!.update(from: samples + offset, count: windowSize) }
+        let start = consumed * hop % capacity
+        let first = min(windowSize, capacity - start)
+        copied.withUnsafeMutableBufferPointer {
+            $0.baseAddress!.update(from: samples + start, count: first)
+            if first < windowSize { ($0.baseAddress! + first).update(from: samples, count: windowSize - first) }
+        }
         let time = completedTimes[consumed % completedTimes.count]
         let generation = generation
         consumed += 1
@@ -154,8 +171,9 @@ final class SampleRing: @unchecked Sendable {
 /// Delayed waveform delivery has its own wake-up. Updating the output delay moves every remaining
 /// deadline together; consumed readings never return, including after a route becomes faster.
 struct WaveformDelivery {
-    /// More than ten seconds at the usual rate, while bounding a broken driver's future timestamps.
-    static let capacity = 128
+    /// More than ten seconds at 25 readings a second, while bounding a broken driver's future
+    /// timestamps.
+    static let capacity = 256
     var delay: TimeInterval = 0
     private var generation: UInt?
     private var waiting: [(time: TimeInterval, reading: AudioReading)] = []

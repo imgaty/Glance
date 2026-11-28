@@ -230,7 +230,7 @@ final class TapPipeline: @unchecked Sendable {
         analyzer = Analyzer(sampleRate: rate)
         binned = BinnedFFT(sampleRate: rate)
 
-        let ring = SampleRing(capacity: BinnedFFT.size * 8, sampleRate: rate)
+        let ring = SampleRing(capacity: BinnedFFT.size * 8, sampleRate: rate, hop: BinnedFFT.hop(sampleRate: rate))
         active = true
         heard.delay = Self.heardAfter(aggregate: aggregateID, window: Analyzer.size)
         heardBars.delay = Self.waveformDelay(sampleRate: rate)
@@ -481,14 +481,19 @@ final class Analyzer {
 }
 
 /// The six bars, made exactly as Apple's own waveform makes them: `MediaCoreUI`'s
-/// `WaveformBinnedFFT`, read from macOS 27.3's code and its log. A window of 4096 samples, once
-/// each as it fills (about 12 times a second), Hann windowed, through an FFT; each bar the sum of
-/// the bins in its band, bass at the left, the bins counted from 20 Hz up; the sum raised to the
-/// power 0.4 after a 0.6 gain, each bar a twentieth lower than the one to its left, then shaped by
-/// Apple's own curve and kept between 0 and 1. Nothing is eased here: the bars animate each reading
-/// in (see `LiveBarsView`).
+/// `WaveformBinnedFFT`, read from macOS 27.3's code and its log. A window of 4096 samples, Hann
+/// windowed, through an FFT; each bar the sum of the bins in its band, bass at the left, the bins
+/// counted from 20 Hz up; the sum raised to the power 0.4 after a 0.6 gain, each bar a twentieth
+/// lower than the one to its left, then shaped by Apple's own curve and kept between 0 and 1. One
+/// difference: a new window starts 25 times a second, each overlapping the one before, where
+/// Apple's reads each window once as it fills, about 12 times a second, which looks choppy.
+/// Nothing is eased here: the bars animate each reading in (see `LiveBarsView`).
 final class BinnedFFT {
     static let size = 4096
+    /// How many times a second the bars get a new reading.
+    static let readingsPerSecond = 25.0
+    /// Samples from one window's start to the next's at `sampleRate`: 1920 at 48 kHz.
+    static func hop(sampleRate: Double) -> Int { max(Int((sampleRate / readingsPerSecond).rounded()), 1) }
     /// The bands' edges, in hertz, left to right.
     static let edges: [Float] = [20, 81, 170, 527, 1_500, 4_500, 10_000]
     /// Each bar this much lower than the one to its left, as a share.

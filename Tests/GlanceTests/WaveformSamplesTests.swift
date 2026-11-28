@@ -116,6 +116,42 @@ struct WaveformSamplesTests {
         #expect(try #require(ring.nextWindow()).samples == (16..<24).map(Float.init))
     }
 
+    @Test("Overlapping windows start every hop, each read once with its own completion time")
+    func overlap() throws {
+        let ring = SampleRing(capacity: 32, sampleRate: 8, windowSize: 8, hop: 4)
+        #expect(write((0..<16).map(Float.init), to: ring, startingAt: 0, time: 10))
+        #expect(ring.readyWindowCount == 3)
+        for (start, time) in [(0, 11.0), (4, 11.5), (8, 12.0)] {
+            let window = try #require(ring.nextWindow())
+            #expect(window.samples == (start..<start + 8).map(Float.init))
+            #expect(abs(window.completedAt - time) < 0.000001)
+        }
+        #expect(ring.nextWindow() == nil)
+        #expect(!write([16, 17, 18], to: ring, startingAt: 16, time: 12))
+        #expect(write([19], to: ring, startingAt: 19, time: 12.375))
+        #expect(try #require(ring.nextWindow()).samples == (12..<20).map(Float.init))
+    }
+
+    @Test("Overlapping windows wrap around a ring that isn't a whole number of windows")
+    func overlapWrap() throws {
+        let ring = SampleRing(capacity: 12, sampleRate: 8, windowSize: 8, hop: 4)
+        #expect(write((0..<20).map(Float.init), to: ring, startingAt: 0))
+        // Windows starting at 0 and 4 were partly overwritten.
+        #expect(ring.readyWindowCount == 2)
+        #expect(try #require(ring.nextWindow()).samples == (8..<16).map(Float.init))
+        #expect(try #require(ring.nextWindow()).samples == (12..<20).map(Float.init))
+        #expect(ring.nextWindow() == nil)
+    }
+
+    @Test("The bars get 25 readings a second at the usual sample rates")
+    func readingRate() {
+        #expect(BinnedFFT.hop(sampleRate: 48_000) == 1920)
+        #expect(BinnedFFT.hop(sampleRate: 44_100) == 1764)
+        for rate in [44_100.0, 48_000, 96_000] {
+            #expect(abs(rate / Double(BinnedFFT.hop(sampleRate: rate)) - 25) < 0.01)
+        }
+    }
+
     @Test("Stereo mixes all channels while disabled null-data streams do not dim the signal")
     func mix() throws {
         let ring = SampleRing(capacity: 8, sampleRate: 8, windowSize: 4)

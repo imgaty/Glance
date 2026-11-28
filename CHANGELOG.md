@@ -1,6 +1,6 @@
 # Changelog
 
-`Created: 11 October 2026` | `Last updated: 26 November 2026`
+`Created: 11 October 2026` | `Last updated: 28 November 2026`
 
 <br>
 
@@ -357,6 +357,8 @@
   follow fresh audio in order, with independent rounded ends, and delayed
   readings no longer disturb the background's beat. Reduce Motion holds
   the bars still while playing and shows dots while paused.
+- Changed the waveform to take a new reading 25 times a second, about twice as
+  often as before, so it moves smoothly rather than in steps.
 - Changed the background behind the player to three slowly turning copies of the
   cover, softly blurred and warped, that pulse with the whole of the music: the
   bass swells them and the treble deepens their colors. They keep moving while

@@ -203,7 +203,7 @@ struct WaveformGlyph: View {
     }
 
     /// How many times a second the made-up song is read: as often as music is.
-    static let demoRate = 48_000 / Double(BinnedFFT.size)
+    static let demoRate = 48_000 / Double(BinnedFFT.hop(sampleRate: 48_000))
 
     /// The made-up song's beats a second: a little under two.
     private static let demoTempo = 1.8
