@@ -63,16 +63,19 @@ struct SoundMenuPresenter: NSViewRepresentable {
     static func dismantleNSView(_ view: Anchor, coordinator: Coordinator) { coordinator.cancel() }
 }
 
-/// The Sound menu's window: a glass panel under the button that opened it, as Control Center opens
-/// its Sound menu from the menu bar. It takes the keys for its rows and slider without making Glance
-/// the app in use, so the app in front stays in front and its window stays the key one: opening and
-/// closing it never makes that window blink between looking in front and behind.
+/// The Sound menu's window: AppKit's own container for a menu that points at what opened it, as the
+/// Dock's menus point at their icons, under the button that opened it: at once, following a held
+/// press, fading as it closes. It takes the keys for its rows and slider without making Glance the
+/// app in use, as the Dock's menus never make the Dock the app in use, so the app in front stays in
+/// front and its window stays the key one: opening and closing it never makes that window blink
+/// between looking in front and behind.
 @MainActor
 final class SoundPanel: NSObject {
     private weak var soundMenu: SoundOutputMenu?
     let window = SoundPanelWindow()
     let contentView = SoundPanelContent()
-    private let glass = NSGlassEffectView()
+    /// The container, its arrow pointing up at the button.
+    private let callout = SoundCalloutView()
     private let scroll = NSScrollView()
     private let stack = SoundMenuStack()
     private let maximumHeight: CGFloat
@@ -81,6 +84,8 @@ final class SoundPanel: NSObject {
     /// The button's rect on the screen, and the screen's visible part, it hangs under.
     private var placement: (anchor: CGRect, visible: CGRect)?
     private var monitors: [Any] = []
+    /// Follows the press that opened it, until it's let go.
+    private var pressMonitor: Any?
     private var observers: [NSObjectProtocol] = []
     private var workspaceObservers: [NSObjectProtocol] = []
     /// Glance's own window that had the keys before (the notch, say), given them back.
@@ -102,10 +107,17 @@ final class SoundPanel: NSObject {
         contentView.onCancel = { [weak self] in self?.dismiss() }
         contentView.setAccessibilityRole(.group)
         contentView.setAccessibilityLabel(String(localized: "Sound"))
-        glass.cornerRadius = SoundLook.radius
-        glass.contentView = contentView
-        window.contentView = glass
+        // Rows scrolled under the corners stay inside them, and follow the window as it grows.
+        contentView.autoresizingMask = [.width, .height]
+        contentView.wantsLayer = true
+        contentView.layer?.cornerRadius = SoundLook.radius
+        contentView.layer?.cornerCurve = .continuous
+        contentView.layer?.masksToBounds = true
+        callout.addSubview(contentView)
+        window.contentView = callout
         window.onCancel = { [weak self] in self?.dismiss() }
+        // A click beside the arrow, on the clear strip, is outside the menu.
+        window.shows = { [weak self] point in self?.callout.shows(point) ?? true }
         window.onKey = { [weak self] event in
             guard let self, !self.dismissing else { return false }
             return self.soundMenu?.handleKey(event) == true
@@ -151,13 +163,15 @@ final class SoundPanel: NSObject {
         if contentSize != size {
             contentSize = size
             if let placement, window.isVisible {
-                window.setFrame(SoundMenuPlacement.frame(for: size, below: placement.anchor, in: placement.visible), display: true, animate: animate)
+                let box = SoundMenuPlacement.frame(for: size, below: placement.anchor, in: placement.visible)
+                window.setFrame(Self.windowFrame(around: box), display: true, animate: animate)
             } else {
-                window.setContentSize(size)
+                window.setContentSize(Self.windowFrame(around: CGRect(origin: .zero, size: size)).size)
             }
-            glass.frame = CGRect(origin: .zero, size: size)
-            contentView.frame = glass.bounds
+            callout.frame = CGRect(origin: .zero, size: window.frame.size)
+            contentView.frame = CGRect(origin: .zero, size: size)
             scroll.frame = contentView.bounds
+            pointArrow()
             window.invalidateShadow()
         }
         NSAnimationContext.runAnimationGroup { context in
@@ -185,24 +199,39 @@ final class SoundPanel: NSObject {
         let onScreen = parent.convertToScreen(anchor.convert(rect, to: nil))
         placement = (onScreen, screen.visibleFrame)
         window.level = NSWindow.Level(rawValue: max(parent.level.rawValue, NSWindow.Level.popUpMenu.rawValue) + 1)
-        window.setFrame(SoundMenuPlacement.frame(for: contentSize, below: onScreen, in: screen.visibleFrame), display: false)
+        let box = SoundMenuPlacement.frame(for: contentSize, below: onScreen, in: screen.visibleFrame)
+        window.setFrame(Self.windowFrame(around: box), display: false)
+        callout.frame = CGRect(origin: .zero, size: window.frame.size)
+        pointArrow()
         return true
+    }
+
+    /// The window round a box: the box, and above it the arrow's strip.
+    static func windowFrame(around box: CGRect) -> CGRect {
+        CGRect(x: box.minX, y: box.minY, width: box.width, height: box.height + SoundCalloutView.margin)
+    }
+
+    /// The box on the screen, under the arrow's strip.
+    private var boxOnScreen: CGRect {
+        CGRect(x: window.frame.minX, y: window.frame.minY, width: window.frame.width, height: window.frame.height - SoundCalloutView.margin)
+    }
+
+    /// The arrow at the button's middle, wherever the box had to go.
+    private func pointArrow() {
+        guard let anchor = placement?.anchor else { return }
+        callout.point(at: anchor.midX - window.frame.minX)
     }
 
     func show(from anchor: NSView, pointer: CGPoint?) {
         guard !dismissing, let parent = anchor.window, parent.isVisible, place(from: anchor, pointer: pointer) else { return finishDismissal() }
         previousKey = NSApp.keyWindow
-        let fades = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        window.alphaValue = fades ? 0 : 1
+        // All at once, as a menu shows.
+        window.alphaValue = 1
         // Key without making Glance the app in use: the panel is non-activating.
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(contentView)
-        if fades {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = SoundLook.fade
-                window.animator().alphaValue = 1
-            }
-        }
+        // Opened by a press still held, it follows the drag, as a menu does.
+        if NSEvent.pressedMouseButtons & 1 != 0 { trackPress() }
         NSAccessibility.post(element: contentView, notification: .layoutChanged, userInfo: [.uiElements: [contentView]])
         let anchorRect = placement?.anchor
         let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
@@ -248,6 +277,7 @@ final class SoundPanel: NSObject {
         let window = window
         NSAnimationContext.runAnimationGroup { context in
             context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : SoundLook.fade
+            context.timingFunction = SoundLook.fadeCurve
             window.animator().alphaValue = 0
         } completionHandler: {
             MainActor.assumeIsolated {
@@ -257,10 +287,54 @@ final class SoundPanel: NSObject {
         }
     }
 
+    /// While the press that opened it is held: dragged onto a row, it lights the row; let go there,
+    /// it chooses it. Let go on the button or anywhere in the panel, it stays open, as a menu does
+    /// after a click; let go anywhere else once the pointer has moved, it closes.
+    private func trackPress() {
+        let start = NSEvent.mouseLocation
+        var moved = false
+        pressMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, !self.dismissing else { return }
+                let point = NSEvent.mouseLocation
+                if hypot(point.x - start.x, point.y - start.y) > SoundLook.dragSlop { moved = true }
+                let row = self.row(at: point)
+                if event.type == .leftMouseDragged {
+                    if moved { self.soundMenu?.highlight(row?.item) }
+                    return
+                }
+                self.endPress()
+                if let item = row?.item {
+                    self.soundMenu?.activate(item)
+                } else if moved, !self.boxOnScreen.contains(point), self.placement?.anchor.contains(point) != true {
+                    self.dismiss()
+                }
+            }
+            return event
+        }
+    }
+
+    private func endPress() {
+        if let pressMonitor { NSEvent.removeMonitor(pressMonitor) }
+        pressMonitor = nil
+    }
+
+    /// The row a press can choose at this point on the screen, if it's on one in sight.
+    func row(at point: CGPoint) -> SoundMenuContentRow? {
+        guard window.isVisible, window.frame.contains(point) else { return nil }
+        for case let row as SoundMenuContentRow in soundMenu?.items.compactMap(\.view) ?? [] {
+            guard row.window === window, !row.isHiddenOrHasHiddenAncestor, let item = row.item, item.isEnabled, item.action != nil else { continue }
+            let shown = row.bounds.intersection(row.visibleRect)
+            if window.convertToScreen(row.convert(shown, to: nil)).contains(point) { return row }
+        }
+        return nil
+    }
+
     private func finishDismissal() {
         guard !didFinish else { return }
         didFinish = true
         dismissing = true
+        endPress()
         monitors.forEach(NSEvent.removeMonitor)
         monitors = []
         observers.forEach(NotificationCenter.default.removeObserver)
@@ -288,6 +362,8 @@ final class SoundPanelWindow: NSPanel {
     var onCancel: (() -> Void)?
     /// A key pressed, before anything in the menu sees it: whether the menu took it.
     var onKey: ((NSEvent) -> Bool)?
+    /// Whether a point in the window is on what it draws: a click anywhere else closes it.
+    var shows: ((CGPoint) -> Bool)?
 
     init() {
         super.init(contentRect: CGRect(x: 0, y: 0, width: SoundLook.width, height: 100), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
@@ -307,6 +383,10 @@ final class SoundPanelWindow: NSPanel {
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, onKey?(event) == true { return }
+        if [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type), let shows, !shows(event.locationInWindow) {
+            onCancel?()
+            return
+        }
         super.sendEvent(event)
     }
 
@@ -341,11 +421,101 @@ private final class SoundMenuStack: NSView {
     override var isFlipped: Bool { true }
 }
 
+/// AppKit's container for a menu that points at what opened it, the Dock's menus' own, drawn by its
+/// frame for such menus: glass with an arrow, its corners and arrow AppKit's. The window holds the box
+/// and, above it, the strip the arrow stands in; the frame's other margins fall outside it. Cut to the
+/// frame's own outline, as a menu's window is, so the strip stays clear beside the arrow and the
+/// window's shadow follows the outline. Where AppKit has no such frame, plain glass with the same
+/// corners and no arrow.
+@MainActor
+final class SoundCalloutView: NSView {
+    /// The strip above the box the arrow stands in, the room AppKit's frame keeps on each side of its
+    /// box: measured, 13 points.
+    nonisolated static let margin: CGFloat = 13
+    private static let frameClass = NSClassFromString("_NSPopupMenuWindowPopoverFrame") as? NSView.Type
+    private static let outlineSelector = NSSelectorFromString("_copyFrameMaskPathInRect:")
+    /// Whether AppKit's own container, with its arrow, is in use.
+    static var pointsWithArrow: Bool { frameClass?.instancesRespond(to: outlineSelector) == true }
+
+    /// AppKit's frame, or the glass standing in for it.
+    let background: NSView
+    private let outline = CAShapeLayer()
+    private var arrowX: CGFloat = 0
+
+    init() {
+        if Self.pointsWithArrow, let frameClass = Self.frameClass {
+            background = frameClass.init(frame: .zero)
+            // The arrow on the top edge, pointing up at the button.
+            background.setValue(NSRectEdge.maxY.rawValue, forKey: "anchorEdge")
+        } else {
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = SoundLook.radius
+            background = glass
+        }
+        super.init(frame: .zero)
+        wantsLayer = true
+        addSubview(background)
+    }
+    required init?(coder: NSCoder) { nil }
+
+    /// The box, under the arrow's strip.
+    var box: CGRect { CGRect(x: 0, y: 0, width: bounds.width, height: max(0, bounds.height - Self.margin)) }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        reshape()
+    }
+
+    override func layout() {
+        super.layout()
+        reshape()
+    }
+
+    /// Points the arrow at this x, in the container's own coordinates.
+    func point(at x: CGFloat) {
+        arrowX = x
+        reshape()
+    }
+
+    /// Whether a point, in the container's coordinates, is on what it draws.
+    func shows(_ point: CGPoint) -> Bool {
+        guard Self.pointsWithArrow, let path = outline.path else { return box.contains(point) }
+        return path.contains(point)
+    }
+
+    private func reshape() {
+        guard Self.pointsWithArrow else {
+            background.frame = box
+            return
+        }
+        // The frame keeps its margins on every side; only the top one, the arrow's, is the window's.
+        let margin = Self.margin
+        background.frame = CGRect(x: -margin, y: -margin, width: bounds.width + margin * 2, height: bounds.height + margin)
+        background.setValue(NSValue(point: CGPoint(x: arrowX + margin, y: background.bounds.maxY)), forKey: "anchorPoint")
+        typealias Outline = @convention(c) (AnyObject, Selector, CGRect) -> Unmanaged<CGPath>?
+        let copy = unsafeBitCast(background.method(for: Self.outlineSelector), to: Outline.self)
+        guard let framePath = copy(background, Self.outlineSelector, background.bounds)?.takeRetainedValue() else { return }
+        var shift = CGAffineTransform(translationX: -margin, y: -margin)
+        let path = framePath.copy(using: &shift) ?? framePath
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        outline.path = path
+        outline.frame = bounds
+        layer?.mask = outline
+        CATransaction.commit()
+        background.needsDisplay = true
+        window?.invalidateShadow()
+    }
+}
+
 enum SoundMenuPlacement {
-    /// The panel's frame: its top the gap under the button, centered on it, kept on the screen.
+    /// The box's frame, the container's 13 points round it: under the button, as the Dock places its
+    /// menus by their icons, the arrow's tip at the button's edge, and centered on the button, so the
+    /// arrow is in the box's middle; moved in only to stay on the screen, the arrow still at the button.
     static func frame(for size: CGSize, below anchor: CGRect, in visible: CGRect) -> CGRect {
+        // The arrow's strip above the box ends at the button's edge.
         let x = min(max(anchor.midX - size.width / 2, visible.minX), max(visible.minX, visible.maxX - size.width))
-        let y = max(visible.minY, anchor.minY - SoundLook.below - size.height)
+        let y = max(visible.minY, anchor.minY - SoundCalloutView.margin - size.height)
         return CGRect(x: x.rounded(), y: y.rounded(), width: size.width, height: size.height)
     }
 

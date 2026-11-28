@@ -872,7 +872,12 @@ struct ExpandedCallView: View {
     /// frame. No current event or pointer position is needed to locate the call's dropdown.
     private func soundButton(_ h: CGFloat, symbolShare: CGFloat, weight: Font.Weight = .semibold) -> some View {
         let side = CallLayout.round(h)
-        return IslandCircleButton(control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side) {
+        return IslandCircleButton(
+            control: .activityFirst, height: h, tint: .white, label: String(localized: "Sound Output"), fill: CallLook.speaker, side: side,
+            // Its own menu opens as a pull-down menu does, as the press goes down.
+            onPress: actions.output == nil ? { soundPresented.toggle() } : nil,
+            held: soundPresented
+        ) {
             // Pressed again, it closes the menu it opened, as a menu's title does.
             if let output = actions.output { output(nil) } else { soundPresented.toggle() }
         } glyph: {

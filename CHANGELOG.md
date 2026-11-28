@@ -142,10 +142,12 @@
   its ends are gray, as macOS draws them.
 - Fixed closing Sound taking focus away from another Glance window.
 
-- Changed Sound to open as the menu bar's Sound menu does: a glass panel under
-  its button, without an arrow, that takes the keys for its own rows and
-  slider while the app you're using stays in front. Pressing the button again
-  closes it.
+- Changed Sound to open as the Dock's menus do: in macOS's own glass with an
+  arrow, centered under its button with the arrow pointing at it, as soon as
+  the button is pressed. The button stays lit while Sound is open, and Sound
+  fades as it closes. It takes the keys for its own rows and slider while the
+  app you're using stays in front. Holding the button, dragging onto an output
+  and letting go chooses it. Pressing the button again closes Sound.
 - Fixed opening and closing Sound taking the focus from the app in front, which
   made that app's window flash when the button was pressed again and again.
 

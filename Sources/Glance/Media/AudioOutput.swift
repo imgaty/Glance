@@ -778,13 +778,15 @@ final class SoundRowLight: NSView {
 enum SoundLook {
     static let edge: CGFloat = highlightInset
     static let width: CGFloat = 308
-    /// The panel's corners, as Control Center's Sound menu rounds its own.
-    static let radius: CGFloat = 16
-    /// How far under the button's contact area the panel hangs: 6 points under the notch's edge,
-    /// which is the padding under it.
-    static let below: CGFloat = PlayerLayout.padding + 6
-    /// Its fade in and out.
-    static let fade: TimeInterval = 0.12
+    /// The box's corners, as AppKit rounds its container for a menu with an arrow, the Dock's: read
+    /// from its outline on macOS 27.3, continuous corners of 12 points.
+    static let radius: CGFloat = 12
+    /// Its fade as it closes, a menu's: measured on 27.3, gone in about 0.24 seconds, half of it in
+    /// the first 0.07, then slower and slower. It shows all at once, as a menu does.
+    static let fade: TimeInterval = 0.24
+    static let fadeCurve = CAMediaTimingFunction(controlPoints: 0.15, 0.35, 0.5, 1)
+    /// How far a held press moves before it chooses what it's let go on, rather than staying open.
+    static let dragSlop: CGFloat = 3
     static let inset: CGFloat = 14
     static let highlightInset: CGFloat = 5
     /// A lit row's corners: nested in the panel's, they share a center when the panel's radius is the

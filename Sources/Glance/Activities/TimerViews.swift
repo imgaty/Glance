@@ -558,13 +558,13 @@ struct TimerDoneView: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
             }
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .firstBaseline(Self.nameBaseline(name, restingHeight: h))
-                .padding(.leading, nameEdge)
-                .padding(.trailing, TimerLayout.circleGap(h) + Self.buttonsWidth(h) + TimerLayout.circleEdge(h))
-                .accessibilityHidden(true)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .firstBaseline(Self.nameBaseline(name, restingHeight: h))
+            .padding(.leading, nameEdge)
+            .padding(.trailing, TimerLayout.circleGap(h) + Self.buttonsWidth(h) + TimerLayout.circleEdge(h))
+            .accessibilityHidden(true)
             HStack(spacing: TimerLayout.circleGap(h)) {
                 IslandCircle(height: h, tint: TimerLayout.ink, highlighted: hovered == .again && repeatState != .pending, side: TimerLayout.circle(h)) {
                     if repeatState == .pending, !reduceMotion {
@@ -604,9 +604,10 @@ struct TimerDoneView: View {
             h * TimerLayout.titleLimit)
         // Reserve the status line before the command begins so a delayed reply doesn't change
         // the notch's width or push the Stop button away from the pointer.
-        let statusWidth = [ClockActivity.RepeatState.pending, .failed].compactMap(\.status).map {
-            ceil(($0 as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: statusSize, weight: .medium)]).width) + 2
-        }.max() ?? 0
+        let statusWidth =
+            [ClockActivity.RepeatState.pending, .failed].compactMap(\.status).map {
+                ceil(($0 as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: statusSize, weight: .medium)]).width) + 2
+            }.max() ?? 0
         let words = max(titleWidth, statusWidth)
         let right = buttonsWidth(h) + TimerLayout.circleEdge(h)
         let across = nameEdge(h) + words + TimerLayout.circleGap(h) + right
@@ -750,16 +751,23 @@ struct IslandCircleButton<Glyph: View>: View {
     let label: String
     var fill: Color?
     var side: CGFloat?
+    /// For a button that opens a menu, what a pointer's press does as it goes down (see `IslandButton`).
+    var onPress: (() -> Void)? = nil
+    /// Lit while the menu it opened is open (see `IslandButton`).
+    var held = false
     let action: () -> Void
     @ViewBuilder let glyph: Glyph
     @State private var hovering = false
 
     var body: some View {
-        Button(action: action) {
-            IslandCircle(height: height, tint: tint, highlighted: hovering, fill: fill, side: side) { glyph }
+        Button {
+            if onPress != nil, PressedClick.releasesHandled() { return }
+            action()
+        } label: {
+            IslandCircle(height: height, tint: tint, highlighted: hovering || held, fill: fill, side: side) { glyph }
                 .contentShape(Circle())
         }
-        .buttonStyle(IslandPress(highlight: false, contactSize: nil))
+        .buttonStyle(IslandPress(highlight: false, contactSize: nil, onPress: PressedClick.handling(onPress)))
         .onHover { hovering = $0 }
         .notchControl()
         .keyControl(control, outset: CGSize(width: 3, height: 3), spoken: label, action: action)

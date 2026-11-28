@@ -26,13 +26,23 @@ struct IslandButton: View {
     /// what it does.
     var label: String? = nil
     var value: String? = nil
+    /// For a button that opens a menu: what a pointer's press does as it goes down, as a pull-down
+    /// menu's button opens it; the same click going up then does nothing more. The keys and
+    /// VoiceOver still use `action`.
+    var onPress: (() -> Void)? = nil
+    /// Lit as when pressed while the menu it opened is open, as the Dock dims an icon while its
+    /// menu shows.
+    var held = false
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let glyph = size, glowColor = burstColor
         let drawBurst = burstEnabled, scaleBurst = burstEnabled && !reduceMotion
-        Button(action: action) {
+        Button {
+            if onPress != nil, PressedClick.releasesHandled() { return }
+            action()
+        } label: {
             VariableControlSymbol(symbol: symbol, value: symbolValue ?? 1)
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(color)
@@ -66,7 +76,7 @@ struct IslandButton: View {
                     }
                 }
         }
-        .buttonStyle(IslandPress())
+        .buttonStyle(IslandPress(held: held, onPress: PressedClick.handling(onPress)))
         .notchControl()
         .modifier(SpokenAs(label: label, value: value))
     }
@@ -161,9 +171,46 @@ struct IslandPress: ButtonStyle {
     var highlight = true
     /// nil keeps the label's own size, for the app badge.
     var contactSize: CGFloat? = NowPlayingView.hitbox
+    /// Lit as when pressed, without shrinking, while what it opened is open.
+    var held = false
+    /// Called as a press goes down.
+    var onPress: (() -> Void)? = nil
 
     func makeBody(configuration: Configuration) -> some View {
-        IslandPressBody(label: configuration.label, pressed: configuration.isPressed, highlight: highlight, contactSize: contactSize)
+        IslandPressBody(label: configuration.label, pressed: configuration.isPressed, highlight: highlight, contactSize: contactSize, held: held)
+            .onChange(of: configuration.isPressed) { _, down in
+                if down { onPress?() }
+            }
+    }
+}
+
+/// A click that a button acted on as it went down, as a pull-down menu's button does, so the same
+/// click going up doesn't act again: a mouse-down and its mouse-up share one event number. A press
+/// seen outside its own mouse-down, as when SwiftUI updates late, isn't acted on: the button then
+/// acts on the release, as any button does.
+@MainActor
+enum PressedClick {
+    private static var handled: Int?
+
+    /// The press, made to act only on a click going down.
+    static func handling(_ press: (() -> Void)?) -> (() -> Void)? {
+        press.map { press in
+            { if takes(NSApp.currentEvent) { press() } }
+        }
+    }
+
+    /// Whether a press seen while this event is handled acts now: only on a mouse-down, remembered.
+    static func takes(_ event: NSEvent?) -> Bool {
+        guard let event, event.type == .leftMouseDown else { return false }
+        handled = event.eventNumber
+        return true
+    }
+
+    /// Whether this event is the release of a click its press already acted on.
+    static func releasesHandled(_ event: NSEvent? = NSApp.currentEvent) -> Bool {
+        guard let event, event.type == .leftMouseUp, event.eventNumber == handled else { return false }
+        handled = nil
+        return true
     }
 }
 
@@ -172,18 +219,21 @@ private struct IslandPressBody<Label: View>: View {
     let pressed: Bool
     let highlight: Bool
     let contactSize: CGFloat?
+    let held: Bool
     @State private var hovered = false
     @State private var frame = CGRect.zero
     @Environment(\.demoPointer) private var demoPointer
 
     var body: some View {
-        IslandPressFeedback(label: label, pressed: pressed, hovered: hovered || frame.holds(demoPointer), highlight: highlight, contactSize: contactSize)
-            .onHover { hovered = $0 }
-            .onGeometryChange(for: CGRect.self) {
-                $0.frame(in: .named(NotchView.bodySpace))
-            } action: {
-                frame = $0
-            }
+        IslandPressFeedback(
+            label: label, pressed: pressed, hovered: hovered || frame.holds(demoPointer), highlight: highlight, contactSize: contactSize, held: held
+        )
+        .onHover { hovered = $0 }
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .named(NotchView.bodySpace))
+        } action: {
+            frame = $0
+        }
     }
 }
 
@@ -195,12 +245,15 @@ struct IslandPressFeedback<Label: View>: View {
     let hovered: Bool
     var highlight = true
     var contactSize: CGFloat? = NowPlayingView.hitbox
+    /// Lit as when pressed, without shrinking.
+    var held = false
     @Environment(\.isEnabled) private var enabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let down = enabled && pressed
         let over = enabled && hovered
+        let lit = down || (enabled && held)
         label
             .scaleEffect(down && !reduceMotion ? 0.85 : 1)
             .opacity(down && !highlight ? 0.75 : 1)
@@ -208,8 +261,8 @@ struct IslandPressFeedback<Label: View>: View {
             .frame(width: contactSize, height: contactSize)
             .background {
                 Circle()
-                    .fill(.white.opacity(highlight ? (down ? 0.14 : over ? 0.08 : 0) : 0))
-                    .animation(.easeOut(duration: 0.15), value: down)
+                    .fill(.white.opacity(highlight ? (lit ? 0.14 : over ? 0.08 : 0) : 0))
+                    .animation(.easeOut(duration: 0.15), value: lit)
                     .animation(.easeOut(duration: 0.15), value: over)
             }
             .contentShape(Rectangle())

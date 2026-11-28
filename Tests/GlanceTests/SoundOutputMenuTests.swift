@@ -177,7 +177,14 @@ struct SoundOutputMenuTests {
         window.orderFrontRegardless()
         defer { window.orderOut(nil) }
         #expect(popover.window.styleMask.contains(.nonactivatingPanel))
-        #expect((popover.window.contentView as? NSGlassEffectView)?.contentView === popover.contentView)
+        // AppKit's container with an arrow, the Dock's menus' own, is the panel's. (This test hosts
+        // the rows in a window of its own.)
+        if SoundCalloutView.pointsWithArrow {
+            let callout = try #require(popover.window.contentView as? SoundCalloutView)
+            #expect(NSStringFromClass(type(of: callout.background)) == "_NSPopupMenuWindowPopoverFrame")
+            // Cut to the frame's outline: its margins stay clear.
+            #expect(callout.layer?.mask is CAShapeLayer)
+        }
         let speaker = try #require(menu.items.first { $0.tag == Int(speakers.id) }?.view)
         let holder = try #require(speaker.superview)
         let oldHeight = popover.contentSize.height
@@ -188,7 +195,8 @@ struct SoundOutputMenuTests {
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight + headphone.frame.height)
         #expect(!window.isKeyWindow)
-        #expect(popover.window.frame.size == popover.contentSize)
+        // The box, and the arrow's strip above it.
+        #expect(popover.window.frame.size == CGSize(width: popover.contentSize.width, height: popover.contentSize.height + SoundCalloutView.margin))
         // A current-output refresh must not replace or restart the appearing row.
         menu.refresh(devices: [speakers, headphones], current: speakers.id, batteries: [:])
         popover.reload(animated: true)
@@ -206,6 +214,7 @@ struct SoundOutputMenuTests {
         #expect(inserted.superview == nil)
         #expect(speaker.superview === holder)
         #expect(popover.contentSize.height == oldHeight)
-        #expect(popover.window.frame.size == popover.contentSize)
+        // The box, and the arrow's strip above it.
+        #expect(popover.window.frame.size == CGSize(width: popover.contentSize.width, height: popover.contentSize.height + SoundCalloutView.margin))
     }
 }

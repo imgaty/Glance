@@ -332,7 +332,10 @@ struct NowPlayingView: View {
                 symbol: slot == .output ? output.buttonSymbol : symbol(for: slot), size: PlayerLayout.optionGlyph,
                 symbolValue: slot == .output ? output.speakerLevel : nil, color: state.color, slashed: state.slashed,
                 burst: favoriteBursts, burstEnabled: slot == .favorite, burstColor: accent,
-                label: slot.title, value: state.value
+                label: slot.title, value: state.value,
+                // Sound opens as a pull-down menu does, as the press goes down.
+                onPress: slot == .output ? { use(slot, at: place) } : nil,
+                held: slot == .output && soundPlace == place
             ) {
                 use(slot, at: place)
             }

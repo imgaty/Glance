@@ -297,11 +297,13 @@ Customize Controls.
 
 ### Sound output and volume
 
-The `Sound Output` button opens Sound under it, in native glass, as the menu
-bar's Sound menu opens. The app you're using stays in front while Sound takes
-the keys for its own rows and slider, and the notch stays open under it. Sound
-grows and shrinks as outputs come and go. Escape, another press on the button,
-or a click outside closes it.
+The `Sound Output` button opens Sound as the Dock opens its menus: in native
+glass with an arrow, centered under the button with the arrow pointing at it,
+as soon as you press it. The button stays lit while Sound is open. You can also
+hold the button, drag onto an output and let go to choose it. The app you're
+using stays in front while Sound takes the keys for its own rows and slider,
+and the notch stays open under it. Sound grows and shrinks as outputs come and
+go. Escape, another press on the button, or a click outside closes it.
 
 Sound is laid out as the menu bar's Sound menu: the same width, insets, row
 heights and lines, and a row lit under the pointer or the arrow keys in the
