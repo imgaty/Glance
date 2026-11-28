@@ -10,6 +10,9 @@
 
 ### Live Activities
 
+- Fixed a click in Glance's own Settings, or on its menu bar icon, leaving the
+  notch open.
+
 - Changed live activities to open only when you hover over or click them,
   unless they have nothing to show beside the camera, as Low Battery, a call
   coming in or an AirDrop request: a Focus change no longer extends by itself,
