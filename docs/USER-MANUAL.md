@@ -716,14 +716,16 @@ invent a countdown after snoozing, and leaves Clock's native alert available.
 Right-click the notch and choose **Recognize Music**. Glance requests microphone
 permission at that point and uses ShazamKit to identify the song. ShazamKit
 sends an audio signature to Shazam. It shows as the iPhone's Music Recognition
-does. The notch opens by itself for a moment as it starts listening: Shazam's
-mark on a blue disc, `Listening…`, a waveform of what it hears, and **Cancel**
-in blue. It then settles beside the camera, the mark at the left with light
-passing through it and the waveform at the right. Opened again later, it says
-`Working on it…`, then `Still trying…`.
+does. Started from the notch's menu, the notch opens to it: Shazam's mark on a
+blue disc, `Listening…`, a waveform of what it hears, and **Cancel** in blue.
+It then settles beside the camera, the mark at the left with light passing
+through it and the waveform at the right. Started elsewhere, as from Control
+Center, it stays beside the camera until you click it. Opened again later, it
+says `Working on it…`, then `Still trying…`.
 
-When no song was found, the notch opens to `No song found.` with **Try Again**
-for a few seconds, then the activity goes by itself, as a canceled request does.
+When no song was found, it says `No song found.` with **Try Again** when
+opened, for a few seconds, then the activity goes by itself, as a canceled
+request does.
 A song found shows its cover, which opens it in Music, with its title and
 artist, until **Done**. Opening or closing the notch never starts a recognition
 session by itself.
@@ -774,9 +776,9 @@ not a nonempty result you may still want to keep.
 
 A confirmed Focus change appears as the iPhone and Apple's MacBook Pro show it:
 the Focus's symbol at the left end and `On` or `Off` at the right, both in the
-Focus's color, or gray when it turned off. After a second it extends for a
-moment, the symbol in a circle beside the Focus's name, then settles back and
-goes. Apple's own Focuses keep their colors; a Focus of your own takes your
+Focus's color, or gray when it turned off. Hover over or click it and it
+extends: the symbol in a circle beside the Focus's name. It settles back as the
+pointer leaves, then goes. Apple's own Focuses keep their colors; a Focus of your own takes your
 Mac's accent color. Glance reads macOS's own Focus banner and what macOS
 records in its log as a Focus turns on or off, so a change made from Control
 Center, where macOS shows no banner, shows too. Reading the log needs an
@@ -829,15 +831,14 @@ long as it records. Before that, while macOS counts down to the recording, the
 count shows in a ring; it has nothing to open to, so hovering or clicking keeps
 it in place. VoiceOver reads it as status, not as a button, and its count stays
 current as the visible number changes. Recording and memo labels also keep their
-elapsed times current in compact and expanded views. Once you stop,
-it opens by itself,
-with `Saving Recording…` under the time and the ring around the button going
-round; then the square in the ring grows into the recording's first picture, and
-the notch says where it went, such as `Recording Saved to Desktop`. Click the
+elapsed times current in compact and expanded views. Once you stop, it stays
+beside the camera; click it and it opens with `Saving Recording…` under the
+time and the ring around the button going round; then the square in the ring
+grows into the recording's first picture, and the notch says where it went,
+such as `Recording Saved to Desktop`. Click the
 picture to open the recording. Long folder names shorten before the picture;
-VoiceOver reads the full destination. Moving the pointer onto the notch and
-away closes it sooner. In a bubble, or beside one, the countdown's number shows inside its
-ring.
+VoiceOver reads the full destination. In a bubble, or beside one, the
+countdown's number shows inside its ring.
 
 Hover over or click the notch while the recording has it, or click its bubble,
 and it opens to the red dot and the recording's time over `Screen Recording`,

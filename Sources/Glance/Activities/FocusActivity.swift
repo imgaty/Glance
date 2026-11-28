@@ -51,10 +51,9 @@ struct FocusChange: Equatable, Sendable {
     /// Off, as the iPhone shows it: gray.
     static let off = Color(white: 103 / 255)
 
-    /// As the iPhone shows a Focus changing, measured from a recording: beside the camera, then after
-    /// a second it extends by itself for 1.4 seconds, then back beside the camera and gone.
-    static let extendsAfter = 1.0
-    static let extendsFor = 1.4
+    /// How long a Focus changing shows beside the camera. It extends only with the pointer on it, or
+    /// clicked, as every live activity's extended view does (the user, 2026-11-28: the extended view
+    /// "is a view for when the user clicks/hovers on the notch"), never by itself.
     static let shows = 3.4
 
     static func read(

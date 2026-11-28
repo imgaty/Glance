@@ -152,8 +152,8 @@ final class NotchController {
         /// Something for the tray was dragged near it and rested there: it's open on the tray to
         /// take it, until the drag goes away or ends.
         case drag
-        /// It opened by itself, as the iPhone's screen recording does as it starts and as it's
-        /// saved: it stays open until that's done, or the pointer visits it and leaves.
+        /// It opened by itself, for what has no closed view, as AirDrop asking to share: it stays
+        /// open until that's done, or the pointer visits it and leaves.
         case presented
         /// Opened with a click, as the Mac's island is: it stays open with the pointer away, until a
         /// click lands outside it, it's swiped up, or the shortcut or Escape closes it.
@@ -694,9 +694,8 @@ final class NotchController {
             if let alert {
                 model.alertWing = SystemActivityView.wing(
                     for: alert, restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
-                if case .device = alert.content {
-                    model.alertExtendedWing = ExpandedDeviceLayout.wing(
-                        name: alert.name ?? "", restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
+                if let wing = Self.extendedWing(for: alert, closed: model.closedSize) {
+                    model.alertExtendedWing = wing
                 } else {
                     model.alertExtended = false
                 }
@@ -704,7 +703,6 @@ final class NotchController {
                 model.alertExtended = false
             }
         }
-        extendFocus(alert)
         guard alert == nil else { return }
         if let page = reopening, Activities.shared.waiting.isEmpty {
             reopening = nil
@@ -761,12 +759,9 @@ final class NotchController {
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
     }
 
-    private var recognitionPresent: Task<Void, Never>?
-
     private func show(recognition state: MusicRecognitionActivity.State, identity: UUID?) {
         let shown = state == .idle ? nil : state
         let wasPresent = model.recognition != nil
-        let wasWorking = model.recognition?.isWorking == true
         if (shown != nil) == wasPresent {
             if identity != model.recognitionIdentity { model.dismissed.remove(.recognition) }
             model.recognitionIdentity = identity
@@ -780,19 +775,9 @@ final class NotchController {
         }
         if model.state == .open, model.expandedGone { close(holdUntilExit: true) }
         if model.expanded == .recognition, let focus = model.keys.focus, activityControls?.contains(focus) == false { model.keys.clear() }
-        // As the iPhone's: it opens by itself as it starts listening, then settles beside the camera;
-        // and opens again to say no song was found, until it goes.
-        let opensFor: TimeInterval? =
-            !wasWorking && shown?.isWorking == true ? ShazamLook.opensAtStart : wasWorking && shown == .noMatch ? ShazamLook.showsNoMatch : nil
-        if let opensFor {
-            recognitionPresent?.cancel()
-            recognitionPresent = Task { [weak self] in
-                // Once it has taken its place beside the camera.
-                try? await Task.sleep(for: .seconds(NotchMotion.foldDuration))
-                guard let self, !Task.isCancelled, self.model.recognition == shown else { return }
-                self.present(.recognition, for: opensFor, onCollapse: Opening.openingTap)
-            }
-        }
+        // Listening, or no song found, it stays beside the camera: it opens only when clicked, or
+        // started from Glance (see `recognizeMusic`), as every live activity with a closed view does
+        // (the user, 2026-11-28).
     }
 
     /// Called only by an explicit Recognize Music command; opening an existing activity is inert.
@@ -842,18 +827,12 @@ final class NotchController {
     }
 
     /// A recording started counting down, started, was paused, is being saved, or ended: its wings
-    /// come, change, or go. While the screen recording is saved, until it's said where, it opens by
-    /// itself, as the iPhone's does; not as it starts, which the iPhone's doesn't.
+    /// come, change, or go. Saving and saved, it stays beside the camera, and opens to say where only
+    /// when clicked, as every live activity with a closed view does (the user, 2026-11-28).
     private func show(screen: ScreenRecording?, memo: VoiceMemo?) {
         let was = model.screenRecording
         defer {
-            if screen?.isSaving == true, was?.isSaving != true {
-                present(.screenRecording, for: nil)
-            } else if screen == nil, was != nil {
-                endPresenting()
-            } else if screen?.isSaved == true, was?.isSaved != true {
-                present(.screenRecording, for: nil)
-            }
+            if screen == nil, was != nil { endPresenting() }
         }
         let ending = (screen == nil && model.screenRecording != nil) || (memo == nil && model.voiceMemo != nil)
         model.changeActivityPresentation(animation: ending ? IslandMotion.fold : IslandMotion.open) {
@@ -1377,7 +1356,7 @@ final class NotchController {
     // MARK: Transitions
 
     private func peek() {
-        if let alert = model.alert, !model.collapsed, case .device = alert.content { extend(alert) } else { model.peek() }
+        if let alert = model.alert, !model.collapsed, Self.extendedWing(for: alert, closed: model.closedSize) != nil { extend(alert) } else { model.peek() }
         startPolling()
         // On an announcement, it only swells around it, or a device extends, and it opens once that's
         // over (see `show`).
@@ -1399,30 +1378,23 @@ final class NotchController {
         scheduleOpen(after: opening.hoverDelay + Self.restTime)
     }
 
-    private var focusExtension: Task<Void, Never>?
-
-    /// A Focus changing extends by itself a second after it shows, for 1.4 seconds, then settles back
-    /// beside the camera, as the iPhone's does.
-    private func extendFocus(_ alert: NotchAlert?) {
-        focusExtension?.cancel()
-        guard let alert, alert.kind == .focus, case .status = alert.content else { return }
-        focusExtension = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(FocusChange.extendsAfter))
-            guard let self, !Task.isCancelled, self.model.alert?.id == alert.id, self.model.state == .closed else { return }
-            self.model.alertExtendedWing = FocusExtendedView.wing(restingHeight: self.model.closedSize.height, closedWidth: self.model.closedSize.width)
-            self.model.changeActivityPresentation(animation: NotchMotion.expand) { self.model.alertExtended = true }
-            try? await Task.sleep(for: .seconds(FocusChange.extendsFor))
-            guard !Task.isCancelled, self.model.alert?.id == alert.id, self.model.alertExtended else { return }
-            self.model.changeActivityPresentation(animation: IslandMotion.fold) { self.model.alertExtended = false }
+    /// How wide each wing is for an announcement's extended view, for one that has one: a device
+    /// arriving says what it is, a Focus changing its name. It extends only with the pointer on it or
+    /// clicked, as every live activity's extended view does, never by itself (the user, 2026-11-28:
+    /// the extended view "is a view for when the user clicks/hovers on the notch").
+    static func extendedWing(for alert: NotchAlert, closed: CGSize) -> CGFloat? {
+        switch alert.content {
+        case .device: ExpandedDeviceLayout.wing(name: alert.name ?? "", restingHeight: closed.height, closedWidth: closed.width)
+        case .status where alert.kind == .focus: FocusExtendedView.wing(restingHeight: closed.height, closedWidth: closed.width)
+        default: nil
         }
     }
 
-    /// A device being announced extends to say what it is, as the iPhone's AirPods do, for as long
+    /// An announcement with an extended view extends, under the pointer or clicked, and stays as long
     /// again.
     private func extend(_ alert: NotchAlert) {
-        guard case .device = alert.content else { return }
-        model.alertExtendedWing = ExpandedDeviceLayout.wing(
-            name: alert.name ?? "", restingHeight: model.closedSize.height, closedWidth: model.closedSize.width)
+        guard let wing = Self.extendedWing(for: alert, closed: model.closedSize) else { return }
+        model.alertExtendedWing = wing
         model.extend()
         Activities.shared.keep(alert.kind, for: alert.seconds)
     }
@@ -1464,6 +1436,14 @@ final class NotchController {
     /// already pulling the notch down, which a wait would leave stretching it.
     private func open(on asked: NotchPage = .player, forDrop: Bool = false, byClick: Bool = false) {
         guard model.state != .open else { return }
+        // An announcement with an extended view opens to that, as clicking any live activity opens
+        // its own; the keyboard still opens the player.
+        if !forDrop, !holds.contains(.keyboard), let alert = model.alert, !model.collapsed,
+            Self.extendedWing(for: alert, closed: model.closedSize) != nil
+        {
+            if !model.alertExtended { extend(alert) }
+            return
+        }
         // With no song and no live activity, there's no player to open to: the tray instead, or
         // nothing, as the Dynamic Island has nothing to expand with nothing going on.
         guard let page = Self.openingPage(asked, forDrop: forDrop, playerEmpty: playerEmpty, trayOn: Tray.isOn) else { return }

@@ -74,3 +74,16 @@ struct FocusLogTests {
     }
 }
 
+/// The user, 2026-11-28: the extended view "is a view for when the user clicks/hovers on the notch".
+@Suite("Extended views come only from the pointer")
+struct ExtendedViewTests {
+    @Test("Only a device arriving and a Focus changing have an extended view to show when hovered or clicked")
+    @MainActor func which() {
+        let closed = CGSize(width: 185, height: 32)
+        #expect(NotchController.extendedWing(for: ActivityBench.focus(), closed: closed) != nil)
+        #expect(NotchController.extendedWing(for: DeviceWatch.alert(name: "AirPods Pro", model: .airpodsPro2, battery: 80), closed: closed) != nil)
+        let charging = NotchAlert(kind: .charging, content: .battery(title: "Charging", level: BatteryLevel(percent: 64, charging: true)), spoken: "Charging")
+        #expect(NotchController.extendedWing(for: charging, closed: closed) == nil)
+        #expect(NotchController.extendedWing(for: BatteryWatch.lowBattery(BatteryWatch.Reading(percent: 20, onPower: false, charging: false)), closed: closed) == nil)
+    }
+}

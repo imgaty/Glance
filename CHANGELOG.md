@@ -10,6 +10,13 @@
 
 ### Live Activities
 
+- Changed live activities to open only when you hover over or click them,
+  unless they have nothing to show beside the camera, as Low Battery, a call
+  coming in or an AirDrop request: a Focus change no longer extends by itself,
+  music recognition no longer opens as it starts listening or finds nothing,
+  and a screen recording no longer opens as it's saved. Clicking a Focus change
+  or a device arriving shows its extended view rather than opening the player.
+
 - Fixed a Focus turned on or off from Control Center never showing in the
   notch: macOS shows no banner for a change made there. Glance now also reads
   what macOS records as a Focus changes, from anywhere, which needs an
@@ -93,9 +100,9 @@
   rounded as the iPhone rounds it.
 
 - Changed Focus changes to show as the iPhone and Apple's MacBook Pro do: the
-  Focus's symbol and `On` or `Off` in its color, extending for a moment with its
-  name. Do Not Disturb is purple, Work teal, and each of Apple's Focuses keeps
-  its color.
+  Focus's symbol and `On` or `Off` in its color, extending with its name when
+  you hover over or click it. Do Not Disturb is purple, Work teal, and each of
+  Apple's Focuses keeps its color.
 
 - Changed opened activities to the iPhone's own sizes for their round buttons,
   pictures and words, their words standing just under the camera, and each
@@ -106,11 +113,10 @@
   gains a digit, such as 59:59 to 1:00:00, rather than running under the camera.
 
 - Changed music recognition to show as the iPhone's Music Recognition does:
-  the notch opens by itself as it starts listening, with Shazam's mark on a
-  blue disc, `Listening…`, a waveform of what it hears and a blue **Cancel**,
-  then settles beside the camera with the mark and the waveform. When no song
-  is found it opens to `No song found.` with **Try Again**, then goes by
-  itself, as a canceled request does.
+  Shazam's mark and a waveform of what it hears beside the camera, opening, when
+  clicked or started from Glance, to the mark on a blue disc, `Listening…` and
+  a blue **Cancel**. When no song is found it says `No song found.` with
+  **Try Again** when opened, then goes by itself, as a canceled request does.
 
 - Changed shortcuts started from Glance to show as the iPhone shows a shortcut
   running: its own icon beside the camera with a ring in its color that fills

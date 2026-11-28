@@ -46,8 +46,7 @@ enum ShazamLook {
     /// After how long listening says it's still at it, and then that it's still trying.
     static let workingAfter: TimeInterval = 4
     static let tryingAfter: TimeInterval = 9
-    /// How long the notch opens to it as it starts listening, and to "No song found." before it goes.
-    static let opensAtStart: TimeInterval = 2.5
+    /// How long "No song found." stays before it goes.
     static let showsNoMatch: TimeInterval = 4.7
 
     /// The waveform's width at that height, beside the camera or opened.
