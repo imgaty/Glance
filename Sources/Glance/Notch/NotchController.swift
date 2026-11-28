@@ -2612,10 +2612,11 @@ final class NotchController {
         guard model.detached != nil else { return nil }
         let h = model.closedSize.height
         let m = model.metrics(for: .closed)
+        let w = model.bubbleWidth
         let out = m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
         // Beside the notch's far end, as people read: to its left, right to left.
-        let left = Self.readsRightToLeft ? centerX - out - h : centerX + out
-        return CGRect(x: left - 4, y: topY - h - 4, width: h + 8, height: h + 6)
+        let left = Self.readsRightToLeft ? centerX - out - w : centerX + out
+        return CGRect(x: left - 4, y: topY - h - 4, width: w + 8, height: h + 6)
     }
 
     /// A little forgiving margin before an open notch decides the pointer has left.
@@ -2627,9 +2628,10 @@ final class NotchController {
         guard model.state == .open, model.openedFromBubble, !model.activityControlsHidden, !model.bubbleMerged, model.second != nil else { return nil }
         let h = model.closedSize.height
         let m = model.metrics(for: .open)
+        let w = model.bubbleWidth(for: model.activities.first)
         let out = m.bodyWidth / 2 + m.flare + h * IslandBubble.gap
-        let left = Self.readsRightToLeft ? centerX - out - h : centerX + out
-        return CGRect(x: left - 4, y: topY - h - 4, width: h + 8, height: h + 6)
+        let left = Self.readsRightToLeft ? centerX - out - w : centerX + out
+        return CGRect(x: left - 4, y: topY - h - 4, width: w + 8, height: h + 6)
     }
 
     // MARK: Helpers

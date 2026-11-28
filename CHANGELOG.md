@@ -10,6 +10,10 @@
 
 ### Live Activities
 
+- Changed a call in the bubble off the notch's end to a pill as wide as its
+  green phone and time need, the time as large as beside the camera, rather
+  than a circle it had to shrink to fit.
+
 - Added shortcuts started anywhere to the notch, not only those run from its
   menu: from the Shortcuts app, Terminal or any other app, each with its name,
   its icon, a ring that fills as it runs, and a button to stop it.

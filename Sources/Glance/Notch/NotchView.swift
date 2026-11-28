@@ -126,7 +126,19 @@ final class NotchModel: ObservableObject {
     /// from there, so the notch and the bubble are one shape, not two.
     @Published var bubbleReach: CGFloat = 0
     /// From the notch's trailing end to the bubble's far side.
-    var bubbleSpan: CGFloat { closedSize.height * (1 + IslandBubble.gap) }
+    var bubbleSpan: CGFloat { closedSize.height * IslandBubble.gap + bubbleWidth }
+    /// The detached activity's bubble: a circle as wide as the notch is tall, or a pill as wide as
+    /// what it shows needs (see `bubbleWidth(for:)`).
+    var bubbleWidth: CGFloat { bubbleWidth(for: detached) }
+
+    /// A bubble showing this activity: a call going on shows its phone and time as beside the camera,
+    /// in a pill as wide as they need, made room for a moment before the time gains a digit; anything
+    /// else, a circle.
+    func bubbleWidth(for activity: Activity?) -> CGFloat {
+        let h = closedSize.height
+        if activity == .call, let call { return ahead { CallBubbleMark.width(for: call, restingHeight: h, at: $0) } }
+        return h
+    }
     /// A presentation change passes through the hardware housing before its new content opens.
     @Published var activityFolded = false
     /// Geometry has begun opening, but its controls are still fading into view.
@@ -1384,7 +1396,7 @@ struct NotchView: View {
             music: activity == .music, artwork: activity == .music ? nowPlaying.artwork : nil,
             paused: activity == .music && nowPlaying.hasMedia && !nowPlaying.isPlaying,
             name: activity.map(model.name(of:)) ?? String(localized: "Timer"), open: { model.openBubble() },
-            restingHeight: model.closedSize.height,
+            restingHeight: model.closedSize.height, width: model.bubbleWidth(for: activity),
             // Beside an open view, it comes out of the view's body, under the flare its top corner
             // reaches out to the screen's edge with, and rests past that flare.
             notchEnd: model.state != .open ? m.bodyWidth / 2 - m.fold : beside ? m.bodyWidth / 2 : restingEnd,

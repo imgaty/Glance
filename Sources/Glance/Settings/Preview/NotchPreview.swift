@@ -63,9 +63,10 @@ struct NotchPreview: View {
                         guard model.detached != nil else { return nil }
                         let h = model.closedSize.height
                         let m = model.metrics(for: .closed)
+                        let w = model.bubbleWidth
                         let out = m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
-                        let x = proxy.size.width / 2 + (layoutDirection == .rightToLeft ? -out - h : out) * scale
-                        return CGRect(x: x - 4 * scale, y: (top.edge - 2) * scale, width: (h + 8) * scale, height: (h + 6) * scale)
+                        let x = proxy.size.width / 2 + (layoutDirection == .rightToLeft ? -out - w : out) * scale
+                        return CGRect(x: x - 4 * scale, y: (top.edge - 2) * scale, width: (w + 8) * scale, height: (h + 6) * scale)
                     })
                 // Pointer coordinates pass through the same transform as the picture, including
                 // intermediate animation frames, rather than using the destination scale early.
@@ -79,9 +80,10 @@ struct NotchPreview: View {
                         guard model.detached != nil else { return nil }
                         let h = model.closedSize.height
                         let m = model.metrics(for: .closed)
+                        let w = model.bubbleWidth
                         let out = m.bodyWidth / 2 - m.fold + h * IslandBubble.gap
-                        let x = sceneWidth / 2 + (layoutDirection == .rightToLeft ? -out - h : out)
-                        return CGRect(x: x - 4, y: top.edge - 2, width: h + 8, height: h + 6)
+                        let x = sceneWidth / 2 + (layoutDirection == .rightToLeft ? -out - w : out)
+                        return CGRect(x: x - 4, y: top.edge - 2, width: w + 8, height: h + 6)
                     })
                 ZStack(alignment: .top) {
                     // Laid out once, as large as it's ever seen, drawn back with the lyrics, so drawing

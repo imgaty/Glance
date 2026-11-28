@@ -285,25 +285,21 @@ struct CallAvatar: View {
 /// How long the call has been going, a second at a time.
 struct CallTime: View {
     let since: Date
-    var bubble = false
 
     var body: some View {
         TimelineView(.periodic(from: since, by: 1)) { context in
             let seconds = max(Int(context.date.timeIntervalSince(since)), 0)
-            Text(bubble ? CallBubbleMark.text(seconds) : ClockText.of(seconds))
+            Text(ClockText.of(seconds))
                 .monospacedDigit()
         }
     }
 }
 
-/// A call in the bubble, off the notch's end, when another activity started first: its time, as large
-/// as the notch's time beside the camera when it fits, smaller when it doesn't, never under the Mac's
-/// smallest text; and the green phone before it, only where both fit (the user, 2026-11-08: "it
-/// should show the time, and if it fits the phone icon"). Measured at a 32 point notch: m:ss is 29.5
-/// points at the notch's 13.6 point text and the circle holds about 28, so it's drawn a little
-/// smaller; mm:ss fits at about 10; with the phone, even m:ss would need 31 at 10, so the phone doesn't
-/// show at 32 or 37 points. Past an hour it goes on counting minutes, as h:mm:ss can't fit at 10.
-/// Ringing or going out, it's the phone alone, as large as any mark in the bubble.
+/// A call in the bubble, off the notch's end, when another activity started first: the green phone
+/// and the call's time, as large as beside the camera, in a pill as wide as they need (the user,
+/// 2026-11-26: "it can be a pill", over 2026-11-08's time shrunk to fit a circle and the phone only
+/// where it fit). Ringing or going out, it's the phone alone, as large as any mark in the bubble, in
+/// a circle.
 struct CallBubbleMark: View {
     let call: CallShown
     let restingHeight: CGFloat
@@ -312,21 +308,17 @@ struct CallBubbleMark: View {
         let h = restingHeight
         switch call.phase {
         case .connected(let since):
-            TimelineView(.periodic(from: since, by: 1)) { context in
-                let text = Self.text(max(Int(context.date.timeIntervalSince(since)), 0))
-                let fit = Self.fit(text, restingHeight: h)
-                HStack(spacing: fit.size * Self.gap) {
-                    if fit.phone {
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: fit.size * Self.phone, weight: .medium))
-                            .rotationEffect(.degrees(CallLook.phoneTilt))
-                    }
-                    Text(text)
-                        .font(.system(size: fit.size, weight: .semibold).monospacedDigit())
-                        .fixedSize()
-                }
-                .foregroundStyle(CallLook.green)
+            HStack(spacing: 0) {
+                Image(systemName: "phone.fill")
+                    .font(.system(size: h * CallLook.phone, weight: .medium))
+                    .rotationEffect(.degrees(CallLook.phoneTilt))
+                    .padding(.trailing, CallLook.timeGap)
+                CallTime(since: since)
+                    .font(IslandType.font(LiveActivityView.textSize(for: h), weight: .semibold, restingHeight: h))
+                    .fixedSize()
             }
+            .offset(x: -h * Self.inkShift)
+            .foregroundStyle(CallLook.green)
         case .ringing, .calling:
             Image(systemName: "phone.fill")
                 .font(.system(size: h * Self.mark, weight: .medium))
@@ -335,53 +327,20 @@ struct CallBubbleMark: View {
         }
     }
 
-    /// The phone's size beside the time, as beside the camera; the gap between them, both as shares of
-    /// the text's size; alone, as wide as the timer's ring by its ink.
-    static let phone: CGFloat = CallLook.phone / 0.426
-    static let gap: CGFloat = CallLook.timeGap / (32 * 0.426)
+    /// The phone alone, as wide as the timer's ring by its ink.
     static let mark: CGFloat = TimerLayout.ring / 0.936
-    /// How far in from the circle's edge the time keeps, as a share of the notch's height.
-    static let margin: CGFloat = 0.05
+    /// The tilted phone's ink stands about 2.5 points inside its frame at a 32-point notch, the
+    /// digits' about 0.5: the pair moves this much of the height toward the phone, so its ink is as
+    /// far from each end of the pill.
+    static let inkShift: CGFloat = 0.03
 
-    /// The time as the bubble shows it: minutes and seconds, past 59 minutes too, as h:mm:ss can't fit
-    /// and h:mm would read as minutes; hours and minutes only from 100 minutes, which can't fit either.
-    static func text(_ seconds: Int) -> String {
-        seconds < 100 * 60 ? String(format: "%d:%02d", seconds / 60, seconds % 60) : String(format: "%d:%02d", seconds / 3600, seconds / 60 % 60)
-    }
-
-    /// The time's size and whether the phone shows: the largest that fits across the circle at the
-    /// text's height, the notch's size at most and the Mac's smallest at least, the phone only if it
-    /// fits there too.
-    static func fit(_ text: String, restingHeight h: CGFloat) -> (size: CGFloat, phone: Bool) {
-        let most = LiveActivityView.textSize(for: h), least = StopwatchReading.smallest
-        func width(_ size: CGFloat, phone: Bool) -> CGFloat {
-            let digits = text.replacingOccurrences(of: "[0-9]", with: "0", options: .regularExpression)
-            let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
-            var width = (digits as NSString).size(withAttributes: [.font: font]).width
-            if phone,
-                let symbol = NSImage(systemSymbolName: "phone.fill", accessibilityDescription: nil)?
-                    .withSymbolConfiguration(.init(pointSize: size * Self.phone, weight: .medium))
-            {
-                width += symbol.size.width + size * Self.gap
-            }
-            return width
-        }
-        func room(_ size: CGFloat) -> CGFloat {
-            // Across the circle where the digits' tops and bottoms reach, less the margin each side.
-            let half = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold).capHeight / 2
-            let r = h / 2
-            return 2 * (r * r - half * half).squareRoot() - 2 * h * Self.margin
-        }
-        func largest(phone: Bool) -> CGFloat? {
-            var size = most
-            while size >= least {
-                if width(size, phone: phone) <= room(size) { return size }
-                size -= 0.25
-            }
-            return nil
-        }
-        if let size = largest(phone: true) { return (size, true) }
-        return (largest(phone: false) ?? least, false)
+    /// The bubble's width: going on, the phone and the time as beside the camera, as far in from each
+    /// end as the phone is from the notch's there; ringing or going out, a circle.
+    static func width(for call: CallShown, restingHeight h: CGFloat, at date: Date = .now) -> CGFloat {
+        guard case .connected(let since) = call.phase else { return h }
+        let time = ClockText.of(max(Int(date.timeIntervalSince(since)), 0))
+        let words = SystemActivityView.digitsWidth(time, LiveActivityView.textSize(for: h), .semibold)
+        return max(h, (2 * h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap + words).rounded(.up))
     }
 }
 
@@ -671,12 +630,11 @@ struct ExpandedCallView: View {
         // The time grows out of where it shows beside the camera, going from green to gray as it comes.
         let spread = ((closedWidth ?? width) - width) / 2
         let timeBaseline = top + side
-        let bubbleText = CallBubbleMark.text(max(Int(Date.now.timeIntervalSince(since)), 0))
-        let fit = CallBubbleMark.fit(bubbleText, restingHeight: h)
-        let compactSize = bubbleCenter == nil ? LiveActivityView.textSize(for: h) : fit.size
-        let compactWidth = (bubbleText as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: compactSize, weight: .semibold)]).width
+        let compactText = ClockText.of(max(Int(Date.now.timeIntervalSince(since)), 0))
+        let compactSize = LiveActivityView.textSize(for: h)
+        let compactWidth = (compactText as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: compactSize, weight: .semibold)]).width
         let timeFrom = CGSize(
-            width: bubbleCenter.map { $0 + width / 2 - words - compactWidth / 2 + (fit.phone ? fit.size * (CallBubbleMark.phone + CallBubbleMark.gap) / 2 : 0) }
+            width: bubbleCenter.map { $0 + width / 2 - words - compactWidth / 2 + (h * CallLook.phone * 1.15 + CallLook.timeGap) / 2 }
                 ?? (h * CallLook.phoneEdge + h * CallLook.phone * 1.15 + CallLook.timeGap - words - spread),
             height: h / 2 + closedDrop - (timeBaseline - detail.capHeight / 2))
         let count = CGFloat(2 + (sourceAvailable ? 1 : 0) + (microphone.available ? 1 : 0) + (call.canEnd ? 1 : 0))
@@ -696,7 +654,7 @@ struct ExpandedCallView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .firstBaseline(nameBaseline)
                         .padding(.leading, side + CallLayout.wordsGap(h))
-                    CallTime(since: since, bubble: bubbleCenter != nil)
+                    CallTime(since: since)
                         .font(IslandType.detail(restingHeight))
                         .foregroundStyle(out || closedWidth == nil && bubbleCenter == nil ? NotchType.detailColor : CallLook.green)
                         .modifier(

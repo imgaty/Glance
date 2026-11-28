@@ -42,6 +42,9 @@ struct IslandBubble: View {
     /// Opens it, as a click on it does.
     let open: () -> Void
     let restingHeight: CGFloat
+    /// As wide as the notch is tall, a circle, or wider, a pill, as what it shows needs (see
+    /// `NotchModel.bubbleWidth(for:)`).
+    var width: CGFloat? = nil
     /// How far from the notch's middle its trailing end is, which the bubble sits off.
     let notchEnd: CGFloat
     /// How much further out than its gap it rests: beside an open view, past the flare its top
@@ -78,23 +81,27 @@ struct IslandBubble: View {
 
     var body: some View {
         let h = restingHeight
+        let w = max(width ?? h, h)
         // With Reduce Motion on, it stays where it rests, and only fades.
         let out: CGFloat = shown || reduceMotion ? 1 : 0
-        let span = h * (1 + Self.gap) + travel
+        // From inside the notch's end, all of it, to its gap off the end.
+        let span = w + h * Self.gap + travel
         ZStack(alignment: .leading) {
             if !reduceMotion {
-                BubbleBlend(out: out, span: span / h)
+                BubbleBlend(out: out, span: span / h, width: w / h)
                     .animation(motion, value: out)
             }
             ZStack {
-                Circle().fill(.black)
+                Capsule().fill(.black)
                     // Its outline swollen and leaning toward the pointer; its top, the screen's edge,
                     // stays put.
                     .background(alignment: .top) {
-                        Ellipse().fill(.black)
-                            .frame(width: h + swell.across, height: h + swell.bottom)
-                            .offset(x: (swell.trailing - swell.leading) / 2)
-                            .animation(NotchMotion.hover, value: swell)
+                        Group {
+                            if w > h { Capsule().fill(.black) } else { Ellipse().fill(.black) }
+                        }
+                        .frame(width: w + swell.across, height: h + swell.bottom)
+                        .offset(x: (swell.trailing - swell.leading) / 2)
+                        .animation(NotchMotion.hover, value: swell)
                     }
                 ZStack {
                     switch kept {
@@ -138,7 +145,7 @@ struct IslandBubble: View {
                 .animation(motion, value: out)
                 .animation(Animation.easeOut(duration: 0.1).paced) { $0.opacity(hidden ? 0 : 1) }
             }
-            .frame(width: h, height: h)
+            .frame(width: w, height: h)
             // What it shows, in words, and a click's opening.
             .overlay {
                 if shown, !hidden, let clock {
@@ -199,9 +206,9 @@ struct IslandBubble: View {
             .animation(motion, value: out)
         }
         // From inside the notch's end, where it comes out of, to where it rests.
-        .frame(width: h + span, height: h, alignment: .leading)
+        .frame(width: w + span, height: h, alignment: .leading)
         // Stepped as the notch's own frame is, so the two keep one clock even when a frame comes late.
-        .modifier(SteppedOffset(x: notchEnd - h + (h + span) / 2))
+        .modifier(SteppedOffset(x: notchEnd - w + (w + span) / 2))
         // Solid until the opening notch has covered it, or it's run all the way into the notch's end,
         // and back before the closing notch uncovers it, as anything fading here would show as a pale
         // circle beside the notch.
@@ -342,6 +349,8 @@ struct BubbleBlend: View, Animatable {
     var out: CGFloat
     /// How far it rests from the circle in the notch's end, by the height.
     var span: CGFloat = 1 + IslandBubble.gap
+    /// How wide each is, by the height: 1, circles; wider, pills.
+    var width: CGFloat = 1
 
     /// How much it's blurred, by the height: enough for them to part just before the bubble rests.
     static let blur: CGFloat = 0.11
@@ -365,7 +374,12 @@ struct BubbleBlend: View, Animatable {
                 // One shape, so that where they overlap, in the notch's end, they don't add up past its edge.
                 var circles = Path()
                 for x in [0, bubble] {
-                    circles.addEllipse(in: CGRect(x: Self.margin + x, y: Self.margin, width: h, height: h))
+                    let rect = CGRect(x: Self.margin + x, y: Self.margin, width: h * width, height: h)
+                    if width > 1 {
+                        circles.addRoundedRect(in: rect, cornerSize: CGSize(width: h / 2, height: h / 2))
+                    } else {
+                        circles.addEllipse(in: rect)
+                    }
                 }
                 layer.fill(circles, with: .color(.black))
                 // In the notch's end, the bubble's top is the notch's: square up to the screen's edge, as
@@ -374,7 +388,7 @@ struct BubbleBlend: View, Animatable {
                 if near > 0 {
                     layer.drawLayer { top in
                         top.clip(to: circles, options: .inverse)
-                        top.fill(Path(CGRect(x: Self.margin + bubble, y: 0, width: h, height: Self.margin + h / 2)), with: .color(.black.opacity(near)))
+                        top.fill(Path(CGRect(x: Self.margin + bubble, y: 0, width: h * width, height: Self.margin + h / 2)), with: .color(.black.opacity(near)))
                     }
                 }
             }

@@ -1357,19 +1357,24 @@ struct SystemBannersTests {
         #expect(CallLook.accept(.standard) == CallLook.accept)
     }
 
-    @Test("A call in the bubble shows its time as large as fits, never under the Mac's smallest text, and the phone only where both fit")
-    func callBubble() {
-        #expect(CallBubbleMark.text(5) == "0:05")
-        #expect(CallBubbleMark.text(754) == "12:34")
-        #expect(CallBubbleMark.text(3753) == "62:33")
-        #expect(CallBubbleMark.text(100 * 60 + 5) == "1:40")
-        let short = CallBubbleMark.fit("0:05", restingHeight: 32), long = CallBubbleMark.fit("12:34", restingHeight: 32)
-        #expect(short.size <= LiveActivityView.textSize(for: 32) && short.size > long.size)
-        #expect(long.size >= StopwatchReading.smallest)
-        // At the usual notch, the phone and the time don't fit together.
-        #expect(!short.phone && !long.phone)
-        // A notch twice as tall has room for both.
-        #expect(CallBubbleMark.fit("0:05", restingHeight: 64).phone)
+    @Test("A call in the bubble shows its phone and time as beside the camera, in a pill as wide as they need")
+    @MainActor func callBubble() {
+        let since = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let call = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: since))
+        let short = CallBubbleMark.width(for: call, restingHeight: 32, at: since + 5)
+        let long = CallBubbleMark.width(for: call, restingHeight: 32, at: since + 754)
+        let hour = CallBubbleMark.width(for: call, restingHeight: 32, at: since + 3753)
+        // Wider than the circle, and wider still as the time gains digits.
+        #expect(short > 32 && long > short && hour > long)
+        // Ringing or going out, the phone alone, in a circle.
+        var ringing = call
+        ringing.phase = .ringing
+        #expect(CallBubbleMark.width(for: ringing, restingHeight: 32) == 32)
+        // Detached, the bubble takes that width; anything else in it is a circle.
+        let model = NotchModel(closedSize: CGSize(width: 185, height: 32), layout: .top, hasCamera: true)
+        #expect(model.bubbleWidth(for: .timer) == 32)
+        model.call = call
+        #expect(model.bubbleWidth(for: .call) >= CallBubbleMark.width(for: call, restingHeight: 32))
     }
 
     @Test("The stopwatch's hundredths are never under the Mac's smallest text")
