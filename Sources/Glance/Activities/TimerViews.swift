@@ -60,11 +60,9 @@ enum TimerLayout {
     static func timeSize(_ h: CGFloat) -> CGFloat { h * 41 / 36.67 }
     static func timeFont(_ h: CGFloat) -> Font { .system(size: timeSize(h), weight: .light).monospacedDigit() }
     static func timeNSFont(_ h: CGFloat) -> NSFont { .monospacedDigitSystemFont(ofSize: timeSize(h), weight: .light) }
-    static func timeInkEdge(_ h: CGFloat) -> CGFloat { h * 31.3 / 36.67 }
     static func labelSize(_ h: CGFloat) -> CGFloat { h * 17 / 36.67 }
     static func labelGap(_ h: CGFloat) -> CGFloat { h * 10 / 36.67 }
     static func doneSize(_ h: CGFloat) -> CGFloat { h * 30 / 36.67 }
-    static func doneEdge(_ h: CGFloat) -> CGFloat { h * 34 / 36.67 }
     /// The Stopwatch's, measured from the iPhone's (the simulator doesn't show it): its buttons 1.43 of
     /// the notch's height and 0.29 apart; its time 0.94 tall, semibold, a little tightened.
     static func stopwatchCircle(_ h: CGFloat) -> CGFloat { h * 1.429 }
@@ -300,7 +298,7 @@ struct ExpandedTimerView: View {
         // spare, beside the camera.
         let side = max((width - camera) / 2, 0)
         let out = revealed
-        let rise = (h - TimerLayout.tallHeight(h)) / 2 + closedDrop
+        let rise = (h - Self.height(for: shown, restingHeight: h)) / 2 + closedDrop
         let spread = ((closedWidth ?? width) - width) / 2
         let timeFrom = CGSize(width: spread - LiveActivityView.textEdge(restingHeight: h) + Self.timeEdge(shown, h), height: rise)
         let ringFrom = CGSize(width: SystemActivityView.ringEdge(h) - TimerLayout.circleEdge(h) - spread, height: rise)
@@ -415,13 +413,19 @@ struct ExpandedTimerView: View {
         return camera + 2 * (max(buttons, time) + LiveActivityView.cameraGap)
     }
 
+    /// How tall it opens: the buttons with as much room above and below as from the left end, and
+    /// the time as far from the right one (the user, 2026-11-28: the padding "consistent all around").
+    static func height(for shown: ClockShown, restingHeight h: CGFloat) -> CGFloat {
+        (circle(shown, h) + 2 * TimerLayout.circleEdge(h)).rounded()
+    }
+
     /// The round buttons' side: the Timer's or the Stopwatch's.
     static func circle(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
         isStopwatch(shown) ? TimerLayout.stopwatchCircle(h) : TimerLayout.circle(h)
     }
 
-    /// From the right end to the time's frame: the Timer's ink where iOS 27's is, less the room after
-    /// a digit; the Stopwatch's as far in as the buttons, less its digits' bearing.
+    /// From the right end to the time's frame: its ink as far in as the buttons are from the left
+    /// end, less the room after a digit; the Stopwatch's less its digits' bearing.
     static func timeEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
         if isStopwatch(shown) { return TimerLayout.circleEdge(h) - h * TimerLayout.timeBearing }
         let font = TimerLayout.timeNSFont(h)
@@ -431,7 +435,7 @@ struct ExpandedTimerView: View {
         var advance = CGSize.zero
         CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
         let ink = CTFontGetBoundingRectsForGlyphs(font, .horizontal, &glyph, nil, 1)
-        return TimerLayout.timeInkEdge(h) - (advance.width - ink.maxX)
+        return TimerLayout.circleEdge(h) - (advance.width - ink.maxX)
     }
 
     /// The time as it reads then, its digits all as wide as each other.
@@ -544,7 +548,7 @@ struct TimerDoneView: View {
 
     var body: some View {
         let h = restingHeight
-        let nameEdge = Self.nameEdge(h)
+        let nameEdge = Self.nameEdge(name, h)
         // The name as high as it goes under the camera, running on beneath it up to the buttons,
         // which stand beside it.
         ZStack {
@@ -609,12 +613,18 @@ struct TimerDoneView: View {
         }.max() ?? 0
         let words = max(titleWidth, statusWidth)
         let right = buttonsWidth(h) + TimerLayout.circleEdge(h)
-        let across = nameEdge(h) + words + TimerLayout.circleGap(h) + right
+        let across = nameEdge(name, h) + words + TimerLayout.circleGap(h) + right
         return max(gap + right, (across - closedWidth) / 2)
     }
 
-    /// From the left end to its name, as iOS 27's.
-    static func nameEdge(_ h: CGFloat) -> CGFloat { TimerLayout.doneEdge(h) }
+    /// From the left end to its name: its ink as far in as the buttons are from the right end.
+    static func nameEdge(_ name: String, _ h: CGFloat) -> CGFloat {
+        TimerLayout.circleEdge(h) - Ink.lead(name, font: IslandType.nsFont(TimerLayout.doneSize(h), weight: .medium, restingHeight: h))
+    }
+
+    /// How tall it stands: the buttons with as much room above and below as from the end; the name,
+    /// as high as it goes under the camera, ends above them.
+    static func height(restingHeight h: CGFloat) -> CGFloat { (TimerLayout.circle(h) + 2 * TimerLayout.circleEdge(h)).rounded() }
 
     /// Where the name stands: as high as it goes under the camera.
     static func nameBaseline(_ name: String, restingHeight h: CGFloat) -> CGFloat {

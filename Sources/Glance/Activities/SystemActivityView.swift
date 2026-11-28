@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import os
 
 /// What the Mac announces, and Clock's timer or stopwatch, in the closed notch's wings, as the
 /// iPhone's Dynamic Island draws its own, the two sides read as one: a device beside its battery's
@@ -161,7 +162,7 @@ struct SystemActivityView: View {
                         }
                     }
                     // From its end, as far as from the top and bottom.
-                    .padding(.leading, Self.ringEdge(restingHeight))
+                    .padding(.leading, Self.clockEdge(shown, restingHeight))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // Nothing opened takes its place: it fades as the notch opens, and back as it closes.
                     .islandFade(!grown)
@@ -209,7 +210,9 @@ struct SystemActivityView: View {
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(.default, open)
                     }
-                    .padding(.trailing, LiveActivityView.textEdge(restingHeight: restingHeight))
+                    // Its ink as far from its end as the ring's or the symbol's is from theirs, and
+                    // from the top and bottom.
+                    .padding(.trailing, Self.clockEdge(shown, restingHeight) - Self.readingTrail(shown, restingHeight))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .islandFade(!leadingOnly)
                     .modifier(GrownAway(grown: grown))
@@ -381,14 +384,65 @@ struct SystemActivityView: View {
         let words = LiveActivityView.textEdge(restingHeight: h)
         switch content {
         case .battery: return (words, words)
-        case .status: return (edge, words)
+        case .status(let symbol, _, let text, _):
+            // The symbol's ink as far in from its end as from the top and bottom, and the word's as
+            // far from the other (the user, 2026-11-28: the padding "consistent all around").
+            let size = LiveActivityView.textSize(for: h)
+            let ink = symbolInk(symbol, size: size + 2)
+            let around = LiveActivityView.concentric(ink.height, in: h)
+            return (around - (side(h) - ink.width) / 2, around - Ink.trail(text, font: .systemFont(ofSize: size, weight: .semibold)))
         default: return (edge, edge)
         }
     }
 
+    /// How large a symbol's ink is at this size, as the notch draws it: read from where it's drawn,
+    /// as its picture has room around it.
+    static func symbolInk(_ symbol: String, size: CGFloat) -> CGSize {
+        let key = "\(symbol)@\(size)"
+        if let known = symbolInks.withLock({ $0[key] }) { return known }
+        let config = NSImage.SymbolConfiguration(pointSize: size, weight: .semibold)
+        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)
+            ?? SystemSymbol.image(symbol)?.withSymbolConfiguration(config)
+        else { return CGSize(width: size, height: size) }
+        let scale: CGFloat = 4
+        let width = Int(ceil(image.size.width * scale)), height = Int(ceil(image.size.height * scale))
+        guard width > 0, height > 0,
+            let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue),
+            let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else { return image.size }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return image.size }
+        var top = height, bottom = -1, left = width, right = -1
+        for y in 0..<height {
+            for x in 0..<width where data[y * width + x] > 40 {
+                top = min(top, y); bottom = max(bottom, y); left = min(left, x); right = max(right, x)
+            }
+        }
+        let ink = bottom < 0 ? image.size : CGSize(width: CGFloat(right - left + 1) / scale, height: CGFloat(bottom - top + 1) / scale)
+        symbolInks.withLock { $0[key] = ink }
+        return ink
+    }
+    private static let symbolInks = OSAllocatedUnfairLock(initialState: [String: CGSize]())
+
     /// How far in from its end the timer's ring or the stopwatch's symbol sits: as far as from the
     /// top and bottom, concentric with the end.
     static func ringEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * TimerLayout.ring, in: h) }
+
+    /// Beside the camera, how far in from the ends the clock's ink stands, either side: as far as the
+    /// ring's, or the stopwatch's symbol's with its crown, from the top and bottom (the user,
+    /// 2026-11-28: the padding "consistent all around").
+    static func clockEdge(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
+        guard case .stopwatch = shown else { return ringEdge(h) }
+        return LiveActivityView.concentric(h * TimerLayout.ring + h * TimerLayout.ringLine * 1.5, in: h)
+    }
+
+    /// How far short of its frame's end the time's ink stops: past its last digit, and the
+    /// stopwatch's small hundredths, short of the time's own end.
+    static func readingTrail(_ shown: ClockShown, _ h: CGFloat) -> CGFloat {
+        let size = LiveActivityView.textSize(for: h)
+        guard case .stopwatch = shown else { return Ink.trail("0", font: .monospacedDigitSystemFont(ofSize: size, weight: .medium)) }
+        return size * 0.09 + Ink.trail("0", font: .monospacedDigitSystemFont(ofSize: size * StopwatchReading.share(size), weight: .semibold))
+    }
 
     /// Where a timer's squeezed time starts beside its ring, with another activity detached: after
     /// the ring by 0.27 of the height, as iOS 27's Clock spaces them.

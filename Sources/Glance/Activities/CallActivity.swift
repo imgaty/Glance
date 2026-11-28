@@ -104,7 +104,9 @@ enum CallLook {
     static let phoneTilt: Double = 15
     /// From the ends, by the notch's height, for the phone's ink and the waveform's to be as far in
     /// as the iPhone's, 0.264 and 0.291: the tilted symbol inks 0.078 inside its bounds.
-    static let phoneEdge: CGFloat = 0.186
+    /// The phone's frame from its end: its ink, tilted, as far in as the phone is from the top and
+    /// bottom (the user, 2026-11-28: the padding "consistent all around").
+    static let phoneEdge: CGFloat = 0.225
     static let waveEdge: CGFloat = 0.291
 
     /// Inside the round buttons, the symbol's size for the button's, as on the iPhone: its cross a
@@ -124,9 +126,8 @@ enum CallLook {
     static let endSymbol: CGFloat = 0.458
     static let videoFill = Color(.displayP3, red: 0x1D / 255, green: 0x1D / 255, blue: 0x1F / 255)
     static let videoGlyph = Color(.displayP3, red: 0x61 / 255, green: 0x60 / 255, blue: 0x65 / 255)
-    /// Opened on a call, the name by the notch's height, and how far in it starts.
+    /// Opened on a call, the name by the notch's height.
     static let name: CGFloat = 0.215
-    static let nameEdge: CGFloat = 0.246
     /// Opened, as far apart as on the user's phone, by the buttons' size, measured at 3x on their
     /// screenshot: 150 pixel buttons, 63 between them, and 50 between the caller's circle and them.
     static let buttonSpacing: CGFloat = 63.0 / 150
@@ -201,6 +202,22 @@ enum CallLayout {
     /// From the right end to where the words stop, before the buttons.
     static func wordsEnd(buttons: CGFloat, restingHeight h: CGFloat) -> CGFloat {
         buttons > 0 ? roundEdge(h) + round(h) * buttons + roundGap(h) * (buttons - 1) + wordsGap(h) : roundEdge(h)
+    }
+
+    /// How low the caller's two lines reach: the caller's picture and the buttons end there too, and
+    /// the notch's edge comes up as far under it as they stand in from the ends (see
+    /// `UnderCamera.twoLineHeight`).
+    static func wordsBottom(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.twoLineBottom(
+            [call.line ?? call.over], first: .systemFont(ofSize: NotchType.size), line: call.name,
+            font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
+    }
+    /// Where the caller's picture and the buttons stand: their middle, so they end where the words do.
+    static func sidesMiddle(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.twoLineSidesMiddle(bottom: wordsBottom(for: call, restingHeight: h), side: round(h))
+    }
+    static func comingHeight(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.twoLineHeight(bottom: wordsBottom(for: call, restingHeight: h), edge: roundEdge(h))
     }
 
     /// Where the first of the caller's two lines, what the call's over, stands: as high as it goes
@@ -539,7 +556,10 @@ struct IncomingCallView: View {
             .padding(.trailing, CallLayout.roundEdge(h))
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(maxHeight: .infinity)
+        // Twice as tall as the picture's and the buttons' middle, so they end where the words do; the
+        // notch ends sooner, under them (see `CallLayout.comingHeight`), the words staying at its top.
+        .frame(height: 2 * CallLayout.sidesMiddle(for: call, restingHeight: h))
+        .frame(height: CallLayout.comingHeight(for: call, restingHeight: h), alignment: .top)
     }
 
     private func button(_ symbol: String, _ color: Color, _ side: CGFloat, _ glyph: CGFloat, _ highlighted: Bool) -> some View {
@@ -694,15 +714,20 @@ struct ExpandedCallView: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .firstBaseline(UnderCamera.baseline([call.name], font: .systemFont(ofSize: size, weight: .semibold), restingHeight: h))
-                    .padding(.leading, TimerLayout.rowHeight(h) * CallLook.nameEdge - CallLayout.roundEdge(h))
                     .contentShape(Rectangle())
                     .modifier(IslandReveal(hidden: !revealed))
             }
             HStack(spacing: CallLayout.roundGap(h)) { inlineButtons(h) }
                 .modifier(IslandReveal(hidden: !revealed))
         }
-        .padding(.horizontal, CallLayout.roundEdge(h))
-        .frame(width: width, height: TimerLayout.rowHeight(h))
+        // The name's ink as far in from the left end as the buttons are from the right (the user,
+        // 2026-11-28: the padding "consistent all around").
+        .padding(.leading, CallLayout.roundEdge(h) - Ink.lead(call.name, font: .systemFont(ofSize: size, weight: .semibold)))
+        .padding(.trailing, CallLayout.roundEdge(h))
+        // Twice as tall as the name's middle, so the buttons, centered, stand level with it; the notch
+        // ends sooner, under them.
+        .frame(width: width, height: 2 * Self.inlineMiddle(h))
+        .frame(height: Self.inlineHeight(h), alignment: .top)
     }
 
     /// The sound output, and a red cross to end it where the app's own button can be pressed.
@@ -724,11 +749,12 @@ struct ExpandedCallView: View {
         let side = CallLayout.round(h)
         let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
-        let rise = (h - TimerLayout.rowHeight(h)) / 2 + closedDrop
+        let row = 2 * CallLayout.sidesMiddle(for: call, restingHeight: h)
+        let rise = (h - row) / 2 + closedDrop
         let avatarFrom = CGSize(width: CallLayout.edge(h) - CallLayout.roundEdge(h) - spread, height: rise)
         // The words as high as they go under the camera, from the top of the caller's row, as tall as
         // the picture, in the row's middle.
-        let baseline = CallLayout.wordsBaseline(for: call, restingHeight: h) - (TimerLayout.rowHeight(h) - side) / 2
+        let baseline = CallLayout.wordsBaseline(for: call, restingHeight: h) - (row - side) / 2
         return HStack(spacing: CallLayout.wordsGap(h)) {
             sourceButton {
                 ZStack(alignment: .leading) {
@@ -761,7 +787,7 @@ struct ExpandedCallView: View {
                 .modifier(IslandReveal(hidden: !revealed))
         }
         .padding(.horizontal, CallLayout.roundEdge(h))
-        .frame(width: width, height: TimerLayout.rowHeight(h))
+        .frame(width: width, height: row)
     }
 
     @ViewBuilder private func buttons(_ h: CGFloat) -> some View {
@@ -939,8 +965,24 @@ struct ExpandedCallView: View {
 
     /// Connected over FaceTime or Phone, the caller's row, as tall as the circle, and the buttons'
     /// with a gap between, the padding under them; otherwise as tall as the Alarm.
+    /// Another app's call: its name alone, large, as high as it goes under the camera, the row a
+    /// little taller than the iPhone's for its buttons to stand level with it (see
+    /// `UnderCamera.oneLineHeight`).
+    static func inlineHeight(_ h: CGFloat) -> CGFloat {
+        UnderCamera.oneLineHeight(middle: inlineMiddle(h), side: CallLayout.round(h), edge: CallLayout.roundEdge(h))
+    }
+
+    /// The middle of another app's call's name, as high as it goes under the camera: the buttons stand
+    /// level with it.
+    static func inlineMiddle(_ h: CGFloat) -> CGFloat {
+        UnderCamera.oneLineMiddle(font: .systemFont(ofSize: TimerLayout.rowHeight(h) * CallLook.name, weight: .semibold), restingHeight: h)
+    }
+
     static func height(for call: CallShown, restingHeight h: CGFloat) -> CGFloat {
-        guard call.isConnected, call.throughApple else { return TimerLayout.rowHeight(h) }
+        // Coming in or going out, the picture and buttons level with the two lines; another app's call,
+        // a little taller for its buttons to stand level with its name.
+        guard call.isConnected else { return CallLayout.comingHeight(for: call, restingHeight: h) }
+        guard call.throughApple else { return inlineHeight(h) }
         // To a whole point, the rest of it under the buttons.
         return (circleTop(for: call, restingHeight: h) + CallLayout.round(h) + rowGap(restingHeight: h) + CallLayout.round(h) + CallLayout.roundEdge(h)).rounded(.up)
     }

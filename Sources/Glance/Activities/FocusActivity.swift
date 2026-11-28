@@ -327,8 +327,11 @@ struct FocusExtendedView: View {
     let on: Bool
     let restingHeight: CGFloat
 
-    /// The state's word, this far in from the right end, by the extended notch's height (18 of 84).
-    static let stateEdge: CGFloat = 18 / 84
+    /// From the right end to the state's word: its ink as far in as the circle is from the left end,
+    /// and from the top and bottom (the user, 2026-11-28: the padding "consistent all around").
+    static func stateEnd(_ state: String, restingHeight h: CGFloat) -> CGFloat {
+        circleEdge(h) - Ink.trail(state, font: .systemFont(ofSize: NotchType.size, weight: .semibold))
+    }
     /// The circle, 56 points across and 14 in from its end on the iPhone's 84-point island.
     static func circle(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) * 56 / 84 }
     static func circleEdge(_ h: CGFloat) -> CGFloat { TimerLayout.rowHeight(h) * 14 / 84 }
@@ -359,7 +362,7 @@ struct FocusExtendedView: View {
             .font(IslandType.title(restingHeight))
             .firstBaseline(Self.wordsBaseline(name: name, state: state, restingHeight: h))
             .padding(.leading, Self.circleEdge(h) + side + h * AirDropLayout.gap)
-            .padding(.trailing, tall * Self.stateEdge)
+            .padding(.trailing, Self.stateEnd(state, restingHeight: h))
         }
         .frame(height: tall)
     }

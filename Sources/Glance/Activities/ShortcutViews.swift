@@ -16,6 +16,10 @@ enum ShortcutRunLook {
     static let iconEdge: CGFloat = 0.273
     static let ring: CGFloat = 0.645
     static let ringEdge: CGFloat = 0.2
+    /// Where the icon and the ring stand beside the camera, in their wings, which stay as wide: as
+    /// far in from the ends as the taller is from the top and bottom (the user, 2026-11-28: the
+    /// padding "consistent all around").
+    static func compactEdge(_ h: CGFloat) -> CGFloat { LiveActivityView.concentric(h * max(icon, ring), in: h) }
     /// The icon's corners, by its side (`WFApertureIconView`'s image view).
     static let corner: CGFloat = 0.26
     /// Its shadow, in the iPhone's points: 35% black, 6 across, 3 up.
@@ -63,12 +67,12 @@ struct ShortcutRunMark: View {
         let ringShown = !run.state.active || (run.progress ?? 0) > 0 || waited
         ZStack {
             ShortcutTile(look: shown.shownLook, side: h * ShortcutRunLook.icon, restingHeight: h)
-                .padding(.leading, h * ShortcutRunLook.iconEdge)
+                .padding(.leading, ShortcutRunLook.compactEdge(h))
                 .frame(maxWidth: .infinity, alignment: .leading)
             TaskRing(status: ShortcutRunGlyph.status(for: run), diameter: h * ShortcutRunLook.ring, tint: shown.shownLook.tint)
                 .opacity(ringShown ? 1 : 0)
                 .animation(.easeInOut(duration: ShortcutRunLook.ringFade), value: ringShown)
-                .padding(.trailing, h * ShortcutRunLook.ringEdge)
+                .padding(.trailing, ShortcutRunLook.compactEdge(h))
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .islandFade(!leadingOnly)
         }
@@ -220,7 +224,7 @@ struct ShortcutRunView: View {
         ActivityRowLayout.width(detail: "", buttons: 1, metrics: .shortcut(h), restingHeight: h, camera: camera)
     }
 
-    static func height(restingHeight h: CGFloat) -> CGFloat { ActivityRowMetrics.shortcut(h).height }
+    static func height(restingHeight h: CGFloat) -> CGFloat { ActivityRowLayout.height(title: "", detail: "", metrics: .shortcut(h), restingHeight: h) }
 
     /// In the order they stand: Shortcuts at the left, then Stop, or Done once it's over.
     static func controls(for shown: ShortcutShown) -> [PlayerControl] {

@@ -82,8 +82,6 @@ final class LowPowerMode: ObservableObject {
 /// of its level. Its colors are the iPhone's own, in Display P3: red, and yellow once Low Power Mode
 /// is on.
 enum LowBatteryLayout {
-    /// From the left end to the words.
-    static let wordsEdge: CGFloat = 0.75
     /// From the words to the capsule, at the least.
     static let wordsGap: CGFloat = 0.33
     /// As tall as the padding leaves, and as wide for that as the iPhone's.
@@ -178,12 +176,35 @@ enum LowBatteryLayout {
     static func wing(percent: Int, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
         let right = capsule(h).width + TimerLayout.buttonEdge(h)
         let words = ([LowBatteryView.title(percent), LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure].map { width($0) }.max() ?? 0)
-        return max(LiveActivityView.cameraGap + right, (h * wordsEdge + words + h * wordsGap + right - closedWidth) / 2)
+        return max(LiveActivityView.cameraGap + right, (wordsStart(percent: percent, restingHeight: h) + words + h * wordsGap + right - closedWidth) / 2)
     }
 
     /// Where the level's line stands: as high as it goes under the camera.
     static func wordsBaseline(percent: Int, restingHeight h: CGFloat) -> CGFloat {
         UnderCamera.baseline([LowBatteryView.title(percent)], font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
+    }
+
+    /// The lines under the level, any of which can show.
+    static var seconds: [String] { [LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure] }
+
+    /// From the left end to the words: their ink as far in as the capsule is from the right end (the
+    /// user, 2026-11-28: the padding "consistent all around").
+    static func wordsStart(percent: Int, restingHeight h: CGFloat) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        return TimerLayout.buttonEdge(h) - ([LowBatteryView.title(percent)] + seconds).map { Ink.lead($0, font: font) }.min()!
+    }
+
+    /// How low the words reach, whichever line shows under the level, so the notch keeps its height
+    /// as they change: the capsule ends there too.
+    static func wordsBottom(percent: Int, restingHeight h: CGFloat) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: NotchType.size, weight: .semibold)
+        return wordsBaseline(percent: percent, restingHeight: h) + UnderCamera.lineStep(font) + seconds.map { UnderCamera.depth($0, font: font) }.max()!
+    }
+
+    /// How tall it stands: everything ends where the words do, and the notch's edge comes up as far
+    /// under them as the capsule stands in from the end.
+    static func height(percent: Int, restingHeight h: CGFloat) -> CGFloat {
+        (max(wordsBottom(percent: percent, restingHeight: h), TimerLayout.buttonEdge(h) + capsule(h).height) + TimerLayout.buttonEdge(h)).rounded()
     }
 }
 
@@ -233,8 +254,8 @@ struct LowBatteryView: View {
             .fixedSize()
             .accessibilityElement(children: .combine)
             .firstBaseline(layout.wordsBaseline(percent: percent, restingHeight: h))
-            .padding(.leading, h * layout.wordsEdge)
-            .frame(height: TimerLayout.tallHeight(h))
+            .padding(.leading, layout.wordsStart(percent: percent, restingHeight: h))
+            .frame(height: layout.height(percent: percent, restingHeight: h))
             ZStack {
                 if on {
                     capsule(h, on: true).transition(layout.change)
@@ -246,9 +267,12 @@ struct LowBatteryView: View {
             .spokenButton(on ? String(localized: "Turn off Low Power Mode") : String(localized: "Turn on Low Power Mode")) { lowPower.toggle() }
             .disabled(lowPower.isChanging)
             .padding(.trailing, TimerLayout.buttonEdge(h))
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            // Ending where the words do.
+            .padding(.top, layout.height(percent: percent, restingHeight: h) - TimerLayout.buttonEdge(h) - layout.capsule(h).height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         }
-        .frame(maxHeight: .infinity)
+        .frame(height: layout.height(percent: percent, restingHeight: h))
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     /// The battery, large, in its capsule, as the iPhone draws it: the body, the level bright and

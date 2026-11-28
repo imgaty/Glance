@@ -33,8 +33,9 @@ struct ActivityStatusPresentationTests {
         #expect(ShortcutRunGlyph.status(for: .fixture(state: .failed)) == .failed)
         let finished = ShortcutShown(run: .fixture(state: .completed))
         let detailed = ShortcutShown(run: .fixture(state: .failed), additionalRuns: 1)
-        // One row as tall as the Timer's either way; what doesn't fit is said under the pointer.
-        #expect(ShortcutRunView.height(restingHeight: 32) == ActivityRowMetrics.shortcut(32).height)
+        // One row, its name alone, as tall as it needs for the icon and ring to stand level with it,
+        // either way; what doesn't fit is said under the pointer.
+        #expect(ShortcutRunView.height(restingHeight: 32) == ActivityRowLayout.height(title: "", detail: "", metrics: .shortcut(32), restingHeight: 32))
         #expect(ShortcutRunView.explanation(for: detailed).count > ShortcutRunView.explanation(for: finished).count)
     }
 

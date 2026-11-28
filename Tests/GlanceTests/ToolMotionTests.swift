@@ -115,6 +115,6 @@ struct ToolMotionTests {
         // Open, it takes no notice of the pointer.
         #expect(!model.activityFolded && model.activityControlsHidden)
         #expect(model.hoverPlace == nil && model.outline == .zero)
-        #expect(model.metrics.height == TimerLayout.tallHeight(model.closedSize.height))
+        #expect(model.metrics.height == ExpandedTimerView.height(for: model.expandedClock!, restingHeight: model.closedSize.height))
     }
 }

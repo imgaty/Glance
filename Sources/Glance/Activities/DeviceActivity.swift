@@ -40,6 +40,28 @@ enum ExpandedDeviceLayout {
     }
     static let nameStep: CGFloat = 0.53
 
+    /// What it says it is: connected, or running low.
+    static func said(low: Bool) -> String { low ? String(localized: "Low Battery") : String(localized: "Connected") }
+
+    /// Extended, how low the words reach: the name under what's happened, as low as its letters go.
+    /// The device's place and the ring end there too (the user, 2026-11-28: the padding "consistent
+    /// all around").
+    static func wordsBottom(name: String, low: Bool, restingHeight h: CGFloat) -> CGFloat {
+        saidBaseline(said(low: low), restingHeight: h) + h * nameStep
+            + UnderCamera.depth(name, font: .systemFont(ofSize: NotchType.size, weight: .semibold))
+    }
+
+    /// Where the device's place and the ring end, extended.
+    static func bottom(name: String, low: Bool, restingHeight h: CGFloat) -> CGFloat {
+        max(wordsBottom(name: name, low: low, restingHeight: h), TimerLayout.buttonEdge(h) + TimerLayout.content(h))
+    }
+
+    /// How tall it extends: everything ends where the words do, and the notch's edge comes up as far
+    /// under them as the ring stands in from the end.
+    static func height(name: String, low: Bool, restingHeight h: CGFloat) -> CGFloat {
+        (bottom(name: name, low: low, restingHeight: h) + TimerLayout.buttonEdge(h)).rounded()
+    }
+
     /// Each wing: as wide as the ring needs against the camera, or wider for a long name, under the
     /// camera, to reach the ring.
     static func wing(name: String, restingHeight h: CGFloat, closedWidth: CGFloat) -> CGFloat {
@@ -92,6 +114,8 @@ struct DeviceActivityView: View {
         let middle = TimerLayout.buttonEdge(h) + TimerLayout.content(h) / 2 - (largeAxis - largeWidth / 2)
         let smallMiddle = small.edge + max(reach - axis, 0) + smallWidth / 2
         let ringScale = small.ring / large.ring
+        // Extended, the device's place and the ring end where the words do.
+        let bottom = ExpandedDeviceLayout.height(name: name, low: low, restingHeight: h) - TimerLayout.buttonEdge(h)
         // Hung from the notch's top middle, which never moves, each is moved out to its end, and
         // follows it there on the notch's own spring, with no layout to land on whole pixels.
         Color.clear.overlay(alignment: .top) {
@@ -99,7 +123,7 @@ struct DeviceActivityView: View {
                 picture(height: large.picture)
                     .frame(width: largeWidth, height: large.picture)
                     .scaleEffect(extended ? 1 : small.picture / large.picture)
-                    .offset(x: (extended ? middle : smallMiddle) - toEnd, y: notch.height / 2)
+                    .offset(x: (extended ? middle : smallMiddle) - toEnd, y: extended ? bottom - TimerLayout.content(h) / 2 : notch.height / 2)
                 // Its battery as a ring alone, as AirPods' is: a device that doesn't tell it isn't
                 // announced (see `DeviceWatch`).
                 if let battery {
@@ -109,7 +133,7 @@ struct DeviceActivityView: View {
                     )
                     .modifier(RingArrival(leaving: leaving))
                     .scaleEffect(extended ? 1 : ringScale)
-                    .offset(x: toEnd - (extended ? large.trailing + large.ring / 2 : small.trailing + small.ring / 2), y: notch.height / 2)
+                    .offset(x: toEnd - (extended ? large.trailing + large.ring / 2 : small.trailing + small.ring / 2), y: extended ? bottom - large.ring / 2 : notch.height / 2)
                 }
                 words.modifier(IslandReveal(hidden: !extended))
             }
@@ -132,15 +156,16 @@ struct DeviceActivityView: View {
         let wing = layout.wing(name: name, restingHeight: h, closedWidth: closedWidth)
         let large = DeviceLayout(height: h, low: low, extended: true)
         let width = closedWidth + wing * 2 - large.ring - large.trailing - LiveActivityView.cameraGap
-        let said = low ? String(localized: "Low Battery") : String(localized: "Connected")
+        let said = layout.said(low: low)
         let saidBaseline = layout.saidBaseline(said, restingHeight: h)
+        let height = layout.height(name: name, low: low, restingHeight: h)
         return ZStack(alignment: .topLeading) {
             line(said, font: IslandType.detail(h), baseline: saidBaseline, color: NotchType.detailColor)
             line(name, font: IslandType.title(h), baseline: saidBaseline + h * layout.nameStep, color: .white)
         }
         .padding(.leading, AirDropLayout.wordsStart(h))
-        .frame(width: width, height: TimerLayout.tallHeight(h), alignment: .topLeading)
-        .offset(x: width / 2 - toEnd, y: notch.height / 2)
+        .frame(width: width, height: height, alignment: .topLeading)
+        .offset(x: width / 2 - toEnd, y: height / 2)
     }
 
     /// A line of words, by where its baseline falls.

@@ -299,6 +299,22 @@ enum AirDropLayout {
         UnderCamera.baseline(["AirDrop"], font: .systemFont(ofSize: NotchType.size, weight: .semibold), restingHeight: h)
     }
 
+    /// Opened, how low its two lines reach, the second saying who it's `from`: the picture and the
+    /// ring end there too (see `UnderCamera.twoLineSidesMiddle`), and the notch's edge comes up as far
+    /// under it as they stand in from the ends.
+    static func wordsBottom(_ h: CGFloat, from: String) -> CGFloat {
+        UnderCamera.twoLineBottom(
+            ["AirDrop"], first: .systemFont(ofSize: NotchType.size, weight: .semibold), line: from, font: .systemFont(ofSize: NotchType.size),
+            restingHeight: h)
+    }
+    /// Where the picture and the ring stand: their middle, so they end where the words do.
+    static func sidesMiddle(_ h: CGFloat, from: String) -> CGFloat {
+        UnderCamera.twoLineSidesMiddle(bottom: wordsBottom(h, from: from), side: TimerLayout.content(h))
+    }
+    static func openHeight(_ h: CGFloat, from: String) -> CGFloat {
+        UnderCamera.twoLineHeight(bottom: wordsBottom(h, from: from), edge: ringEdge(h))
+    }
+
     /// Where the words start, from the left end.
     static func wordsStart(_ h: CGFloat) -> CGFloat { thumbEdge(h) + TimerLayout.content(h) + h * gap }
 
@@ -410,7 +426,7 @@ struct ExpandedAirDropView: View {
         // The ring grows out of where it shows beside the camera, as the Timer's does.
         let out = revealed
         let spread = ((closedWidth ?? width) - width) / 2
-        let rise = (h - TimerLayout.rowHeight(h)) / 2 + closedDrop
+        let rise = h / 2 - AirDropLayout.sidesMiddle(h, from: Self.from(shown)) + closedDrop
         let ringFrom = CGSize(
             width: bubbleCenter.map { $0 - width / 2 + AirDropLayout.ringEdge(h) + h * AirDropLayout.ring / 2 }
                 ?? (spread - h * AirDropLayout.ringEdge + AirDropLayout.ringEdge(h)), height: rise)
@@ -433,7 +449,9 @@ struct ExpandedAirDropView: View {
                 right.frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
-        .frame(width: width, height: TimerLayout.rowHeight(h))
+        // Laid out twice as tall as the picture's and the ring's middle, so they, in the middle of it, end
+        // where the words do; the notch ends sooner, under them (see `AirDropLayout.openHeight`).
+        .frame(width: width, height: 2 * AirDropLayout.sidesMiddle(h, from: Self.from(shown)))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Self.spoken(shown))
     }

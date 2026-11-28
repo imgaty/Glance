@@ -37,6 +37,10 @@ struct LiveActivityView: View {
     static func coverSide(_ h: CGFloat) -> CGFloat { h * 23 / 36.67 }
     static func waveformSide(_ h: CGFloat) -> CGFloat { h * 22 / 36.67 }
     static func musicEdge(_ h: CGFloat) -> CGFloat { h * 9 / 36.67 }
+    /// Where the cover and the waveform stand in their wings, which stay as wide as iOS 27's: as far
+    /// in from the ends as the cover is from the top and bottom (the user, 2026-11-28: the padding
+    /// "consistent all around").
+    static func musicPadding(_ h: CGFloat) -> CGFloat { concentric(coverSide(h), in: h) }
 
     /// The least between what the wings show and the camera housing, both black: as near as can be
     /// without anything going under it.
@@ -86,7 +90,7 @@ struct LiveActivityView: View {
     @State private var popChanges = 0
 
     var body: some View {
-        let edge = Self.musicEdge(restingHeight) * swell
+        let edge = Self.musicPadding(restingHeight) * swell
         let side = Self.coverSide(restingHeight) * swell
         let waveform = Self.waveformSide(restingHeight) * swell
         let popLeaving = popKept && !pop

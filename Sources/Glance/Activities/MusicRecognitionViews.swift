@@ -315,7 +315,10 @@ struct MusicRecognitionActivityView: View {
         state == .noMatch ? .noMatch(h) : .recognition(h)
     }
 
-    static func height(for state: MusicRecognitionActivity.State, restingHeight h: CGFloat) -> CGFloat { metrics(for: state, restingHeight: h).height }
+    /// How tall it opens: its row, a little taller with its name alone (see `ActivityRowLayout.height`).
+    static func height(for state: MusicRecognitionActivity.State, restingHeight h: CGFloat) -> CGFloat {
+        ActivityRowLayout.height(title: title(for: state), detail: detail(for: state), metrics: metrics(for: state, restingHeight: h), restingHeight: h)
+    }
 
     /// The waveform before the ✕ while it listens, and the room between them, as the iPhone's.
     static func waveRoom(_ h: CGFloat) -> CGFloat { ShazamLook.waveWidth(h, opened: true) + h * ShazamLook.waveGap }

@@ -342,7 +342,10 @@ struct AlarmActivityTests {
     @Test("A ringing alarm is as tall as the Timer's alert; its name runs under the camera, and a failure stays in it")
     func contentHeight() {
         let normal = AlarmShown(alarm: alarm)
-        #expect(AlarmActivityView.height(restingHeight: 32) == TimerLayout.tallHeight(32))
+        // As tall as its words need, everything ending where they do, as far above the notch's edge as
+        // the buttons stand in from the end.
+        let height = AlarmActivityView.height(for: normal, restingHeight: 32)
+        #expect(abs(height - AlarmRingingView.wordsBottom(title: alarm.title, restingHeight: 32) - TimerLayout.circleEdge(32)) <= 0.5)
         var pending = normal
         pending.pending = .snooze
         #expect(AlarmActivityView.detail(for: pending) == AlarmActivity.Action.snooze.progress)
@@ -361,7 +364,7 @@ struct AlarmActivityTests {
         model.alarm = failed
         model.expanded = .alarm
         model.state = .open
-        #expect(model.metrics.height == TimerLayout.tallHeight(32))
+        #expect(model.metrics.height == AlarmActivityView.height(for: failed, restingHeight: 32))
         #expect(model.metrics.bodyWidth == AlarmActivityView.width(for: failed, restingHeight: 32, camera: model.camera))
     }
 

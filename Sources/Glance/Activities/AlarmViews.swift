@@ -192,8 +192,12 @@ struct AlarmCompactView: View {
             if minimal {
                 AlarmClockGlyph(height: restingHeight * 0.5, tint: tint, ringing: shown.pending == nil)
             } else {
-                CompactActivityMark(caption: shown.alarm.title, captionColor: tint, restingHeight: restingHeight, leadingOnly: leadingOnly) {
-                    AlarmClockGlyph(height: LiveActivityView.textSize(for: restingHeight) + 2, tint: tint, ringing: shown.pending == nil)
+                let glyph = LiveActivityView.textSize(for: restingHeight) + 2
+                CompactActivityMark(
+                    caption: shown.alarm.title, captionColor: tint, restingHeight: restingHeight, leadingOnly: leadingOnly,
+                    markInk: CGSize(width: AlarmClockGlyph.width(forHeight: glyph), height: glyph)
+                ) {
+                    AlarmClockGlyph(height: glyph, tint: tint, ringing: shown.pending == nil)
                 }
             }
         }
@@ -238,6 +242,38 @@ struct AlarmRingingView: View {
 
     private static func buttonsWidth(_ h: CGFloat) -> CGFloat { TimerLayout.circle(h) * 2 + TimerLayout.circleGap(h) }
 
+    /// How far the clock and the words come in from the iPhone's places, so the clock's ink stands
+    /// as far from the left end as the buttons do from the right (the user, 2026-11-28: the padding
+    /// "consistent all around").
+    static func shift(_ h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) * AlarmLook.glyphEdge - TimerLayout.circleEdge(h) }
+
+    /// Where the time stands: as high as it goes under the camera.
+    static func timeBaseline(_ top: String, restingHeight h: CGFloat) -> CGFloat {
+        UnderCamera.baseline([top], font: .systemFont(ofSize: TimerLayout.tallHeight(h) * AlarmLook.timeSize), restingHeight: h)
+    }
+
+    /// The name under the time: the alarm's, or Alarm for one whose title is its time.
+    static func name(_ title: String) -> String {
+        title.range(of: #"^\d{1,2}[:.h]\d{2}"#, options: .regularExpression) != nil ? String(localized: "Alarm") : title
+    }
+
+    /// How low the words reach: the name under the time, as low as its letters go. The clock and the
+    /// buttons end there too.
+    static func wordsBottom(title: String, restingHeight h: CGFloat) -> CGFloat {
+        let tall = TimerLayout.tallHeight(h)
+        return timeBaseline("", restingHeight: h) + tall * AlarmLook.nameStep
+            + UnderCamera.depth(name(title), font: .systemFont(ofSize: tall * AlarmLook.titleSize, weight: .medium))
+    }
+
+    /// How tall it stands, for an alarm with this title: everything ends where the words do, and the
+    /// notch's edge comes up as far under them as the buttons stand in from the end.
+    static func height(title: String, restingHeight h: CGFloat) -> CGFloat {
+        (max(wordsBottom(title: title, restingHeight: h), TimerLayout.circleEdge(h) + TimerLayout.circle(h)) + TimerLayout.circleEdge(h)).rounded()
+    }
+    static func height(for shown: AlarmShown, rangAt: Date = .now, restingHeight h: CGFloat) -> CGFloat {
+        height(title: shown.alarm.title, restingHeight: h)
+    }
+
     /// Each side of the camera: room for the clock beside it on the left and the two buttons on the
     /// right, each from its end, and for the words under it to reach the buttons.
     @MainActor
@@ -248,9 +284,9 @@ struct AlarmRingingView: View {
         let words = min(
             max(textWidth(lines.top, size: tall * AlarmLook.timeSize, weight: .regular), textWidth(lines.name, size: tall * AlarmLook.titleSize, weight: .medium)),
             h * TimerLayout.titleLimit)
-        let left = tall * AlarmLook.glyphEdge + AlarmClockGlyph.width(forHeight: AlarmLook.glyphInk(h)) + gap
+        let left = TimerLayout.circleEdge(h) + AlarmClockGlyph.width(forHeight: AlarmLook.glyphInk(h)) + gap
         let right = gap + buttonsWidth(h) + TimerLayout.circleEdge(h)
-        let across = tall * AlarmLook.wordsStart + words + TimerLayout.circleGap(h) + buttonsWidth(h) + TimerLayout.circleEdge(h)
+        let across = tall * AlarmLook.wordsStart - shift(h) + words + TimerLayout.circleGap(h) + buttonsWidth(h) + TimerLayout.circleEdge(h)
         return max(left, right, (across - closedWidth) / 2)
     }
 
@@ -258,15 +294,20 @@ struct AlarmRingingView: View {
         let h = restingHeight
         let tall = TimerLayout.tallHeight(h)
         let lines = Self.lines(for: shown, rangAt: rangAt)
+        let height = Self.height(for: shown, rangAt: rangAt, restingHeight: h)
+        // Everything ends where the words do: the clock and the buttons stand on that line.
+        let bottom = height - TimerLayout.circleEdge(h)
+        let wordsStart = tall * AlarmLook.wordsStart - Self.shift(h)
         ZStack(alignment: .topLeading) {
             glyph(h)
-                .padding(.leading, tall * AlarmLook.glyphEdge)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .padding(.leading, TimerLayout.circleEdge(h))
+                .padding(.top, bottom - AlarmLook.glyphInk(h))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             // The time as high as it goes under the camera, the name under it as on the iPhone, both
             // running on beneath it up to the buttons.
-            let timeBaseline = UnderCamera.baseline([lines.top], font: .systemFont(ofSize: tall * AlarmLook.timeSize), restingHeight: h)
+            let timeBaseline = Self.timeBaseline(lines.top, restingHeight: h)
             Color.clear
-                .frame(width: max(width - tall * AlarmLook.wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), height: tall)
+                .frame(width: max(width - wordsStart - TimerLayout.circleGap(h) - Self.buttonsWidth(h) - TimerLayout.circleEdge(h), 0), height: height)
                 .overlay(alignment: .topLeading) {
                     Text(lines.top)
                         .font(IslandType.font(tall * AlarmLook.timeSize, restingHeight: h))
@@ -283,15 +324,16 @@ struct AlarmRingingView: View {
                         .truncationMode(.tail)
                         .alignmentGuide(.top) { $0[.firstTextBaseline] - timeBaseline - tall * AlarmLook.nameStep }
                 }
-            .padding(.leading, tall * AlarmLook.wordsStart)
+            .padding(.leading, wordsStart)
             .help(shown.failure ?? shown.spoken)
             .accessibilityElement(children: .combine)
             .accessibilityHint(shown.failure ?? "")
             buttons(h)
                 .padding(.trailing, TimerLayout.circleEdge(h))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .padding(.top, bottom - TimerLayout.circle(h))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         }
-        .frame(width: width, height: tall)
+        .frame(width: width, height: height)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(shown.spoken)
     }
@@ -385,7 +427,7 @@ struct AlarmActivityView: View {
         camera + 2 * AlarmRingingView.wing(for: shown, restingHeight: h, closedWidth: camera)
     }
 
-    static func height(restingHeight h: CGFloat) -> CGFloat { TimerLayout.tallHeight(h) }
+    static func height(for shown: AlarmShown, restingHeight h: CGFloat) -> CGFloat { AlarmRingingView.height(for: shown, restingHeight: h) }
 
     /// In the order they stand: Clock at the left, then Snooze and Stop.
     static func controls(for shown: AlarmShown) -> [PlayerControl] {

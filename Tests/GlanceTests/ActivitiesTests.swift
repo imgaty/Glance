@@ -305,7 +305,9 @@ struct ActivitiesTests {
         model.alertExtendedWing = 100
         model.alertExtended = true
         let peek = model.metrics(for: .peek)
-        #expect(peek.height == TimerLayout.tallHeight(32))
+        // As tall as its words need, the device and the ring ending where they do.
+        #expect(peek.height == ExpandedDeviceLayout.height(name: "AirPods", low: false, restingHeight: 32))
+        #expect(abs(peek.height - ExpandedDeviceLayout.bottom(name: "AirPods", low: false, restingHeight: 32) - TimerLayout.buttonEdge(32)) <= 0.5)
         #expect(abs(peek.bodyWidth - 385) < 0.001)
         let small = DeviceLayout(height: 32), large = DeviceLayout(height: 32, extended: true)
         #expect(large.picture > small.picture)
@@ -456,7 +458,9 @@ struct ActivitiesTests {
         #expect(model.restingHeight == 32)
         model.alert = NotchAlert(kind: .timerDone, content: .timerDone(length: 300, name: "Timer"), spoken: "Timer done", stays: true)
         #expect(model.restingTall)
-        #expect(model.restingHeight == (32 * TimerLayout.tall).rounded())
+        // Its buttons with as much room above and below as from the end.
+        #expect(model.restingHeight == TimerDoneView.height(restingHeight: 32))
+        #expect(abs((model.restingHeight - TimerLayout.circle(32)) / 2 - TimerLayout.circleEdge(32)) <= 0.5)
         #expect(model.metrics(for: .closed).height == model.restingHeight)
         // As wide as the iPhone's island, the buttons beside the camera, the name running on beneath
         // it, up to its limit.
@@ -466,7 +470,7 @@ struct ActivitiesTests {
         #expect(plain == LiveActivityView.cameraGap + right)
         // A long label runs on under the camera, cut short, and never widens it past its limit.
         #expect(long >= plain)
-        #expect(long <= max(plain, (TimerDoneView.nameEdge(32) + 32 * TimerLayout.titleLimit + 2 + TimerLayout.circleGap(32) + right - 185) / 2 + 0.01))
+        #expect(long <= max(plain, (TimerDoneView.nameEdge(String(repeating: "Long label ", count: 10), 32) + 32 * TimerLayout.titleLimit + 2 + TimerLayout.circleGap(32) + right - 185) / 2 + 0.01))
         // Its name's letters just under the camera.
         let reach = UnderCamera.reach(["Timer"], font: .systemFont(ofSize: TimerLayout.doneSize(32), weight: .medium))
         #expect(isClose(TimerDoneView.nameBaseline("Timer", restingHeight: 32) - reach, 32 + UnderCamera.clearance))
@@ -498,14 +502,14 @@ struct ActivitiesTests {
         model.timer = .running(until: .now + 300, total: 300)
         model.expanded = .timer
         let open = model.metrics(for: .open)
-        #expect(open.height == (32 * TimerLayout.tall).rounded())
+        // The buttons with as much room above and below as from the left end.
+        #expect(open.height == ExpandedTimerView.height(for: .timer(model.timer!), restingHeight: 32))
+        #expect(abs((open.height - TimerLayout.circle(32)) / 2 - TimerLayout.circleEdge(32)) <= 0.5)
         // Either side of the camera, only as wide as the buttons, wider than "5:00", need: iOS 27's
         // 50-point circles, 8 apart and 17 from the end, by the island's 36.67-point height.
         let buttons = TimerLayout.circle(32) * 2 + TimerLayout.circleGap(32)
         #expect(abs(TimerLayout.circle(32) - 32 * 50 / 36.67) < 0.01)
         #expect(abs(open.bodyWidth - (185 + 2 * (TimerLayout.circleEdge(32) + buttons + LiveActivityView.cameraGap))) < 1)
-        // Its top corners in proportion to its height, as the player's are to the player's.
-        #expect(abs(open.flare - PlayerLayout.cornerRadius * open.height / 148) < 0.001)
         // Past an hour, the time takes more room.
         model.timer = .running(until: .now + 7_200, total: 7_200)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
@@ -513,7 +517,9 @@ struct ActivitiesTests {
         model.timer = nil
         model.stopwatch = .running(since: .now - 7)
         model.expanded = .stopwatch
-        #expect(model.metrics(for: .open).height == open.height)
+        // Its larger buttons with the same room around them.
+        #expect(model.metrics(for: .open).height == ExpandedTimerView.height(for: .stopwatch(model.stopwatch!), restingHeight: 32))
+        #expect(model.metrics(for: .open).height >= open.height)
         #expect(model.metrics(for: .open).bodyWidth >= open.bodyWidth)
     }
 
@@ -656,7 +662,9 @@ struct ActivitiesTests {
         let h: CGFloat = 32
         let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
         model.alert = alert
-        #expect(model.restingHeight == TimerLayout.tallHeight(h))
+        // As tall as its words need, the capsule ending where they do.
+        #expect(model.restingHeight == LowBatteryLayout.height(percent: 10, restingHeight: h))
+        #expect(abs(model.restingHeight - LowBatteryLayout.wordsBottom(percent: 10, restingHeight: h) - TimerLayout.buttonEdge(h)) <= 0.5)
         // The capsule as tall as the iPhone's round buttons, as far in from the end.
         let edge = TimerLayout.buttonEdge(h)
         #expect(LowBatteryLayout.capsule(h).height == TimerLayout.content(h))
@@ -666,13 +674,14 @@ struct ActivitiesTests {
         let words = [LowBatteryView.title(10), LowBatteryView.offer, LowBatteryView.done, LowBatteryView.changing, LowBatteryView.failure]
             .map { LowBatteryLayout.width($0) }.max() ?? 0
         let wing = SystemActivityView.wing(for: alert, restingHeight: h, closedWidth: 185)
-        #expect(
-            wing == max(LiveActivityView.cameraGap + right, (h * LowBatteryLayout.wordsEdge + words + h * LowBatteryLayout.wordsGap + right - 185) / 2))
+        let wordsStart: CGFloat = LowBatteryLayout.wordsStart(percent: 10, restingHeight: h)
+        let across: CGFloat = wordsStart + words + h * LowBatteryLayout.wordsGap + right
+        #expect(wing == max(LiveActivityView.cameraGap + right, (across - 185) / 2))
         let reach = UnderCamera.reach([LowBatteryView.title(10)], font: .systemFont(ofSize: NotchType.size, weight: .semibold))
         #expect(isClose(LowBatteryLayout.wordsBaseline(percent: 10, restingHeight: h) - reach, h + UnderCamera.clearance))
         #expect(wing < h * 4)
         // Tall already, it doesn't swell under the pointer.
-        #expect(model.metrics(for: .peek).height == TimerLayout.tallHeight(h))
+        #expect(model.metrics(for: .peek).height == LowBatteryLayout.height(percent: 10, restingHeight: h))
         #expect(model.metrics(for: .peek).bodyWidth == model.metrics(for: .closed).bodyWidth)
         // A ripple every two seconds: palest early on, and the line gone before the next.
         #expect(abs(LowBatteryLayout.rippleTime(after: 2) - LowBatteryLayout.rippleTime(after: 0)) < 0.001)
@@ -873,7 +882,7 @@ struct SystemBannersTests {
         let h: CGFloat = 32
         let ringing = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .ringing)
         #expect(ExpandedCallView.wing(for: ringing, restingHeight: h) == IncomingCallView.wing(for: ringing, restingHeight: h, closedWidth: 185))
-        #expect(ExpandedCallView.height(for: ringing, restingHeight: h) == TimerLayout.rowHeight(h))
+        #expect(ExpandedCallView.height(for: ringing, restingHeight: h) == CallLayout.comingHeight(for: ringing, restingHeight: h))
         let model = NotchModel(closedSize: CGSize(width: 185, height: h), layout: .top, hasCamera: true)
         model.call = CallShown(name: "Alex Morgan", over: "Phone", app: CallAudio.phone, phase: .connected(since: .now))
         model.expanded = .call
@@ -1023,7 +1032,7 @@ struct SystemBannersTests {
         let side = TimerLayout.content(h)
         var call = CallShown(name: "Alex Morgan", over: "Discord", app: "com.hnc.Discord", phase: .connected(since: .now))
         #expect(!call.throughApple)
-        #expect(ExpandedCallView.height(for: call, restingHeight: h) == TimerLayout.rowHeight(h))
+        #expect(ExpandedCallView.height(for: call, restingHeight: h) == ExpandedCallView.inlineHeight(h))
         // The speaker alone, then End too: each wing as wide as the buttons need, from the camera to the
         // end.
         #expect(ExpandedCallView.connectedButtons(for: call) == 1)
@@ -1228,8 +1237,10 @@ struct SystemBannersTests {
         #expect(CallLook.phoneTilt == 15)
         // The waveform's side: its bars, the iPhone's distance from the end, and the camera's gap.
         #expect(wing >= CallLook.waveWidth + 32 * CallLook.waveEdge + LiveActivityView.cameraGap)
-        #expect(abs(32 * (CallLook.phoneEdge + 0.078) - 8.44) < 0.05)
+        // The phone's ink as far in from its end as the waveform from the other (the user,
+        // 2026-11-28: the padding "consistent all around").
         #expect(abs(32 * CallLook.waveEdge - 9.31) < 0.05)
+        #expect(abs(32 * (CallLook.phoneEdge + 0.078) - 32 * CallLook.waveEdge) < 0.5)
     }
 
     @Test("A bar is the louder voice's color past the yellow where both overlap, and a yellow dot when quiet")
@@ -1876,11 +1887,12 @@ struct RecordingTests {
         #expect(recorded >= 1 && recorded <= RecordingLook.openRecorded)
         #expect(recordedEnd + LiveActivityView.cameraGap <= (memo - 185) / 2)
         #expect(recordedEnd + tall * RecordingLook.openPitch + LiveActivityView.cameraGap > (memo - 185) / 2)
-        // The screen's dot, time and name run on under the camera, so an hour's time doesn't widen it.
+        // The screen's dot and time stand beside the camera, level with its button, so the notch is as
+        // wide as they need there, and an hour's longer time widens it; its name runs on under it.
         let short = RecordingLook.screenWidth(restingHeight: h, camera: 185, length: 8)
         let long = RecordingLook.screenWidth(restingHeight: h, camera: 185, length: 3725)
-        #expect(short == (185 + 2 * (LiveActivityView.cameraGap + TimerLayout.content(h) + TimerLayout.buttonEdge(h))).rounded(.up))
-        #expect(long == short)
+        #expect(short == (185 + 2 * (TimerLayout.buttonEdge(h) + RecordingLook.firstLineWidth(8) + LiveActivityView.cameraGap)).rounded(.up))
+        #expect(long > short)
         // Its waveform and time fit beside its button.
         let room = memo - PlayerLayout.padding - ExpandedRecordingView.memoTimeEdge(h)
         #expect(RecordingLook.openWaveWidth(h) + RecordingLook.timeWidth("0:00:00", size: RecordingLook.memoTimeSize(h)) < room)

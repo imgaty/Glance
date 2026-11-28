@@ -623,9 +623,18 @@ final class NotchModel: ObservableObject {
         guard restingTall else { return closedSize.height }
         // A call coming in and a Focus extended stand as tall as the iPhone's island for them; the
         // rest as tall as its Clock.
-        if case .incomingCall = alert?.content { return TimerLayout.rowHeight(closedSize.height) }
-        if alertExtended, alert?.kind == .focus { return TimerLayout.rowHeight(closedSize.height) }
-        return TimerLayout.tallHeight(closedSize.height)
+        let h = closedSize.height
+        switch alert?.content {
+        case .incomingCall(let call): return CallLayout.comingHeight(for: call, restingHeight: h)
+        // Each as tall as its padding, the same all around, needs (the user, 2026-11-28).
+        case .timerDone: return TimerDoneView.height(restingHeight: h)
+        case .alarm(let title): return AlarmRingingView.height(title: title, restingHeight: h)
+        case .lowBattery(let percent): return LowBatteryLayout.height(percent: percent, restingHeight: h)
+        case .device: return ExpandedDeviceLayout.height(name: alert?.name ?? "", low: alert?.kind.runsLow == true, restingHeight: h)
+        default: break
+        }
+        if alertExtended, alert?.kind == .focus { return TimerLayout.rowHeight(h) }
+        return TimerLayout.tallHeight(h)
     }
 
     /// Open on an activity's own view, rather than the player or the tray.
@@ -648,7 +657,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded == .airdrop:
                 (
                     AirDropLayout.width(restingHeight: closedSize.height, camera: camera, asking: airdrop?.asking == true) + pull * 0.35 + across,
-                    TimerLayout.rowHeight(closedSize.height) + pull
+                    AirDropLayout.openHeight(closedSize.height, from: airdrop.map(ExpandedAirDropView.from) ?? "") + pull
                 )
             case .open where expanded == .call:
                 (
@@ -660,7 +669,7 @@ final class NotchModel: ObservableObject {
             case .open where expanded == .alarm && alarm != nil:
                 (
                     AlarmActivityView.width(for: alarm!, restingHeight: closedSize.height, camera: camera) + pull * 0.35 + across,
-                    AlarmActivityView.height(restingHeight: closedSize.height) + pull
+                    AlarmActivityView.height(for: alarm!, restingHeight: closedSize.height) + pull
                 )
             case .open where expanded == .shortcut && shortcut != nil:
                 (
@@ -675,7 +684,8 @@ final class NotchModel: ObservableObject {
             case .open where expanded.flatMap(recording(of:)) != nil:
                 (
                     expanded.flatMap(recording(of:)).map(openWidth(of:)).map { $0 + pull * 0.35 + across } ?? 0,
-                    TimerLayout.rowHeight(closedSize.height) + pull
+                    (expanded.flatMap(recording(of:)).map { RecordingLook.openHeight($0, restingHeight: closedSize.height) } ?? TimerLayout.rowHeight(closedSize.height))
+                        + pull
                 )
             case .open where expanded != nil:
                 (
@@ -685,7 +695,7 @@ final class NotchModel: ObservableObject {
                             restingHeight: closedSize.height, camera: camera, at: date)
                     }
                         + pull * 0.35 + across,
-                    TimerLayout.tallHeight(closedSize.height) + pull
+                    ExpandedTimerView.height(for: expandedClock ?? .timer(.paused(left: 0, total: 0)), restingHeight: closedSize.height) + pull
                 )
             case .open where page == .tray: (trayWidth + pull * 0.35 + pageStretch + across, trayHeight + pull)
             case .open: (openSize.width + (showsLyrics ? lyricsWidth : 0) + pull * 0.35 + pageStretch + across, openSize.height + pull)
@@ -1423,7 +1433,7 @@ struct NotchView: View {
                     shown: clock, name: name, restingHeight: h, camera: model.camera, width: width,
                     revealed: visible, closedWidth: grownOrigin(activity)
                 )
-                .frame(width: width, height: TimerLayout.tallHeight(h))
+                .frame(width: width, height: ExpandedTimerView.height(for: clock, restingHeight: h))
                 .environment(\.notchControls, visible && !activityPreview)
                 .allowsHitTesting(places == nil && visible)
                 .accessibilityHidden(!visible)
@@ -1535,7 +1545,7 @@ struct NotchView: View {
         let h = model.closedSize.height
         let side = LiveActivityView.coverSide(h) * swell
         let waveform = LiveActivityView.waveformSide(h) * swell
-        let edge = LiveActivityView.musicEdge(h) * swell
+        let edge = LiveActivityView.musicPadding(h) * swell
         return ZStack(alignment: .topLeading) {
             Color.clear
                 .frame(width: side, height: side)

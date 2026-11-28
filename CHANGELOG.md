@@ -10,6 +10,12 @@
 
 ### Live Activities
 
+- Changed every live activity, closed and opened, to keep the same room at
+  both ends and under what it shows, and above it too unless words stand under
+  the camera, where they stay as high as they go. Pictures and buttons beside
+  two lines of words end where the words do, and the notch is only as tall as
+  that needs.
+
 - Changed a call in the bubble off the notch's end to a pill as wide as its
   green phone and time need, the time as large as beside the camera, rather
   than a circle it had to shrink to fit.
@@ -88,7 +94,8 @@
 
 - Changed opened activities to the iPhone's own sizes for their round buttons,
   pictures and words, their words standing just under the camera, and each
-  only as wide as what stands beside the camera needs.
+  only as wide as what stands beside the camera needs. A screen recording's
+  time stands beside the camera, centered on its row.
 
 - Changed a time beside the camera to slide the notch wider a moment before it
   gains a digit, such as 59:59 to 1:00:00, rather than running under the camera.
